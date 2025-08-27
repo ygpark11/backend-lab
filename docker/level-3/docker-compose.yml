@@ -1,0 +1,17 @@
+version: '3.8' # 파일 규격 버전
+
+services: # 이 파일로 관리할 서비스(컨테이너)들의 목록
+
+  # 1. 'my-app' 이라는 이름의 서비스 (우리의 스프링 부트 앱)
+  my-app:
+    build: ../level-2 # 이미지는 ../level-2 폴더의 Dockerfile을 사용해서 빌드
+    ports:
+      - "8080:8080" # 내 PC 8080번 포트와 컨테이너 8080번 포트 연결
+    depends_on: # my-redis 서비스가 실행된 후에 실행되도록 순서 지정
+      - my-redis
+
+  # 2. 'my-redis' 이라는 이름의 서비스
+  my-redis:
+    image: redis:alpine # 도커 허브의 redis:alpine 이미지 사용
+    ports:
+      - "6379:6379"
