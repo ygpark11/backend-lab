@@ -28,7 +28,6 @@ AOF 설정을 활성화하고, 동기화 정책을 '매 쓰기마다'로 설정�
 
 ```conf
 appendonly yes
-appendfsync always
 ```
 
 ### 영속성 테스트 과정
