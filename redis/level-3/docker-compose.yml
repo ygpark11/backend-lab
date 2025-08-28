@@ -1,0 +1,13 @@
+services:
+  my-redis-persistent:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    # 볼륨(volume)을 사용하여 내 PC와 컨테이너 내부를 연결합니다.
+    volumes:
+      # 내 PC의 reids.conf -> 컨테이너 내부의 설정 파일 경로.
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+        # 내 PC의 data 디렉터리 -> 컨테이너 내부의 데이터 저장 폴더
+      - ./data:/data
+    # redis-server를 실행할 때, 우리가 만든 설정 파일을 사용하도록 명령합니다.
+    command: redis-server /usr/local/etc/redis/redis.conf
