@@ -1,0 +1,17 @@
+services:
+  my-app-with-redis:
+    build: ./demo
+    ports:
+      - "8080:8080"
+    depends_on:
+      - my-redis
+    # application.yml의 host 설정과 연결됩니다.
+    environment:
+      - SPRING_DATA_REDIS_HOST=my-redis
+
+  my-redis:
+    image: redis:alpine
+    # ports는 my-app-with-redis와 통신할 때는 필요없지만,
+    # 우리가 PC에서 직접 접속하여 캐시 내용을 확인할 때 유용합니다.
+    ports:
+      - "6379:6379"

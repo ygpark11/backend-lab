@@ -1,0 +1,10 @@
+spring:
+  data:
+    redis:
+      host: my-redis # localhost가 아닌, docker-compose의 서비스 이름을 사용합니다!
+      port: 6379
+      # 10분짜리 유효기간을 모든 캐시에 전역으로 적용
+      # s는 초, m은 분, h는 시간을 의미
+      #time-to-live: 10m
+  cache:
+    type: redis # 스프링 캐시 추상화의 구현체로 Redis를 사용하도록 설정
