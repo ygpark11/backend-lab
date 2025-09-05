@@ -1,0 +1,5 @@
+spring:
+  data:
+    redis:
+      host: my-review-redis # docker-compose?? ??? ??? ??
+      port: 6379

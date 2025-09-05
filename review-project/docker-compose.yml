@@ -1,0 +1,17 @@
+services:
+  my-review-app:
+    # 현재 폴더의 Dockerfile을 사용하여 이미지를 빌드합니다.
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - my-review-redis
+    environment:
+      # application.yml의 host 설정을 이 서비스 이름으로 지정합니다.
+      - SPRING_DATA_REDIS_HOST=my-review-redis
+
+  my-review-redis:
+    image: redis:alpine
+    # PC에서 Redis 내부를 확인하기 위해 포트를 열어둡니다.
+    ports:
+      - "6379:6379"
