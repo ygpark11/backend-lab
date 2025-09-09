@@ -1,0 +1,10 @@
+INSERT INTO users (username, age) VALUES ('user1', 21);
+INSERT INTO users (username, age) VALUES ('user2', 22);
+INSERT INTO users (username, age) VALUES ('user3', 23);
+INSERT INTO users (username, age) VALUES ('user4', 24);
+INSERT INTO users (username, age) VALUES ('user5', 25);
+INSERT INTO users (username, age) VALUES ('user6', 26);
+INSERT INTO users (username, age) VALUES ('user7', 27);
+INSERT INTO users (username, age) VALUES ('user8', 28);
+INSERT INTO users (username, age) VALUES ('user9', 29);
+INSERT INTO users (username, age) VALUES ('user10', 30);
