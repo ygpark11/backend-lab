@@ -5,17 +5,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
-@Slf4j
-@Component // (1) 이 Processor를 스프링 빈으로 등록합니다.
-public class UnsafeItemProcessor implements ItemProcessor<User, User> {
+import java.util.concurrent.atomic.AtomicInteger;
 
-    private int count = 0; // (2) 여러 스레드가 공유하는 위험한 상태(State)
+@Slf4j
+@Component
+public class SafeItemProcessor implements ItemProcessor<User, User> {
+
+    // (2) int 대신 AtomicInteger를 사용합니다.
+    private final AtomicInteger count = new AtomicInteger(0);
 
     @Override
     public User process(User user) throws Exception {
-        count++; // (3) 여러 스레드가 이 값을 동시에 바꾸려고 경쟁합니다.
+        // (3) count++ 대신, 원자적 연산을 보장하는 incrementAndGet() 메서드를 사용합니다.
+        int currentCount = count.incrementAndGet();
         log.info("Thread: [{}], User ID: [{}], Count: [{}]",
-                Thread.currentThread().getName(), user.getId(), count);
+                Thread.currentThread().getName(), user.getId(), currentCount);
         return user;
     }
 }
