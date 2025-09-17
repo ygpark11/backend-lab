@@ -3,16 +3,39 @@
 ## 1. 핵심 개념 정리
 - **메시지 키 (Message Key)**: 메시지에 붙이는 '꼬리표'. 카프카는 이 키를 기준으로 메시지를 어떤 파티션으로 보낼지 결정한다.
 - **순서 보장**: 카프카는 **'같은 키를 가진 메시지는 항상 같은 파티션으로 보내는 것'**을 보장한다. 하나의 파티션은 하나의 컨슈머만 담당하므로, 결과적으로 특정 키에 대한 메시지들은 항상 순서대로 처리된다.
-- **기본 파티셔너 (Default Partitioner)**: `Key`가 있을 경우, 키의 해시(hash)값을 계산하여 파티션 번호를 결정한다. 하지만 최신 버전의 `StickyPartitioner`는 네트워크 효율을 위해, 키가 다르더라도 짧은 시간 내의 메시지들은 하나의 파티션으로 묶어 보내려는 경향이 매우 강하다.
+- **기본 파티셔너 (Default Partitioner)**: `Key`가 있을 경우, 키의 해시(hash)값을 계산하여 파티션 번호를 결정한다. 이 해시값은 키의 내용에 따라 결정된다.
 
 ---
-## 2. 핵심 코드
-### 2-1. `producer-app/application.yml`
-```yaml
-spring:
-  kafka:
-    producer:
-      bootstrap-servers: localhost:9092
+## 2. 핵심 코드 (성공적인 메시지 분배)
+```java
+@Bean
+public CommandLineRunner commandLineRunner(KafkaProducerService producerService) {
+    return args -> {
+        // 매번 다른 UUID를 키로 사용하여 메시지를 보낸다.
+        // 파티셔너가 작고, 해시값이 겹쳐 같은 파티션으로 가는 경우가 있어, 메세지 키에 따른 순서 보장 확인을 위해 UUID를 사용하여 실습
+        producerService.sendMessage("my-first-topic", UUID.randomUUID().toString(), "Message 1");
+        producerService.sendMessage("my-first-topic", UUID.randomUUID().toString(), "Message 2");
+        producerService.sendMessage("my-first-topic", UUID.randomUUID().toString(), "Message 3");
+        // ...
+    };
+}
 ```
+---
+## 3. 실습 Q&A 및 발견 (가장 중요했던 추적 과정)
+### 미스터리: 왜 모든 메시지가 한 컨슈머에게만 가는가?
+- 우리는 "key-A", "key-B", "key-C" 등 다른 키를 사용했음에도, 모든 메시지가 하나의 컨슈머로만 쏠리는 현상을 겪었다. StickyPartitioner의 동작을 의심하여 linger.ms, flush(), CustomPartitioner 등 다양한 시도를 했으나 모두 실패했다.
 
-### 2-2. `ProducerAppApplication.java` (성공적인 메시지 분배)
+### 결정적 단서 (제자님의 발견): "문제는 키였다!"
+- 수많은 시도 끝에, "우리가 사용한 'key-A', 'key-B' 같은 단순한 문자열들이, 카프카의 해시 함수를 거치니 우연히도 3개의 파티션 중 같은 파티션으로만 가게 되는 해시 충돌이 발생한 것이 아닐까?" 라는 가설을 세웠다.
+
+### 가설 검증 및 성공
+- **'랜덤 키(UUID)'**를 사용하는 실험을 통해, 키의 내용이 바뀌자 메시지가 마침내 여러 컨슈머로 분산되는 것을 증명해냈다. 파티션 수가 적을 때 단순하고 유사한 문자열 키는 해시 충돌이 발생할 확률이 높다는 결론에 도달했다.
+---
+## 4. 학습한 내용
+- 메시지 키를 사용하여 특정 메시지 그룹의 처리 순서를 보장하는 원리를 이해했다.
+
+- 가장 중요한 교훈: 프레임워크의 복잡한 동작을 의심하기 전에, 가장 기본이 되는 '입력값(Key)' 자체가 문제의 원인일 수 있다는 깊은 깨달음을 얻었다.
+
+- 예측 불가능한 문제에 대해, 가설을 세우고, 대조 실험을 설계하고, 결과를 통해 원인을 증명하는 실전적인 디버깅 및 문제 해결 능력을 길렀다.
+
+- 이론만으로는 알 수 없는 실제 시스템의 복잡성과 해시 충돌 가능성을 경험했다.
