@@ -1,8 +1,8 @@
 spring:
   kafka:
     consumer:
-      # \uD504\uB85C\uB4C0\uC11C\uC640 \uB3D9\uC77C\uD558\uAC8C \uCE74\uD504\uCE74 \uBE0C\uB85C\uCEE4 \uC8FC\uC18C\uB97C \uC124\uC815\uD569\uB2C8\uB2E4.
+      # 프로듀서와 동일하게 카프카 브로커 주소를 설정합니다.
       bootstrap-servers: localhost:9092
-      # \uC774 \uCEE8\uC288\uBA38\uAC00 \uC18D\uD55C \uADF8\uB8F9\uC758 ID\uC785\uB2C8\uB2E4.
-      # \uAC19\uC740 \uADF8\uB8F9 ID\uB97C \uAC00\uC9C4 \uCEE8\uC288\uBA38\uB4E4\uC740 \uD558\uB098\uC758 \uD1A0\uD53D \uBA54\uC2DC\uC9C0\uB97C \uB098\uB220\uC11C \uCC98\uB9AC\uD569\uB2C8\uB2E4.
+      # 이 컨슈머가 속한 그룹의 ID입니다.
+      # 같은 그룹 ID를 가진 컨슈머들은 하나의 토픽 메시지를 나눠서 처리합니다.
       group-id: my-group
