@@ -1,5 +1,5 @@
 spring:
   data:
     redis:
-      host: my-review-redis # docker-compose?? ??? ??? ??
+      host: my-review-redis # docker-compose에서 설정한 서비스 이름
       port: 6379

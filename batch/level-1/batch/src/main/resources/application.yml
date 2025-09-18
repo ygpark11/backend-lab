@@ -2,5 +2,5 @@ spring:
   batch:
     job:
       name: helloWorldJob
-    # Job? ???? ???? ??? ?????.
-    # enabled: false
+      # Job이 자동으로 실행되는 것을 비활성화합니다.
+      # enabled: false
