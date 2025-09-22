@@ -12,18 +12,15 @@ import java.util.UUID;
 @SpringBootApplication
 public class ProducerAppApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(ProducerAppApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(ProducerAppApplication.class, args);
+    }
 
     @Bean
     public CommandLineRunner commandLineRunner(KafkaProducerService producerService) {
         return args -> {
-            // 1. 정상적인 JSON 메시지 전송
             producerService.sendMessage("my-first-topic",
-                    new MyMessage(UUID.randomUUID().toString(), "id-001", "This is a normal message."));
-
-            // 2. 비정상적인 '독약' 메시지 전송 (JSON 형식이 아님)
+                    new MyMessage(UUID.randomUUID().toString(), "This is a normal message."));
             producerService.sendPlainString("my-first-topic", "This is a poison pill!");
         };
     }

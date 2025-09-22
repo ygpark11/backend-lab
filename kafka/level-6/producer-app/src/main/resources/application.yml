@@ -1,9 +1,7 @@
 spring:
   kafka:
     producer:
-      # 우리 컴퓨터(localhost)의 9092 포트에서 실행 중인 카프카 브로커를 바라보게 합니다.
       bootstrap-servers: localhost:9092
-      # key와 value의 직렬화(Serialization) 방식을 지정
-      # 메세지 본문을 JSON 형태로 직렬화
+      # Key는 String으로, Value는 MyMessage 객체를 JSON으로 변환하여 보냅니다.
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

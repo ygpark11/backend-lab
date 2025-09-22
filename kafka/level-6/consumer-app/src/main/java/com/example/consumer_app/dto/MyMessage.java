@@ -10,7 +10,6 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MyMessage {
-    private String uniqueId;
     private String messageId;
     private String messageContent;
 }
