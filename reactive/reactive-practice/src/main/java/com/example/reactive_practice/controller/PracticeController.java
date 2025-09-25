@@ -1,13 +1,60 @@
 package com.example.reactive_practice.controller;
 
+import com.example.reactive_practice.dto.Post;
+import com.example.reactive_practice.dto.PostResponse;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
 @RestController
 public class PracticeController {
+
+    private final WebClient webClient;
+
+    // 생성자를 통해 WebClient Bean을 주입받습니다.
+    public PracticeController(WebClient webClient) {
+        this.webClient = webClient;
+    }
+
+    @GetMapping("/posts/{id}")
+    public Mono<PostResponse> getPost(@PathVariable int id) { // (1) 반환 타입 변경
+        return webClient.get()
+                .uri("/posts/" + id) // baseUrl 뒤에 붙는 경로
+                .retrieve() // 응답을 받기 위한 메소드
+                .bodyToMono(Post.class) // // (2) 일단 Post 객체로 변환하고
+                .map(post -> new PostResponse(post.getTitle(), post.getBody()));  // (3) map으로 PostResponse 객체로 가공
+    }
+
+    @GetMapping("/posts/multiple")
+    public Mono<String> getMultiplePosts() {
+        // API 호출 1: /posts/1 (결과를 Mono<Post>로 받음)
+        Mono<Post> post1 = webClient.get()
+                .uri("/posts/1")
+                .retrieve()
+                .bodyToMono(Post.class);
+
+        // API 호출 2: /posts/2 (결과를 Mono<Post>로 받음)
+        Mono<Post> post2 = webClient.get()
+                .uri("/posts/2")
+                .retrieve()
+                .bodyToMono(Post.class);
+
+        // (1) 두 Mono 작업이 모두 끝날 때까지 기다렸다가 결과를 합칩니다.
+        return Mono.zip(post1, post2)
+                .map(tuple -> {
+                    // (2) 결과는 Tuple 형태로 전달됩니다. (tuple.getT1(), tuple.getT2())
+                    Post p1 = tuple.getT1();
+                    Post p2 = tuple.getT2();
+                    // (3) 두 Post 객체의 제목을 합쳐서 새로운 문자열로 반환합니다.
+                    return "Post 1 Title: " + p1.getTitle() + "\n" +
+                            "Post 2 Title: " + p2.getTitle();
+                });
+    }
 
     @GetMapping("/test")
     public Flux<String> test() {
