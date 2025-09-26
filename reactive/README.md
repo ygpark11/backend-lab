@@ -174,17 +174,32 @@ public WebClient webClient() {
 
 ## 💻 핵심 코드 (`findUserDetailsById` 메소드)
 
+여러 사용자 정보를 조회하는 API를 통해 위 개념들을 종합적으로 실습
+
+- **ID: 3 (데이터 오류)**: `onErrorResume`과 `Mono.empty()`를 사용해 해당 사용자만 건너뛰기
+- **ID: 4 (일시적 네트워크 오류)**: `retryWhen`을 사용해 1초 간격으로 2번 재시도
+- **재시도 최종 실패 시**: 가장 바깥의 `onErrorResume`으로 사용자에게 안정적인 대체 메시지 반환
+- 
 ```java
 // findUserDetailsById 메소드
 private Mono<String> findUserDetailsById(long userId) {
     return Mono.defer(() -> {
-        // ...
-    })
-    .onErrorResume(error -> {
-        // InvalidUserDataError일 경우 Mono.empty() 반환
-    })
-    .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
-            // TemporaryNetworkError일 경우 재시도
-    );
-}
+                if (userId == 3) {
+                    return Mono.error(new RuntimeException("InvalidUserDataError"));
+                }
+                if (userId == 4) {
+                    return Mono.error(new RuntimeException("TemporaryNetworkError"));
+                }
+                return Mono.just("사용자 정보 조회 성공! [ID: " + userId + "]");
+            })
+            .onErrorResume(error -> {
+                if (error.getMessage().contains("InvalidUserDataError")) {
+                    System.out.println("‼️ 데이터 처리 불가, 건너뜁니다. ID: " + userId);
+                    return Mono.empty();
+                }
+                return Mono.error(error);
+            })
+            .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
+                    .filter(error -> error.getMessage().contains("TemporaryNetworkError"))
+            );
 ```
