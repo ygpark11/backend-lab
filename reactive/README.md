@@ -5,6 +5,7 @@
 ## 목차
 - [Level 1: 패러다임의 전환과 핵심 개념](#level-1-패러다임의-전환과-핵심-개념)
 - [Level 2: 외부 세계와의 비동기 통신](#level-2-외부-세계와의-비동기-통신)
+- [Level 3: 고급 에러 핸들링 및 비동기 스트림 제어](#level-3-고급-에러-핸들링-및-비동기-스트림-제어)
 
 ---
 
@@ -144,3 +145,46 @@ public WebClient webClient() {
 ### ✅ 결론
 - 리액티브(WebFlux)와 전통적인 방식(MVC)은 **대체 관계가 아닌 상호 보완 관계**이다.  
 - 개발자는 해결하려는 문제의 성격에 따라 **가장 적합한 도구**를 선택할 수 있는 더 넓은 선택지를 갖게 된다.
+
+---
+
+## Level 3: 고급 에러 핸들링 및 비동기 스트림 제어
+
+### 1. 재시도(Retry) 전략
+
+- **`retry(N)`**: N번 만큼 작업을 다시 구독하여 단순 재시도.
+- **`retryWhen(Retry)`**: 지연 시간(backoff), 특정 조건 필터링 등 스마트한 재시도 정책 구현.
+
+### 2. 에러 대체(Fallback) 전략
+
+- **`onErrorReturn()`**: 에러 발생 시, 스트림을 중단하고 지정된 **고정값** 반환.
+- **`onErrorResume()`**: 에러 발생 시, 대체할 **새로운 스트림(Publisher)**을 동적으로 생성하여 반환.
+
+### 3. 에러 무시 및 스트림 계속 진행
+
+- **`onErrorContinue()`**: `Flux` 스트림의 특정 데이터 에러 시, 전체 중단 없이 해당 데이터만 건너뛰고 계속 진행.
+- **`flatMap` 내부 에러 처리**: `flatMap`의 내부 스트림 에러는 `Mono.empty()`로 처리하여 메인 스트림 중단 방지.
+
+### 4. 비동기 작업의 동시성 제어 (Concurrency Control)
+
+- **`flatMap(transform, concurrency)`**: `concurrency` 파라미터로 동시 처리 작업의 최대 개수 제한. 외부 시스템 부하 조절에 유용.
+- **동작 원리**: 작업 **시작**은 순서를 따르나, **처리**는 `concurrency` 개수만큼 동시에 진행.
+
+---
+
+## 💻 핵심 코드 (`findUserDetailsById` 메소드)
+
+```java
+// findUserDetailsById 메소드
+private Mono<String> findUserDetailsById(long userId) {
+    return Mono.defer(() -> {
+        // ...
+    })
+    .onErrorResume(error -> {
+        // InvalidUserDataError일 경우 Mono.empty() 반환
+    })
+    .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
+            // TemporaryNetworkError일 경우 재시도
+    );
+}
+```

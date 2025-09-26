@@ -2,12 +2,15 @@ package com.example.reactive_practice.controller;
 
 import com.example.reactive_practice.dto.Post;
 import com.example.reactive_practice.dto.PostResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 
@@ -26,8 +29,31 @@ public class PracticeController {
         return webClient.get()
                 .uri("/posts/" + id) // baseUrl 뒤에 붙는 경로
                 .retrieve() // 응답을 받기 위한 메소드
-                .bodyToMono(Post.class) // // (2) 일단 Post 객체로 변환하고
+                .bodyToMono(Post.class) // (2) 일단 Post 객체로 변환하고
                 .map(post -> new PostResponse(post.getTitle(), post.getBody()));  // (3) map으로 PostResponse 객체로 가공
+    }
+
+    @GetMapping("/posts/{id}/error-resume")
+    public Mono<Post> getPostOnErrorResume(@PathVariable int id) {
+        return webClient.get()
+                .uri("/posts/" + id)
+                .retrieve()
+                .bodyToMono(Post.class)
+                .onErrorResume(error -> {
+                    // (1) 넘어온 에러가 WebClientResponseException 타입인지 확인
+                    if (error instanceof WebClientResponseException) {
+                        WebClientResponseException ex = (WebClientResponseException) error;
+
+                        // (2) HTTP 상태 코드로 분기 처리
+                        if (ex.getStatusCode() == HttpStatus.NOT_FOUND) { // 404 에러일 경우
+                            System.out.println("Error: Post not found (404)");
+                            return Mono.just(new Post(id, 0, "Not Found", "The requested post was not found."));
+                        }
+                    }
+                    // (3) 404가 아닌 다른 모든 에러일 경우
+                    System.out.println("Error occurred: " + error.getMessage());
+                    return Mono.just(new Post(id, 0, "Default Title", "Default Body"));
+                });
     }
 
     @GetMapping("/posts/multiple")
@@ -141,5 +167,81 @@ public class PracticeController {
                     return Flux.just(order + "-상품1", order + "-상품2")
                             .delayElements(Duration.ofMillis(500));
                 });
+    }
+
+    @GetMapping("/test-retry")
+    public Flux<String> testRetry() {
+        return Flux.<String>error(new RuntimeException("의도적인 에러 발생!")) // (1)
+                .doOnError(error -> System.out.println("Error occurred: " + error.getMessage())) // (2)
+                .retry(2); // (3)
+    }
+
+    @GetMapping("/test-retry-when")
+    public Flux<String> testRetryWhen() {
+        return Flux.<String>error(new RuntimeException("의도적인 에러 발생!"))
+                .doOnError(error -> System.out.println("Error occurred at: " + java.time.LocalTime.now() + ", " + error.getMessage()))
+                .retryWhen(Retry.backoff(2, Duration.ofSeconds(2)) // (1)
+                        .doBeforeRetry(retrySignal -> { // (2)
+                            System.out.println("Retry attempt #" + (retrySignal.totalRetries() + 1));
+                        })
+                        .onRetryExhaustedThrow((retryBackoffSpec, retrySignal) -> { // (3)
+                            return retrySignal.failure();
+                        })
+                );
+    }
+
+    @GetMapping("/users/details")
+    public Flux<String> findUserDetails() {
+        return Flux.range(1, 5) // 1~5번 사용자 ID를 순차적으로 조회 시작
+                .flatMap(this::findUserDetailsById) // (1) 각 ID로 상세 정보 조회)
+                //.flatMap(this::findUserDetailsById, 2) // 동시에 실행될 수를 지정하고 싶으면 두번째 인자로 숫자를 넣기 - 동시에 2개 까지 실행
+                .onErrorResume(error -> { // (5)
+                    System.out.println("❌ 최종 에러 발생! 대체 응답을 반환합니다. 에러: " + error.getMessage());
+                    return Flux.just("죄송합니다. 시스템에 일시적인 장애가 발생했습니다.");
+                });
+    }
+
+    // 각 사용자의 상세 정보를 조회하는 외부 API 호출을 시뮬레이션하는 메소드
+    private Mono<String> findUserDetailsById(long userId) {
+        return Mono.defer(() -> {
+            if (userId == 3) {
+                // 3번 사용자는 데이터에 문제가 있어 항상 실패하는 경우
+                return Mono.error(new RuntimeException("InvalidUserDataError"));
+            }
+            if (userId == 4) {
+                // 4번 사용자는 네트워크가 불안정하여 가끔 실패하는 경우 (여기서는 항상 실패하도록 시뮬레이션)
+                System.out.println("⏳ 4번 사용자 정보 조회 시도...");
+                return Mono.error(new RuntimeException("TemporaryNetworkError"));
+            }
+            return Mono.just("사용자 정보 조회 성공! [ID: " + userId + "]");
+        })
+        .onErrorResume(error -> { // (1) 이 블록이 핵심입니다.
+            if (error.getMessage().contains("InvalidUserDataError")) {
+                System.out.println("‼️ 데이터 처리 불가, 건너뜁니다. ID: " + userId);
+                return Mono.empty(); // (2) 파산 대신 '결과 없음'으로 보고하여 메인 스트림을 살립니다.
+            }
+            return Mono.error(error); // (3) 그 외의 에러는 다시 던져서 retryWhen이 처리하도록 합니다.
+        })
+        .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
+                .filter(error -> error.getMessage().contains("TemporaryNetworkError"))
+                .doBeforeRetry(retrySignal -> {
+                    System.out.println("🔁 네트워크 에러! 재시도를 수행합니다. (시도 횟수: " + (retrySignal.totalRetries() + 1) + ")");
+                })
+        );
+    }
+
+    public static void main(String[] args) {
+        Flux.range(1, 5) // 1, 2, 3, 4, 5를 순서대로 발행하는 Flux
+                .map(i -> {
+                    if (i == 3) {
+                        throw new RuntimeException("의도적인 에러 발생! 데이터: " + i);
+                    }
+                    return "성공적으로 처리된 데이터: " + i;
+                })
+                .onErrorContinue((error, data) -> {
+                    // (1) 에러가 발생했을 때 실행되는 부분
+                    System.out.println("문제가 발생했지만 건너뜁니다. 에러: " + error.getMessage() + ", 원인 데이터: " + data);
+                })
+                .subscribe(result -> System.out.println("최종 소비자에게 전달된 결과: " + result)); // (2)
     }
 }
