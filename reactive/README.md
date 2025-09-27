@@ -6,6 +6,7 @@
 - [Level 1: 패러다임의 전환과 핵심 개념](#level-1-패러다임의-전환과-핵심-개념)
 - [Level 2: 외부 세계와의 비동기 통신](#level-2-외부-세계와의-비동기-통신)
 - [Level 3: 고급 에러 핸들링 및 비동기 스트림 제어](#level-3-고급-에러-핸들링-및-비동기-스트림-제어)
+- [Level 4: 실시간 이벤트 처리와 메시지 큐 (Kafka)](#level-4-실시간-이벤트-처리와-메세지-큐-(kafka))
 
 ---
 
@@ -202,4 +203,62 @@ private Mono<String> findUserDetailsById(long userId) {
             .retryWhen(Retry.backoff(2, Duration.ofSeconds(1))
                     .filter(error -> error.getMessage().contains("TemporaryNetworkError"))
             );
+```
+
+---
+
+## Level 4: 실시간 이벤트 처리와 메시지 큐 (Kafka)
+
+## 🚀 핵심 학습 내용
+
+### 1. Kafka 기본 개념 및 환경 설정
+
+- **Kafka**: '멈추지 않는 초고속 컨베이어 벨트'에 비유. Producer(생산자), Consumer(소비자), Topic(주제)으로 구성된 메시지 브로커.
+- **환경 설정**: `docker-compose.yml`을 사용하여 Kafka와 Zookeeper 컨테이너를 실행. `application.yml`에 `bootstrap-servers`와 `serializer`/`deserializer` 설정.
+
+### 2. 기본 Producer/Consumer 구현 (String)
+
+- **`KafkaTemplate<String, String>`**: Producer에서 문자열 메시지를 특정 토픽으로 발송하기 위해 사용.
+- **`@KafkaListener`**: Consumer에서 특정 토픽을 구독하고, 메시지가 들어오면 지정된 메소드를 실행하는 핵심 어노테이션.
+
+### 3. 심화 Producer/Consumer 구현 (JSON Object)
+
+- **DTO (Data Transfer Object)**: 주고받을 객체의 구조를 정의하는 클래스.
+- **`JsonSerializer` / `JsonDeserializer`**: 객체를 JSON 문자열로 변환하고, 그 반대 과정을 수행. `application.yml`에서 설정.
+- **`spring.json.trusted.packages`**: `JsonDeserializer`가 역직렬화를 허용할 패키지를 지정하는 보안 설정.
+
+---
+
+## 💻 핵심 코드
+
+#### `docker-compose.yml`
+```yaml
+# Kafka와 Zookeeper 실행을 위한 Docker Compose 설정
+version: '3'
+services:
+  zookeeper:
+    # ...
+  kafka:
+    # ...
+```
+
+#### `@KafkaListener` (Consumer)
+```java
+// JSON 형태의 DTO를 자동으로 변환하여 수신
+  @KafkaListener(topics = "my-topic", groupId = "my-group")
+  public void listen(MessageDto message) {
+System.out.println("📥 메시지 수신: " + message.toString());
+}
+```
+
+#### `application.yml`  (JSON 설정)
+```yaml
+spring:
+  kafka:
+    producer:
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
 ```

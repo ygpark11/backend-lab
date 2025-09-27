@@ -2,9 +2,13 @@ package com.example.reactive_practice.controller;
 
 import com.example.reactive_practice.dto.Post;
 import com.example.reactive_practice.dto.PostResponse;
+import com.example.reactive_practice.kafka.KafkaProducer;
+import com.example.reactive_practice.kafka.MessageDto;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -15,14 +19,11 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 
 @RestController
+@RequiredArgsConstructor
 public class PracticeController {
 
     private final WebClient webClient;
-
-    // 생성자를 통해 WebClient Bean을 주입받습니다.
-    public PracticeController(WebClient webClient) {
-        this.webClient = webClient;
-    }
+    private final KafkaProducer kafkaProducer;
 
     @GetMapping("/posts/{id}")
     public Mono<PostResponse> getPost(@PathVariable int id) { // (1) 반환 타입 변경
@@ -230,18 +231,11 @@ public class PracticeController {
         );
     }
 
-    public static void main(String[] args) {
-        Flux.range(1, 5) // 1, 2, 3, 4, 5를 순서대로 발행하는 Flux
-                .map(i -> {
-                    if (i == 3) {
-                        throw new RuntimeException("의도적인 에러 발생! 데이터: " + i);
-                    }
-                    return "성공적으로 처리된 데이터: " + i;
-                })
-                .onErrorContinue((error, data) -> {
-                    // (1) 에러가 발생했을 때 실행되는 부분
-                    System.out.println("문제가 발생했지만 건너뜁니다. 에러: " + error.getMessage() + ", 원인 데이터: " + data);
-                })
-                .subscribe(result -> System.out.println("최종 소비자에게 전달된 결과: " + result)); // (2)
+    @GetMapping("/kafka/send")
+    public String sendMessage(@RequestParam("message") String message) {
+        // DTO 객체 생성
+        MessageDto messageDto = new MessageDto("New Message", message, System.currentTimeMillis());
+        kafkaProducer.sendMessage("my-topic", messageDto);
+        return "Object message sent successfully: " + messageDto.toString();
     }
 }

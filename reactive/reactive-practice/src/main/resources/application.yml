@@ -1,0 +1,15 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      # StringSerializer -> JsonSerializer\uB85C \uBCC0\uACBD
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: my-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      # StringDeserializer -> JsonDeserializer\uB85C \uBCC0\uACBD
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        # JsonDeserializer\uB97C \uC704\uD55C \uCD94\uAC00 \uC124\uC815
+        spring.json.trusted.packages: "com.example.reactive_practice.kafka"
