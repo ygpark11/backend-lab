@@ -7,6 +7,7 @@
 - [Level 2: 외부 세계와의 비동기 통신](#level-2-외부-세계와의-비동기-통신)
 - [Level 3: 고급 에러 핸들링 및 비동기 스트림 제어](#level-3-고급-에러-핸들링-및-비동기-스트림-제어)
 - [Level 4: 실시간 이벤트 처리와 메시지 큐 (Kafka)](#level-4-실시간-이벤트-처리와-메세지-큐-(kafka))
+- [Level 5: 고급 스트림 제어 (배압, Cold & Hot 스트림)](#level-5-고급-스트림-제어-(배압,-cold-&-hot-스트림))
 
 ---
 
@@ -261,4 +262,69 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+```
+---
+## Level 5: 고급 스트림 제어 (배압, Cold & Hot 스트림)
+
+## 🚀 핵심 학습 내용
+
+### 1. 배압(Backpressure) 전략
+
+- **문제 정의**: 생산자의 데이터 발행 속도가 소비자의 처리 속도보다 빨라 데이터가 누적되어 시스템 장애(`OverflowException`)를 유발하는 현상.
+- **문제 재현**: 배압 제어가 없는 `Sinks` API와 별도 스레드를 사용하여 의도적으로 문제를 발생시키는 과정을 통해 원인을 깊이 이해함.
+- **핵심 해결 전략 비교**:
+
+| 구분 | `onBackpressureBuffer()` | `onBackpressureDrop()` | `onBackpressureLatest()` |
+| :--- | :--- | :--- | :--- |
+| **비유** | 요리 대기 테이블 | 꽉 찬 우체통 (새 편지 버림) | 꽉 찬 우체통 (헌 편지 버림) |
+| **전략** | 버퍼에 데이터를 **쌓아둠** | 들어오는 **새 데이터**를 버림 | **기존 데이터**를 버리고 새 데이터 보관 |
+| **데이터 유실**| **없음** (버퍼 한도 내) | **있음** (버퍼가 찬 동안의 모든 데이터) | **있음** (최신 데이터 1개 제외 모두) |
+
+### 2. 차가운(Cold) 스트림 vs. 뜨거운(Hot) 스트림
+
+- **차가운 스트림 (Cold Publisher)**: '주문 제작 DVD'에 비유. **구독할 때마다** 각 구독자를 위해 독립적인 데이터 스트림이 처음부터 새로 생성됨.
+- **뜨거운 스트림 (Hot Publisher)**: '생방송 라디오'에 비유. 구독 여부와 관계없이 데이터 스트림은 하나만 존재하며, 구독자는 **중간부터 참여하여** 동일한 스트림을 실시간으로 공유함.
+- **핵심 연산자**:
+    - `publish()`: Cold 스트림을 수동 제어 가능한 `ConnectableFlux`(뜨거운 스트림)로 변환.
+    - `connect()`: `ConnectableFlux`의 데이터 발행을 시작시키는 '방송 시작' 버튼.
+    - `autoConnect(N)`: N명의 구독자가 생기면 자동으로 `connect()`를 호출해주는 편리한 연산자.
+    - `blockLast()`: `main` 메소드 등에서 비동기 스트림이 완료될 때까지 안정적으로 대기하는 방법. `Thread.sleep`의 불편함을 해결함.
+
+---
+
+## 💻 핵심 코드
+
+#### 배압 문제 해결 (`Buffer` 전략)
+```java
+// Sinks를 이용한 외부 주입 및 버퍼링으로 데이터 유실 없이 배압 제어
+Sinks.Many<Integer> sink = Sinks.many().multicast().onBackpressureBuffer();
+
+sink.asFlux()
+    .publishOn(Schedulers.single())
+    .subscribe(data -> { // 느린 소비자
+        Thread.sleep(100);
+    });
+
+new Thread(() -> { // 빠른 생산자
+    for (int i = 1; i <= 50; i++) {
+        sink.tryEmitNext(i);
+    }
+}).start();
+```
+
+#### 뜨거운 스트림 생성 (`autoConnect`)
+```java
+// 1명의 구독자가 생기면 자동으로 방송을 시작하는 뜨거운 스트림
+Flux<Long> hotFlux = Flux.interval(Duration.ofSeconds(1))
+                        .take(5)
+                        .publish()
+                        .autoConnect(1);
+
+// A는 시작부터, B는 2.5초 뒤에 참여하지만 같은 스트림을 공유
+hotFlux.subscribe(data -> log.info("Subscriber A: {}", data));
+Thread.sleep(2500);
+hotFlux.subscribe(data -> log.info("Subscriber B: {}", data));
+
+// 스트림이 끝날 때까지 대기
+hotFlux.blockLast();
 ```
