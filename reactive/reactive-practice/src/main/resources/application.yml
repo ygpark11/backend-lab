@@ -1,4 +1,13 @@
 spring:
+  # R2DBC 설정
+  r2dbc:
+    url: r2dbc:h2:mem:///testdb # (1)
+    username: sa
+    password:
+  # SQL 스크립트 실행 설정
+  sql:
+    init:
+      mode: always # (2)
   kafka:
     bootstrap-servers: localhost:9092
     producer:

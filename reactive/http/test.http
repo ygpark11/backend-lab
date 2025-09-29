@@ -1,0 +1,11 @@
+### 사용자 전제 조회
+GET http://localhost:8080/users
+
+### 특정 사용자 조회
+GET http://localhost:8080/users/1
+
+### 특정 사용자 조회
+POST http://localhost:8080/users
+Content-Type: application/json
+
+{"name":"David", "email":"david@example.com"}

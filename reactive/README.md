@@ -8,6 +8,7 @@
 - [Level 3: 고급 에러 핸들링 및 비동기 스트림 제어](#level-3-고급-에러-핸들링-및-비동기-스트림-제어)
 - [Level 4: 실시간 이벤트 처리와 메시지 큐 (Kafka)](#level-4-실시간-이벤트-처리와-메세지-큐-(kafka))
 - [Level 5: 고급 스트림 제어 (배압, Cold & Hot 스트림)](#level-5-고급-스트림-제어-(배압,-cold-&-hot-스트림))
+- [Level 6: 완전한 반응형 애플리케이션 (R2DBC)](#level-6-완전한-반응형-애플리케이션-(r2dbc))
 
 ---
 
@@ -327,4 +328,95 @@ hotFlux.subscribe(data -> log.info("Subscriber B: {}", data));
 
 // 스트림이 끝날 때까지 대기
 hotFlux.blockLast();
+```
+
+---
+## Level 6: 완전한 반응형 애플리케이션 (R2DBC)
+
+## 🚀 핵심 학습 내용
+
+### 1. R2DBC의 필요성: JDBC vs. R2DBC
+
+- **JDBC (블로킹)**: '코스 요리 전문점'. DB가 모든 결과를 준비할 때까지 애플리케이션 스레드가 대기. 사용자가 첫 응답을 받기까지의 시간(TTFB)이 김.
+- **R2DBC (논블로킹)**: '컨베이어 벨트 초밥집'. DB가 준비되는 데이터부터 스트림으로 흘려보내므로, 스레드가 대기하지 않고 TTFB가 매우 짧아 사용자 체감 성능이 뛰어남.
+- **결론**: 완전한 리액티브 시스템을 구축하려면 DB 접근 계층까지 논블로킹으로 처리해주는 R2DBC가 필수적임.
+
+### 2. Spring Data R2DBC 구현
+
+- **설정**: `spring-boot-starter-data-r2dbc` 및 DB별 드라이버(`r2dbc-h2`) 의존성 추가. `application.yml`에 `r2dbc:url` 설정.
+- **Entity**: JPA의 `@Entity` 대신 `@Table`, `@Id` 어노테이션을 사용하여 테이블 및 기본 키를 매핑.
+- **Repository**: `JpaRepository` 대신 `ReactiveCrudRepository`를 상속. 모든 CRUD 메소드가 `Mono` 또는 `Flux`를 반환.
+
+### 3. 리액티브 파이프라인과 에러 처리
+
+- **스트림 체인**: 리액티브 애플리케이션의 모든 작업(Controller-Service-Repository)은 분리된 호출이 아닌, 하나의 거대한 스트림 체인으로 연결됨.
+- **`Mono`라는 약속**: 컨트롤러가 반환하는 `Mono`는 결과가 아닌 '결과를 주겠다'는 약속임. WebFlux는 이 약속이 지켜지거나(onSuccess) 깨질 때(onError) 최종 HTTP 응답을 보냄.
+- **실패 시나리오**: DB 저장 실패 시 `onError` 신호가 파이프라인을 따라 전파되어 사용자에게는 절대 '성공' 응답이 나가지 않음. `onErrorResume`을 이용해 특정 DB 예외를 잡아 사용자 친화적인 에러 메시지(예: 400 Bad Request)로 변환 가능.
+- **비동기 작업 분리 (`doOnSuccess`)**: 'DB 저장(주 흐름)' 성공 후, 결과를 기다릴 필요 없는 '이메일 발송(부가 흐름)' 같은 작업을 `doOnSuccess`와 별도 스케줄러를 통해 'Fire-and-Forget' 방식으로 안전하게 실행 가능.
+
+---
+
+## 💻 핵심 코드
+
+#### `UserRepository` (Reactive Repository)
+```java
+public interface UserRepository extends ReactiveCrudRepository<User, Long> {
+    // 반환 타입이 모두 Mono, Flux
+}
+```
+
+#### `UserService` (비동기 체이닝 예시)
+```java
+public Mono<User> save(User user) {
+    return userRepository.save(user)
+            .doOnSuccess(savedUser -> { // DB 저장 성공 후
+                // 이메일 발송을 별도로 실행 (결과를 기다리지 않음)
+                emailService.sendWelcomeEmail(savedUser)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe();
+            });
+}
+```
+---
+## 💻 회원 가입 완료되면 환영 이메일 발송하기 (실습 프로젝트)
+- 회원 가입 API 호출 시, DB에 사용자 정보를 저장하고, 저장이 성공하면 환영 이메일을 비동기로 발송하는 기능 구현
+
+#### `EmailService` (느린 작업을 가정한 외부 서비스)
+
+```java
+@Service
+public class EmailService {
+    // 이메일 발송은 2초가 걸린다고 가정
+    public Mono<Void> sendWelcomeEmail(User user) {
+        return Mono.delay(Duration.ofSeconds(2))
+                .doOnSuccess(it -> log.info("✅ 환영 이메일 발송 완료! 받는 사람: {}", user.getEmail()))
+                .then();
+    }
+}
+```
+
+#### `UserService` (주 흐름과 부가 흐름의 분리)
+
+```java
+@Service
+@RequiredArgsConstructor
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+
+    public Mono<User> save(User user) {
+        return userRepository.save(user) // 1. 주 흐름: DB 저장
+                .doOnSuccess(savedUser -> { // 2. DB 저장 성공 후
+                    // 3. 부가 흐름: 이메일 발송 (결과를 기다리지 않음)
+                    emailService.sendWelcomeEmail(savedUser)
+                            .subscribeOn(Schedulers.boundedElastic())
+                            // subscribe()에 에러 핸들러를 추가
+                            .subscribe(
+                                    v -> {}, // 성공 시에는 아무것도 하지 않음
+                                    e -> log.error("환영 이메일 발송 실패! 사용자 ID: {}", savedUser.getId(), e) // 실패 시 에러 로그 기록
+                            );
+                });
+    }
+}
 ```
