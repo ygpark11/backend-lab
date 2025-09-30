@@ -1,14 +1,8 @@
--- 기존 users 테이블이 있다면 삭제
-DROP TABLE IF EXISTS users;
+-- schema.sql 파일 하단에 추가
+DROP TABLE IF EXISTS comments;
 
--- users 테이블 생성
-CREATE TABLE users (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       name VARCHAR(255),
-                       email VARCHAR(255)
+CREATE TABLE comments (
+                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                          content VARCHAR(255),
+                          user_id BIGINT
 );
-
--- 초기 데이터 삽입
-INSERT INTO users (name, email) VALUES ('Alice', 'alice@example.com');
-INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
-INSERT INTO users (name, email) VALUES ('Charlie', 'charlie@example.com');

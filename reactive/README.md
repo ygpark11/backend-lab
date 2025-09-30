@@ -9,6 +9,7 @@
 - [Level 4: 실시간 이벤트 처리와 메시지 큐 (Kafka)](#level-4-실시간-이벤트-처리와-메세지-큐-(kafka))
 - [Level 5: 고급 스트림 제어 (배압, Cold & Hot 스트림)](#level-5-고급-스트림-제어-(배압,-cold-&-hot-스트림))
 - [Level 6: 완전한 반응형 애플리케이션 (R2DBC)](#level-6-완전한-반응형-애플리케이션-(r2dbc))
+- [**Level 7: 내부 이벤트 버스 구현 (Sinks API - Bonus Stage)**](./level7) (📍 Final)
 
 ---
 
@@ -420,3 +421,58 @@ public class UserService {
     }
 }
 ```
+
+---
+## Level 7: 내부 이벤트 버스 구현 (Sinks API - Bonus Stage)
+
+## 🚀 핵심 학습 내용
+
+- **개념**: `Sinks`는 리액티브 스트림 외부의 일반 코드와 리액티브 스트림을 연결하는 '다리' 역할을 함. '이벤트 발행'과 '이벤트 구독'을 통해 코드의 결합도를 낮추는 데 사용.
+- **`Sinks.many().multicast()`**: 여러 구독자가 동일한 이벤트를 함께 구독할 수 있는 Hot Stream 형태의 이벤트 버스를 생성.
+- **실무 시나리오**: '댓글 저장(주 흐름)' 성공 후, `Sinks`에 이벤트를 발행. '알림 발송', '스팸 필터'(부가 흐름) 등은 이 이벤트를 구독하여 독립적으로 동작.
+- **전통 방식과의 비교**: `@Async`는 구현이 간단하지만 스레드 자원 소모가 크고 작업 유실의 위험이 있음. `Sinks`는 초기 개념이 복잡하지만 적은 자원으로 높은 효율을 내며, 아키텍처적으로 더 유연함.
+
+## 💻 핵심 코드
+
+```java
+// CommentEventBus (내부 이벤트 버스)
+@Component
+public class CommentEventBus {
+    private final Sinks.Many<Comment> sink = Sinks.many().multicast().onBackpressureBuffer();
+    // ... publishEvent, getEventStream ...
+}
+
+// CommentService (이벤트 발행자)
+@Service
+public class CommentService {
+    public Mono<Comment> saveComment(Comment comment) {
+        return commentRepository.save(comment)
+                .doOnSuccess(commentEventBus::publishEvent);
+    }
+}
+
+// NotificationService (이벤트 구독자)
+@Service
+public class NotificationService {
+    @PostConstruct
+    public void subscribeToEvents() {
+        commentEventBus.getEventStream()
+                .subscribe(comment -> log.info("📬 알림 발송: {}", comment));
+    }
+}
+```
+
+### 전통적 방식(@Async)과의 비교
+
+- **공통 목표**: 사용자를 기다리게 하지 않고 오래 걸리는 작업을 백그라운드에서 처리.
+- **핵심 질문**: "이미 운영 중인 Spring MVC 프로젝트에 리액티브를 섞어 써도 될까?"
+    - **결론**: 아니오. MVC 컨트롤러에서 `Mono`나 `Flux`의 결과를 얻으려면 결국 `.block()`을 호출해야 하므로, 리액티브의 핵심인 논블로킹 장점이 사라지는 '반쪽짜리 리액티브'가 됨. **WebFlux로의 완전한 전환 없이는 리액티브 방식의 도입은 의미가 없음.**
+
+- **비교 표**:
+
+| 구분 | **일반 스프링 MVC (`@Async`)** | **리액티브 (WebFlux + Sinks)** |
+| :--- | :--- | :--- |
+| **비유** | 👨‍💼 임시 직원(스레드) 즉시 고용 | 🏭 자동화 컨베이어 벨트 |
+| **장점** | - **매우 간단함**: `@Async` 어노테이션 하나로 구현 가능<br>- 기존 MVC 코드에 쉽게 통합 가능 | - **높은 자원 효율성**: 적은 스레드로 대규모 동시 요청 처리<br>- **안정성**: 파이프라인으로 에러 처리가 명확하고, 외부 큐와 연동 시 작업 유실 방지 |
+| **단점** | - **높은 자원 소모**: 요청마다 스레드를 점유하여 한계가 명확함<br>- **작업 유실 위험**: 서버 다운 시 실행 중이던 작업 소멸 | - **높은 학습 곡선**: 스트림과 파이프라인 개념에 대한 깊은 이해 필요<br>- **전체 스택 전환**: '반쪽짜리'가 되지 않으려면 WebFlux 등 생태계 전체를 도입해야 함 |
+| **적합한 환경**| - 동시 요청이 적거나 보통일 때<br>- 간단한 백그라운드 작업 | - 대규모 동시 요청 처리가 필요할 때<br>- MSA, 이벤트 기반 아키텍처 |

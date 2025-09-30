@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/reactive.iml" filepath="$PROJECT_DIR$/.idea/reactive.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/reactive-practice.main.iml" filepath="$PROJECT_DIR$/.idea/modules/reactive-practice.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/reactive-practice.test.iml" filepath="$PROJECT_DIR$/.idea/modules/reactive-practice.test.iml" />
     </modules>
   </component>
 </project>
