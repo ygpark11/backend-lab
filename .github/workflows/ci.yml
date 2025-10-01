@@ -27,6 +27,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 5-3. Gradle 빌드 및 테스트 실행
-      - name: Build with Gradle
+      # =======================================================
+      # ▼▼▼ 이 단계를 추가해주세요 ▼▼▼
+      - name: Grant execute permission for gradlew
+        working-directory: ./reactive/reactive-practice
+        run: chmod +x gradlew
+      # =======================================================
+
+      # 'Build with Gradle' 단계를 아래와 같이 수정합니다.
+      - name: Build reactive-practice project with Gradle
+        # 1. working-directory 키를 추가하여 작업 폴더를 지정합니다.
+        working-directory: ./reactive/reactive-practice
+        # 2. 해당 폴더 안에서 빌드 명령어를 실행합니다.
         run: ./gradlew build
