@@ -32,3 +32,11 @@ jobs:
       - name: Build with Gradle
         working-directory: ./ci-cd/ci-cd-lab
         run: ./gradlew build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # 보관될 아티팩트의 이름
+          name: ci-cd-lab-jar
+          # 보관할 파일의 경로 (새 프로젝트 경로에 맞게 수정)
+          path: ./ci-cd/ci-cd-lab/build/libs/*.jar
