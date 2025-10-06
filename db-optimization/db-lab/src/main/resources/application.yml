@@ -1,16 +1,23 @@
 spring:
-  # JPA \uC124\uC815
+  datasource:
+    # MySQL \uC811\uC18D \uC815\uBCF4
+    url: jdbc:mysql://localhost:3306/db_lab
+    username: root
+    password: password # docker-compose.yml\uC5D0\uC11C \uC124\uC815\uD55C \uBE44\uBC00\uBC88\uD638
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
-    show-sql: true # (1) JPA\uAC00 \uC2E4\uD589\uD558\uB294 \uBAA8\uB4E0 SQL \uCFFC\uB9AC\uB97C \uCF58\uC194\uC5D0 \uCD9C\uB825
+    hibernate:
+      ddl-auto: create
     properties:
       hibernate:
-        format_sql: true # (2) \uCD9C\uB825\uB418\uB294 SQL\uC744 \uBCF4\uAE30 \uC88B\uAC8C \uC904 \uBC14\uAFC8\uD558\uC5EC \uC815\uB82C
-    hibernate:
-      ddl-auto: create # (3) \uC560\uD50C\uB9AC\uCF00\uC774\uC158\uC774 \uC2DC\uC791\uB420 \uB54C\uB9C8\uB2E4, \uAE30\uC874 \uD14C\uC774\uBE14\uC744 \uC0AD\uC81C\uD558\uACE0 \uC5D4\uD2F0\uD2F0 \uD074\uB798\uC2A4\uC5D0 \uB9DE\uCDB0 \uC0C8\uB85C \uC0DD\uC131
+        # MySQL 8 \uBC84\uC804\uC6A9 Dialect \uC124\uC815
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
 
-  # H2 \uB370\uC774\uD130\uBCA0\uC774\uC2A4 \uC124\uC815
-  h2:
-    console:
-      enabled: true # (4)  H2 \uB370\uC774\uD130\uBCA0\uC774\uC2A4\uC758 \uB0B4\uC6A9\uC744 \uC9C1\uC811 \uB4E4\uC5EC\uB2E4\uBCFC \uC218 \uC788\uB294 \uC6F9 \uCF58\uC194 \uD65C\uC131\uD654
-  datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+#  # H2 \uB370\uC774\uD130\uBCA0\uC774\uC2A4 \uC124\uC815
+#  h2:
+#    console:
+#      enabled: true # (4)  H2 \uB370\uC774\uD130\uBCA0\uC774\uC2A4\uC758 \uB0B4\uC6A9\uC744 \uC9C1\uC811 \uB4E4\uC5EC\uB2E4\uBCFC \uC218 \uC788\uB294 \uC6F9 \uCF58\uC194 \uD65C\uC131\uD654
+#  datasource:
+#    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1

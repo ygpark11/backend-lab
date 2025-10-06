@@ -1,7 +1,6 @@
 package com.example.db_lab;
-import com.example.db_lab.domain.Post;
+
 import com.example.db_lab.domain.User;
-import com.example.db_lab.repository.PostRepository;
 import com.example.db_lab.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
@@ -15,9 +14,28 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
-    private final PostRepository postRepository;
+    // private final PostRepository postRepository;
 
     @Override
+    public void run(String... args) throws Exception {
+        System.out.println("대용량 테스트 데이터 초기화를 시작합니다...");
+        long startTime = System.currentTimeMillis();
+
+        // postRepository.deleteAllInBatch(); // 1. 이 줄을 삭제 또는 주석 처리
+        //userRepository.deleteAllInBatch(); // 2. User 테이블 삭제는 남겨두거나 삭제해도 됨
+
+        List<User> users = new ArrayList<>();
+        for (int i = 1; i <= 100000; i++) {
+            users.add(new User("user" + i, "user" + i + "@example.com"));
+        }
+        userRepository.saveAll(users);
+
+        long endTime = System.currentTimeMillis();
+        System.out.println(">> 데이터 초기화 완료! (총 " + (endTime - startTime) + "ms 소요)");
+    }
+
+    // N+1 문제 테스트를 위한 데이터 초기화
+    /*@Override
     public void run(String... args) throws Exception {
         System.out.println("N+1 문제 테스트 데이터 초기화를 시작합니다...");
 
@@ -41,5 +59,5 @@ public class DataInitializer implements CommandLineRunner {
         postRepository.saveAll(posts);
 
         System.out.println("데이터 초기화 완료!");
-    }
+    }*/
 }
