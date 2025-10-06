@@ -5,7 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "users", indexes = @Index(name = "idx_email", columnList = "email"))
+// name과 email을 묶어 복합 인덱스 생성
+@Table(name = "users", indexes = @Index(name = "idx_name_email", columnList = "name, email"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class User {
