@@ -1,0 +1,19 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: user-service-route # 규칙 이름
+              uri: lb://user-service # eureka 서버에 등록된 user-service에 주소로 찾아가도록 동적 설정
+              predicates:
+                - Path=/users/** # /users/로 시작하는 모든 요청을 잡도록 변경
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
