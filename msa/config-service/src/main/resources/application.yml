@@ -1,0 +1,15 @@
+server:
+  port: 8888 # (1) Config Server? ?? ??
+
+spring:
+  application:
+    name: config-service
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/ygpark11/backend-lab-config.git
+
+eureka:
+  client:
+    enabled: false # (2) Config Server? Eureka? ???? ??
