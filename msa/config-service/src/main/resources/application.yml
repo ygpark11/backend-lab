@@ -1,5 +1,5 @@
 server:
-  port: 8888 # (1) Config Server? ?? ??
+  port: 8888
 
 spring:
   application:
@@ -10,6 +10,12 @@ spring:
         git:
           uri: https://github.com/ygpark11/backend-lab-config.git
 
+  rabbitmq:
+    host: localhost # (1) Docker로 실행한 RabbitMQ 서버 주소
+    port: 5672
+    username: guest # (2) 기본 사용자 이름
+    password: guest # (2) 기본 비밀번호
+
 eureka:
   client:
-    enabled: false # (2) Config Server? Eureka? ???? ??
+    enabled: false

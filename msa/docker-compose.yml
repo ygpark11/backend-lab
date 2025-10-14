@@ -1,0 +1,7 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management # (공식 RabbitMQ 이미지)
+    container_name: rabbitmq_boot
+    ports:
+      - "5672:5672"   # 애플리케이션들이 메시지를 주고받을 때 사용할 메인 포트
+      - "15672:15672" # RabbitMQ 내부에서 무슨 일이 일어나는지 볼 수 있는 웹 대시보드용 포트(관리자 웹 UI용 포트)
