@@ -4,8 +4,9 @@ spring:
   config:
     import: "configserver:http://localhost:8888" # (1)
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: refresh, bus-refresh
+# 자동 업데이트의 책임 주체를 config-service로 변경하여 actuator 외부 노출 제거
+#management:
+#  endpoints:
+#    web:
+#      exposure:
+#        include: refresh, bus-refresh
