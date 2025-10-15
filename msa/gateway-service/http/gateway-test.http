@@ -1,0 +1,8 @@
+### 테스트 1: 인증 실패 (헤더 없음)
+# X-USER-ID 헤더 없이 요청을 보내 401 Unauthorized 응답이 오는지 확인합니다.
+GET http://localhost:8000/users/123/info
+
+### 테스트 2: 인증 성공 (헤더 포함)
+# X-USER-ID 헤더를 정상적으로 포함시켜 200 OK 응답과 함께 사용자 정보가 오는지 확인합니다.
+GET http://localhost:8000/users/123/info
+X-USER-ID: 123

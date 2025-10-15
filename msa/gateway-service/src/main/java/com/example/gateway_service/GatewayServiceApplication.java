@@ -6,6 +6,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication
 @EnableDiscoveryClient
+// @EnableFeignClients Http Interface Client 도입을 위해 주석
 public class GatewayServiceApplication {
 
 	public static void main(String[] args) {
