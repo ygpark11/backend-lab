@@ -1,0 +1,2 @@
+### RabbitMQ 테스트 메시지 발송
+GET http://localhost:8081/test-mq/new-user-123
