@@ -1,2 +1,11 @@
 ### RabbitMQ 테스트 메시지 발송
 GET http://localhost:8081/test-mq/new-user-123
+
+### 로그인 API 테스트 (JWT 발급)
+POST http://localhost:8081/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "1234"
+}

@@ -1,14 +1,21 @@
 package com.example.user_service.controller;
 
+import com.example.user_service.dto.LoginRequestDto;
 import com.example.user_service.dto.UserDto;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 /**
  * Gateway 연동을 위한 API
@@ -22,9 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class UserController {
 
     private final RabbitTemplate rabbitTemplate;
+    private final SecretKey jwtSecretKey; // JWT 비밀 키 주입
 
-    public UserController(RabbitTemplate rabbitTemplate) {
+    public UserController(RabbitTemplate rabbitTemplate, @Value("${token.secret}") String secret) {
         this.rabbitTemplate = rabbitTemplate;
+        // 주입받은 문자열 키를 HMAC-SHA 알고리즘에 맞는 SecretKey 객체로 변환
+        this.jwtSecretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     // Config 서버에서 값을 읽어옴
@@ -58,5 +68,35 @@ public class UserController {
 
         String responseMessage = "Message sent to RabbitMQ: " + message;
         return ResponseEntity.ok(responseMessage);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequestDto loginRequest) {
+
+        // (임시) 실제로는 DB에서 사용자 정보를 조회하고 패스워드를 비교해야 함
+        // 지금은 "test@example.com" / "1234" 만 허용
+        if ("test@example.com".equals(loginRequest.getEmail()) && "1234".equals(loginRequest.getPassword())) {
+
+            // 로그인 성공 시 JWT 생성
+            String jwt = Jwts.builder()
+                    .subject("test-user-id") // 토큰의 주체 (실제로는 user.getUserId())
+                    .claim("email", loginRequest.getEmail()) // 비공개 클레임 (부가 정보)
+                    .expiration(new Date(System.currentTimeMillis() + (60 * 60 * 1000))) // 만료 시간: 1시간
+                    .signWith(jwtSecretKey) // 서명: 우리가 만든 비밀키 사용
+                    .compact(); // 토큰 생성
+
+            // 응답 헤더에 JWT를 담아서 반환
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.AUTHORIZATION, "Bearer " + jwt);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body("Login Successful. Token generated.");
+
+        } else {
+            // 로그인 실패
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid email or password.");
+        }
     }
 }

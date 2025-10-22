@@ -21,3 +21,13 @@ GET http://localhost:8000/coupons/check/123
 ### 글로벌 필터 테스트 3 (성공 예상)
 GET http://localhost:8000/coupons/check/123
 X-Request-ID: abc-123-xyz
+
+### JWT 테스트 1: 접근 거부 (토큰 없음)
+GET http://localhost:8000/coupons/check/456
+X-Request-ID: test-no-token
+
+### JWT 테스트 3: 접근 허용 (유효한 토큰)
+GET http://localhost:8000/coupons/check/789
+X-Request-ID: test-valid-token
+# 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjExMjMyNzB9.cGGzmHDbslRTIgbYGw_TgXomTA1QVr9lSAAbW3aK8R2eYvcslfy8fO0J8pBXaIPL
