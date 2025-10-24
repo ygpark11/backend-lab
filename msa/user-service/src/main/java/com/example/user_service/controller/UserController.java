@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -51,10 +52,25 @@ public class UserController {
         return message;
     }
 
+    /**
+     * Gateway 연동 API (수정됨: 인가 로직 추가)
+     * Gateway가 추가해 준 'X-Authenticated-User-ID' 헤더를 신뢰하여,
+     * 경로 변수의 userId와 헤더의 userId가 일치하는지 확인한다.
+     */
     @GetMapping("/{userId}/info")
-    public ResponseEntity<UserDto> getUserInfo(@PathVariable("userId") String userId) {
-        // 실제로는 DB에서 조회해야 하지만, 지금은 테스트용 데이터 반환
-        System.out.println("Gateway로부터 사용자 정보 요청 받음: " + userId);
+    public ResponseEntity<UserDto> getUserInfo(
+            @PathVariable("userId") String userId,
+            @RequestHeader("X-Authenticated-User-ID") String authenticatedUserId // ★★★ 게이트웨이가 보낸 헤더 주입
+    ) {
+        // ★★★ 인가(Authorization) 로직 ★★★
+        if (!userId.equals(authenticatedUserId)) {
+            // 경로의 ID와 인증된 사용자 ID가 다르면 403 Forbidden 에러 반환
+            log.warn("인가 실패: 사용자 {}가 사용자 {}의 정보에 접근 시도.", authenticatedUserId, userId);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "자신의 정보만 조회할 수 있습니다.");
+        }
+
+        // 인가 성공: 기존 로직 수행
+        log.info("Gateway로부터 사용자 정보 요청 받음 (인가 성공): {}", userId);
         UserDto userDto = new UserDto(userId, "Gildong Hong", "gildong@example.com");
         return ResponseEntity.ok(userDto);
     }

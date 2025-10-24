@@ -38,44 +38,51 @@ public class AuthenticationHeaderFilter extends AbstractGatewayFilterFactory<Aut
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
 
-            // 1. Authorization 헤더가 있는지 확인
+            // 1. Authorization 헤더 확인 (기존 로직)
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return onError(exchange, "No Authorization header", HttpStatus.UNAUTHORIZED);
             }
 
-            // 2. 헤더에서 토큰 추출 (Bearer 접두사 제거)
+            // 2. 토큰 추출 (기존 로직)
             String authorizationHeader = Objects.requireNonNull(request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
-            if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            if (!authorizationHeader.startsWith("Bearer ")) {
                 return onError(exchange, "Authorization header is invalid", HttpStatus.UNAUTHORIZED);
             }
-            String jwt = authorizationHeader.substring(7); // "Bearer " 7글자 제거
+            String jwt = authorizationHeader.substring(7);
 
-            // 3. ★★★ JWT 검증 (핵심) ★★★
-            if (!isJwtValid(jwt)) {
+            // 3. JWT 검증 후 'subject' 추출 (★★★ 로직 변경 ★★★)
+            String subject = getSubjectFromJwt(jwt);
+            if (subject == null) {
                 return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
             }
 
-            // 4. 검증 성공: 다음 필터로 진행
-            log.info("JWT validation successful.");
-            return chain.filter(exchange);
+            // 4. ★★★ 새로운 헤더를 추가하여 요청 변조 ★★★
+            ServerHttpRequest newRequest = request.mutate()
+                    .header("X-Authenticated-User-ID", subject) // 신뢰할 수 있는 헤더 추가
+                    .build();
+
+            ServerWebExchange newExchange = exchange.mutate()
+                    .request(newRequest)
+                    .build();
+
+            // 5. 변조된 요청으로 다음 필터 체인 실행
+            log.info("JWT validation successful. User ID: {}", subject);
+            return chain.filter(newExchange);
         };
     }
 
-    // JWT를 파싱하고 서명을 검증하는 메서드
-    private boolean isJwtValid(String jwt) {
+    // JWT를 파싱하고 subject를 반환하는 메서드 (isJwtValid를 대체/수정)
+    private String getSubjectFromJwt(String jwt) {
         try {
-            // Jwts.parser()가 Deprecated 되어 Jwts.parser() 사용
-            // build() 메서드가 Deprecated 되어 verifyWith() 사용
-            Jwts.parser()
-                    .verifyWith(jwtSecretKey) // 1. 비밀키로 서명 검증
+            return Jwts.parser()
+                    .verifyWith(jwtSecretKey)
                     .build()
-                    .parseSignedClaims(jwt); // 2. 토큰 파싱 (실패 시 예외 발생)
-
-            return true; // 검증 성공
-
+                    .parseSignedClaims(jwt)
+                    .getPayload() // Claims 객체 가져오기
+                    .getSubject(); // subject (사용자 ID) 반환
         } catch (Exception e) {
             log.error("JWT validation failed: {}", e.getMessage());
-            return false; // 검증 실패
+            return null; // 검증 실패 시 null 반환
         }
     }
 

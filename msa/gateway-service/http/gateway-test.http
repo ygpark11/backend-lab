@@ -5,8 +5,9 @@ X-Request-ID: abc-123-xyz
 
 ### 테스트 2: 인증 성공 (헤더 포함)
 # X-USER-ID 헤더를 정상적으로 포함시켜 200 OK 응답과 함께 사용자 정보가 오는지 확인합니다.
-GET http://localhost:8000/users/123/info
-X-USER-ID: 123
+GET http://localhost:8000/users/test-user-id/info
+X-Request-ID: my-info-test
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyODg0NzV9.Okk8QkugJ28sDY_JC0jZRwE36-19st2sbLlZVdNQezZWAT2wBW4XvzoOTdKNz1pD
 
 ### 테스트 3: 쿠폰 서비스 호출
 GET http://localhost:8000/coupons/check/123
@@ -31,3 +32,35 @@ GET http://localhost:8000/coupons/check/789
 X-Request-ID: test-valid-token
 # 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
 Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjExMjMyNzB9.cGGzmHDbslRTIgbYGw_TgXomTA1QVr9lSAAbW3aK8R2eYvcslfy8fO0J8pBXaIPL
+
+네, 모든 준비가 완료되었습니다! 🔥
+
+이제 우리의 '디지털 잠금장치'와 '신원 확인 시스템'이 제대로 작동하는지 최종 검증을 할 시간입니다.
+
+최종 테스트: '인증' + '인가' 확인
+IntelliJ의 http 파일이나 Postman 등을 사용하여 다음 시나리오들을 테스트합니다.
+
+1. 로그인하여 '나(test-user-id)'의 JWT 발급받기
+
+먼저, 유효한 JWT를 얻기 위해 user-service의 로그인 API를 호출합니다. (이전 단계와 동일)
+
+HTTP
+
+### JWT 발급 (사용자: test-user-id)
+POST http://localhost:8081/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "1234"
+}
+
+### 내 정보 조회 (성공 예상)
+GET http://localhost:8000/users/test-user-id/info
+X-Request-ID: my-info-test
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyODg0NzV9.Okk8QkugJ28sDY_JC0jZRwE36-19st2sbLlZVdNQezZWAT2wBW4XvzoOTdKNz1pD
+
+### 다른 사람 정보 조회 (실패 예상)
+GET http://localhost:8000/users/another-user-id/info
+X-Request-ID: other-info-test
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyODg0NzV9.Okk8QkugJ28sDY_JC0jZRwE36-19st2sbLlZVdNQezZWAT2wBW4XvzoOTdKNz1pD
