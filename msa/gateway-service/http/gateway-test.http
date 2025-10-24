@@ -64,3 +64,19 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpb
 GET http://localhost:8000/users/another-user-id/info
 X-Request-ID: other-info-test
 Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyODg0NzV9.Okk8QkugJ28sDY_JC0jZRwE36-19st2sbLlZVdNQezZWAT2wBW4XvzoOTdKNz1pD
+
+### Spring Security 테스트 1: 접근 거부 (토큰 없음)
+GET http://localhost:8000/coupons/check/456
+X-Request-ID: test-sec-no-token
+
+### Spring Security 테스트 3: 내 정보 조회 (성공 예상)
+GET http://localhost:8000/users/test-user-id/info
+X-Request-ID: test-sec-my-info
+# 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyOTE3MTd9.TYcJqfIliCTJfDb8qDEEwkbwIL719tNu6RVlwLhEo541s0GoIwI3zU7hX2MuICAO
+
+### Spring Security 테스트 4: 다른 사람 정보 조회 (실패 예상)
+GET http://localhost:8000/users/another-user-id/info
+X-Request-ID: test-sec-other-info
+# 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjEyOTE3MTd9.TYcJqfIliCTJfDb8qDEEwkbwIL719tNu6RVlwLhEo541s0GoIwI3zU7hX2MuICAO

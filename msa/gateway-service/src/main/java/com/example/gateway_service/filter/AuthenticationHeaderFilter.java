@@ -1,5 +1,6 @@
 package com.example.gateway_service.filter;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -50,39 +51,39 @@ public class AuthenticationHeaderFilter extends AbstractGatewayFilterFactory<Aut
             }
             String jwt = authorizationHeader.substring(7);
 
-            // 3. JWT 검증 후 'subject' 추출 (★★★ 로직 변경 ★★★)
-            String subject = getSubjectFromJwt(jwt);
-            if (subject == null) {
+            // JWT 검증 후 클레임(정보 조각) 직접 추출
+            Claims claims = getClaimsFromJwt(jwt);
+            if (claims == null) {
                 return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
             }
+            String subject = claims.getSubject(); // 사용자 ID (subject) 가져오기
 
-            // 4. ★★★ 새로운 헤더를 추가하여 요청 변조 ★★★
-            ServerHttpRequest newRequest = request.mutate()
-                    .header("X-Authenticated-User-ID", subject) // 신뢰할 수 있는 헤더 추가
+            // 인증된 사용자 ID 헤더를 다음 서비스로 전달
+            ServerHttpRequest modifiedRequest = request.mutate()
+                    .header("X-Authenticated-User-ID", subject)
                     .build();
 
-            ServerWebExchange newExchange = exchange.mutate()
-                    .request(newRequest)
+            ServerWebExchange modifiedExchange = exchange.mutate()
+                    .request(modifiedRequest)
                     .build();
 
             // 5. 변조된 요청으로 다음 필터 체인 실행
             log.info("JWT validation successful. User ID: {}", subject);
-            return chain.filter(newExchange);
+            return chain.filter(modifiedExchange);
         };
     }
 
-    // JWT를 파싱하고 subject를 반환하는 메서드 (isJwtValid를 대체/수정)
-    private String getSubjectFromJwt(String jwt) {
+    // 메서드 이름 변경 및 Claims 객체를 직접 반환하도록 수정
+    private Claims getClaimsFromJwt(String jwt) {
         try {
             return Jwts.parser()
                     .verifyWith(jwtSecretKey)
                     .build()
                     .parseSignedClaims(jwt)
-                    .getPayload() // Claims 객체 가져오기
-                    .getSubject(); // subject (사용자 ID) 반환
+                    .getPayload();
         } catch (Exception e) {
             log.error("JWT validation failed: {}", e.getMessage());
-            return null; // 검증 실패 시 null 반환
+            return null;
         }
     }
 

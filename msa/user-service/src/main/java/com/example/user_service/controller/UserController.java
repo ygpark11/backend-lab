@@ -16,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 import java.util.Date;
 
 /**
@@ -60,8 +61,12 @@ public class UserController {
     @GetMapping("/{userId}/info")
     public ResponseEntity<UserDto> getUserInfo(
             @PathVariable("userId") String userId,
-            @RequestHeader("X-Authenticated-User-ID") String authenticatedUserId // ★★★ 게이트웨이가 보낸 헤더 주입
+            //@RequestHeader("X-Authenticated-User-ID") String authenticatedUserId // ★★★ 게이트웨이가 보낸 헤더 주입
+            Principal principal // ★★★ @RequestHeader 대신 Principal 주입
     ) {
+        // ★★★ Spring Security로부터 인증된 사용자 ID 가져오기
+        String authenticatedUserId = principal.getName();
+
         // ★★★ 인가(Authorization) 로직 ★★★
         if (!userId.equals(authenticatedUserId)) {
             // 경로의 ID와 인증된 사용자 ID가 다르면 403 Forbidden 에러 반환
