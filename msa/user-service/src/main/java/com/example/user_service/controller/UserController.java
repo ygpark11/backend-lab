@@ -61,10 +61,10 @@ public class UserController {
     @GetMapping("/{userId}/info")
     public ResponseEntity<UserDto> getUserInfo(
             @PathVariable("userId") String userId,
-            //@RequestHeader("X-Authenticated-User-ID") String authenticatedUserId // ★★★ 게이트웨이가 보낸 헤더 주입
-            @RequestHeader("X-Authenticated-User-ID") String authenticatedUserId
+            Principal principal
     ) {
         // ★★★ Spring Security로부터 인증된 사용자 ID 가져오기
+        String authenticatedUserId = principal.getName();
 
         // ★★★ 인가(Authorization) 로직 ★★★
         if (!userId.equals(authenticatedUserId)) {

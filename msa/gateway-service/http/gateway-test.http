@@ -71,4 +71,4 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpb
 ### 분산 추적 테스트
 GET http://localhost:8000/users/test-user-id/info
 X-Request-ID: trace-test-1
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE1NDQyNTl9.0c7r_tSK2PLvgWa9xCPnXN2LESJ8oq92jf_wwoj8bWD0SobNcTDiEkRSK4o_OoLz
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE1NDg4NzR9.A7ASE-GuCcA5FOOVsB-ax-ioxUj1x25cVHlPkTC4fhFNTw78bVmNAhqXhtadsXcP

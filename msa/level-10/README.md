@@ -50,3 +50,17 @@ management:
 
 ### ### STEP 4: 서비스별 테스트 및 검증
 - `Gateway`를 통해 내부 서비스 API를 호출한 뒤, `http://localhost:9411`에서 요청의 전체 흐름(Trace)이 `gateway-service`부터 시작하여 모든 경유 서비스를 포함하여 시각화되는 것을 확인했다.
+
+## 4. 내부 통신 보안 강화 (임시 설정 복원)
+
+분산 추적 테스트 과정에서, 'user-service'의 Spring Security 설정을 임시로 '.anyRequest().permitAll()'로 변경했었다. Level 10 실습 완료 후, 이 보안 설정을 원래대로 복원하고 게이트웨이에서 전파된 헤더를 안전하게 처리하는 것이 필수적이다.
+
+### STEP 1: 커스텀 인증 필터 생성 (`user-service`)
+- `RequestHeaderAuthenticationFilter`를 구현하여, `X-Authenticated-User-ID` 헤더를 읽고 `UsernamePasswordAuthenticationToken`을 생성하여 `SecurityContextHolder`에 저장하는 로직을 구현했다.
+
+### STEP 2: `SecurityConfig` 수정 (`user-service`)
+- 생성한 `RequestHeaderAuthenticationFilter`를 `addFilterBefore()`를 사용하여 Spring Security 필터 체인에 등록했다.
+- `.authorizeHttpRequests` 설정을 다시 `.anyRequest().authenticated()`로 복원하여 보안을 강화했다.
+
+### STEP 3: `UserController` 복원 (`user-service`)
+- 컨트롤러에서 `@RequestHeader` 대신 `Principal` 객체를 주입받아 인증된 사용자 ID를 안전하게 사용하도록 코드를 복원했다.
