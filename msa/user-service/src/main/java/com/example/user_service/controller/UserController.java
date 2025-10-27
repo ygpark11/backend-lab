@@ -62,10 +62,9 @@ public class UserController {
     public ResponseEntity<UserDto> getUserInfo(
             @PathVariable("userId") String userId,
             //@RequestHeader("X-Authenticated-User-ID") String authenticatedUserId // ★★★ 게이트웨이가 보낸 헤더 주입
-            Principal principal // ★★★ @RequestHeader 대신 Principal 주입
+            @RequestHeader("X-Authenticated-User-ID") String authenticatedUserId
     ) {
         // ★★★ Spring Security로부터 인증된 사용자 ID 가져오기
-        String authenticatedUserId = principal.getName();
 
         // ★★★ 인가(Authorization) 로직 ★★★
         if (!userId.equals(authenticatedUserId)) {
@@ -93,7 +92,6 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody LoginRequestDto loginRequest) {
-
         // (임시) 실제로는 DB에서 사용자 정보를 조회하고 패스워드를 비교해야 함
         // 지금은 "test@example.com" / "1234" 만 허용
         if ("test@example.com".equals(loginRequest.getEmail()) && "1234".equals(loginRequest.getPassword())) {

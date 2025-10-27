@@ -3,10 +3,3 @@ spring:
     name: user-service
   config:
     import: "configserver:http://localhost:8888" # (1)
-
-# \uC790\uB3D9 \uC5C5\uB370\uC774\uD2B8\uC758 \uCC45\uC784 \uC8FC\uCCB4\uB97C config-service\uB85C \uBCC0\uACBD\uD558\uC5EC actuator \uC678\uBD80 \uB178\uCD9C \uC81C\uAC70
-#management:
-#  endpoints:
-#    web:
-#      exposure:
-#        include: refresh, bus-refresh

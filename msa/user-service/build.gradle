@@ -37,6 +37,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation "io.micrometer:micrometer-tracing-bridge-brave"
+    // Zipkin Exporter (Zipkin 서버로 데이터 전송)
+    implementation "io.zipkin.reporter2:zipkin-reporter-brave"
+    implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 	compileOnly 'org.projectlombok:lombok'

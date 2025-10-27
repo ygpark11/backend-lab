@@ -3,5 +3,20 @@ services:
     image: rabbitmq:3-management # (공식 RabbitMQ 이미지)
     container_name: rabbitmq_boot
     ports:
-      - "5672:5672"   # 애플리케이션들이 메시지를 주고받을 때 사용할 메인 포트
-      - "15672:15672" # RabbitMQ 내부에서 무슨 일이 일어나는지 볼 수 있는 웹 대시보드용 포트(관리자 웹 UI용 포트)
+      - "5672:5672"  # AMQP 포트do
+      - "15672:15672" # 관리자 UI 포트
+    networks:
+      - backend-lab-network # 서비스들이 사용할 네트워크
+
+  # --- ★★★ Zipkin 서비스 추가 ★★★ ---
+  zipkin:
+    image: openzipkin/zipkin:latest # 공식 Zipkin 이미지 사용
+    container_name: zipkin
+    ports:
+      - "9411:9411" # Zipkin UI 및 API 포트
+    networks:
+      - backend-lab-network # 같은 네트워크에 연결
+
+networks:
+  backend-lab-network:
+    driver: bridge

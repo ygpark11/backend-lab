@@ -34,6 +34,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-config'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation "io.micrometer:micrometer-tracing-bridge-brave"
+    // Zipkin Exporter (Zipkin 서버로 데이터 전송)
+    implementation "io.zipkin.reporter2:zipkin-reporter-brave"
+    implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
