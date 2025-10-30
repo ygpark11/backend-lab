@@ -1,0 +1,3 @@
+### 게이트웨이 우회 테스트
+POST http://localhost:8083/user/test-user-id/product/Book123
+X-Authenticated-User-ID: test-user-id

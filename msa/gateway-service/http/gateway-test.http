@@ -71,4 +71,11 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpb
 ### 분산 추적 테스트
 GET http://localhost:8000/users/test-user-id/info
 X-Request-ID: trace-test-1
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE1NDg4NzR9.A7ASE-GuCcA5FOOVsB-ax-ioxUj1x25cVHlPkTC4fhFNTw78bVmNAhqXhtadsXcP
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE3NDk0MDF9.FsAgxz9XtgdCV7Fg2oKve85OxGSqKckwK59siF1ShDd0b0eITRL9431SygDbmhhu
+
+### 최종 테스트: Order Service 호출 (user-service 호출 포함)
+POST http://localhost:8000/orders/user/test-user-id/product/Book123
+X-Request-ID: order-test-1
+# 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE3ODQwNjR9.j0dINV_AZuEqFhjXh19FoLU6AYh3CGeYcsneg8WNCCZQL_1nBlibpfWaniU_q2tP
+
