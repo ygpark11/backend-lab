@@ -1,4 +1,4 @@
-# Level 1: API Gateway, 서비스 디스커버리 & 중앙 설정 관리
+# MSA Level 1: API Gateway, 서비스 디스커버리 & 중앙 설정 관리
 
 ## 📝 학습 목표
 

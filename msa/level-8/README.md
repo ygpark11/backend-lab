@@ -1,4 +1,4 @@
-# Level 8 - 인증 정보 전파 및 인가 기초
+# MSA Level 8 - 인증 정보 전파 및 인가 기초
 
 ## 학습 목표
 API Gateway에서 JWT를 통해 '인증(Authentication)'된 사용자의 신원 정보를 내부 마이크로서비스로 안전하게 **전파(Propagate)**하고, 이를 기반으로 기초적인 **'인가(Authorization)'** 로직을 구현한다.

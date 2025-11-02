@@ -1,4 +1,4 @@
-# Level 7 - 인증 및 인가 (JWT on Gateway)
+# MSA Level 7 - 인증 및 인가 (JWT on Gateway)
 
 ## 학습 목표
 MSA 환경의 '정문'인 API Gateway에 **상태 없는(Stateless) 인증 방식인 JWT(JSON Web Token)**를 도입한다.

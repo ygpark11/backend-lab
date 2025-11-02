@@ -1,4 +1,4 @@
-# Level 6 - API Gateway 심화 (라우팅 및 전역 필터)
+# MSA Level 6 - API Gateway 심화 (라우팅 및 전역 필터)
 
 ## 학습 목표
 MSA의 '정문'인 API Gateway(`gateway-service`)를 고도화한다.

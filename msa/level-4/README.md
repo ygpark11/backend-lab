@@ -1,4 +1,4 @@
-# Level 4 - 장애 복원력과 서킷 브레이커
+# MSA Level 4 - 장애 복원력과 서킷 브레이커
 
 ## 학습 목표
 MSA 환경에서 하나의 서비스 장애가 시스템 전체로 전파되는 '장애 전파(Cascading Failures)' 현상을 이해하고, 이를 방지하기 위한 **서킷 브레이커(Circuit Breaker)** 패턴을 **Resilience4j**를 사용하여 API Gateway에 구현한다.

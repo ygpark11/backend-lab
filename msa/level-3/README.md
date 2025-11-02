@@ -1,4 +1,4 @@
-# Level 3: 서비스 간 통신
+# MSA Level 3: 서비스 간 통신
 
 ## 학습 목표
 MSA 환경의 단일 진입점(Entry Point)인 API Gateway에서 내부 마이크로서비스(`user-service`)를 호출하는 두 가지 방식, **OpenFeign**과 **HTTP Interface Client**를 구현하고 비교하며, 그 과정에서 마주치는 실무적인 문제들을 해결하여 기술의 내부 동작 원리를 깊이 있게 이해한다.

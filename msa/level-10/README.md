@@ -1,4 +1,4 @@
-Level 10 - 분산 추적 (Distributed Tracing)
+# MSA Level 10 - 분산 추적 (Distributed Tracing)
 
 ## 학습 목표
 MSA 환경에서 단일 요청이 여러 마이크로서비스를 거쳐 처리될 때, 전체 **요청의 흐름을 추적하고 병목 지점을 시각화**하는 **분산 추적(Distributed Tracing)** 시스템을 구축한다. Spring Boot 3.x 환경의 표준인 **Micrometer Tracing**과 **Zipkin**을 사용한다.

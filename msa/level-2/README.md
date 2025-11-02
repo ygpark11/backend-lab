@@ -1,4 +1,4 @@
-# Level 2: 설정 완전 자동화 (Spring Cloud Bus & Webhook)
+# MSA Level 2: 설정 완전 자동화 (Spring Cloud Bus & Webhook)
 
 ## 📝 학습 목표
 

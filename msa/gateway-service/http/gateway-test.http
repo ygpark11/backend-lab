@@ -77,5 +77,5 @@ Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpb
 POST http://localhost:8000/orders/user/test-user-id/product/Book123
 X-Request-ID: order-test-1
 # 아래 YOUR_JWT_TOKEN_HERE 부분을 실제 복사한 토큰으로 교체하세요
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjE3ODQwNjR9.j0dINV_AZuEqFhjXh19FoLU6AYh3CGeYcsneg8WNCCZQL_1nBlibpfWaniU_q2tP
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJ0ZXN0LXVzZXItaWQiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJleHAiOjE3NjIwMTI1Nzl9.jMaJ-tiOgxa2YYUwGNlGs2cfIHn2stA-XXcCK_CPHP-qLd9_UH0aJAGDtNC0sKiv
 

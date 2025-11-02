@@ -1,4 +1,4 @@
-# 백엔드 마스터 클래스: MSA Level 11 - 효율적인 함대 통신 (HTTP Interface Client)
+MSA Level 11 - 효율적인 함대 통신 (HTTP Interface Client)
 
 ## 학습 목표
 MSA 환경에서 서비스 간 **동기(Synchronous) 직접 호출**이 필요한 경우, `RestTemplate`보다 우수하고 논블로킹 I/O를 활용하는 **HTTP Interface Client (`WebClient` 기반)** 패턴을 적용한다. 또한, 서비스 간 호출 시 **인증 정보(JWT/사용자 ID)를 안전하게 전파**하는 방법을 구현하고 관련 문제를 해결한다.

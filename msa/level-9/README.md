@@ -1,4 +1,4 @@
-# Level 9 - Spring Security 통합
+# MSA Level 9 - Spring Security 통합
 
 ## 학습 목표
 이전 Level 8에서 구현한 기초적인 인증 정보 전파 및 인가 방식을 스프링 생태계의 표준 보안 프레임워크인 **Spring Security**와 통합한다. 이를 통해 MSA 환경에서 보다 안전하고 표준적이며 확장 가능한 인증/인가 체계를 구축한다.

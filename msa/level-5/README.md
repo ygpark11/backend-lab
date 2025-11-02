@@ -1,4 +1,4 @@
-# Level 5 - 비동기 통신과 메시지 큐 (RabbitMQ)
+# MSA Level 5 - 비동기 통신과 메시지 큐 (RabbitMQ)
 
 ## 학습 목표
 MSA 환경에서 서비스 간의 강한 결합(Strong Coupling) 문제를 해결하기 위해, 메시지 큐(MQ)를 이용한 **비동기(Asynchronous) 통신** 방식을 이해하고 구현한다. RabbitMQ를 사용하여 '발신자(Producer)'와 '수신자(Consumer)'를 완벽하게 분리하는 **'느슨한 결합(Loose Coupling)'** 아키텍처를 완성한다.
