@@ -29,14 +29,18 @@ ext {
 }
 
 dependencies {
+    // Actuator (Micrometer Tracing의 기본)
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.cloud:spring-cloud-starter-config'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    // Micrometer Tracing이라는 '표준 API'와 Brave라는 '실제 구현체'를 연결
+    // Trace ID와 Span ID를 생성하고 전파하는 모든 핵심 작업은 이 라이브러리가 담당
     implementation "io.micrometer:micrometer-tracing-bridge-brave"
-    // Zipkin Exporter (Zipkin 서버로 데이터 전송)
+    // Brave(엔진)가 수집한 추적 정보(Span)를 Zipkin 서버가 이해할 수 있는 형식으로 '번역'하고 '보고서' 작성
     implementation "io.zipkin.reporter2:zipkin-reporter-brave"
+    // reporter가 만든 '보고서'를 **실제로 Zipkin 서버에 HTTP(URL)로 '전송
     implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'

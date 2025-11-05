@@ -1,0 +1,71 @@
+services:
+  # 1. Elasticsearch (중앙 서고)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3 # (1) 공식 이미지
+    container_name: msa-elasticsearch
+    environment:
+      # (2) 개발용: 싱글 노드 모드로 실행 (클러스터X), 보안 기능 비활성화
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      # (3) JVM 힙 메모리 설정 (로컬 환경을 위해 낮게 설정)
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      # (4) 데이터를 로컬에 저장하여 컨테이너가 삭제되어도 보존
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200" # Elasticsearch API 포트
+      - "9300:9300"
+    networks:
+      - elk-net # (5) ELK 전용 내부 네트워크
+
+  # 2. Kibana (중앙 통제실 모니터)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    container_name: msa-kibana
+    environment:
+      # (6) 연결할 Elasticsearch 주소 (내부 네트워크 이름 사용)
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601" # Kibana 웹 UI 포트
+    depends_on:
+      - elasticsearch # (7) Elasticsearch가 먼저 실행된 후 실행
+    networks:
+      - elk-net
+
+  # 3. Logstash (정보 수집관)
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.3
+    container_name: msa-logstash
+    environment:
+      # (8) JVM 힙 메모리 설정 (로컬 환경)
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+    ports:
+      # (9) 나중에 Filebeat 등 다른 수집기가 데이터를 보낼 포트
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    volumes:
+      # (10) ★★★가장 중요★★★
+      # Logstash가 어떻게 동작할지 정의하는 설정 파일을 연결
+      - ./elk-config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      # (11) ★★★우리 서비스의 로그 파일을 읽을 경로 연결★★★
+      # 호스트(PC)의 /var/log/msa-logs/ 폴더를
+      # Logstash 컨테이너의 /var/log/msa-logs/ 폴더로 연결
+      # WSL 2에서 Windows의 C 드라이브 경로(/mnt/c/...)를 마운트합니다.
+      #- /var/log/msa-logs:/var/log/msa-logs
+      - /mnt/c/var/log/msa-logs:/var/log/msa-logs
+    depends_on:
+      - elasticsearch
+    networks:
+      - elk-net
+
+# (12) 데이터 영속성을 위한 Docker 볼륨 정의
+volumes:
+  esdata:
+    driver: local
+
+# (13) 컨테이너 간 통신을 위한 네트워크 정의
+networks:
+  elk-net:
+    driver: bridge

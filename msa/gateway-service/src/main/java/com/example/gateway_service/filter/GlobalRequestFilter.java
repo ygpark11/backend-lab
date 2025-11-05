@@ -41,6 +41,10 @@ public class GlobalRequestFilter implements GlobalFilter, Ordered {
      */
     @Override
     public int getOrder() {
-        return -1; // 0보다 낮은 값을 주어 다른 기본 필터들보다 먼저 실행되도록 함
+        // return -1; // (X) Spring의 기본 필터들보다 먼저 실행되어 Tracing을 방해
+
+        // (O) Spring의 Tracing 필터(-1), 인증 필터(0) 등이
+        //     모두 실행된 후, '늦게' 실행되도록 순서를 양보합니다.
+        return 10;
     }
 }

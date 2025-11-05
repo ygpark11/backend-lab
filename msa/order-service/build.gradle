@@ -32,14 +32,28 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	implementation 'org.springframework.cloud:spring-cloud-starter-config'
-	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
-    implementation 'io.github.resilience4j:resilience4j-reactor'
+
+    // Spring Cloud
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+
+    // Micrometer Tracing (표준 API + Brave 연결)
+    implementation 'io.micrometer:micrometer-tracing'
+    implementation "io.micrometer:micrometer-tracing-bridge-brave"
+    implementation "io.zipkin.reporter2:zipkin-reporter-brave"
+    implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
+
+    // Reactor 비동기 컨텍스트 전파 (Trace ID 유실 방지)
+    implementation 'io.micrometer:context-propagation'
+    implementation 'io.projectreactor:reactor-core-micrometer'
+
+    // implementation 'io.github.resilience4j:resilience4j-reactor'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'io.projectreactor:reactor-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
