@@ -39,19 +39,17 @@ public class AuthenticationHeaderFilter extends AbstractGatewayFilterFactory<Aut
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
 
-            // 1. Authorization 헤더 확인 (기존 로직)
+            // 1. Authorization 헤더 확인
             if (!request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
                 return onError(exchange, "No Authorization header", HttpStatus.UNAUTHORIZED);
             }
 
-            // 2. 토큰 추출 (기존 로직)
+            // 2. 토큰 추출
             String authorizationHeader = Objects.requireNonNull(request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION));
             if (!authorizationHeader.startsWith("Bearer ")) {
                 return onError(exchange, "Authorization header is invalid", HttpStatus.UNAUTHORIZED);
             }
             String jwt = authorizationHeader.substring(7);
-
-            // JWT 검증 후 클레임(정보 조각) 직접 추출
             Claims claims = getClaimsFromJwt(jwt);
             if (claims == null) {
                 return onError(exchange, "JWT token is not valid", HttpStatus.UNAUTHORIZED);
@@ -68,7 +66,7 @@ public class AuthenticationHeaderFilter extends AbstractGatewayFilterFactory<Aut
                     .build();
 
             // 5. 변조된 요청으로 다음 필터 체인 실행
-            log.info("JWT validation successful. User ID: {}", subject);
+            log.info("✅ [AuthFilter] JWT validation successful. User ID: {}", subject);
             return chain.filter(modifiedExchange);
         };
     }
@@ -89,7 +87,7 @@ public class AuthenticationHeaderFilter extends AbstractGatewayFilterFactory<Aut
 
     // 에러 발생 시 공통 응답 처리
     private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
-        log.error(err);
+        log.warn("[AuthFilter] {}", err);
         exchange.getResponse().setStatusCode(httpStatus);
         return exchange.getResponse().setComplete();
     }

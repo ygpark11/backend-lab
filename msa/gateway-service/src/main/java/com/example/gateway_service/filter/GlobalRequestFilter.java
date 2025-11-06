@@ -20,8 +20,7 @@ public class GlobalRequestFilter implements GlobalFilter, Ordered {
 
         // 1. "X-Request-ID" 헤더가 있는지 검사합니다.
         if (!request.getHeaders().containsKey("X-Request-ID")) {
-            log.error("Global Filter: X-Request-ID header is missing!");
-
+            log.error("[GlobalFilter] ❌ X-Request-ID header is missing!");
             // 2. 헤더가 없으면 요청을 즉시 차단합니다.
             exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
             return exchange.getResponse().setComplete(); // Mono<Void> 반환
@@ -29,7 +28,8 @@ public class GlobalRequestFilter implements GlobalFilter, Ordered {
 
         // 3. 헤더가 있다면, 요청을 계속 진행시킵니다.
         String requestId = request.getHeaders().getFirst("X-Request-ID");
-        log.info("Global Filter: X-Request-ID = {}", requestId);
+        log.info("[GlobalFilter] ▶ Incoming request: {} {}", request.getMethod(), request.getURI());
+        log.info("[GlobalFilter] X-Request-ID = {}", requestId);
 
         return chain.filter(exchange);
     }
@@ -42,9 +42,7 @@ public class GlobalRequestFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         // return -1; // (X) Spring의 기본 필터들보다 먼저 실행되어 Tracing을 방해
-
-        // (O) Spring의 Tracing 필터(-1), 인증 필터(0) 등이
-        //     모두 실행된 후, '늦게' 실행되도록 순서를 양보합니다.
+        // TracingWebFilter(-1), SecurityFilter(0) 이후 실행되도록 설정
         return 10;
     }
 }

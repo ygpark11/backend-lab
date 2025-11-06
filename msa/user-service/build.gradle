@@ -29,24 +29,31 @@ ext {
 }
 
 dependencies {
+    // 1. Core Spring Boot (Servlet 기반)
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-amqp'
-	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // 2. Spring Cloud (Config, Eureka, Bus)
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.cloud:spring-cloud-starter-bus-amqp'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // 3. JWT (Security Filter용)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
-    // Micrometer Tracing이라는 '표준 API'와 Brave라는 '실제 구현체'를 연결
-    // Trace ID와 Span ID를 생성하고 전파하는 모든 핵심 작업은 이 라이브러리가 담당
-    implementation "io.micrometer:micrometer-tracing-bridge-brave"
-    // Brave(엔진)가 수집한 추적 정보(Span)를 Zipkin 서버가 이해할 수 있는 형식으로 '번역'하고 '보고서' 작성
-    implementation "io.zipkin.reporter2:zipkin-reporter-brave"
-    // reporter가 만든 '보고서'를 **실제로 Zipkin 서버에 HTTP(URL)로 '전송
-    implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'io.projectreactor:reactor-core-micrometer'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+    // 4. Micrometer Tracing (Brave + Zipkin)
+    implementation 'io.micrometer:micrometer-tracing'
+    implementation "io.micrometer:micrometer-tracing-bridge-brave"
+    implementation "io.zipkin.reporter2:zipkin-reporter-brave"
+    implementation "io.zipkin.reporter2:zipkin-sender-urlconnection"
+
+    // 5. Context Propagation (Trace ID 유실 방지 - 표준)
+    implementation 'io.micrometer:context-propagation'
+
+    implementation 'io.projectreactor:reactor-core-micrometer'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
