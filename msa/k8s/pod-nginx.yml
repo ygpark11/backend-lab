@@ -1,0 +1,15 @@
+# pod-nginx.yml
+# K8s의 가장 기본 단위인 'Pod'를 선언형으로 정의합니다.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-pod-declarative  # Pod의 고유한 이름
+  labels:
+    app: nginx                # 'app=nginx'라는 '꼬리표'를 붙입니다. (나중에 관리용)
+spec:
+  containers:
+  - name: nginx-container     # Pod 안에서 실행될 컨테이너의 이름
+    image: nginx:latest       # 사용할 도커 이미지
+    ports:
+    - containerPort: 80       # 이 컨테이너는 80번 포트를 사용합니다.

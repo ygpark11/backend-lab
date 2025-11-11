@@ -1,0 +1,24 @@
+# deployment-nginx.yml
+# '자가 치유'와 '확장'을 담당하는 'Deployment'를 정의합니다.
+
+apiVersion: apps/v1  # (Pod와 다름! 'apps' API 그룹을 사용)
+kind: Deployment     # (우리의 목표! 'Deployment')
+metadata:
+  name: nginx-deployment  # Deployment 관리자의 이름
+spec:
+  replicas: 1             # (★핵심 1★) 이 Pod를 '1개' 유지하도록 관리하라!
+
+  selector:                 # (이 Deployment가 관리할 Pod를 찾는 '꼬리표')
+    matchLabels:
+      app: nginx-app
+
+  template:                 # (★핵심 2★) 이것이 'Pod의 설계도'입니다.
+    metadata:
+      labels:               # (이 '꼬리표'를 Pod에 붙여라)
+        app: nginx-app
+    spec:
+      containers:
+      - name: nginx-container
+        image: nginx:latest
+        ports:
+        - containerPort: 80
