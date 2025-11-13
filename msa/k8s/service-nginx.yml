@@ -1,0 +1,17 @@
+# k8s/service-nginx.yml
+# K8s 항구 내부에 '고정된 이름'과 '내부 IP'를 부여하는 'Service'를 정의합니다.
+
+apiVersion: v1
+kind: Service        # (★) 3대 핵심 개념: Service
+metadata:
+  name: nginx-service  # (★) 이 '서비스'의 고유한 이름 (e.g., http://nginx-service)
+spec:
+  type: ClusterIP    # (★) 유형: ClusterIP (항구 내부용, K8s 클러스터 내부에서만 접근 가능)
+
+  selector:            # (★) '어떤 Pod'들에게 연결할지 찾는 '꼬리표'
+    app: nginx-app   # (필수!) deployment-nginx.yml의 'labels.app' 값과 일치해야 함
+
+  ports:
+  - protocol: TCP
+    port: 80         # (★) 이 '서비스(nginx-service)'가 '80'번 포트로 전화를 받음
+    targetPort: 80   # (★) 전화를 'Pod'의 '80'번 포트로 연결함

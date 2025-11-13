@@ -124,3 +124,85 @@ kubectl delete deployment [Deployment이름]
 # [모니터링] 1초마다 실시간으로 상황실 모니터링
 watch kubectl get pods
 ```
+
+---
+
+## 🌊 Level 14-C (Part 1): '항구의 내부 교환원' (Service - ClusterIP)
+
+Level 14-B에서 `Deployment`를 통해 '자가 치유'되는 함대(Pod)를 만들었다.
+하지만 '총사령관'이 `Pod`를 '자가 치유'시킬 때마다 `Pod`의 IP 주소가 계속 바뀌는 '유령 함대' 문제가 발생했다. 이래서는 `api-gateway` 같은 다른 서비스가 `nginx`를 안정적으로 찾아갈 수 없다.
+
+이 '내부 통신' 문제를 해결하기 위해, K8s 3대 핵심 개념의 마지막 퍼즐인 **`Service`**를 도입한다.
+
+### 1. '왜?' (Service가 필요한 이유)
+
+`Service`는 K8s 항구 내부에 설치하는 **'내부 교환원'**이다.
+
+- **문제점:** `Deployment`가 `Pod`를 복구(재생성)할 때마다, `Pod`는 **'임시 IP'** (예: `172.17.0.5`)를 새로 할당받는다. 이 IP는 신뢰할 수 없다.
+- **해결책:** `Service`는 `Pod`들 앞에 **'고정된 대표 IP'** (예: `10.109.57.21`)와 **'고정된 DNS 이름'** (예: `nginx-service`)을 제공한다.
+- **동작:** K8s 내의 다른 서비스(`api-gateway`)는 `Pod`의 '임시 IP'를 몰라도, 이 '교환원'의 '대표 IP/이름'으로만 요청을 보내면 된다. `Service`가 알아서 현재 살아있는 `Pod`에게 요청을 '연결'(프록시/로드 밸런싱)해준다.
+
+### 2. '무엇을?' (Service 'ClusterIP' 실습)
+
+항구 '내부용'으로만 작동하는 가장 기본 타입인 `ClusterIP` '교환원'을 설치했다.
+
+**[k8s/service-nginx.yml]**
+```yaml
+# k8s/service-nginx.yml
+# K8s 항구 내부에 '고정된 이름'과 '내부 IP'를 부여하는 'Service'를 정의합니다.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service  # (★) 이 '서비스'의 고유한 이름 (e.g., http://nginx-service)
+spec:
+  type: ClusterIP    # (★) 유형: ClusterIP (항구 내부용)
+
+  selector:            # (★) '어떤 Pod'들에게 연결할지 찾는 '꼬리표'
+    app: nginx-app   # (필수!) deployment-nginx.yml의 'labels.app' 값과 일치해야 함
+
+  ports:
+  - protocol: TCP
+    port: 80         # (★) 이 '서비스(nginx-service)'가 '80'번 포트로 전화를 받음
+    targetPort: 80   # (★) 전화를 'Pod'의 '80'번 포트로 연결함
+```
+
+- 실행: `kubectl apply -f service-nginx.yml`
+
+- 검증: `kubectl get service` (또는 `kubectl get svc`)
+
+- 결과: `nginx-service`가 `CLUSTER-IP` (예: `10.109.57.21`)를 할당받은 것을 확인했다.
+
+- 돌발상황: `minikube`가 꺼져있어서 `connection refused` 오류 발생. `minikube start --driver=docker --force`로 '사령부'를 재시작하여 해결함.
+
+### '핵심 Q&A' (덜컥거림 없는 이해)
+
+Q: 'Pod'가 '고정 IP'를 할당받는 것인가?
+
+A: 아니다! (가장 중요)
+
+- `Pod`는 '자가 치유'될 때마다 '계속 다른 임시 IP' (예: `172.17.0.5`)를 받는다. (`kubectl get pods -o wide`로 확인 가능)
+
+- 'Service' (교환원)가 '영원히 바뀌지 않는 고정 IP' (예: `10.109.57.21`)를 받는다.
+
+- 'Service'는 이 '고정 IP'로 요청을 받아서, '임시 IP'를 가진 `Pod`에게 '대신 연결'(프록시)해주는 것이다.
+
+Q: 'Service'는 '유레카 서버'와 같은 것인가?
+
+A: 95% 맞다. (훌륭한 비유!) '같은 문제'(서비스 디스커버리)를 해결하지만, '방식'이 다르다.
+
+- 유레카 (Level 13): '전화번호부'.
+
+  - `api-gateway`가 유레카에게 "nginx IP 줘"라고 '묻는다'.
+
+  - 유레카는 "저기 `172.17.0.5`야"라고 '알려준다'.
+
+  - `api-gateway`가 직접 `172.17.0.5`로 전화한다.
+
+- K8s Service (Level 14): '교환원'.
+
+  - `api-gateway`가 Service의 '대표번호'(`10.109.57.21`)로 "nginx 연결해줘"라고 '요청한다'.
+
+  - `Service`가 "알겠다"고 한 뒤, 자신이 대신 `172.17.0.5`로 전화를 '연결해준다'(프록시).
+
+  - `api-gateway`는 `nginx`의 실제 '임시 IP'를 전혀 몰라도 된다.
