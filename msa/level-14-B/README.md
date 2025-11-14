@@ -175,7 +175,7 @@ spec:
 
 - 돌발상황: `minikube`가 꺼져있어서 `connection refused` 오류 발생. `minikube start --driver=docker --force`로 '사령부'를 재시작하여 해결함.
 
-### '핵심 Q&A' (덜컥거림 없는 이해)
+### 3. '핵심 Q&A' (덜컥거림 없는 이해)
 
 Q: 'Pod'가 '고정 IP'를 할당받는 것인가?
 
@@ -206,3 +206,54 @@ A: 95% 맞다. (훌륭한 비유!) '같은 문제'(서비스 디스커버리)를
   - `Service`가 "알겠다"고 한 뒤, 자신이 대신 `172.17.0.5`로 전화를 '연결해준다'(프록시).
 
   - `api-gateway`는 `nginx`의 실제 '임시 IP'를 전혀 몰라도 된다.
+
+### 4. '항구의 관문' 개방 (Service - NodePort)
+
+`ClusterIP`는 '내부 통신' 문제는 해결했지만, '외부 세계'(내 PC의 WSL 터미널)에서는 여전히 '고립된 항구'에 접속할 수 없는 문제가 남았다.
+
+'항구의 관문'을 열기 위해 `Service`의 타입을 `NodePort`로 '업그레이드'했다.
+
+- **`NodePort`란?** `ClusterIP`의 모든 기능(내부 교환원)을 '포함'하면서, '항구의 벽'(Node)에 '외부 관문'(랜덤 포트, 30000~32767)을 추가로 개방하는 타입.
+
+**[k8s/service-nginx.yml (최종 수정본)]**
+```yaml
+# k8s/service-nginx.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  type: NodePort    # (★) 'ClusterIP'에서 'NodePort'로 수정 (승격)
+  selector:
+    app: nginx-app
+  ports:
+  - protocol: TCP
+    port: 80         # (내부 교환원 포트)
+    targetPort: 80   # (Pod 포트)
+    # 'nodePort: 31795' (← 이 부분은 K8s가 자동으로 할당/기록함)
+```
+
+### 5. '항구의 관문' 개방 (Service - NodePort)
+
+`NodePort`를 통해 '항구 밖'에서 `nginx`에 접속하는 것을 최종 확인했다.
+
+1. 설계도 수정 적용: `kubectl apply -f service-nginx.yml`
+
+   - `service "nginx-service" configured` 메시지 확인.
+
+2. '관문' 포트 확인: `kubectl get svc nginx-service`
+
+   - `TYPE`이 `NodePort`로 변경됨.
+
+   - `PORT(S)`가 `80:31795/TCP` (예시)처럼, '내부 포트(80)'와 '외부 관문 포트(31795)'가 매핑된 것을 확인.
+
+3. '항구 주소'(Node IP) 확인: `minikube ip`
+
+   - `192.168.49.2` (예시)와 같은 '항구'의 IP를 확인.
+
+4. '외부'에서 '관문'으로 접속 (최종 성공): `curl http://[minikube-ip]:[nodeport]`
+
+   - `curl http://192.168.49.2:31795` (예시)
+
+   - `Welcome to nginx!` HTML이 터미널에 성공적으로 출력됨.
+

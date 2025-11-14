@@ -6,7 +6,7 @@ kind: Service        # (★) 3대 핵심 개념: Service
 metadata:
   name: nginx-service  # (★) 이 '서비스'의 고유한 이름 (e.g., http://nginx-service)
 spec:
-  type: ClusterIP    # (★) 유형: ClusterIP (항구 내부용, K8s 클러스터 내부에서만 접근 가능)
+  type: NodePort    # (★) ClusterIP에서 `NodePort`로 수정
 
   selector:            # (★) '어떤 Pod'들에게 연결할지 찾는 '꼬리표'
     app: nginx-app   # (필수!) deployment-nginx.yml의 'labels.app' 값과 일치해야 함
