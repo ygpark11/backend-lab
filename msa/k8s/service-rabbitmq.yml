@@ -1,0 +1,19 @@
+# k8s/service-rabbitmq.yml
+# '연료 공급소'의 '내부 교환원'
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service # (★) 'config-service'가 이 이름으로 찾아옵니다.
+spec:
+  type: ClusterIP      # (★) '항구 내부용'. 외부 노출 불필요.
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    protocol: TCP
+    port: 5672
+    targetPort: 5672
+  - name: management-ui
+    protocol: TCP
+    port: 15672
+    targetPort: 15672

@@ -257,3 +257,111 @@ spec:
 
    - `Welcome to nginx!` HTML이 터미널에 성공적으로 출력됨.
 
+---
+
+## 🌊 Level 14-D: '7척의 MSA 함대' K8s 진수 (최종 보스)
+
+Level 14-C까지 배운 '연습용 함선'(`nginx`)을 넘어, 우리가 직접 건조한 '7척의 MSA 함대'를 K8s에 배포하는 대장정이다.
+
+이 과정에서 '두 개의 거대한 장벽'을 만났다.
+1.  **장벽 1: 이미지 인식 (ImagePullBackOff):** `minikube`는 '별도의 Docker Daemon'을 사용하므로, `eval $(minikube -p minikube docker-env)`로 '조선소'를 맞춰야 한다.
+2.  **장벽 2: 서비스 디스커버리 (네트워킹):** `docker-compose`의 이름(`config-server`)이 아닌, K8s `Service`의 이름(`config-service`)을 사용하도록 '설정'을 변경해야 한다.
+
+### 1. (Part 1) '선결 과제': '생명 유지 장치' 구축
+
+'선봉함'인 `config-service`는 `RabbitMQ`와 `Zipkin`에 의존성이 있다. 따라서 `config-service`보다 '인프라' 2척을 K8s에 먼저 배포했다.
+
+- '공식 이미지'(Docker Hub)를 사용했으므로, '장벽 1'(이미지 빌드)은 해당되지 않았다.
+
+**[k8s/deployment-rabbitmq.yml]**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+```
+
+**[k8s/service-rabbitmq.yml] (`ClusterIP`, 내부용)**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service # (★) config-service가 이 '이름'으로 찾아옴
+spec:
+  type: ClusterIP
+  selector:
+    app: rabbitmq
+  ports:
+  - name: amqp
+    port: 5672
+    targetPort: 5672
+  - name: management-ui
+    port: 15672
+    targetPort: 15672
+```
+
+**[k8s/deployment-zipkin.yml]**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zipkin-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zipkin
+  template:
+    metadata:
+      labels:
+        app: zipkin
+    spec:
+      containers:
+        - name: zipkin
+          image: openzipkin/zipkin
+          ports:
+            - containerPort: 9411
+```
+**[k8s/service-zipkin.yml] (`NodePort`, 외부 UI 확인용)**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin-service # (★) 모든 서비스가 이 '이름'으로 추적 정보를 보냄
+spec:
+  type: NodePort
+  selector:
+    app: zipkin
+  ports:
+  - protocol: TCP
+    port: 9411
+    targetPort: 9411
+    # nodePort: 32708 (K8s 자동 할당 예시)
+```
+
+### 2. '돌발 상황': '윈도우-WSL 장벽' (ERR_CONNECTION_TIMED_OUT)
+`minikube ip`로 확인한 '항구 주소'(`192.168.49.2`)는 'WSL(섬) 내부용' 주소이다. '윈도우(대륙)'의 '웹 브라우저'에서 이 주소로 직접 접속할 수 없다.
+
+- 해결책: '총사령관'의 '마법의 주문'(minikube service)을 사용했다.
+
+- 명령: minikube service zipkin-service
+
+- 결과: '총사령관'이 '임시 뱃길(터널)'을 뚫고, '윈도우'의 '웹 브라우저'를 '자동으로' 실행하여 Zipkin UI 접속에 성공했다.
+
+- (학습 완료) rabbitmq-deployment와 zipkin-deployment가 Running 상태임을 kubectl get pods로 확인.

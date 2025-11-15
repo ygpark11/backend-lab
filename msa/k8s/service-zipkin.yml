@@ -1,0 +1,15 @@
+# k8s/service-zipkin.yml
+# '관제탑'의 '내부 교환원' 및 '외부 관문'
+apiVersion: v1
+kind: Service
+metadata:
+  name: zipkin-service # (★) 모든 서비스가 이 이름으로 '추적 정보'를 보냅니다.
+spec:
+  type: NodePort      # (★) '관문'을 열어서 우리가 UI를 확인해야 함
+  selector:
+    app: zipkin
+  ports:
+  - protocol: TCP
+    port: 9411
+    targetPort: 9411
+    # K8s가 30000~ 대역의 'nodePort'를 자동 할당합니다.

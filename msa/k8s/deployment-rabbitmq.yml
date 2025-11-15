@@ -1,0 +1,22 @@
+# k8s/deployment-rabbitmq.yml
+# '연료 공급소' (RabbitMQ) - '공식 이미지' 사용
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3-management # (★) Docker Hub 공식 이미지
+        ports:
+        - containerPort: 5672  # (Spring Cloud Bus 통신 포트)
+        - containerPort: 15672 # (관리자 웹 UI 포트)
