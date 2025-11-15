@@ -53,3 +53,8 @@ dependencyManagement {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+// 'bootJar' (Fat Jar)만 만들고, 'plain.jar' (Thin Jar)는 만들지 않도록 설정
+jar {
+    enabled = false
+}
