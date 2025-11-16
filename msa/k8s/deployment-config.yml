@@ -1,0 +1,23 @@
+# k8s/deployment-config.yml
+# '선봉함' config-service를 '관리'할 Deployment
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: config-service-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: config-service
+  template:
+    metadata:
+      labels:
+        app: config-service
+    spec:
+      containers:
+        - name: config-service
+          image: config-service:1.0  # (★) '인천'에 빌드한 그 이미지
+          imagePullPolicy: Never     # (★) "DockerHub에서 찾지 말고, '인천' 로컬 이미지를 써라!"
+          ports:
+            - containerPort: 8888

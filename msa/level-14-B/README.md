@@ -365,3 +365,29 @@ spec:
 - 결과: '총사령관'이 '임시 뱃길(터널)'을 뚫고, '윈도우'의 '웹 브라우저'를 '자동으로' 실행하여 Zipkin UI 접속에 성공했다.
 
 - (학습 완료) rabbitmq-deployment와 zipkin-deployment가 Running 상태임을 kubectl get pods로 확인.
+
+### 3. (Part 2) '선봉함' 진수 (Config Service)
+
+'인프라'가 준비되고, '장벽 2'(서비스 디스커버리)를 해결하기 위해 '항해 지도'를 갱신했다.
+
+- **(수정 1)** `config-service`의 'Bootstrap 설정'(`src/main/resources/application.yml`)의 `rabbitmq.host`를 `rabbitmq-service`로 수정했다.
+- **(수정 2)** '중앙 항해 지도'(`backend-lab-config.git`의 `application.yml`)의 `rabbitmq.host`와 `zipkin.tracing.endpoint`를 `rabbitmq-service`와 `zipkin-service`로 '갱신'하고 `git push`했다.
+
+'설계도'가 갱신되었으므로, '함선'을 '재건조'하고 '진수'를 시도했다.
+
+### 4. '돌발 상황': '장벽 1' (ErrImageNeverPull)
+
+- **현상:** `kubectl get pods` 결과, `config-service` Pod가 `ErrImageNeverPull` 상태로 '진수'에 실패했다.
+- **원인:** '부산 조선소'(WSL)와 '인천 조선소'(Minikube)의 차이. '선봉함'을 '부산'(WSL)에 건조(`docker build`)해놓고, '총사령관'은 '인천'(`minikube`)에서 `imagePullPolicy: Never`로 이미지를 찾으려 했기 때문이다.
+- **해결책 (항로 수정):**
+    1.  **'조선소' 연결:** `eval $(minikube -p minikube docker-env)` '마법의 주문'으로 터미널이 '인천 조선소'(`minikube`)를 바라보게 했다.
+    2.  **'인천'에서 재건조:** `config-service` 폴더에서 `docker build -t config-service:1.0 .`를 '다시' 실행하여, '총사령관'이 '인식할 수 있는' 위치에 함선을 건조했다.
+    3.  **'진수' 재시도:** `k8s/` 폴더에서 `kubectl apply -f deployment-config.yml`과 `kubectl apply -f service-config.yml`을 '다시' 실행했다.
+
+### 5. '선봉함' 진수 성공 (Level 14-D Part 2 완수)
+
+- **(검증 1)** `kubectl get pods`: `config-service-deployment-...` Pod가 **`Running`** 상태가 되는 것을 확인.
+- **(검증 2)** `kubectl get svc config-service`: '관문'(`NodePort`) 번호 확인 (예: `8888:30887/TCP`)
+- **(검증 3)** `minikube ip`: '항구 주소' 확인 (예: `192.168.49.2`)
+- **(최종 검증)** `curl http://192.168.49.2:30887/actuator/health`
+    - **`{"status":"UP"}`** '생존 신호'를 '항구 외부'에서 수신 완료
