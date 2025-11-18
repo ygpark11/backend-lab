@@ -391,3 +391,37 @@ spec:
 - **(검증 3)** `minikube ip`: '항구 주소' 확인 (예: `192.168.49.2`)
 - **(최종 검증)** `curl http://192.168.49.2:30887/actuator/health`
     - **`{"status":"UP"}`** '생존 신호'를 '항구 외부'에서 수신 완료
+
+### 6. (Part 3) '함대의 두뇌' (Eureka) 진수
+
+'선봉함'(`config-service`)과 '인프라'가 '정박'된 '항구'에 '함대의 두뇌'(`discovery-service`)를 '진수'시켰다.
+
+- **(장벽 1)** `eval $(minikube docker-env)`로 '인천 조선소'에 `discovery-service:1.0` '함선'을 '건조'했다.
+- **(장벽 2)** `config-service`를 '먼저' 찾아야 하는 '닭과 달걀' 문제가 있었다.
+
+### 7. '돌발 상황': 'CrashLoopBackOff' (최고 레벨의 '덜컥거림')
+
+- **현상:** `discovery-service` Pod가 `Running` -> `Error` -> `CrashLoopBackOff` '무한 루프'에 빠졌다.
+- **'블랙박스' 회수:** `kubectl logs [pod-name]`
+- **'유언':** `java.lang.IllegalStateException: Unable to load config data from 'configserver:http://config-service:8888'`
+- **'진짜' 원인:** `Caused by: IllegalStateException: Incorrect ConfigDataLocationResolver chosen...`
+
+### 8. '사고'의 '최종 진단' 및 '수리' (엔지니어의 진단법)
+
+'사고'의 원인은 '네트워킹'(`Connection refused`)이 '아니라', '엔진'(Spring)이 '마법 주문'(`configserver:`)을 '해석'할 '부품'(`Starter`)이 '누락'되었기 때문이었다.
+
+- **(수리 1: 항해 지도)** 'Spring Boot 3'는 `bootstrap.yml`을 '읽지 않는다'.
+    - `rm src/main/resources/bootstrap.yml` ('구형 지도' 폐기)
+    - `application.yml`에 '열쇠'(`spring.config.import...`)와 '임무'(`eureka.client...`)를 '모두' '갱신'했다.
+- **(수리 2: 엔진 부품)** 'Config Server 해석기' '부품'이 '누락'되었다.
+    - `discovery-service`의 `build.gradle`의 `dependencies`에 `implementation 'org.springframework.cloud:spring-cloud-starter-config'`를 '추가'했다.
+- **(수리 3: 함선 건조)** '선장'의 '자가 진단'(`*.jar` 충돌)을 통해 `jar { enabled = false }`도 `build.gradle`에 '추가'했다.
+
+- **(재진수)** '수리된' `build.gradle`과 `application.yml`을 바탕으로 `docker build -t discovery-service:1.0 .`를 '인천 조선소'에 '재건조'했다.
+- **(교체)** `kubectl delete pod [crash-pod-name]`로 '사고 함선'을 '강제 퇴역'시키자, '총사령관'(`Deployment`)이 '자동으로' '수리된 새 함선'을 '진수'시켰다.
+
+### 9. '함대의 두뇌' 진수 성공 (Level 14-D Part 3 완수)
+
+- **(검증 1)** `watch kubectl get pods`: `discovery-service-deployment-...` Pod가 **`Running`** 상태가 되는 것을 확인.
+- **(최종 검증)** `minikube service discovery-service`
+    - '총사령관'의 '터널링 마법'으로 **'유레카 대시보드' UI가 '웹 브라우저'에 '자동으로' 출력**되는 것을 확인

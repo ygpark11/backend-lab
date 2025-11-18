@@ -1,7 +1,10 @@
-server:
-  port: 8761 # (1)
+spring:
+  application:
+    name: discovery-service
+  config:
+    import: "configserver:http://config-service:8888"
 
 eureka:
   client:
-    register-with-eureka: false # (2)
-    fetch-registry: false # (3)
+    register-with-eureka: false
+    fetch-registry: false
