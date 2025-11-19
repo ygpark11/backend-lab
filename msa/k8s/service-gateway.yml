@@ -1,0 +1,13 @@
+# k8s/service-gateway.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service # (내부 함선들도 이 이름으로 호출 가능)
+spec:
+  type: NodePort      # (★) 외부(윈도우)에서 접속할 관문!
+  selector:
+    app: gateway-service
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000

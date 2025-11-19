@@ -1,0 +1,13 @@
+# k8s/service-users.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service # (★) Gateway가 이 이름으로 찾습니다! (lb://users-service)
+spec:
+  type: ClusterIP     # (★) 외부 노출 X, 내부 통신 O
+  selector:
+    app: user-service
+  ports:
+  - protocol: TCP
+    port: 80           # 서비스의 대표 포트 (깔끔하게 80)
+    targetPort: 8081   # (★) 실제 함선(Pod)의 포트 (8081)

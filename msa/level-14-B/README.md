@@ -425,3 +425,32 @@ spec:
 - **(검증 1)** `watch kubectl get pods`: `discovery-service-deployment-...` Pod가 **`Running`** 상태가 되는 것을 확인.
 - **(최종 검증)** `minikube service discovery-service`
     - '총사령관'의 '터널링 마법'으로 **'유레카 대시보드' UI가 '웹 브라우저'에 '자동으로' 출력**되는 것을 확인
+
+### 10. (Part 4) '후속 함대' 진수 (Gateway & Users) 및 최종 연결
+
+'함대의 관문'(`api-gateway-service`)과 '비즈니스 함선'(`users-service`)을 K8s에 진수시키고, '외부'에서 '내부 깊은 곳'까지의 통신을 검증했다.
+
+- **(속전속결)** `discovery-service` 때 학습한 '표준 건조 절차'(`build.gradle` 수정, `application.yml` 수정, `eval` 빌드)를 적용하여 빠르게 진수.
+
+#### 🛠️ 트러블슈팅 (Troubleshooting)
+
+**1. 장벽 3: 라우팅 불일치 (404 Not Found)**
+- **현상:** `curl .../user-service/...` 호출 시 Gateway가 `404` 응답.
+- **원인:** Gateway 설정은 `Path=/users/**` (복수형)인데, 요청을 단수형으로 보냄.
+- **해결:** 요청 경로를 `/users/...`로 수정하여 호출.
+
+**2. 장벽 4: 문지기의 검문 (400 Bad Request)**
+- **현상:** Gateway 로그에 `GlobalFilter: X-Request-ID header is missing!` 에러 발생.
+- **원인:** `curl` 요청에 필수 헤더가 누락됨.
+- **해결:** `curl -H "X-Request-ID: test" ...` 헤더 추가.
+
+**3. 장벽 5: 유령 주소 (500 Internal Server Error / UnknownHostException)**
+- **현상:** Gateway 로그에 `Failed to resolve 'user-service-deployment-xxx'` 에러 발생.
+- **원인:** `user-service`가 유레카에 자신의 'Pod Hostname'을 등록했으나, K8s 내부 DNS는 Pod 이름을 해석하지 못함.
+- **해결:** `user-service`의 `application.yml`에 `eureka.instance.prefer-ip-address: true`를 추가. 유레카에 'IP 주소'를 등록하게 하여 DNS 조회를 우회함.
+
+### 11. Level 14 최종 완수 선언 (Mission Complete)
+
+- **최종 테스트:** `curl -H "X-Request-ID: test" http://[minikube-ip]:[NodePort]/users/actuator/health`
+- **결과:** `{"status":"UP"}` 응답 확인.
+- **의의:** 7척의 MSA 함대(Config, Discovery, Gateway, Infra, Services)가 모두 Kubernetes 클러스터 위에서 유기적으로 연결되어 동작함을 증명.
