@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      serviceAccountName: prometheus # 아까 만든 신분증 착용
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.44.0 # 검증된 버전 사용
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+          ports:
+            - containerPort: 9090
+          volumeMounts: # 설정 파일을 컨테이너 내부로 연결
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            name: prometheus-config
+        - name: prometheus-storage-volume
+          emptyDir: {} # 임시 저장소 (재시작시 데이터 날아감 - 학습용)
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  selector:
+    app: prometheus
+  type: NodePort # 외부(브라우저)에서 접속하기 위해
+  ports:
+    - port: 9090
+      targetPort: 9090
+      nodePort: 30090 # 고정 포트 사용 (접속 편의성)

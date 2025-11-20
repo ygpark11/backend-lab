@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest # 최신 안정 버전
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            # 아까 만든 설정을 Grafana가 읽을 수 있는 경로에 마운트
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+      volumes:
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  selector:
+    app: grafana
+  type: NodePort # 외부 접속용
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30000 # 접속하기 편하게 30000번 고정

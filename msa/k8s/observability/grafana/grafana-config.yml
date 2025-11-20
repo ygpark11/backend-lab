@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: default
+data:
+  # 이 파일이 컨테이너 안의 /etc/grafana/provisioning/datasources/ 경로에 생깁니다.
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus:9090 # ★ 핵심: K8s 내부 DNS (IP 몰라도 됨)
+        access: proxy
+        isDefault: true
