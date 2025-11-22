@@ -8,19 +8,25 @@ data:
     server:
       http_listen_port: 9080
       grpc_listen_port: 0
+    
     positions:
       filename: /tmp/positions.yaml
+    
     clients:
       - url: http://loki:3100/loki/api/v1/push
+    
     scrape_configs:
       - job_name: kubernetes-pods
         kubernetes_sd_configs:
           - role: pod
         relabel_configs:
+          # [Standard] 내 노드(NodeName)에 있는 파드만 수집 (필수 최적화)
           - source_labels: [__meta_kubernetes_pod_node_name]
             target_label: __host__
           - action: labelmap
             regex: __meta_kubernetes_pod_label_(.+)
+          
+          # Namespace & Pod Name 정리
           - source_labels: [__meta_kubernetes_namespace]
             action: replace
             target_label: namespace
@@ -30,6 +36,9 @@ data:
           - source_labels: [__meta_kubernetes_pod_container_name]
             action: replace
             target_label: container
-          - source_labels: [__meta_kubernetes_pod_container_id]
-            replacement: /var/log/pods/*$1/*.log
+          
+          # [Standard] 로그 경로 조합 (가장 표준적인 방식)
+          - source_labels: [__meta_kubernetes_pod_uid, __meta_kubernetes_pod_container_name]
+            separator: /
             target_label: __path__
+            replacement: /var/log/pods/*$1/*.log

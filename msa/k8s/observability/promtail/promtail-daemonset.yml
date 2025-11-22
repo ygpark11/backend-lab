@@ -18,6 +18,12 @@ spec:
           image: grafana/promtail:2.8.2
           args:
             - "-config.file=/etc/promtail/promtail.yaml"
+          env:
+            # [Standard] 내 노드의 이름을 환경변수로 주입 (Node Filtering용)
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           volumeMounts:
             - name: config
               mountPath: /etc/promtail
@@ -25,6 +31,10 @@ spec:
               mountPath: /run/promtail
             - name: pods
               mountPath: /var/log/pods
+              readOnly: true
+            # [Standard] ★ 핵심 추가: 심볼릭 링크 원본 경로 마운트
+            - name: docker
+              mountPath: /var/lib/docker/containers
               readOnly: true
       volumes:
         - name: config
@@ -36,3 +46,7 @@ spec:
         - name: pods
           hostPath:
             path: /var/log/pods
+        # [Standard] ★ 핵심 추가: 호스트의 Docker 로그 폴더 연결
+        - name: docker
+          hostPath:
+            path: /var/lib/docker/containers
