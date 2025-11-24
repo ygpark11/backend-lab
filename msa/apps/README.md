@@ -1,53 +1,103 @@
 # 🎮 Project: PS-Tracker (PlayStation Store Intelligence Platform)
 
 * **Start Date:** 2025.11.23
-* **Description:** PlayStation Store의 게임 가격 정보를 수집/분석하여 "구매 적기"를 알려주는 인텔리전스 플랫폼.
-* **Key Strategy:** Polyglot MSA (Java & Python)
+* **Status:** Level 16 - Polyglot Architecture Setup & Crawling PoC (Proof of Concept)
+* **Tech Stack:**
+    * **Core:** Java 17, Spring Boot 3.x (JPA, H2)
+    * **Collector:** Python 3.x, Selenium, Requests
 
 ---
 
-## 1. 프로젝트 목표 (Business Goal)
+## 1. 프로젝트 기획 및 설계 (Project Planning)
 *단순한 쇼핑몰 클론이 아닌, 데이터 기반의 의사결정 도구 개발*
-* **Intelligence:** 역대 최저가, 메타크리틱 점수, 가격 방어율 분석.
-* **Automation:** Python 크롤러를 통한 주기적 데이터 자동 수집.
-* **Profit:** 최저가 알림 구독 및 AI 구매 조언 리포트 제공.
 
-## 2. 아키텍처 (Architecture)
+### 🎯 핵심 가치 (Value Proposition)
+1.  **Intelligence:** 역대 최저가, 메타크리틱 점수, 가격 방어율 분석을 통한 "구매 적기" 판단.
+2.  **Automation:** 사람이 아닌 '수집기(Collector)'가 24시간 감시하는 자동화 시스템.
+3.  **Profit:** 최저가 알림 구독 및 AI 구매 조언 리포트 제공 (수익화 모델).
 
-### 🏗 Polyglot Structure
-각 언어의 장점을 극대화하기 위해 역할을 분리함.
+### 📋 기능 요구사항 (Requirements)
+* **R1. 데이터 수집:** PS Store의 동적 페이지(React)를 크롤링하여 가격, 이미지, 메타데이터 수집.
+* **R2. 데이터 적재:** 수집된 데이터를 RDB에 저장하되, 중복을 방지하고 가격 변동 내역을 관리.
+* **R3. 이종 통신:** Python(수집)과 Java(서비스) 간의 효율적인 데이터 파이프라인 구축.
+
+---
+
+## 2. 아키텍처 (Polyglot MSA Architecture)
+
+### 🏗 구조도 및 역할 분담
+언어별 장점을 극대화하기 위해 **Polyglot(다중 언어)** 전략을 채택함.
 
 | Service Name | Tech Stack | Role | Port |
 | :--- | :--- | :--- | :--- |
-| **Catalog Service** | Java 17, Spring Boot 3.x | **[Core]** 게임 정보 조회, 저장, API 제공 | 8080 |
-| **Collector Service** | Python 3.x, Requests | **[Worker]** 데이터 수집(Crawling) 및 전송 | N/A |
+| **Catalog Service** | Java 17, Spring Boot | **[Data Center]** 데이터 저장, API 서빙, 트랜잭션 관리 | 8080 |
+| **Collector Service** | Python 3.x, Selenium | **[Worker]** 동적 웹 크롤링, HTML 파싱, 데이터 전송 | N/A |
 
-### 🔄 Data Flow (Day 1 Draft)
-1. **Collector (Python):** `requests`를 통해 데이터를 수집/가공.
-2. **Transfer:** HTTP REST API (`POST /api/v1/games/collect`)로 Java 서버에 전송.
-3. **Catalog (Java):** `Upsert` 로직을 통해 신규 게임은 생성, 기존 게임은 가격 정보 갱신.
+### 🔄 데이터 흐름 (Data Flow)
+1.  **Target:** PS Store 상세 페이지 (JavaScript로 렌더링되는 동적 사이트).
+2.  **Crawling (Python):** `Selenium` + `WebDriver`를 이용해 브라우저를 띄우고 렌더링 대기.
+3.  **Transfer:** 수집된 데이터를 JSON으로 가공하여 Java API (`POST /api/v1/games/collect`)로 전송.
+4.  **Upsert (Java):** DB에 없는 게임이면 `Insert`, 이미 존재하면 가격 정보만 `Update`.
 
-## 3. 핵심 도메인 설계 (Domain)
+---
 
-### Game Entity (`Catalog Service`)
-* **Identity:** `psStoreId` (PS Store 고유 식별자, Unique Key)
-* **Data:** `title`, `publisher`, `imageUrl`
-* **Price:** `currentPrice`, `isDiscount`, `discountRate`
-* **Update Strategy:** 동일한 `psStoreId`가 들어오면 가격 정보만 `Update`, 없으면 `Insert`.
-
-## 4. 실행 방법 (Getting Started)
+## 3. 핵심 구현 내용 (Implementation Details)
 
 ### ① Catalog Service (Java)
+* **Game Entity 설계:**
+    * `psStoreId` (Unique Key): PS Store URL에 포함된 고유 ID를 사용하여 데이터 중복 방지.
+    * `Upsert Logic`: `findByPsStoreId` 조회 후 존재 여부에 따라 분기 처리.
+* **API 개방:** 외부(Collector)에서 데이터를 밀어넣을 수 있는 `POST` 엔드포인트 구현.
+
+### ② Collector Service (Python) ★ Key Tech
+* **Selenium 도입 이유:** `requests` 라이브러리만으로는 React/Vue 기반의 동적 페이지(빈 HTML)를 읽을 수 없어, 실제 브라우저 엔진인 Selenium 도입.
+* **Robust Crawling (견고한 크롤링):**
+    * **Explicit Wait:** 무작정 기다리는 것이 아니라, 특정 태그(`data-qa`)가 뜰 때까지 스마트하게 대기 (`WebDriverWait`).
+    * **Data-QA Selector:** 클래스명(`css-1xyz`)은 자주 바뀌므로, 변하지 않는 속성인 `data-qa`를 타겟팅하여 유지보수성 확보.
+    * **User-Agent:** (향후 적용 예정) 봇 탐지 우회를 위한 헤더 조작 고려.
+
+---
+
+## 4. 트러블슈팅 & 학습 노트 (Troubleshooting Log)
+
+### 💥 Issue 1: WSL 환경과 가상환경 충돌
+* **증상:** WSL 터미널에서 윈도우용으로 생성된 `venv`(`Scripts` 폴더)를 실행하려다 에러 발생.
+* **원인:** OS마다 가상환경 구조가 다름 (Windows는 `Scripts`, Linux는 `bin`).
+* **해결:** Selenium(GUI 브라우저) 실행을 위해 **Windows PowerShell**로 환경을 전환하여 실행.
+
+### 💥 Issue 2: StaleElementReferenceException (썩은 참조 에러)
+* **증상:** 요소를 찾았는데, 데이터를 꺼내려는 순간 "요소가 사라졌다"며 에러 발생.
+* **원인:** 모던 웹(SPA)은 화면을 비동기로 깜빡이며 다시 그리기 때문에, 잡고 있던 태그가 순식간에 옛날 것(Stale)이 됨.
+* **해결:** `time.sleep()`으로 렌더링이 완전히 끝날 때까지 넉넉하게 대기하거나, `try-except`로 재시도 로직 구현.
+
+### 💥 Issue 3: Element Visibility vs Presence
+* **증상:** `h1` 태그가 있는데도 `TimeoutException` 발생.
+* **원인:** `visibility_of` 조건은 "눈에 보일 때"를 기다리는데, 로딩 중에 잠깐 투명하거나 가려져 있어서 타임아웃 발생.
+* **해결:** `presence_of` (HTML에 존재하기만 하면 됨) 조건으로 완화하여 해결.
+
+---
+
+## 5. 실행 방법 (How to Run)
+
+### 1. Java Server (Catalog) Start
 ```bash
 cd apps/catalog-service
 ./gradlew bootRun
-# Server started on port 8080
+# Server listening on 8080...
 ```
 
-### ② Collector Service (Python)
+### 2. Python Crawler (Collector) Run
+
+- Prerequisite: Chrome Browser Installed
+
 ```bash
 cd apps/collector-service
-source venv/bin/activate  # (Windows: .\venv\Scripts\activate)
-pip install requests
-python test_sender.py
+# Windows PowerShell
+.\venv\Scripts\activate
+
+# Dependencies Install
+pip install selenium requests webdriver-manager
+
+# Run
+python simple_crawler.py
 ```
