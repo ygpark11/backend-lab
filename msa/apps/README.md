@@ -1,7 +1,7 @@
 # 🎮 Project: PS-Tracker (PlayStation Store Intelligence Platform)
 
 * **Start Date:** 2025.11.23
-* **Status:** Level 16 - Polyglot Architecture Setup & Crawling PoC (Proof of Concept)
+* **Status:** Polyglot Architecture & Batch Crawling
 * **Tech Stack:**
     * **Core:** Java 17, Spring Boot 3.x (JPA, H2)
     * **Collector:** Python 3.x, Selenium, Requests
@@ -46,15 +46,18 @@
 ### ① Catalog Service (Java)
 * **Game Entity 설계:**
     * `psStoreId` (Unique Key): PS Store URL에 포함된 고유 ID를 사용하여 데이터 중복 방지.
-    * `Upsert Logic`: `findByPsStoreId` 조회 후 존재 여부에 따라 분기 처리.
-* **API 개방:** 외부(Collector)에서 데이터를 밀어넣을 수 있는 `POST` 엔드포인트 구현.
+    * **Upsert Logic:** `findByPsStoreId` 조회 후 존재 여부에 따라 분기 처리.
+* **H2 Database Config:**
+    * `application.yml` 설정을 통해 In-memory DB 접속 허용 및 콘솔 활성화.
 
 ### ② Collector Service (Python) ★ Key Tech
 * **Selenium 도입 이유:** `requests` 라이브러리만으로는 React/Vue 기반의 동적 페이지(빈 HTML)를 읽을 수 없어, 실제 브라우저 엔진인 Selenium 도입.
-* **Robust Crawling (견고한 크롤링):**
-    * **Explicit Wait:** 무작정 기다리는 것이 아니라, 특정 태그(`data-qa`)가 뜰 때까지 스마트하게 대기 (`WebDriverWait`).
-    * **Data-QA Selector:** 클래스명(`css-1xyz`)은 자주 바뀌므로, 변하지 않는 속성인 `data-qa`를 타겟팅하여 유지보수성 확보.
-    * **User-Agent:** (향후 적용 예정) 봇 탐지 우회를 위한 헤더 조작 고려.
+* **Batch Crawling (List & Detail Pattern):**
+    * **Phase A (목록):** 카테고리 페이지에서 `a[href*='/product/']` 패턴으로 상세 페이지 URL 목록을 먼저 확보.
+    * **Phase B (상세):** 확보된 URL을 순회(Loop)하며 상세 정보를 수집 및 전송.
+* **Robust Logic:**
+    * **Explicit Wait:** 무작정 기다리는 것이 아니라, 특정 태그(`data-qa`)가 뜰 때까지 스마트하게 대기.
+    * **Data-QA Selector:** 자주 바뀌는 클래스명 대신, 불변 속성인 `data-qa`를 타겟팅.
 
 ---
 
@@ -68,7 +71,7 @@
 ### 💥 Issue 2: StaleElementReferenceException (썩은 참조 에러)
 * **증상:** 요소를 찾았는데, 데이터를 꺼내려는 순간 "요소가 사라졌다"며 에러 발생.
 * **원인:** 모던 웹(SPA)은 화면을 비동기로 깜빡이며 다시 그리기 때문에, 잡고 있던 태그가 순식간에 옛날 것(Stale)이 됨.
-* **해결:** `time.sleep()`으로 렌더링이 완전히 끝날 때까지 넉넉하게 대기하거나, `try-except`로 재시도 로직 구현.
+* **해결:** `time.sleep()`으로 렌더링이 완전히 끝날 때까지 넉넉하게 대기.
 
 ### 💥 Issue 3: Element Visibility vs Presence
 * **증상:** `h1` 태그가 있는데도 `TimeoutException` 발생.
@@ -79,25 +82,27 @@
 
 ## 5. 실행 방법 (How to Run)
 
-### 1. Java Server (Catalog) Start
+### ① Catalog Service (Java)
 ```bash
 cd apps/catalog-service
 ./gradlew bootRun
 # Server listening on 8080...
 ```
 
-### 2. Python Crawler (Collector) Run
-
+### ② Collector Service (Python)
 - Prerequisite: Chrome Browser Installed
-
 ```bash
 cd apps/collector-service
 # Windows PowerShell
 .\venv\Scripts\activate
 
-# Dependencies Install
-pip install selenium requests webdriver-manager
-
-# Run
-python simple_crawler.py
+# Run Batch Crawler
+python batch_crawler.py
 ```
+
+### ③ H2 Database Console (Verification)
+- URL: `http://localhost:8080/h2-console`
+- Settings:
+  -  JDBC URL: `jdbc:h2:mem:pstracker` (application.yml 설정값)
+  -  User Name: `sa`
+  -  Password: *(Empty)*
