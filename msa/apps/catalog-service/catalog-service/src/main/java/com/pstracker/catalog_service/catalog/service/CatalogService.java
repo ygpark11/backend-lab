@@ -24,7 +24,8 @@ public class CatalogService {
                     existingGame.updatePriceInfo(
                             request.currentPrice(),
                             request.isDiscount(),
-                            request.discountRate()
+                            request.discountRate(),
+                            request.saleEndDate()
                     );
                     log.info("게임 가격 정보 갱신: {} ({}원)", request.title(), request.currentPrice());
                     return existingGame.getId();
@@ -41,7 +42,8 @@ public class CatalogService {
                     newGame.updatePriceInfo(
                             request.currentPrice(),
                             request.isDiscount(),
-                            request.discountRate()
+                            request.discountRate(),
+                            request.saleEndDate()
                     );
                     Game savedGame = gameRepository.save(newGame);
                     log.info("신규 게임 등록: {}", request.title());

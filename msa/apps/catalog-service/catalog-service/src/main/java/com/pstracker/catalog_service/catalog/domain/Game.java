@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -43,8 +45,11 @@ public class Game {
     private Integer metaScore; // 메타크리틱 점수 (없을 수 있음 -> Integer)
     private Double userScore; // 유저 평점
 
+    private LocalDate saleEndDate; // 할인 종료일 (없을 수 있음 - null)
+
     // 5. 관리 정보
     private LocalDateTime lastUpdated; // 마지막 크롤링 시간
+
 
     // 생성자 (Builder 패턴 대신 정적 팩토리 메서드 사용 추천 - 의미가 명확함)
     public static Game create(String psStoreId, String title, String publisher, String imageUrl) {
@@ -58,10 +63,11 @@ public class Game {
     }
 
     // 가격 정보 업데이트 메서드 (Setter 대신 의미있는 메서드명 사용)
-    public void updatePriceInfo(int currentPrice, boolean isDiscount, int discountRate) {
+    public void updatePriceInfo(int currentPrice, boolean isDiscount, int discountRate, LocalDate saleEndDate) {
         this.currentPrice = currentPrice;
         this.isDiscount = isDiscount;
         this.discountRate = discountRate;
+        this.saleEndDate = saleEndDate;
         this.lastUpdated = LocalDateTime.now();
     }
 }

@@ -3,6 +3,8 @@ package com.pstracker.catalog_service.catalog.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.time.LocalDate;
+
 public record GameCollectRequest(
         @NotBlank(message = "PS Store ID는 필수입니다.")
         String psStoreId,
@@ -19,5 +21,7 @@ public record GameCollectRequest(
         boolean isDiscount,
 
         @PositiveOrZero
-        int discountRate
+        int discountRate,
+
+        LocalDate saleEndDate
 ) {}
