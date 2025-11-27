@@ -1,25 +1,17 @@
 # 🎮 Project: PS-Tracker (PlayStation Store Intelligence Platform)
 
+> **"호구 되지 말고, 고민 하지 말자."**
+> 플레이스테이션 게이머를 위한 **최저가 알림 및 AI 기반 취향 저격 게임 추천** 플랫폼
+
+## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 16 Completed - Intelligent Crawler & Polyglot MSA
-* **Tech Stack:**
-    * **Core:** Java 17, Spring Boot 3.x (JPA, H2)
-    * **Collector:** Python 3.x, Selenium, Requests
-
----
-
-## 1. 프로젝트 기획 (Project Planning)
-*단순한 쇼핑몰 클론이 아닌, 데이터 기반의 의사결정 도구 개발*
+* **Status:** Level 16 Completed (PoC & Polyglot Architecture)
+* **Goal:** 단순한 가격 정보를 넘어, 게이머의 '돈'과 '시간'을 아껴주는 인텔리전스 서비스.
 
 ### 🎯 핵심 가치 (Value Proposition)
-1.  **Intelligence:** 역대 최저가, 메타크리틱 점수, 가격 방어율 분석을 통한 "구매 적기" 판단.
-2.  **Automation:** 사람이 아닌 '수집기(Collector)'가 24시간 감시하는 자동화 시스템.
-3.  **Profit:** 최저가 알림 구독 및 AI 구매 조언 리포트 제공 (수익화 모델).
-
-### 📋 기능 요구사항 (Requirements)
-* **R1. 데이터 수집:** PS Store의 동적 페이지(React)를 크롤링하여 가격, 이미지, 할인 정보 수집.
-* **R2. 데이터 적재:** 수집된 데이터를 RDB에 저장하되, 중복을 방지하고 가격 변동 내역을 관리.
-* **R3. 이종 통신:** Python(수집)과 Java(서비스) 간의 효율적인 데이터 파이프라인 구축.
+1.  **Save Money:** 역대 최저가 분석 및 할인 타이밍 예측 (가격 추적).
+2.  **Save Time:** 사용자 취향(태그, 장르) 기반의 개인화 게임 추천 (AI 큐레이션).
+3.  **Architecture:** Java(Spring Boot)와 Python을 결합한 Polyglot MSA 구조.
 
 ---
 
@@ -39,16 +31,19 @@
 
 ---
 
-## 3. 핵심 구현 내용 (Implementation Details)
+## 3. 핵심 구현 내용 (Technical Details)
 
-### ① Data Model (Java Entity)
-* **Game Entity:**
-    * `psStoreId` (Unique Key): 데이터 중복 방지.
-    * `currentPrice`, `discountRate`: 현재 가격 및 할인율.
-    * `saleEndDate`: 할인 종료일 파싱 저장 (Day 3 추가).
+### ① Catalog Service (Java)
+* **Game Entity 설계:**
+    * `psStoreId` (Unique Key): PS Store URL의 고유 ID를 사용하여 데이터 중복 방지.
+    * **Upsert Logic:** `findByPsStoreId` 조회 후 존재 여부에 따라 분기 처리.
+* **H2 Database Config:** In-memory DB 사용 및 콘솔 활성화 (`application.yml`).
 
-### ② Crawling Strategy (Python) ★ Key Tech
-* **Batch Crawling:** 목록 페이지에서 URL 리스트를 확보 후 순차적으로 상세 페이지 방문.
+### ② Collector Service (Python) ★ Key Tech
+* **Selenium 도입:** `requests`로는 불가능한 React/Vue 기반 동적 페이지(SPA) 크롤링 구현.
+* **Batch Crawling (List & Detail Pattern):**
+    * **Phase A (목록):** 카테고리 페이지에서 `a[href*='/product/']` 패턴으로 상세 페이지 URL 목록 확보.
+    * **Phase B (상세):** 확보된 URL을 순회(Loop)하며 상세 정보를 수집 및 전송.
 * **Deep Parsing:**
     * **가격/할인:** `data-qa` 속성을 활용하여 정확한 태그 타겟팅.
     * **Offer Loop:** 체험판(Offer0)과 본편(Offer1)이 섞여 있는 경우, 유효한 가격이 나올 때까지 순차 탐색 (`for` loop).
@@ -56,7 +51,23 @@
 
 ---
 
-## 4. 트러블슈팅 (Log)
+## 4. 차세대 설계 (Next Step: Level 16.5 Planning)
+PoC를 넘어 실제 서비스를 위한 확장 설계입니다. (In-Progress)
+
+### 🛠️ 데이터베이스 고도화 (MySQL Migration)
+기존 단일 테이블 구조를 정규화하여 관계형 데이터베이스(MySQL)로 이관합니다.
+* **`games`**: 변하지 않는 게임의 마스터 정보 (장르, 태그 포함).
+* **`price_history`**: 가격 변동의 **모든 이력**을 시계열로 저장.
+* **`wishlists`**: 유저별 찜 목록 및 목표 가격 알림 설정.
+
+### 🤖 수집 3원칙 (The Crawling Constitution)
+1.  **기간 존중 (Respect Period):** 할인 종료일이 많이 남은 게임은 불필요하게 재수집하지 않는다.
+2.  **망루 감시 (Watchtower):** 매일 밤 '총 할인 개수'를 체크하고, 급격한 변동(Flash Sale)이 있을 때만 전체를 스캔한다.
+3.  **유저 우선 (User First):** 유저가 '찜'한 게임은 위 규칙을 무시하고 무조건 최신 상태를 유지한다.
+
+---
+
+## 5. 트러블슈팅 (Troubleshooting Log)
 
 ### 💥 Issue 1: 복합 상품 가격 파싱 실패
 * **증상:** '스파이더맨 2' 처럼 체험판이 기본 옵션인 경우 가격을 못 찾고 에러 발생.
@@ -73,7 +84,7 @@
 
 ---
 
-## 5. 실행 방법 (How to Run)
+## 6. 실행 방법 (How to Run)
 
 ### ① Catalog Service (Java)
 ```bash
