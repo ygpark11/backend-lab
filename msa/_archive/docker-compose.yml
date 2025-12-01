@@ -1,0 +1,134 @@
+services:
+  # --- 0. 인프라 (Infra) ---
+  # '인프라'는 의존성이 없으므로 가장 먼저 정의합니다.
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - msa-network # (★변경★) 우리 함대 네트워크로 소속 변경
+    healthcheck:
+      # RabbitMQ가 준비되었는지 확인하는 표준 명령어
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - msa-network # (★변경★) 우리 함대 네트워크로 소속 변경
+
+  # 1번함: Config 서버 (모든 설정의 시작점)
+  # 다른 모든 배들이 이 배의 '설정(config)'을 먼저 받아야 합니다.
+  config-service:
+    build: ../config-service # 이 서비스의 '건조 명세서'(Dockerfile) 위치
+    container_name: config-service # 컨테이너 이름 (관리용)
+    ports:
+      - "8888:8888" # [호스트 포트]:[컨테이너 포트]
+    networks:
+      - msa-network # '우리 함대 전용 네트워크'에 소속시킵니다.
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      zipkin:
+        condition: service_healthy
+    healthcheck:
+      # 이 서비스가 '진짜로 준비되었는지' 확인하는 방법
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s # 10초마다 확인
+      timeout: 5s # 5초간 응답 대기
+      retries: 5 # 5번 실패 시 '아픔' 상태로 간주
+      start_period: 30s # 컨테이너 시작 후 30초간 '준비 시간' 부여
+
+  # 2번함: Eureka 서버 (항해 기록소)
+  # 'Config 서버'가 먼저 준비되어야만 이 배가 뜰 수 있습니다.
+  discovery-service:
+    build: ../discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    networks:
+      - msa-network
+    depends_on:
+      # 'config-service'에 의존합니다.
+      config-service:
+        # (★중요★) 'config-service'가 'healthy' 상태가 될 때까지 기다립니다.
+        condition: service_healthy
+    healthcheck:
+      # 이 서비스가 '진짜로 준비되었는지' 확인하는 방법
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      interval: 10s # 10초마다 확인
+      timeout: 5s # 5초간 응답 대기
+      retries: 5 # 5번 실패 시 '아픔' 상태로 간주
+      start_period: 30s # 컨테이너 시작 후 30초간 '준비 시간' 부여
+
+  # 3번함: Gateway 서버 (병렬 시작 그룹 1)
+  gateway-service:
+    build: ../gateway-service
+    container_name: gateway-service
+    ports:
+      - "8000:8000" # 우리의 '정문'입니다.
+    networks:
+      - msa-network
+    depends_on:
+      # Eureka가 healthy 상태일 때 시작합니다.
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # 4번함: User 서버 (병렬 시작 그룹 2)
+  user-service:
+    build: ../user-service
+    container_name: user-service
+    # (★실무 중심 원칙★)
+    # ports: ... -> 포트를 외부에 노출하지 않습니다.
+    # 'User 서비스'는 '내부 함대'입니다.
+    # 오직 'Gateway 서버'를 통해서만 접근할 수 있어야 합니다.
+    networks:
+      - msa-network
+    depends_on:
+      # Eureka가 healthy 상태일 때 시작합니다.
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8081/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # 5번함: Order 서버 (병렬 시작 그룹 3)
+  order-service:
+    build: ../order-service
+    container_name: order-service
+    # (★실무 중심 원칙★)
+    # 'Order 서비스' 역시 '내부 함대'이므로 포트를 노출하지 않습니다.
+    networks:
+      - msa-network
+    depends_on:
+      # Eureka가 healthy 상태일 때 시작합니다.
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8083/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# '우리 함대 전용 네트워크' (msa-network)를 정의합니다.
+networks:
+  msa-network:
+    driver: bridge # Docker의 기본 네트워크 드라이버

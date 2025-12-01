@@ -1,6 +1,6 @@
 package com.pstracker.catalog_service.catalog.controller;
 
-import com.pstracker.catalog_service.catalog.dto.GameCollectRequest;
+import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,8 +19,8 @@ public class CatalogController {
 
     // 수집기가 데이터를 쏘는 API
     @PostMapping("/collect")
-    public ResponseEntity<Long> collectGameInfo(@Valid @RequestBody GameCollectRequest request) {
-        Long gameId = catalogService.saveOrUpdateGame(request);
-        return ResponseEntity.ok(gameId);
+    public ResponseEntity<String> collectGameInfo(@Valid @RequestBody CollectRequestDto request) {
+        catalogService.upsertGameData(request);
+        return ResponseEntity.ok("Game data collected successfully");
     }
 }

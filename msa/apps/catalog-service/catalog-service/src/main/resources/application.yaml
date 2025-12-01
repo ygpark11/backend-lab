@@ -1,27 +1,17 @@
 spring:
-  application:
-    name: catalog-service
-
-  # 1. H2 Database 설정
   datasource:
-    url: jdbc:h2:mem:pstracker   # DB 이름을 'pstracker'로 고정 (중요!)
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    # [중요] 도커 호스트(localhost)의 3307 포트로 접속 -> 도커 내부 3306으로 연결됨
+    url: jdbc:mysql://localhost:3307/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: user
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # 2. H2 Console 활성화 (웹 접속용)
-  h2:
-    console:
-      enabled: true
-      path: /h2-console          # 접속 경로 설정
-      settings:
-        web-allow-others: true   # 외부 접속 허용 (개발용)
-
-  # 3. JPA 설정 (Entity -> Table 자동 생성)
   jpa:
     hibernate:
-      ddl-auto: update           # Entity 변경 시 테이블 자동 업데이트
-    show-sql: true               # 실행되는 SQL을 콘솔에 보여줌 (디버깅용)
+      # [중요] validate: DB 테이블과 자바 Entity가 일치하는지 검사만 함 (테이블 자동 생성 X)
+      # 우리는 방금 Adminer로 테이블을 완벽하게 만들었으므로 'validate'가 정석입니다.
+      ddl-auto: validate
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
