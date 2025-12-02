@@ -10,9 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class CatalogService {
 
     private final GameRepository gameRepository;
@@ -62,5 +67,26 @@ public class CatalogService {
 
         log.debug("📝 Price updated: {} -> {} KRW (Discount: {}%)",
                 game.getName(), request.getCurrentPrice(), request.getDiscountRate());
+    }
+
+    /**
+     * 수집기에게 "지금 갱신해야 할 게임들"의 목록(Target URLs)을 반환합니다.
+     * 정책:
+     * 1. 3일 이상 업데이트 안 된 게임
+     * 2. (쿼리상) 할인 종료일이 지난 게임
+     */
+    public List<String> getGamesToUpdate() {
+        // 기준: 3일 전
+        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
+        LocalDate today = LocalDate.now();
+
+        // 최대 10개씩만 갱신 (너무 많이 요청하면 차단 위험)
+        // 실제로는 Pageable을 쓰는 게 좋지만, 지금은 List.stream().limit()으로 처리
+        List<Game> targets = gameRepository.findGamesToUpdate(threeDaysAgo, today);
+
+        return targets.stream()
+                .limit(50) // 배치 1회당 10개 제한 (조절 가능)
+                .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
+                .toList();
     }
 }

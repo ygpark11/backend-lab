@@ -1,1 +1,15 @@
-minikube-linux-amd64
+# Java
+/build
+/.gradle
+/out
+*.jar
+
+# Python
+venv/
+__pycache__
+*.pyc
+
+# Docker/System
+.DS_Store
+.idea
+*.iml

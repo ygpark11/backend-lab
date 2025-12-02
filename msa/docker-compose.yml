@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # 1. 데이터베이스
   mysql:
     image: mysql:8.0
     container_name: ps-tracker-db
@@ -16,19 +17,66 @@ services:
     ports:
       - "3307:3306"
     volumes:
-      # [변경] 호스트 경로(./data/mysql) 대신 도커 볼륨(db_data) 사용
-      # 이렇게 하면 WSL 권한 문제(OS errno 1)가 완벽하게 해결됩니다.
       - db_data:/var/lib/mysql
-    restart: always
+    networks:
+      - ps-network
 
+  # 2. Selenium Grid (원격 브라우저) [NEW]
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    container_name: ps-tracker-browser
+    ports:
+      - "4444:4444" # 외부에서 상황 볼 때 필요 (VNC 등)
+      - "7900:7900" # 웹 브라우저로 화면 보기용 (NoVNC)
+    shm_size: "2g" # 브라우저가 메모리 부족하지 않게 설정
+    networks:
+      - ps-network
+
+  # 3. Java Backend (Brain)
+  catalog-service:
+    build: ./apps/catalog-service/catalog-service # Dockerfile 위치
+    container_name: ps-tracker-api
+    ports:
+      - "8080:8080"
+    environment:
+      # 도커 내부에서는 'mysql'이라는 서비스 이름으로 접속
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+      # Python 수집기 주소 지정
+      CRAWLER_URL: http://collector-service:5000/run
+    depends_on:
+      - mysql
+    networks:
+      - ps-network
+
+  # 4. Python Collector (Hand)
+  collector-service:
+    build: ./apps/collector-service # Dockerfile 위치
+    container_name: ps-tracker-collector
+    ports:
+      - "5000:5000"
+    environment:
+      # Java 서버 주소 지정
+      API_BASE_URL: http://catalog-service:8080
+      # Selenium Grid 주소 지정
+      SELENIUM_URL: http://selenium-chrome:4444/wd/hub
+    depends_on:
+      - catalog-service
+      - selenium-chrome
+    networks:
+      - ps-network
+
+  # 5. DB 관리 도구
   adminer:
     image: adminer
     container_name: ps-tracker-adminer
     ports:
       - "8090:8080"
-    environment:
-      ADMINER_DEFAULT_SERVER: mysql
+    networks:
+      - ps-network
 
-# [추가] 도커 볼륨 선언
 volumes:
   db_data:
+
+networks:
+  ps-network:
+    driver: bridge

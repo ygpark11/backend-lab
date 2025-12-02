@@ -11,3 +11,9 @@ Content-Type: application/json
   "isDiscount": true,
   "discountRate": 30
 }
+
+### 수집 대상 조회 API
+GET http://localhost:8080/api/v1/games/targets
+
+### 수동 크롤링 API
+POST http://localhost:8080/api/v1/games/manual-crawl
