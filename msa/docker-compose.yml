@@ -29,6 +29,8 @@ services:
       - "4444:4444" # 외부에서 상황 볼 때 필요 (VNC 등)
       - "7900:7900" # 웹 브라우저로 화면 보기용 (NoVNC)
     shm_size: "2g" # 브라우저가 메모리 부족하지 않게 설정
+    environment:
+      - TZ=Asia/Seoul
     networks:
       - ps-network
 
@@ -39,6 +41,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      TZ: Asia/Seoul
       # 도커 내부에서는 'mysql'이라는 서비스 이름으로 접속
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
       # Python 수집기 주소 지정
@@ -55,6 +58,7 @@ services:
     ports:
       - "5000:5000"
     environment:
+      TZ: Asia/Seoul
       # Java 서버 주소 지정
       API_BASE_URL: http://catalog-service:8080
       # Selenium Grid 주소 지정

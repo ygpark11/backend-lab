@@ -15,3 +15,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+discord:
+  webhook:
+    url: https://discord.com/api/webhooks/1445670168645861487/FXE5N8WcoXRfMVGHTQZr9pkCSF_0-YAT98bWXSRNwZGQ43LZZM6Q7It9A8jgxZYqReE5
