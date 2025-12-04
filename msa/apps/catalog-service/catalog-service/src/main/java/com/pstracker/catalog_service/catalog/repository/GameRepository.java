@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -14,19 +13,15 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     Optional<Game> findByPsStoreId(String psStoreId);
 
     /**
-     * [수집 3원칙 - 기간 존중 & 망루 감시]
-     * 갱신이 필요한 게임 목록을 조회
+     * [수집 원칙 - 기간 존중]
+     * 갱신이 필요한 게임 목록을 조회합니다.
      *
-     * 조건 1: 마지막 갱신일(lastUpdated)이 기준일(threshold)보다 오래된 경우 (너무 오래된 데이터 갱신)
-     * 조건 2: OR (최신 가격 정보의 saleEndDate가 오늘보다 이전인 경우 -> 할인 끝났으니 정가 복귀 확인 필요)
+     * 정책: 마지막 갱신일(lastUpdated)이 기준일(threshold, 1일 전)보다 오래된 게임을 우선 조회합니다.
+     * (시스템 안정화를 위해 복잡한 할인 종료일 체크 로직은 제외하고, 단순 갱신 주기 확인으로 변경함)
      *
-     * 성능: limit을 걸어 한 번에 너무 많은 데이터를 수집하지 않도록 조절
+     * @param threshold 기준 시간 (보통 1일 전)
+     * @return 갱신 대상 게임 목록 (오래된 순 정렬)
      */
-    @Query("SELECT g FROM Game g " +
-            "LEFT JOIN g.priceHistories ph " +
-            "WHERE g.lastUpdated < :threshold " +
-            "OR (ph.saleEndDate < :today AND ph.saleEndDate IS NOT NULL) " +
-            "ORDER BY g.lastUpdated ASC")
-    List<Game> findGamesToUpdate(@Param("threshold") LocalDateTime threshold,
-                                 @Param("today") LocalDate today);
+    @Query("SELECT g FROM Game g WHERE g.lastUpdated < :threshold ORDER BY g.lastUpdated ASC")
+    List<Game> findGamesToUpdate(@Param("threshold") LocalDateTime threshold);
 }

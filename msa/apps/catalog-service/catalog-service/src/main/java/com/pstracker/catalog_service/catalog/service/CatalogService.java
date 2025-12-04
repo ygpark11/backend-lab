@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -28,56 +29,74 @@ public class CatalogService {
 
     /**
      * 크롤러가 수집한 데이터를 저장/갱신하는 핵심 로직
+     * 원칙: "가격 정보는 변동이 있을 때만 INSERT 한다."
      */
     @Transactional
     public void upsertGameData(CollectRequestDto request) {
-        // 1. 게임 정보 찾기 (이전 로직 동일)
+        // 1. 게임 정보 찾기 (없으면 생성)
         Game game = gameRepository.findByPsStoreId(request.getPsStoreId())
                 .orElseGet(() -> {
-                    log.info("✨ New Game Found: {}", request.getTitle());
+                    log.info("✨ New Game Discovered: {}", request.getTitle());
                     return gameRepository.save(Game.create(
                             request.getPsStoreId(), request.getTitle(), request.getPublisher(),
                             request.getImageUrl(), request.getDescription()
                     ));
                 });
 
-        // [Logic Check] 가격 변동 확인을 위해 '직전 가격' 조회
-        // 신규 게임 생성 직후라면 이력이 없으므로 Optional.empty() 반환됨
-        Integer oldPrice = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game)
-                .map(GamePriceHistory::getPrice) // 가격만 추출
-                .orElse(null); // 없으면 null
-
-        // 2. 게임 정보 업데이트 (기존 데이터가 있어도 최신 정보로 덮어쓰기)
+        // 2. 게임 메타 정보 업데이트 (항상 최신화)
+        // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외됨
         game.updateInfo(
                 request.getTitle(), request.getPublisher(), request.getImageUrl(),
                 request.getDescription(), request.getGenreIds()
         );
 
-        // 3. 가격 이력 기록 (무조건 Insert)
-        // 과거 가격을 덮어쓰는게 아니라, 오늘의 가격을 '한 줄 추가' 하는 것임.
-        GamePriceHistory history = GamePriceHistory.create(
-                game, request.getOriginalPrice(), request.getCurrentPrice(),
-                request.getDiscountRate(), request.isPlusExclusive(), request.getSaleEndDate()
-        );
-        priceHistoryRepository.save(history);
+        // 3. [Core] 가격 변동 검사 및 이력 저장
+        // 가장 최근의 가격 이력을 가져옵니다.
+        Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game);
 
-        log.debug("📝 Price updated: {} -> {} KRW", game.getName(), request.getCurrentPrice());
+        if (shouldSaveHistory(latestHistoryOpt, request)) {
+            // 3-1. 변동이 감지되었으므로 저장
+            GamePriceHistory history = GamePriceHistory.create(
+                    game, request.getOriginalPrice(), request.getCurrentPrice(),
+                    request.getDiscountRate(), request.isPlusExclusive(), request.getSaleEndDate()
+            );
+            priceHistoryRepository.save(history);
+            log.info("📈 Price Changed & Saved: {} ({} KRW)", game.getName(), request.getCurrentPrice());
 
-        //if (true) {
-        //    log.info("🚨 [TEST] Forcing Event Publish for: {}", game.getName());
+            // 3-2. 가격 하락 알림 체크 (저장이 일어난 경우에만 체크하면 됨)
+            checkAndPublishAlert(game, latestHistoryOpt, request.getCurrentPrice(), request.getDiscountRate());
+        } else {
+            // 변동 없음: 로그만 남기고 INSERT 생략 (데이터 다이어트 성공!)
+            log.debug("👌 No Change: {} (Skipping DB Insert)", game.getName());
+        }
+    }
 
-        // 4. [New] 알림 이벤트 발행 (The Watcher Trigger)
-        // 조건: 이전 가격이 존재하고(신규 게임 X), 현재 가격이 이전 가격보다 쌀 때
-        if (oldPrice != null && request.getCurrentPrice() < oldPrice) {
-            log.info("🚨 Price Drop Detected! {} ({} -> {})", game.getName(), oldPrice, request.getCurrentPrice());
+    /**
+     * 가격 이력을 저장해야 하는지 판단합니다.
+     * 1. 이력이 아예 없거나 (신규)
+     * 2. 가격/할인조건이 변경된 경우
+     */
+    private boolean shouldSaveHistory(Optional<GamePriceHistory> latestHistoryOpt, CollectRequestDto request) {
+        return latestHistoryOpt.map(gamePriceHistory -> !gamePriceHistory.isSameCondition(
+                request.getCurrentPrice(), request.getDiscountRate(),
+                request.isPlusExclusive(), request.getSaleEndDate()
+        )).orElse(true);
+    }
 
+    /**
+     * 알림 발행 로직 분리 (Clean Code)
+     */
+    private void checkAndPublishAlert(Game game, Optional<GamePriceHistory> oldHistoryOpt, int newPrice, int newDiscountRate) {
+        // 이전 기록이 없으면 알림 대상 아님 (신규 게임)
+        if (oldHistoryOpt.isEmpty()) return;
+
+        Integer oldPrice = oldHistoryOpt.get().getPrice();
+
+        // 가격이 떨어졌을 때만 알림
+        if (newPrice < oldPrice) {
+            log.info("🚨 Price Drop Detected! {} ({} -> {})", game.getName(), oldPrice, newPrice);
             eventPublisher.publishEvent(new GamePriceChangedEvent(
-                    game.getName(),
-                    game.getPsStoreId(),
-                    oldPrice,
-                    request.getCurrentPrice(),
-                    request.getDiscountRate(),
-                    game.getImageUrl()
+                    game.getName(), game.getPsStoreId(), oldPrice, newPrice, newDiscountRate, game.getImageUrl()
             ));
         }
     }
@@ -89,16 +108,14 @@ public class CatalogService {
      * 2. (쿼리상) 할인 종료일이 지난 게임
      */
     public List<String> getGamesToUpdate() {
-        // 기준: 3일 전
-        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
-        LocalDate today = LocalDate.now();
+        // 1. 기준 설정: 하루 전
+        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
 
-        // 최대 10개씩만 갱신 (너무 많이 요청하면 차단 위험)
-        // 실제로는 Pageable을 쓰는 게 좋지만, 지금은 List.stream().limit()으로 처리
-        List<Game> targets = gameRepository.findGamesToUpdate(threeDaysAgo, today);
+        // 2. Repository에 쿼리 요청
+        List<Game> targets = gameRepository.findGamesToUpdate(oneDayAgo);
 
         return targets.stream()
-                .limit(50) // 배치 1회당 10개 제한 (조절 가능)
+                .limit(100) // 배치 1회당 10개 제한 (조절 가능)
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
     }

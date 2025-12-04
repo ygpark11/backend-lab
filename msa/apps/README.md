@@ -5,14 +5,15 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Status: Level 19 Completed (Event-Driven Notification System)
+* **Status:** Level 20 Completed (Optimization & Stability)
 * **Goal:** 24시간 365일, 시스템이 스스로 가격을 감시하고 데이터를 축적하는 완전 자동화 시스템 구축.
 
 ### 🎯 핵심 가치 (Value Proposition)
 1.  **Automation:** 인간의 개입 없이 매일 새벽, 스스로 최신 정보를 수집하고 갱신.
 2.  **Stability:** MSA 구조와 도커 컨테이너를 통해 환경에 구애받지 않는 안정적인 실행 보장.
-3.  **Intelligence:** 단순 수집을 넘어, '갱신이 필요한 게임'만 선별하여 효율적으로 추적.
-4.  **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
+3.  **Intelligence:** 단순 수집을 넘어, '갱신이 필요한 게임'만 선별하고 **'변동이 있을 때만 저장'** 하여 효율 극대화.
+4.  **Resilience:** 네트워크 지연, 레이아웃 변경, 보이지 않는 텍스트 등 온갖 예외 상황에서도 살아남는 강인한 수집 능력.
+5**Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
 
 ---
 
@@ -29,32 +30,29 @@
 
 ### 🔄 자동화 데이터 흐름 (Automation Flow)
 1.  **Trigger:** Java 스케줄러가 매일 새벽 4시 (혹은 API 호출 시) Python Flask 서버(`POST /run`)를 깨움.
-2.  **Crawl:** Python이 Selenium으로 최신 가격을 수집하여 Java로 전송.
-3.  **Compare:** Java(`CatalogService`)가 DB의 '직전 가격'과 '현재 가격'을 비교.
-4.  **Publish :** 가격 하락 감지 시 `GamePriceChangedEvent` 발행 (내부 방송).
-5.  **Notify:** `@Async` 리스너가 이벤트를 청취하여 Discord Webhook 전송
+2.  **Smart Crawl:** Python이 Selenium으로 최신 가격을 수집 (Retry & JS Injection 적용)하여 Java로 전송.
+3.  **Logical Compare: Java(`CatalogService`)가 DB의 '직전 가격' 및 '할인 조건'을 정밀 비교.
+4.  **Save on Change: 변동이 감지된 경우에만 INSERT 수행 (Data Diet).
+5.  **Notify:** 가격 하락 시 `GamePriceChangedEvent` 발행 → Discord Webhook 비동기 전송.
 
 ---
 
 ## 3. 핵심 구현 내용 (Technical Details)
 
 ### ① Catalog Service (Java) - The Brain
-* **Spring Scheduler:** `@Scheduled`를 사용하여 크롤링 작업을 정기적으로 트리거.
-* **Targeting Logic:** '기간 존중' 원칙에 따라, 마지막 갱신일이 오래되었거나 할인 종료일이 지난 게임만 선별하여 수집기에게 전달.
-* **Event System:** `ApplicationEventPublisher`를 사용하여 비즈니스 로직(저장)과 알림 로직(전송)을 완벽하게 분리
+* **Smart Upsert Pattern:** 무조건적인 `INSERT`를 지양하고, 엔티티(`GamePriceHistory`) 내부에 `isSameCondition()` 비즈니스 로직을 구현. 가격, 할인율, 세일 종료일, Plus 혜택 여부 등을 비교하여 "실질적 변동"이 있을 때만 저장함으로써 DB 공간 절약 및 멱등성 확보.
+* **Targeting Logic:** '기간 존중' 원칙에 따라 갱신이 필요한 게임만 선별하여 수집기에게 전달.
+* **Event System:** `ApplicationEventPublisher`를 사용하여 비즈니스 로직과 알림 로직을 분리
 
 ### ② Collector Service (Python) - The Hand
-* **Flask Web Server:** 단순 스크립트 실행 방식에서 벗어나, 외부 명령을 대기하는 서버 형태로 진화.
-* **Selenium Grid 연동:** `webdriver.Remote`를 사용하여 로컬 크롬이 아닌 도커 내부의 원격 브라우저 제어.
-* **Smart Mode:**
-    * **Phase 1 (Update):** Java가 지시한 게임 우선 갱신.
-    * **Phase 2 (Discovery):** 신규 게임 탐색 및 추가.
+* **Universal Parser:** 게임마다 다른 레이아웃("포함", "무료", 다중 오퍼 등)을 모두 처리할 수 있는 범용 파싱 로직 구현.
+* **JS Injection Extraction:** Selenium의 `.text`가 화면 밖(Off-screen) 요소를 읽지 못하는 한계를 극복하기 위해, JavaScript(`textContent`)를 주입하여 데이터를 강제로 추출.
+* **Smart Wait & Retry:** 네트워크 지연에 대비한 `Explicit Wait`와 간헐적 실패(Flaky)를 잡기 위한 `Retry Mechanism` 도입.
+* **Flask Web Server:** 외부 명령을 대기하는 서버 형태.
 
 ### ③ Notification System (The Watcher)
 - Tech: Spring Event + `@Async` + Discord Webhook
-- Mechanism:
-  - 트랜잭션 성능 저하 방지를 위해 알림 발송은 비동기 스레드에서 처리.
-  - `CatalogService`는 알림 채널(Discord, Email 등)의 존재를 모름 (Loose Coupling).
+- Mechanism: 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
 
 ---
 
@@ -77,21 +75,25 @@
 
 <br>
 
-## 5. 수집 정책: 3원칙 (The Crawling Constitution)
+## 5. 수집 정책: 4원칙 (The Crawling Constitution)
 
 시스템의 안정성과 지속 가능성을 위해 아래 3가지 원칙을 준수합니다.
 
 **✅ 1. 기간 존중 (Respect Period)**
-* 무조건 전체 데이터를 긁지 않습니다. Java 애플리케이션이 선별해 준 **'갱신 대상'**만 우선 처리합니다.
-* 이미 방문하여 데이터를 확보한 URL은 중복 수집하지 않습니다.
+* Java 애플리케이션이 선별해 준 **'갱신 대상'**만 우선 처리하며, 불필요한 트래픽을 유발하지 않는다.
 
-**✅ 2. 유저 우선 (User First)**
-* (Level 20 예정) 사용자가 **찜한 게임**은 최우선 순위로 갱신합니다.
+**✅ 2. 데이터 다이어트 (Data Diet)**
+* "변하지 않았다면 기록하지 않는다."
+* 불필요한 중복 데이터를 방지하여 스토리지 비용을 절감하고 조회 성능을 유지한다.
 
-**✅ 3. 안전 제일 (Safety First)**
-* `StaleElementReferenceException` 방지를 위해 **https://m.kpedia.jp/w/7709** 단계와 **[상세 방문]** 로직을 엄격히 분리했습니다.
-* 과도한 트래픽 유발을 막기 위해 수집 건수 제한(Limit) 및 딜레이(Sleep)를 적용했습니다.
+**✅ 3. 정밀 타격 (Precision Strike)**
+* "보이지 않는 것도 본다."
+* 단순 텍스트 추출이 아닌, DOM 내부의 `textContent`를 조회하여 렌더링 이슈를 극복한다.
+* 실패 시 즉시 포기하지 않고, 재시도(Retry)를 통해 수집 성공률을 올린다.
 
+**✅ 4. 안전 제일 (Safety First)**
+* `StaleElementReferenceException` 방지를 위한 **[탐색]**과 [방문] 로직 분리.
+* 수집 건수 제한(Limit) 및 딜레이(Sleep) 적용.
 <br>
 
 ## 6. 핵심 코드 스니펫 (Code Context)
@@ -130,6 +132,29 @@ public void handlePriceChange(GamePriceChangedEvent event) {
 }
 ```
 
+### 🛡️ Smart Upsert (CatalogService.java)
+
+```java
+// 변동이 있을 때만 저장 (Data Diet)
+if (shouldSaveHistory(latestHistoryOpt, request)) {
+        priceHistoryRepository.save(history); // INSERT
+checkAndPublishAlert(...); // 알림 체크
+} else {
+        log.debug("👌 No Change: {} (Skipping DB Insert)", game.getName());
+}
+```
+
+### 🕷️ Invisible Text Extraction (app.py)
+Selenium의 한계를 넘어서는 JavaScript 주입 기법.
+
+```python
+# 요소를 화면 중앙으로 강제 스크롤 (로딩 유도)
+driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", price_elem)
+
+# 화면에 안 보여도 강제로 텍스트 추출 (JS)
+raw_price = driver.execute_script("return arguments[0].textContent;", price_elem).strip()
+```
+
 ---
 
 ## 7. 트러블슈팅 (Troubleshooting Log)
@@ -150,10 +175,19 @@ public void handlePriceChange(GamePriceChangedEvent event) {
 * **증상:** `.gitignore` 설정 미숙으로 가상환경 폴더(`venv`)가 깃허브에 업로드됨.
 * **해결:** `/venv` 슬래시 제거 후 `git rm -r --cached` 명령어를 통해 로컬 파일은 유지하고 원격 저장소에서만 삭제.
 
-### 💥 Issue 5: 침묵하는 감시자 (The Silent Watcher)
-* **증상:** 로직 구현 후 테스트를 돌렸으나 디스코드 알림이 오지 않음.
-* **원인:** 버그가 아니라, 실제 가격 변동이 없었기 때문에 시스템이 정상적으로 침묵(Skip)한 것.
-* **해결:** 테스트 시에는 강제로 이벤트를 발생(`if(true)`)시켜 연결을 확인하고, 검증 후 실제 변동 감지 로직으로 원상 복구.
+### 💥 Issue 5: 침묵하는 0원 (The Silent Zero)
+* **증상:** 가격을 못 찾았을 때 0원으로 DB에 저장되어, 멀쩡한 게임이 무료 게임으로 둔갑하고 알림이 오발송됨.
+* **해결:** Guard Clause(방어 코드) 추가. 유효한 가격을 찾지 못하면 데이터를 전송하지 않고 `Skip` 처리.
+
+### 💥 Issue 6: 유령 데이터 (The Ghost Data)
+* **증상:** 가격은 같은데 `sale_end_dat`e가 `NULL`인 데이터가 중복으로 쌓임.
+* **원인:** PS Store 페이지 로딩 딜레이로 인해, 가격은 떴지만 날짜 텍스트가 렌더링되기 전에 크롤러가 지나가버림.
+* **해결:** `Smart Wait` 도입. 가격 관련 요소가 뜰 때까지 명시적으로 기다리도록 변경.
+
+### 💥 Issue 7: 보이지 않는 텍스트 (Invisible Text)
+* **증상:** HTML 요소는 존재하는데 `.text` 값이 빈 문자열(`''`)로 반환됨.
+* **원인:** 최신 웹 프레임워크의 렌더링 최적화로 인해 화면 밖(Off-screen) 요소의 텍스트를 Selenium이 읽지 못함.
+* **해결:** `driver.execute_script("return arguments[0].textContent;")`를 사용하여 DOM 레벨에서 텍스트 강제 추출.
 
 ---
 
@@ -188,3 +222,8 @@ docker ps
 
 - Method: POST
 - URL: `http://localhost:8080/api/v1/games/manual-crawl`
+
+### ④ Data Verification
+- Adminer 접속: `http://localhost:8090`
+- System: MySQL / Server: `mysql` / User: `user` / PW: `password`
+- `games` 및 `game_price_history` 테이블 데이터 확인.
