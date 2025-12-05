@@ -7,7 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "games")
@@ -42,7 +44,7 @@ public class Game {
     private Integer metaScore;
 
     @Column(name = "user_score")
-    private Double userScore; // [복구 완료]
+    private Double userScore;
 
     @Column(name = "last_updated_at")
     private LocalDateTime lastUpdated;
@@ -50,6 +52,24 @@ public class Game {
     // 양방향 매핑 (게임 삭제 시 가격 이력도 같이 삭제)
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
+
+    @ElementCollection(targetClass = Platform.class, fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "game_platforms",
+            joinColumns = @JoinColumn(name = "game_id")
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "platform")
+    private Set<Platform> platforms = new HashSet<>();
+
+    // [Helper Method] 플랫폼 정보 갱신용 편의 메서드
+    public void updatePlatforms(Set<Platform> newPlatforms) {
+        // 기존 플랫폼 정보를 싹 비우고 새로 채움 (변동사항 반영)
+        this.platforms.clear();
+        if (newPlatforms != null) {
+            this.platforms.addAll(newPlatforms);
+        }
+    }
 
     // --- [생성 메서드] ---
     public static Game create(String psStoreId, String name, String publisher, String imageUrl, String description) {

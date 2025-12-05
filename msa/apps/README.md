@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 20 Completed (Optimization & Stability)
+* **Status:** Level 21-22 Completed (Precision & Robustness)
 * **Goal:** 24시간 365일, 시스템이 스스로 가격을 감시하고 데이터를 축적하는 완전 자동화 시스템 구축.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -13,7 +13,7 @@
 2.  **Stability:** MSA 구조와 도커 컨테이너를 통해 환경에 구애받지 않는 안정적인 실행 보장.
 3.  **Intelligence:** 단순 수집을 넘어, '갱신이 필요한 게임'만 선별하고 **'변동이 있을 때만 저장'** 하여 효율 극대화.
 4.  **Resilience:** 네트워크 지연, 레이아웃 변경, 보이지 않는 텍스트 등 온갖 예외 상황에서도 살아남는 강인한 수집 능력.
-5**Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
+5   **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
 
 ---
 
@@ -35,6 +35,41 @@
 4.  **Save on Change: 변동이 감지된 경우에만 INSERT 수행 (Data Diet).
 5.  **Notify:** 가격 하락 시 `GamePriceChangedEvent` 발행 → Discord Webhook 비동기 전송.
 
+```mermaid
+graph TD
+    %% 스타일 정의
+    classDef java fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef python fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,stroke-dasharray: 5 5;
+
+    subgraph Docker_Network [Docker Network (PS-Tracker)]
+        direction TB
+        
+        Java("<b>Catalog Service (Brain)</b><br/>[Spring Boot / Port 8080]<br/>Scheduler & Logic"):::java
+        Python("<b>Collector Service (Hand)</b><br/>[Flask / Port 5000]<br/>Crawler Controller"):::python
+        Selenium("<b>Selenium Grid (Eyes)</b><br/>[Chrome / Port 4444]<br/>Remote Browser"):::infra
+        DB[("<b>MySQL (Storage)</b><br/>[Port 3307]<br/>Persist Data")]:::infra
+    end
+
+    subgraph External_World [External]
+        PS_Store(PlayStation Store):::external
+        Discord(Discord Webhook):::external
+    end
+
+    %% 데이터 흐름 연결
+    Java -- "1. Trigger (POST /run)" --> Python
+    Python -- "2. Remote Command" --> Selenium
+    Selenium -- "3. GET HTML" --> PS_Store
+    Selenium -- "4. Raw Data (DOM)" --> Python
+    Python -- "5. Send Parsed Data (JSON)" --> Java
+    Java -- "6. Smart Upsert (Compare)" --> DB
+    Java -. "7. Async Alert (If Drop)" .-> Discord
+
+    %% 링크 스타일링
+    linkStyle 0,1,2,3,4,5,6 stroke-width:2px,fill:none,stroke:#333;
+```
+
 ---
 
 ## 3. 핵심 구현 내용 (Technical Details)
@@ -46,14 +81,67 @@
 
 ### ② Collector Service (Python) - The Hand
 * **Universal Parser:** 게임마다 다른 레이아웃("포함", "무료", 다중 오퍼 등)을 모두 처리할 수 있는 범용 파싱 로직 구현.
-* **JS Injection Extraction:** Selenium의 `.text`가 화면 밖(Off-screen) 요소를 읽지 못하는 한계를 극복하기 위해, JavaScript(`textContent`)를 주입하여 데이터를 강제로 추출.
+* **Container-Based Scanning:** 특정 아이콘만 찾는 '저격수' 방식에서, 가격 박스 전체(`offer_container`)를 확보한 뒤 텍스트와 태그를 복합적으로 분석하는 '산탄총' 방식으로 전환하여 Plus 회원 전용가 인식률 100% 달성.
+* **Deep DOM Extraction:** 화면에 렌더링되지 않은 텍스트(Hidden Elements)를 읽지 못하는 `.text` 속성의 한계를 극복하기 위해, `get_attribute("textContent")`를 사용하여 DOM 내부의 원시 데이터를 직접 추출.
 * **Smart Wait & Retry:** 네트워크 지연에 대비한 `Explicit Wait`와 간헐적 실패(Flaky)를 잡기 위한 `Retry Mechanism` 도입.
-* **Flask Web Server:** 외부 명령을 대기하는 서버 형태.
+* **Self-Healing Pagination:** 대량 수집(Max 300 Page) 시 발생할 수 있는 브라우저 메모리 누수(Memory Leak)를 방지하기 위해, 일정 주기(20페이지)마다 드라이버를 스스로 리셋(Restart)하여 장기 실행 안정성 확보.
 
 ### ③ Notification System (The Watcher)
 - Tech: Spring Event + `@Async` + Discord Webhook
 - Mechanism: 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Scheduler as ⏰ Scheduler (Java)
+    participant Crawler as 🐍 Collector (Python)
+    participant Chrome as 🌐 Selenium Grid
+    participant Store as 🛒 PS Store
+    participant Service as 🧠 Catalog Service
+    participant DB as 💾 MySQL
+    participant Discord as 🔔 Discord
+
+    Note over Scheduler, Crawler: 1. Trigger Phase
+    Scheduler->>Crawler: POST /run (Start Batch)
+    activate Crawler
+    
+    Note over Crawler, Store: 2. Crawling Phase
+    loop Pagination (Max 300)
+        Crawler->>Chrome: Connect & Request Page
+        Chrome->>Store: GET /category/...
+        Store-->>Chrome: Response HTML
+        Crawler->>Chrome: get_attribute("textContent")
+        Note right of Crawler: Invisible Text Extraction
+
+        loop Per Game
+            Crawler->>Service: POST /collect (Info & Price)
+            activate Service
+            
+            Note over Service, DB: 3. Logic Phase (Brain)
+            Service->>DB: Fetch Latest History
+            DB-->>Service: Return Entity
+            
+            Service->>Service: isSameCondition() Check
+            
+            alt Condition Changed (Data Diet 실패)
+                Service->>DB: INSERT New History
+                
+                opt Price Drop Detected
+                    Service--)Discord: Send Alert (Async Event)
+                end
+            else No Change (Data Diet 성공)
+                Service->>Service: Skip INSERT
+                Note right of Service: Log: "No Change"
+            end
+            deactivate Service
+        end
+        
+        opt Every 20 Pages
+            Crawler->>Chrome: Restart Driver (Memory Leak Protection)
+        end
+    end
+    deactivate Crawler
+```
 ---
 
 ## 4. 아키텍처 의사결정 (ADR: Event vs MQ)
@@ -109,11 +197,11 @@ if (oldPrice != null && request.getCurrentPrice() < oldPrice) {
         // 이벤트를 던지고 즉시 다음 로직으로 넘어감 (Non-blocking)
         eventPublisher.publishEvent(new GamePriceChangedEvent(
         game.getName(),
-            game.getPsStoreId(),
-oldPrice,
+        game.getPsStoreId(),
+        oldPrice,
         request.getCurrentPrice(),
-            request.getDiscountRate(),
-            game.getImageUrl()
+        request.getDiscountRate(),
+        game.getImageUrl()
     ));
             }
 ```
@@ -151,8 +239,9 @@ Selenium의 한계를 넘어서는 JavaScript 주입 기법.
 # 요소를 화면 중앙으로 강제 스크롤 (로딩 유도)
 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", price_elem)
 
-# 화면에 안 보여도 강제로 텍스트 추출 (JS)
-raw_price = driver.execute_script("return arguments[0].textContent;", price_elem).strip()
+# DOM Attribute Access (변경)
+# 화면 표시 여부(visibility)와 무관하게 DOM 트리에 있는 텍스트 원본을 가져옴
+raw_price = price_elem.get_attribute("textContent").strip()
 ```
 
 ---
@@ -188,6 +277,11 @@ raw_price = driver.execute_script("return arguments[0].textContent;", price_elem
 * **증상:** HTML 요소는 존재하는데 `.text` 값이 빈 문자열(`''`)로 반환됨.
 * **원인:** 최신 웹 프레임워크의 렌더링 최적화로 인해 화면 밖(Off-screen) 요소의 텍스트를 Selenium이 읽지 못함.
 * **해결:** `driver.execute_script("return arguments[0].textContent;")`를 사용하여 DOM 레벨에서 텍스트 강제 추출.
+
+💥 Issue 8: Lombok과 Jackson의 Boolean 전쟁
+* **증상:** 파이썬은 `true`를 보냈는데, 자바 DB에는 계속 `false`(0)로 저장됨.
+* **원인:** Lombok은 boolean 필드(`isPlus`)의 Getter를 `isPlus()`로 생성하지만, Jackson 라이브러리는 Getter 이름이 `is`로 시작하면 필드명을 plus로 추론하여 매핑 실패. (Java Bean Naming Convention 충돌)
+* **해결:** DTO 필드에 `@JsonProperty("isPlusExclusive")`를 명시하여 JSON 키 값을 강제로 고정.
 
 ---
 

@@ -12,7 +12,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -37,10 +36,12 @@ public class CatalogService {
         Game game = gameRepository.findByPsStoreId(request.getPsStoreId())
                 .orElseGet(() -> {
                     log.info("✨ New Game Discovered: {}", request.getTitle());
-                    return gameRepository.save(Game.create(
+                    Game newGame = Game.create(
                             request.getPsStoreId(), request.getTitle(), request.getPublisher(),
                             request.getImageUrl(), request.getDescription()
-                    ));
+                    );
+                    newGame.updatePlatforms(request.getPlatforms());
+                    return gameRepository.save(newGame);
                 });
 
         // 2. 게임 메타 정보 업데이트 (항상 최신화)
@@ -49,6 +50,9 @@ public class CatalogService {
                 request.getTitle(), request.getPublisher(), request.getImageUrl(),
                 request.getDescription(), request.getGenreIds()
         );
+
+        // 플랫폼 정보도 최신화 (혹시 나중에 PS5 버전이 추가될 수도 있으니)
+        game.updatePlatforms(request.getPlatforms());
 
         // 3. [Core] 가격 변동 검사 및 이력 저장
         // 가장 최근의 가격 이력을 가져옵니다.
@@ -115,7 +119,7 @@ public class CatalogService {
         List<Game> targets = gameRepository.findGamesToUpdate(oneDayAgo);
 
         return targets.stream()
-                .limit(100) // 배치 1회당 10개 제한 (조절 가능)
+                .limit(1_000)
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
     }
