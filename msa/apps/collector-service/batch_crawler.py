@@ -11,6 +11,9 @@ from logging.handlers import RotatingFileHandler
 from datetime import datetime
 from flask import Flask, jsonify
 
+import undetected_chromedriver as uc
+from fake_useragent import UserAgent
+
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -24,14 +27,9 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 if not os.path.exists('logs'):
     os.makedirs('logs')
 
-# 로깅 설정 (콘솔 + 파일 회전)
 log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-
-# 1. 파일 핸들러 (10MB 씩 5개 보관)
 file_handler = RotatingFileHandler('logs/crawler.log', maxBytes=10*1024*1024, backupCount=5)
 file_handler.setFormatter(log_formatter)
-
-# 2. 콘솔 핸들러
 console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
 
@@ -54,26 +52,46 @@ is_running = False
 
 def get_driver():
     """드라이버 설정 및 생성 로직 분리"""
-    options = webdriver.ChromeOptions()
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--lang=ko-KR")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
+    # 1. 랜덤 User-Agent 생성
+    ua = UserAgent()
+    random_user_agent = ua.random
+    logger.info(f"🎭 Generated User-Agent: {random_user_agent}")
 
-    # User-Agent 설정 (봇 차단 방지)
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36")
+    driver = None
 
-    # Docker 환경이거나 명시적 헤드리스 요청 시
-    if SELENIUM_URL or os.getenv("HEADLESS", "true").lower() == "true":
-        options.add_argument("--headless")
-
+    # [Case A] Docker / Selenium Grid 환경 (기존 방식 유지하되 옵션 강화)
     if SELENIUM_URL:
         logger.info(f"🌐 [Docker Mode] Connecting to Selenium Grid: {SELENIUM_URL}")
-        return webdriver.Remote(command_executor=SELENIUM_URL, options=options)
+        options = webdriver.ChromeOptions()
+        options.add_argument(f"user-agent={random_user_agent}")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option("useAutomationExtension", False)
+
+        driver = webdriver.Remote(command_executor=SELENIUM_URL, options=options)
+
+    # [Case B] 로컬 환경 (Undetected Chromedriver 사용 - 강력함)
     else:
-        logger.info("💻 [Local Mode] Starting Chrome Driver")
-        return webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        logger.info("💻 [Local Mode] Starting Undetected Chrome Driver (Stealth)")
+        options = uc.ChromeOptions()
+        # headless=True 대신 별도 인자 사용 권장 in uc
+        if os.getenv("HEADLESS", "false").lower() == "true":
+             options.add_argument("--headless=new")
+
+        options.add_argument(f"user-agent={random_user_agent}")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-popup-blocking")
+
+        # UC는 드라이버 설치를 자동으로 관리함
+        driver = uc.Chrome(options=options, use_subprocess=True)
+
+    # 공통: navigator.webdriver 숨기기 (더블 체크)
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    return driver
 
 def fetch_update_targets():
     """Java 서버 통신 예외 처리 강화"""
@@ -96,7 +114,7 @@ def run_batch_crawler_logic():
     driver = None
     try:
         driver = get_driver()
-        wait = WebDriverWait(driver, 15)
+        wait = WebDriverWait(driver, 20)
         visited_urls = set()
 
         # [Phase 1] 기존 타겟 갱신
@@ -107,7 +125,7 @@ def run_batch_crawler_logic():
                 if not is_running: break
                 crawl_detail_and_send(driver, wait, url)
                 visited_urls.add(url)
-                time.sleep(random.uniform(1.0, 2.0))
+                time.sleep(random.uniform(15.0, 25.0))
 
         # [Phase 2] 신규 탐색 (페이지네이션)
         if is_running:
@@ -116,30 +134,39 @@ def run_batch_crawler_logic():
             search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
 
             current_page = 1
-            max_pages = 300
+            max_pages = 10
 
             while current_page <= max_pages:
                 if not is_running: break
 
                 # [메모리 관리] 20페이지마다 드라이버 재시작
-                if current_page > 1 and current_page % 20 == 0:
+                if current_page > 1 and current_page % 15 == 0:
                     logger.info("♻️ [Maintenance] Restarting driver to prevent memory leak...")
                     driver.quit()
-                    time.sleep(5)
+                    time.sleep(10)
                     driver = get_driver()
-                    wait = WebDriverWait(driver, 15)
+                    wait = WebDriverWait(driver, 20)
 
                 target_list_url = f"{base_category_path}/{current_page}{search_params}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
 
                 try:
                     driver.get(target_list_url)
+
                     # 스크롤 로직
-                    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
-                    driver.execute_script("window.scrollTo(0, 1000);")
-                    time.sleep(1.5)
-                    driver.execute_script("window.scrollTo(0, 4000);")
-                    time.sleep(1.5)
+                    try:
+                        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
+                    except TimeoutException:
+                        logger.warning(f"   ⚠️ Page load timeout. Retrying...")
+                        driver.refresh()
+                        time.sleep(3)
+
+                    # 스크롤 로직
+                    driver.execute_script(f"window.scrollTo(0, {random.randint(800, 1200)});")
+                    time.sleep(random.uniform(1.0, 2.0))
+                    driver.execute_script(f"window.scrollTo(0, {random.randint(3000, 4500)});")
+                    time.sleep(random.uniform(2.0, 3.0))
+
                 except Exception as e:
                     logger.warning(f"⚠️ Page Load Error on {current_page}: {e}")
 
@@ -166,12 +193,12 @@ def run_batch_crawler_logic():
                     if not is_running: break
                     crawl_detail_and_send(driver, wait, url)
                     visited_urls.add(url)
-                    time.sleep(random.uniform(1.0, 3.0))
+                    time.sleep(random.uniform(6.0, 10.0))
 
                 current_page += 1
-                time.sleep(random.uniform(2.0, 3.0))
+                time.sleep(random.uniform(10.0, 15.0))
 
-        logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
+            logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
 
     except Exception as e:
         logger.error(f"🔥 Critical Crawler Error: {e}")

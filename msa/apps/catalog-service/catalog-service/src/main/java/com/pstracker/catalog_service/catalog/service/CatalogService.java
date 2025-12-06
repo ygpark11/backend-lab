@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -112,14 +113,14 @@ public class CatalogService {
      * 2. (쿼리상) 할인 종료일이 지난 게임
      */
     public List<String> getGamesToUpdate() {
-        // 1. 기준 설정: 하루 전
-        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+        // 1. 기준 시간 (하루 전)
+        LocalDateTime threshold = LocalDateTime.now().minusDays(1);
 
-        // 2. Repository에 쿼리 요청
-        List<Game> targets = gameRepository.findGamesToUpdate(oneDayAgo);
+        // 2. [New] 기준 날짜 (오늘) - 기간 존중 비교용
+        LocalDate today = LocalDate.now();
 
-        return targets.stream()
-                .limit(1_000)
+        // 3. 쿼리 실행 (today 파라미터 추가)
+        return gameRepository.findGamesToUpdate(threshold, today).stream()
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
     }
