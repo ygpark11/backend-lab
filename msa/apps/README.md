@@ -36,39 +36,6 @@
 4.  **Save on Change: 변동이 감지된 경우에만 INSERT 수행 (Data Diet).
 5.  **Notify:** 가격 하락 시 `GamePriceChangedEvent` 발행 → Discord Webhook 비동기 전송.
 
-```mermaid
-graph TD
-
-    classDef java fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
-    classDef python fill:#e3f2fd,stroke:#1565c0,stroke-width:1px;
-    classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
-    classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:1px,stroke-dasharray: 5 5;
-
-    subgraph Docker_Network [Docker Network - PS]
-        direction TB
-
-        Java["1. Trigger\nCatalog Service (Brain)\n(Spring Boot / 8080)\nScheduler & Logic"]:::java
-        Python["2. Crawl / 4. Send Data\nCollector Service (Hand)\n(Flask / 5000)\nCrawler Controller"]:::python
-        Selenium["3. Parse Price\nSelenium Grid (Eyes)\n(Chrome / 4444)\nRemote Browser"]:::infra
-        DB["6. Fail-Safe Save\nMySQL (Storage)\n(Port 3307)\nPersist Data"]:::infra
-    end
-
-    subgraph External [External Sources]
-        PS_Store["PlayStation Store"]:::external
-        IGDB["IGDB / Twitch API"]:::external
-        Discord["Discord Webhook"]:::external
-    end
-
-    Java --> Python
-    Python --> Selenium
-    Selenium --> PS_Store
-    Python --> Java
-    Java --> IGDB
-    Java --> DB
-    Java -.-> Discord
-
-```
-
 ---
 
 ## 3. 핵심 구현 내용 (Technical Details)
@@ -112,33 +79,39 @@ sequenceDiagram
     participant Chrome as 🌐 Selenium Grid
     participant Store as 🛒 PS Store
     participant Service as 🧠 Catalog Service
+    participant IGDB as 👾 IGDB API
     participant DB as 💾 MySQL
     participant Discord as 🔔 Discord
 
-    Note over Scheduler, Crawler: 1. Trigger Phase
+    Note over Scheduler, Crawler: 1. Trigger Phase (Level 24 예정)
     Scheduler->>Crawler: POST /run (Start Batch)
     activate Crawler
     
     Note over Crawler, Store: 2. Crawling Phase
-    loop Pagination (Max 300)
+    loop Pagination (Max 10)
         Crawler->>Chrome: Connect & Request Page
         Chrome->>Store: GET /category/...
         Store-->>Chrome: Response HTML
         Crawler->>Chrome: get_attribute("textContent")
-        Note right of Crawler: Invisible Text Extraction
+        Note right of Crawler: Precision Logic (Strikethrough)
 
         loop Per Game
             Crawler->>Service: POST /collect (Info & Price)
             activate Service
             
-            Note over Service, DB: 3. Logic Phase (Brain)
+            Note over Service, DB: 3. Logic & Mash-up Phase
+            
+            %% [Level 23 추가] IGDB 연동 구간
+            Service->>IGDB: Search Game (ID -> Name)
+            IGDB-->>Service: Return Ratings (Meta/User)
+            
             Service->>DB: Fetch Latest History
             DB-->>Service: Return Entity
             
             Service->>Service: isSameCondition() Check
             
             alt Condition Changed (Data Diet 실패)
-                Service->>DB: INSERT New History
+                Service->>DB: INSERT New History (Price + Ratings)
                 
                 opt Price Drop Detected
                     Service--)Discord: Send Alert (Async Event)
