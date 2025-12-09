@@ -38,35 +38,46 @@
 
 ```mermaid
 graph TD
-    %% 스타일 정의
-    classDef java fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
-    classDef python fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
-    classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-    classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,stroke-dasharray: 5 5;
 
-    subgraph Docker_Network [Docker Network - PS Tracker]
+    %% 스타일 정의
+    classDef java fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
+    classDef python fill:#e3f2fd,stroke:#1565c0,stroke-width:1px;
+    classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
+    classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:1px,stroke-dasharray: 5 5;
+
+    subgraph Docker_Network [Docker Network - PS]
         direction TB
-        
-        Java["Catalog Service (Brain)\n[Spring Boot / Port 8080]\nScheduler & Logic"]:::java
-        Python["Collector Service (Hand)\n[Flask / Port 5000]\nCrawler Controller"]:::python
-        Selenium["Selenium Grid (Eyes)\n[Chrome / Port 4444]\nRemote Browser"]:::infra
-        DB["MySQL (Storage)\n[Port 3307]\nPersist Data"]:::infra
+
+        Java["Catalog Service (Brain)
+[Spring Boot / 8080]
+Scheduler & Logic"]:::java
+
+        Python["Collector Service (Hand)
+[Flask / 5000]
+Crawler Controller"]:::python
+
+        Selenium["Selenium Grid (Eyes)
+[Chrome / 4444]
+Remote Browser"]:::infra
+
+        DB["MySQL (Storage)
+[Port 3307]
+Persist Data"]:::infra
     end
 
-    subgraph External_World [External Sources]
+    subgraph External [External Sources]
         PS_Store["PlayStation Store"]:::external
         IGDB["IGDB / Twitch API"]:::external
         Discord["Discord Webhook"]:::external
     end
 
-    Java -- "1. Trigger" --> Python
-    Python -- "2. Crawl (Stealth)" --> Selenium
-    Selenium -- "3. Parse Price" --> PS_Store
-    Python -- "4. Send Data" --> Java
-    Java -- "5. Fetch Ratings (Mash-up)" --> IGDB
-    Java -- "6. Fail-Safe Save" --> DB
-    Java -. "7. Async Alert (If Drop)" .-> Discord
-
+    Java -->|1. Trigger| Python
+    Python -->|2. Crawl (Stealth)| Selenium
+    Selenium -->|3. Parse Price| PS_Store
+    Python -->|4. Send Data| Java
+    Java -->|5. Fetch Ratings| IGDB
+    Java -->|6. Save| DB
+    Java -.->|7. Alert| Discord
 ```
 
 ---
