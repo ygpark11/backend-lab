@@ -44,7 +44,7 @@ graph TD
     classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
     classDef external fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,stroke-dasharray: 5 5;
 
-    subgraph Docker_Network [Docker Network (PS-Tracker)]
+    subgraph Docker_Network [Docker Network - PS Tracker]
         direction TB
         
         Java["Catalog Service (Brain)\n[Spring Boot / Port 8080]\nScheduler & Logic"]:::java
@@ -53,13 +53,12 @@ graph TD
         DB["MySQL (Storage)\n[Port 3307]\nPersist Data"]:::infra
     end
 
-    subgraph External_World [External]
-        PS_Store(PlayStation Store):::external
-        IGDB(IGDB / Twitch API):::external
-        Discord(Discord Webhook):::external
+    subgraph External_World [External Sources]
+        PS_Store["PlayStation Store"]:::external
+        IGDB["IGDB / Twitch API"]:::external
+        Discord["Discord Webhook"]:::external
     end
 
-    %% 데이터 흐름 연결
     Java -- "1. Trigger" --> Python
     Python -- "2. Crawl (Stealth)" --> Selenium
     Selenium -- "3. Parse Price" --> PS_Store
@@ -68,9 +67,7 @@ graph TD
     Java -- "6. Fail-Safe Save" --> DB
     Java -. "7. Async Alert (If Drop)" .-> Discord
 
-    %% 링크 스타일링
     linkStyle 0,1,2,3,4,5,6 stroke-width:2px,fill:none,stroke:#333;
-
 ```
 
 ---
