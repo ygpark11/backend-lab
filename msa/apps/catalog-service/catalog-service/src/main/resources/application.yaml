@@ -19,3 +19,9 @@ spring:
 discord:
   webhook:
     url: https://discord.com/api/webhooks/1445670168645861487/FXE5N8WcoXRfMVGHTQZr9pkCSF_0-YAT98bWXSRNwZGQ43LZZM6Q7It9A8jgxZYqReE5
+
+igdb:
+  client-id: "prxma4t42rqkh826svln7s5wxfu2wq"
+  client-secret: "p0vs0nv2pcz4591pg2fbutsn9py0y7"
+  auth-url: "https://id.twitch.tv/oauth2/token"
+  api-url: "https://api.igdb.com/v4"

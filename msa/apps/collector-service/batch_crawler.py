@@ -253,25 +253,21 @@ def crawl_detail_and_send(driver, wait, target_url):
             tag_elements = driver.find_elements(By.CSS_SELECTOR, "[data-qa^='mfe-game-title#productTag']")
             for el in tag_elements:
                 raw_text = el.get_attribute("textContent").strip().upper()
-
                 if "PS5" in raw_text: platform_set.add("PS5")
                 if "PS4" in raw_text: platform_set.add("PS4")
-
-                if "VR2" in raw_text:
-                    platform_set.add("PS_VR2")
-                elif "VR" in raw_text:
-                    platform_set.add("PS_VR")
-
+                if "VR2" in raw_text: platform_set.add("PS_VR2")
+                elif "VR" in raw_text: platform_set.add("PS_VR")
             platforms = list(platform_set)
-            logger.info(f"   🎮 Platforms: {platforms}")
         except Exception as e:
-            logger.warning(f"   ⚠️ Platform parsing error: {e}")
             platforms = []
 
         # 6.. 가격 추출
         best_price = float('inf')
         best_offer_data = None    # 최저가일 때의 세부 정보(원가, 할인율, Plus여부 등)
         found_valid_offer = False
+
+        # DOM 안정화 대기
+        time.sleep(1.0)
 
         # 최대 2번 시도 (DOM 렌더링 지연 대비)
         for attempt in range(2):
@@ -292,17 +288,15 @@ def crawl_detail_and_send(driver, wait, target_url):
                     try:
                         price_selector = f"[data-qa='mfeCtaMain#offer{i}#finalPrice']"
                         price_elem = offer_container.find_element(By.CSS_SELECTOR, price_selector)
-
-                        # execute_script 대신 get_attribute("textContent") 사용 (가장 안전함)
                         raw_price = price_elem.get_attribute("textContent").strip()
-                        clean_price_text = re.sub(r'[^0-9]', '', raw_price)
 
+                        # "포함" 등 숫자가 아닌 경우 건너뛰기 (PS Plus 무료 오퍼 회피용)
+                        clean_price_text = re.sub(r'[^0-9]', '', raw_price)
                         if not clean_price_text: continue
+
                         current_price = int(clean_price_text)
                         if current_price == 0: continue
-                    except:
-                        # 가격 태그가 없으면 무효
-                        continue
+                    except: continue
 
                     # 6-2. PS Plus 여부 파싱
                     is_plus = False
@@ -331,17 +325,40 @@ def crawl_detail_and_send(driver, wait, target_url):
                         except: pass
 
                     # 6-3 원가 파싱
-                    original_price = current_price
+                    original_price = current_price # 기본값
+                    found_original = False
+
+                    # 전략 A: 명시적 태그 (data-qa)
                     try:
                         orig_elem = offer_container.find_element(By.CSS_SELECTOR, f"[data-qa='mfeCtaMain#offer{i}#originalPrice']")
                         raw_orig = orig_elem.get_attribute("textContent").strip()
-                        original_price = int(re.sub(r'[^0-9]', '', raw_orig))
-                    except: pass # 원가가 없으면 정가 판매
+                        parsed_orig = int(re.sub(r'[^0-9]', '', raw_orig))
+                        if parsed_orig > current_price:
+                            original_price = parsed_orig
+                            found_original = True
+                    except: pass
+
+                    # 전략 B: CSS 클래스 (psw-t-strike) - 제공된 HTML에서 확인된 클래스명!
+                    if not found_original:
+                        try:
+                            # psw-t-strike: 소니 스토어의 '취소선' 스타일 클래스
+                            strikethrough_elems = offer_container.find_elements(By.CSS_SELECTOR, ".psw-t-strike")
+                            for elem in strikethrough_elems:
+                                raw_orig = elem.get_attribute("textContent").strip()
+                                clean_orig = re.sub(r'[^0-9]', '', raw_orig)
+                                if clean_orig:
+                                    parsed_price = int(clean_orig)
+                                    # 원가가 현재가보다 커야 유효
+                                    if parsed_price > current_price:
+                                        original_price = parsed_price
+                                        found_original = True
+                                        break
+                        except: pass
 
                     # 할인율 계산
                     discount_rate = 0
                     if original_price > current_price:
-                        discount_rate = int(((original_price - current_price) / original_price) * 100)
+                        discount_rate = int(round(((original_price - current_price) / original_price) * 100))
 
                     # 6-4 종료일 파싱
                     sale_end_date = None
@@ -349,12 +366,10 @@ def crawl_detail_and_send(driver, wait, target_url):
                         date_elem = offer_container.find_element(By.CSS_SELECTOR, f"[data-qa='mfeCtaMain#offer{i}#discountDescriptor']")
                         raw_date_text = date_elem.get_attribute("textContent")
 
-                        # "2025/12/22" 또는 "2025.12.22" 등에서 숫자만 추출
-                        date_nums = re.findall(r'\d+', raw_date_text)
-                        if len(date_nums) >= 3:
-                            # 연도가 2자리인 경우 처리 (보통 4자리)
-                            year = date_nums[0] if len(date_nums[0]) == 4 else f"20{date_nums[0]}"
-                            sale_end_date = f"{year}-{date_nums[1].zfill(2)}-{date_nums[2].zfill(2)}"
+                        # HTML 예시: "2025/12/22 오후 11:59..." -> YYYY/MM/DD 추출
+                        match = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', raw_date_text)
+                        if match:
+                            sale_end_date = f"{match.group(1)}-{match.group(2).zfill(2)}-{match.group(3).zfill(2)}"
                     except: pass
 
                     # 6-5 최저가 비교
@@ -396,7 +411,7 @@ def crawl_detail_and_send(driver, wait, target_url):
             "currentPrice": best_offer_data["currentPrice"],
             "discountRate": best_offer_data["discountRate"],
             "saleEndDate": best_offer_data["saleEndDate"],
-            "isPlusExclusive": best_offer_data["isPlusExclusive"], # 이제 정상적으로 True/False가 들어갑니다
+            "isPlusExclusive": best_offer_data["isPlusExclusive"],
             "genreIds": genre_ids,
             "platforms": platforms
         }

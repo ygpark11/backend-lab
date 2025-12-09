@@ -93,4 +93,15 @@ public class Game {
         this.genreIds = genreIds;
         this.lastUpdated = LocalDateTime.now();
     }
+
+    // 외부 평점(IGDB) 업데이트 전용 메서드
+    public void updateRatings(Integer metaScore, Double userScore) {
+        // null이 아닐 때만 갱신 (기존 데이터 보존)
+        if (metaScore != null) {
+            this.metaScore = metaScore;
+        }
+        if (userScore != null) {
+            this.userScore = userScore;
+        }
+    }
 }

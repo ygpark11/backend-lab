@@ -5,15 +5,16 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 21-22 Completed (Precision & Robustness)
-* **Goal:** 24시간 365일, 시스템이 스스로 가격을 감시하고 데이터를 축적하는 완전 자동화 시스템 구축.
+* **Status:** Level 23 Completed (Value Integration & Anti-Ban Strategy)
+* **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
 1.  **Automation:** 인간의 개입 없이 매일 새벽, 스스로 최신 정보를 수집하고 갱신.
 2.  **Stability:** MSA 구조와 도커 컨테이너를 통해 환경에 구애받지 않는 안정적인 실행 보장.
 3.  **Intelligence:** 단순 수집을 넘어, '갱신이 필요한 게임'만 선별하고 **'변동이 있을 때만 저장'** 하여 효율 극대화.
 4.  **Resilience:** 네트워크 지연, 레이아웃 변경, 보이지 않는 텍스트 등 온갖 예외 상황에서도 살아남는 강인한 수집 능력.
-5   **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
+5.  **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
+6.  **Value-Aware:** 단순 최저가가 아닌, Metacritic 점수와 유저 평점을 함께 제공하여 '싼 게 비지떡'인지 '숨겨진 명작'인지 판별.
 
 ---
 
@@ -46,28 +47,30 @@ graph TD
     subgraph Docker_Network [Docker Network (PS-Tracker)]
         direction TB
         
-        Java("<b>Catalog Service (Brain)</b><br/>[Spring Boot / Port 8080]<br/>Scheduler & Logic"):::java
-        Python("<b>Collector Service (Hand)</b><br/>[Flask / Port 5000]<br/>Crawler Controller"):::python
-        Selenium("<b>Selenium Grid (Eyes)</b><br/>[Chrome / Port 4444]<br/>Remote Browser"):::infra
-        DB[("<b>MySQL (Storage)</b><br/>[Port 3307]<br/>Persist Data")]:::infra
+        Java["Catalog Service (Brain)\n[Spring Boot / Port 8080]\nScheduler & Logic"]:::java
+        Python["Collector Service (Hand)\n[Flask / Port 5000]\nCrawler Controller"]:::python
+        Selenium["Selenium Grid (Eyes)\n[Chrome / Port 4444]\nRemote Browser"]:::infra
+        DB["MySQL (Storage)\n[Port 3307]\nPersist Data"]:::infra
     end
 
     subgraph External_World [External]
         PS_Store(PlayStation Store):::external
+        IGDB(IGDB / Twitch API):::external
         Discord(Discord Webhook):::external
     end
 
     %% 데이터 흐름 연결
-    Java -- "1. Trigger (POST /run)" --> Python
-    Python -- "2. Remote Command" --> Selenium
-    Selenium -- "3. GET HTML" --> PS_Store
-    Selenium -- "4. Raw Data (DOM)" --> Python
-    Python -- "5. Send Parsed Data (JSON)" --> Java
-    Java -- "6. Smart Upsert (Compare)" --> DB
+    Java -- "1. Trigger" --> Python
+    Python -- "2. Crawl (Stealth)" --> Selenium
+    Selenium -- "3. Parse Price" --> PS_Store
+    Python -- "4. Send Data" --> Java
+    Java -- "5. Fetch Ratings (Mash-up)" --> IGDB
+    Java -- "6. Fail-Safe Save" --> DB
     Java -. "7. Async Alert (If Drop)" .-> Discord
 
     %% 링크 스타일링
     linkStyle 0,1,2,3,4,5,6 stroke-width:2px,fill:none,stroke:#333;
+
 ```
 
 ---
@@ -89,6 +92,21 @@ graph TD
 ### ③ Notification System (The Watcher)
 - Tech: Spring Event + `@Async` + Discord Webhook
 - Mechanism: 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
+
+### ④ Value Integration (IGDB API)
+- Data Mash-up: 크롤러가 수집한 가격 정보에 IGDB의 **Metacritic 점수(Critic Score)**와 **유저 평점(User Score)**을 실시간으로 결합.
+- Fail-Safe Design: 외부 API(IGDB) 장애가 내부 핵심 로직(가격 저장)을 방해하지 않도록 철저한 격리.
+  - 전략: `@Transactional` 내부에서 `try-catch`로 API 호출을 감싸, 평점 수집 실패 시 로그만 남기고 가격 정보는 정상 Commit.
+  - 철학: "장식(평점)이 떨어졌다고 케이크(가격 정보)를 버릴 순 없다."
+- Smart Search Strategy: 정확한 평점 매칭을 위한 3단계 방어선 구축.
+  1. ID 검색: PS Store URL의 고유 ID(PPSA...)를 추출하여 1차 매칭 시도.
+  2. Name 검색: ID 매칭 실패 시, 정규화(괄호/특수문자 제거)된 제목으로 2차 매칭 시도.
+     - 불확실한 데이터 오염을 방지하기 위해, 매칭되지 않는 경우 무리하게 저장하지 않고 NULL로 남기는 'Safe Fail' 정책 적용.
+
+### ⑤ Anti-Ban Strategy (The Stealth)
+- Stealth Mode: `undetected-chromedriver`를 도입하여 '봇 탐지'를 우회하고 사람처럼 행동.
+- Respect Period (기간 존중): Java Repository 레벨에서 **"할인 기간이 남은 게임"**은 수집 대상에서 원천 배제(NOT EXISTS 쿼리). 트래픽을 90% 이상 절감하여 차단 확률 최소화.
+- Smart Target: 무조건적인 전수 조사(300페이지)를 버리고, "베스트 셀러(10페이지) + 유저 찜(On-Demand)" 전략으로 전환.
 
 ```mermaid
 sequenceDiagram
@@ -278,10 +296,17 @@ raw_price = price_elem.get_attribute("textContent").strip()
 * **원인:** 최신 웹 프레임워크의 렌더링 최적화로 인해 화면 밖(Off-screen) 요소의 텍스트를 Selenium이 읽지 못함.
 * **해결:** `driver.execute_script("return arguments[0].textContent;")`를 사용하여 DOM 레벨에서 텍스트 강제 추출.
 
-💥 Issue 8: Lombok과 Jackson의 Boolean 전쟁
+### 💥 Issue 8: Lombok과 Jackson의 Boolean 전쟁
 * **증상:** 파이썬은 `true`를 보냈는데, 자바 DB에는 계속 `false`(0)로 저장됨.
 * **원인:** Lombok은 boolean 필드(`isPlus`)의 Getter를 `isPlus()`로 생성하지만, Jackson 라이브러리는 Getter 이름이 `is`로 시작하면 필드명을 plus로 추론하여 매핑 실패. (Java Bean Naming Convention 충돌)
 * **해결:** DTO 필드에 `@JsonProperty("isPlusExclusive")`를 명시하여 JSON 키 값을 강제로 고정.
+
+### 💥 Issue 9: IP 차단 (Access Denied)
+* **증상:** 과도한 페이지네이션(300페이지) 시도로 인해 소니 보안 시스템(Akamai)에 의해 IP 차단됨.
+* **해결:**
+  1. 전략 수정: 수집 대상을 '상위 10페이지'로 축소 (Pareto 법칙).
+  2. 기간 존중: DB 쿼리를 수정하여, 유효한 세일 정보가 있는 게임은 크롤러에게 전달하지 않음.
+  3. Stealth: `fake-useragent` 및 랜덤 딜레이 적용.
 
 ---
 
@@ -321,3 +346,18 @@ docker ps
 - Adminer 접속: `http://localhost:8090`
 - System: MySQL / Server: `mysql` / User: `user` / PW: `password`
 - `games` 및 `game_price_history` 테이블 데이터 확인.
+
+---
+
+## 9. 현재의 한계와 해결 과제 (Known Issues & Roadmap)
+
+### 📉 1. 로컬라이제이션의 벽 (The Localization Wall)
+- 증상: "철권 8"이나 "용과 같이 8" 처럼 한글 제목만 있는 게임은 IGDB(글로벌 DB) 검색에 실패하여 평점이 누락됨.
+- 원인: IGDB는 주로 영문 제목을 기준으로 데이터를 보유하고 있음.
+- 대안 (Research needed):
+  - Hidden JSON Crawling: PS Store 페이지 소스(HTML) 내부에 숨겨진 `sku_name_en` (영문 원제) 데이터를 발굴하여 크롤링.
+  - Translation Layer: LLM이나 번역 API를 활용한 제목 영문 변환 (비용 및 정확도 검토 필요).
+
+### 🌏 2. 리전 락 ID (Region Locked IDs)
+- 증상: PS Store ID(`PPSAxxxxx`)가 국가별로 다르게 부여되는 경우가 있어, 한국 스토어 ID로 IGDB(북미/유럽 ID 위주) 검색 시 매칭 실패 발생.
+- 해결책: IGDB가 보유한 `Alternative IDs` 매핑 정보를 활용하거나, EAN/GTIN 등 국가 무관 고유 식별자 수집 검토.
