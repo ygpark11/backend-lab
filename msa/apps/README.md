@@ -39,7 +39,6 @@
 ```mermaid
 graph TD
 
-    %% 스타일 정의
     classDef java fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px;
     classDef python fill:#e3f2fd,stroke:#1565c0,stroke-width:1px;
     classDef infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px;
@@ -48,21 +47,10 @@ graph TD
     subgraph Docker_Network [Docker Network - PS]
         direction TB
 
-        Java["Catalog Service (Brain)
-[Spring Boot / 8080]
-Scheduler & Logic"]:::java
-
-        Python["Collector Service (Hand)
-[Flask / 5000]
-Crawler Controller"]:::python
-
-        Selenium["Selenium Grid (Eyes)
-[Chrome / 4444]
-Remote Browser"]:::infra
-
-        DB["MySQL (Storage)
-[Port 3307]
-Persist Data"]:::infra
+        Java["1. Trigger\nCatalog Service (Brain)\n(Spring Boot / 8080)\nScheduler & Logic"]:::java
+        Python["2. Crawl / 4. Send Data\nCollector Service (Hand)\n(Flask / 5000)\nCrawler Controller"]:::python
+        Selenium["3. Parse Price\nSelenium Grid (Eyes)\n(Chrome / 4444)\nRemote Browser"]:::infra
+        DB["6. Fail-Safe Save\nMySQL (Storage)\n(Port 3307)\nPersist Data"]:::infra
     end
 
     subgraph External [External Sources]
@@ -71,13 +59,14 @@ Persist Data"]:::infra
         Discord["Discord Webhook"]:::external
     end
 
-    Java -->|1. Trigger| Python
-    Python -->|2. Crawl (Stealth)| Selenium
-    Selenium -->|3. Parse Price| PS_Store
-    Python -->|4. Send Data| Java
-    Java -->|5. Fetch Ratings| IGDB
-    Java -->|6. Save| DB
-    Java -.->|7. Alert| Discord
+    Java --> Python
+    Python --> Selenium
+    Selenium --> PS_Store
+    Python --> Java
+    Java --> IGDB
+    Java --> DB
+    Java -.-> Discord
+
 ```
 
 ---
