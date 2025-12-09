@@ -67,7 +67,6 @@ graph TD
     Java -- "6. Fail-Safe Save" --> DB
     Java -. "7. Async Alert (If Drop)" .-> Discord
 
-    linkStyle 0,1,2,3,4,5,6 stroke-width:2px,fill:none,stroke:#333;
 ```
 
 ---
