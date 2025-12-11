@@ -107,6 +107,50 @@ def fetch_update_targets():
         logger.error(f"❌ Connection Error to Java Server: {e}")
         return []
 
+def mine_english_title(driver):
+    """
+    페이지 소스 내 Script 태그에서 'invariantName' (공식 불변 영문명) 추출
+    Target Pattern: "invariantName":"Gran Turismo™ 7"
+    """
+    try:
+        # 1. 페이지 소스 전체를 문자열로 가져옴 (이미 로딩된 상태라 네트워크 요청 없음 - 안전)
+        src = driver.page_source
+
+        # 2. 정규식으로 "invariantName":"..." 패턴 검색
+        # 설명: "invariantName" 뒤에 :이 있고, 따옴표(") 안에 있는 값([^"]+)을 잡아라
+        match = re.search(r'"invariantName"\s*:\s*"([^"]+)"', src)
+
+        if match:
+            # 3. 찾은 값 (Group 1) 리턴
+            raw_title = match.group(1)
+
+            # 4. 유니코드 이스케이프 (\u0027 등) 처리
+            try:
+                raw_title = raw_title.encode('utf-8').decode('unicode_escape')
+            except: pass
+
+            # 5. 깨진 문자 복구 시도 (UTF-8 bytes -> Latin-1 interpretation fix)
+            try:
+                # 억지로 다시 인코딩했다가 제대로 디코딩 해보기
+                raw_title = raw_title.encode('latin1').decode('utf-8')
+            except: pass
+
+            # 6. 특수문자 치환 (IGDB 검색을 위해 아예 표준 문자로 변경)
+            # 스마트 따옴표(’) -> 일반 따옴표(')
+            raw_title = raw_title.replace("’", "'").replace("‘", "'")
+            # TM(™), R(®) -> 삭제 (불필요 문자)
+            raw_title = re.sub(r'[™®â¢]', '', raw_title)
+
+            logger.info(f"   💎 Mined Invariant Title: {raw_title}")
+            return raw_title.strip()
+
+        return None
+
+    except Exception as e:
+        logger.warning(f"   ⚠️ Mining failed: {e}")
+
+    return None
+
 def run_batch_crawler_logic():
     global is_running
     logger.info("🚀 [Crawler] Batch job started - Pagination Mode On")
@@ -231,6 +275,9 @@ def crawl_detail_and_send(driver, wait, target_url):
             # 가격이 없는 경우(예: 출시 예정작)도 있으므로 로그만 찍고 진행
             logger.info("   ℹ️ No price container found (Might be free or unreleased)")
             pass
+
+        # 영문 타이틀 명 채굴
+        english_title = mine_english_title(driver)
 
         # 3. 제목 추출
         try:
@@ -404,6 +451,7 @@ def crawl_detail_and_send(driver, wait, target_url):
         payload = {
             "psStoreId": ps_store_id,
             "title": title,
+            "englishTitle": english_title,
             "publisher": "Batch Crawler",
             "imageUrl": image_url,
             "description": "Full Data Crawler",

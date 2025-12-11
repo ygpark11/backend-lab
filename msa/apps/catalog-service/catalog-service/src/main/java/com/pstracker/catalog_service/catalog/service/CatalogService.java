@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,28 +44,33 @@ public class CatalogService {
                 .orElseGet(() -> Game.create(
                         request.getPsStoreId(),
                         request.getTitle(),
+                        request.getEnglishTitle(),
                         request.getPublisher(),
                         request.getImageUrl(),
                         request.getDescription()
                 ));
 
-        // 플랫폼 갱싱
+        // 플랫폼 갱신
         game.updatePlatforms(request.getPlatforms());
 
         // 2. 게임 메타 정보 업데이트 (항상 최신화)
-        // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외됨
+        // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외
         game.updateInfo(
-                request.getTitle(), request.getPublisher(), request.getImageUrl(),
+                request.getTitle(), request.getEnglishTitle(), request.getPublisher(), request.getImageUrl(),
                 request.getDescription(), request.getGenreIds()
         );
 
         try {
-            // IGDB 검색 정확도 상승을 위해 원본 제목(dto.getTitle()) 대신 정제된 제목(cleanTitle) 사용
-            String cleanTitle = normalizeTitle(request.getTitle());
-            log.info("🔍 IGDB Search: Original='{}' -> Clean='{}'", request.getTitle(), cleanTitle);
+            // 1. englishTitle을 꺼냄
+            String rawEnglishTitle = request.getEnglishTitle();
+
+            // 2. 검색 우선순위 설정
+            // 영문명이 있으면 그걸 정규화해서 쓰고, 없으면 한글 제목을 정규화해서 씀
+            String searchTitle = StringUtils.hasText(rawEnglishTitle) ? rawEnglishTitle : request.getTitle();
+            log.info("🎯 Using Invariant English Title for IGDB: {}", searchTitle);
 
             // IGDB 검색 (제목 기반)
-            IgdbGameResponse igdbInfo = igdbApiClient.searchGame(request.getPsStoreId(), cleanTitle);
+            IgdbGameResponse igdbInfo = igdbApiClient.searchGame(searchTitle);
 
             if (igdbInfo != null) {
                 // 점수 변환
@@ -84,10 +90,10 @@ public class CatalogService {
                         game.getName(), metaScore, userScore);
             } else {
                 // 검색 실패 시 로그 (디버깅용)
-                log.info("🌫️ IGDB Miss for '{}' (Search: '{}')", request.getTitle(), cleanTitle);
+                log.info("🌫️ IGDB Miss for '{}' (Search: '{}')", request.getTitle(), searchTitle);
             }
         } catch (Exception e) {
-            // D. [핵심] 평점 조회 실패 시 로그만 남기고, 가격 저장 로직은 계속 진행 (Swallow Exception)
+            // D. [핵심] 평점 조회 실패 시 로그만 남기고, 가격 저장 로직은 계속 진행
             log.warn("⚠️ Failed to fetch ratings for '{}' from IGDB: {}", request.getTitle(), e.getMessage());
         }
 
@@ -99,7 +105,7 @@ public class CatalogService {
         game.updatePlatforms(request.getPlatforms());
 
         // 4. [Core] 가격 변동 검사 및 이력 저장
-        // 가장 최근의 가격 이력을 가져옵니다.
+        // 가장 최근의 가격 이력을 조회
         Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game);
 
         if (shouldSaveHistory(latestHistoryOpt, request)) {
@@ -114,7 +120,7 @@ public class CatalogService {
             // 3-2. 가격 하락 알림 체크 (저장이 일어난 경우에만 체크하면 됨)
             checkAndPublishAlert(game, latestHistoryOpt, request.getCurrentPrice(), request.getDiscountRate());
         } else {
-            // 변동 없음: 로그만 남기고 INSERT 생략 (데이터 다이어트 성공!)
+            // 변동 없음: 로그만 남기고 INSERT 생략
             log.debug("👌 No Change: {} (Skipping DB Insert)", game.getName());
         }
     }
@@ -166,32 +172,5 @@ public class CatalogService {
         return gameRepository.findGamesToUpdate(threshold, today).stream()
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
-    }
-
-    /**
-     * [제목 정규화] 검색 정확도를 높이기 위해 불필요한 노이즈를 제거합니다.
-     * 예: "철권 8 (중국어(간체자), 한국어)" -> "철권 8"
-     * 예: "Gran Turismo™ 7" -> "Gran Turismo 7"
-     */
-    private String normalizeTitle(String rawTitle) {
-        if (!StringUtils.hasText(rawTitle)) return "";
-
-        return rawTitle
-                // 1. 괄호와 그 안의 내용 제거 (가장 강력한 노이즈 제거)
-                // 예: (한국어판), (PS4 & PS5), (중국어...) 등
-                .replaceAll("\\(.*?\\)", "")
-
-                // 2. 대괄호와 그 안의 내용 제거
-                // 예: [특전판] 등
-                .replaceAll("\\[.*?\\]", "")
-
-                // 3. TM(™), R(®) 등 특수문자 제거
-                .replaceAll("[™®]", "")
-
-                // 4. "PS4 & PS5" 같은 플랫폼 명칭이 괄호 없이 뒤에 붙는 경우 제거 (선택사항, 일단은 안전하게 둠)
-                // .replaceAll("(?i)PS4|PS5", "")
-
-                // 5. 앞뒤 공백 및 다중 공백 정리
-                .trim().replaceAll("\\s+", " ");
     }
 }

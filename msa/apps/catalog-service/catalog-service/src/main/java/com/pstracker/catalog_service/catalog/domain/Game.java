@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,9 +26,12 @@ public class Game {
     private String psStoreId;
 
     @Column(nullable = false)
-    private String name; // title -> name 변경 (DB 컬럼명 일치)
+    private String name;
 
-    private String publisher; // [복구 완료]
+    @Column(name = "english_name")
+    private String englishName;
+
+    private String publisher;
 
     @Column(columnDefinition = "TEXT")
     private String description;
@@ -72,10 +76,11 @@ public class Game {
     }
 
     // --- [생성 메서드] ---
-    public static Game create(String psStoreId, String name, String publisher, String imageUrl, String description) {
+    public static Game create(String psStoreId, String name, String englishName, String publisher, String imageUrl, String description) {
         Game game = new Game();
         game.psStoreId = psStoreId;
         game.name = name;
+        game.englishName = englishName;
         game.publisher = publisher;
         game.imageUrl = imageUrl;
         game.description = description;
@@ -85,8 +90,14 @@ public class Game {
 
     // --- [비즈니스 로직: 정보 업데이트 통합] ---
     // 크롤링 할 때마다 변할 수 있는 정보들을 한 번에 갱신합니다.
-    public void updateInfo(String name, String publisher, String imageUrl, String description, String genreIds) {
+    public void updateInfo(String name, String englishName, String publisher, String imageUrl, String description, String genreIds) {
         this.name = name;
+
+        // 영문명은 있을 때만 갱신
+        if (StringUtils.hasText(englishName)) {
+            this.englishName = englishName;
+        }
+
         this.publisher = publisher;
         this.imageUrl = imageUrl;
         this.description = description;

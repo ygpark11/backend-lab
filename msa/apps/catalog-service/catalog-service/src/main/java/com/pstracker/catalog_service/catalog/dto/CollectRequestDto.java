@@ -13,6 +13,7 @@ import java.util.Set;
 public class CollectRequestDto {
     private String psStoreId;
     private String title;
+    private String englishTitle;
     private String publisher;
     private String imageUrl;
     private String description;

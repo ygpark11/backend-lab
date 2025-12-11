@@ -23,5 +23,8 @@ public record IgdbGameResponse(
         Integer userCount,
 
         // 요약
-        String summary
+        String summary,
+
+        @JsonProperty("total_rating_count")
+        Integer totalRatingCount
 ) {}

@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 23 Completed (Value Integration & Anti-Ban Strategy)
+* **Status:** Level 23.5 Refactored (Intelligent Search & Heuristics)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -56,20 +56,25 @@
 - Tech: Spring Event + `@Async` + Discord Webhook
 - Mechanism: 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
 
-### ④ Value Integration (IGDB API)
-- Data Mash-up: 크롤러가 수집한 가격 정보에 IGDB의 **Metacritic 점수(Critic Score)**와 **유저 평점(User Score)**을 실시간으로 결합.
-- Fail-Safe Design: 외부 API(IGDB) 장애가 내부 핵심 로직(가격 저장)을 방해하지 않도록 철저한 격리.
-  - 전략: `@Transactional` 내부에서 `try-catch`로 API 호출을 감싸, 평점 수집 실패 시 로그만 남기고 가격 정보는 정상 Commit.
-  - 철학: "장식(평점)이 떨어졌다고 케이크(가격 정보)를 버릴 순 없다."
-- Smart Search Strategy: 정확한 평점 매칭을 위한 3단계 방어선 구축.
-  1. ID 검색: PS Store URL의 고유 ID(PPSA...)를 추출하여 1차 매칭 시도.
-  2. Name 검색: ID 매칭 실패 시, 정규화(괄호/특수문자 제거)된 제목으로 2차 매칭 시도.
-     - 불확실한 데이터 오염을 방지하기 위해, 매칭되지 않는 경우 무리하게 저장하지 않고 NULL로 남기는 'Safe Fail' 정책 적용.
+### ④ Value Integration (IGDB API) - The Intelligence
+* **Heuristic Search Algorithm:** 기계적인 ID 매칭의 한계(Region Lock)를 극복하기 위해, **'데이터의 특성'**을 활용한 휴리스틱 알고리즘 도입.
+    1. **Noise Reduction:** "Digital Deluxe", "Sound Edition", "PS5" 등 검색 정확도를 떨어뜨리는 노이즈 키워드를 Regex로 정밀 타격하여 제거.
+    2. **English Title Priority:** PS Store에서 수집한 한글 제목 대신, 데이터 매칭 확률이 높은 **영문 제목(English Title)**을 우선 사용하여 검색.
+    3. **Popularity Sorting:** 검색 결과 중 **`total_rating_count`(전체 리뷰 수)가 가장 많은 항목**을 본편(Main Game)으로 간주하여 선택 (정확도 95% 이상).
+* **Fail-Safe Design:** 외부 API(IGDB) 장애나 평점 누락이 내부 핵심 로직(가격 저장)을 방해하지 않도록 철저한 격리 (`try-catch` & `Log-only`).
 
 ### ⑤ Anti-Ban Strategy (The Stealth)
 - Stealth Mode: `undetected-chromedriver`를 도입하여 '봇 탐지'를 우회하고 사람처럼 행동.
 - Respect Period (기간 존중): Java Repository 레벨에서 **"할인 기간이 남은 게임"**은 수집 대상에서 원천 배제(NOT EXISTS 쿼리). 트래픽을 90% 이상 절감하여 차단 확률 최소화.
 - Smart Target: 무조건적인 전수 조사(300페이지)를 버리고, "베스트 셀러(10페이지) + 유저 찜(On-Demand)" 전략으로 전환.
+
+### ⑥ Text Normalization Engine (The Filter)
+IGDB 검색 성공률을 끌어올린 정규화 로직.
+* **Platform Tag Removal:** `PS4`, `PS5`, `PS VR2` 등 불필요한 플랫폼 태그 삭제.
+* **Edition Cleaner:** `Deluxe`, `Ultimate`, `Game of the Year` 등 에디션 명칭을 제거하여 본편 검색 유도.
+* **Hidden Noise Filter:** `Sound`, `Anime`, `Music` 등 애니메이션 게임의 부제가 본편 제목을 가리는 현상을 방지하기 위해 조건부 제거 로직 적용.
+* **Invisible Char Trimmer:** 탭(`\t`), 줄바꿈, 인코딩 찌꺼기 등 눈에 보이지 않는 문자열 전처리.
+
 
 ```mermaid
 sequenceDiagram
@@ -277,6 +282,12 @@ raw_price = price_elem.get_attribute("textContent").strip()
   2. 기간 존중: DB 쿼리를 수정하여, 유효한 세일 정보가 있는 게임은 크롤러에게 전달하지 않음.
   3. Stealth: `fake-useragent` 및 랜덤 딜레이 적용.
 
+### 💥 Issue 10: 에디션의 역습 (Noise Keywords)
+* **증상:** "Dragon Ball: Sparking! Zero Sound Ultimate Edition" 검색 시 결과 없음.
+* **원인:** `Sound`, `Ultimate`, `Edition` 등 수식어가 너무 많아 검색 엔진이 본편을 찾지 못함.
+* **해결:** 정규 표현식(Regex)을 이용해 수식어 패턴을 정밀하게 제거하고 핵심 키워드("Dragon Ball Sparking! Zero")만 추출하여 검색 성공.
+
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -317,16 +328,3 @@ docker ps
 - `games` 및 `game_price_history` 테이블 데이터 확인.
 
 ---
-
-## 9. 현재의 한계와 해결 과제 (Known Issues & Roadmap)
-
-### 📉 1. 로컬라이제이션의 벽 (The Localization Wall)
-- 증상: "철권 8"이나 "용과 같이 8" 처럼 한글 제목만 있는 게임은 IGDB(글로벌 DB) 검색에 실패하여 평점이 누락됨.
-- 원인: IGDB는 주로 영문 제목을 기준으로 데이터를 보유하고 있음.
-- 대안 (Research needed):
-  - Hidden JSON Crawling: PS Store 페이지 소스(HTML) 내부에 숨겨진 `sku_name_en` (영문 원제) 데이터를 발굴하여 크롤링.
-  - Translation Layer: LLM이나 번역 API를 활용한 제목 영문 변환 (비용 및 정확도 검토 필요).
-
-### 🌏 2. 리전 락 ID (Region Locked IDs)
-- 증상: PS Store ID(`PPSAxxxxx`)가 국가별로 다르게 부여되는 경우가 있어, 한국 스토어 ID로 IGDB(북미/유럽 ID 위주) 검색 시 매칭 실패 발생.
-- 해결책: IGDB가 보유한 `Alternative IDs` 매핑 정보를 활용하거나, EAN/GTIN 등 국가 무관 고유 식별자 수집 검토.
