@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 23.5 Refactored (Intelligent Search & Heuristics)
+* **Status:** Level 24 Completed (The Analyst - Dynamic Search Engine)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -15,6 +15,7 @@
 4.  **Resilience:** 네트워크 지연, 레이아웃 변경, 보이지 않는 텍스트 등 온갖 예외 상황에서도 살아남는 강인한 수집 능력.
 5.  **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
 6.  **Value-Aware:** 단순 최저가가 아닌, Metacritic 점수와 유저 평점을 함께 제공하여 '싼 게 비지떡'인지 '숨겨진 명작'인지 판별.
+7   **Insight:** 복합 조건(할인율+평점+가격) 검색을 통해 사용자가 원하는 "진짜 꿀매물"을 발굴.
 
 ---
 
@@ -53,8 +54,8 @@
 * **Self-Healing Pagination:** 대량 수집(Max 300 Page) 시 발생할 수 있는 브라우저 메모리 누수(Memory Leak)를 방지하기 위해, 일정 주기(20페이지)마다 드라이버를 스스로 리셋(Restart)하여 장기 실행 안정성 확보.
 
 ### ③ Notification System (The Watcher)
-- Tech: Spring Event + `@Async` + Discord Webhook
-- Mechanism: 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
+* **Tech:** Spring Event + `@Async` + Discord Webhook
+* **Mechanism:** 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
 
 ### ④ Value Integration (IGDB API) - The Intelligence
 * **Heuristic Search Algorithm:** 기계적인 ID 매칭의 한계(Region Lock)를 극복하기 위해, **'데이터의 특성'**을 활용한 휴리스틱 알고리즘 도입.
@@ -75,6 +76,11 @@ IGDB 검색 성공률을 끌어올린 정규화 로직.
 * **Hidden Noise Filter:** `Sound`, `Anime`, `Music` 등 애니메이션 게임의 부제가 본편 제목을 가리는 현상을 방지하기 위해 조건부 제거 로직 적용.
 * **Invisible Char Trimmer:** 탭(`\t`), 줄바꿈, 인코딩 찌꺼기 등 눈에 보이지 않는 문자열 전처리.
 
+### ⑥ Search Engine (QueryDSL) - The Analyst
+Spring Boot 3 + QueryDSL 5.0 기반의 Type-Safe 동적 쿼리 엔진 구축.
+* **Complex Filtering:** 가격 범위(`min/max`), 할인율, 메타/유저 평점, 플랫폼 등 N개의 조건을 조합하여 검색 가능.
+* **Snapshot Query:** `Game`과 `GamePriceHistory`의 1:N 관계에서, `JPAExpressions` 서브쿼리를 사용하여 "가장 최근 가격(Last Recorded)" 만을 정확하게 조인(Latest Snapshot).
+* **Zero-Overhead Projection:** 엔티티 전체를 조회하는 비효율을 제거하기 위해, `@QueryProjection`을 사용하여 필요한 데이터만 DTO로 즉시 변환. (조회 성능 최적화)
 
 ```mermaid
 sequenceDiagram
@@ -212,7 +218,7 @@ public void handlePriceChange(GamePriceChangedEvent event) {
 }
 ```
 
-### 🛡️ Smart Upsert (CatalogService.java)
+### 🛡️ Smart Upsert (`CatalogService.java`)
 
 ```java
 // 변동이 있을 때만 저장 (Data Diet)
@@ -224,7 +230,7 @@ checkAndPublishAlert(...); // 알림 체크
 }
 ```
 
-### 🕷️ Invisible Text Extraction (app.py)
+### 🕷️ Invisible Text Extraction (`app.py`)
 Selenium의 한계를 넘어서는 JavaScript 주입 기법.
 
 ```python
@@ -234,6 +240,25 @@ driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", price_e
 # DOM Attribute Access (변경)
 # 화면 표시 여부(visibility)와 무관하게 DOM 트리에 있는 텍스트 원본을 가져옴
 raw_price = price_elem.get_attribute("textContent").strip()
+```
+
+---
+
+### 🕷🔍 Dynamic Query (`GameRepositoryImpl.java`)
+QueryDSL을 활용하여 복합 조건 검색과 최신 가격 스냅샷 조회를 동시에 처리
+
+```java
+// 핵심 로직: 1:N 관계에서 가장 최근의 가격 이력만 가져오기 (Subquery)
+gamePriceHistory.recordedAt.eq(
+        JPAExpressions
+                .select(gamePriceHistory.recordedAt.max())
+        .from(gamePriceHistory)
+        .where(gamePriceHistory.game.eq(game))
+        ),
+// 동적 검색 조건 (Null Safe)
+nameContains(condition.getKeyword()),
+priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
+metaScoreGoe(condition.getMinMetaScore())
 ```
 
 ---

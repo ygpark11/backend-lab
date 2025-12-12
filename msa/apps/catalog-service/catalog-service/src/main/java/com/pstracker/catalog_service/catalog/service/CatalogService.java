@@ -3,6 +3,8 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
@@ -11,11 +13,12 @@ import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -172,5 +175,16 @@ public class CatalogService {
         return gameRepository.findGamesToUpdate(threshold, today).stream()
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
+    }
+
+    /**
+     * 게임 검색 서비스
+     * @param condition 검색 조건
+     * @param pageable 페이징 정보
+     * @return 게임 검색 결과 페이지
+     */
+    public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
+        log.info("🔍 Search Request: condition={}, page={}", condition, pageable.getPageNumber());
+        return gameRepository.searchGames(condition, pageable);
     }
 }

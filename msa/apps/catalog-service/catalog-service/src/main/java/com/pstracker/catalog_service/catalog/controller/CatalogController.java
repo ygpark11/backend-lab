@@ -1,10 +1,16 @@
 package com.pstracker.catalog_service.catalog.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,5 +40,14 @@ public class CatalogController {
     public ResponseEntity<String> manualCrawl() {
         scheduler.triggerCrawler();
         return ResponseEntity.ok("Crawler triggered manually!");
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<GameSearchResultDto>> searchGames(
+            GameSearchCondition condition, // 쿼리 파라미터 매핑
+            @PageableDefault(size = 20, sort = "lastUpdated", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable);
+        return ResponseEntity.ok(result);
     }
 }
