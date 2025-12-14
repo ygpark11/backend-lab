@@ -1,0 +1,25 @@
+### 회원가입
+POST http://localhost:8080/api/v1/members/signup
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "password1234",
+  "nickname": "PS_Master"
+}
+
+### 로그인
+POST http://localhost:8080/api/v1/members/login
+Content-Type: application/json
+
+{
+  "email": "test@test.com",
+  "password": "password1234"
+}
+
+### 인증 테스트
+GET http://localhost:8080/api/v1/members/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwiYXV0aCI6IlJPTEVfVVNFUiIsImV4cCI6MTc2NTY5MDg2OH0.A1D_E7KXs83CGfUuI4jbuVauenTyUXS1ga5oQJpMF7g
+
+### 게임 검색
+GET http://localhost:8080/api/v1/games/search?keyword=용과

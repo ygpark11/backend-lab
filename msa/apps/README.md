@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 24 Completed (The Analyst - Dynamic Search Engine)
+* **Status:** Level 25 Completed (The Gatekeeper - Security & Auth)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -24,7 +24,7 @@
 ### 🏗 구조 및 역할 (The 5-Container Fleet)
 | Service Name | Tech Stack | Role | Port |
 | :--- | :--- | :--- | :--- |
-| **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러(Timer), 갱신 대상 선별, DB 적재 | 8080 |
+| **Catalog Service** | Java 17, Spring Boot, **Spring Security** | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
 | **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | 5000 |
 | **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | 4444 / 7900 |
 | **MySQL** | MySQL 8.0 | **[Storage]** 정규화된 데이터 저장 (Volume Mount) | 3307 |
@@ -76,12 +76,22 @@ IGDB 검색 성공률을 끌어올린 정규화 로직.
 * **Hidden Noise Filter:** `Sound`, `Anime`, `Music` 등 애니메이션 게임의 부제가 본편 제목을 가리는 현상을 방지하기 위해 조건부 제거 로직 적용.
 * **Invisible Char Trimmer:** 탭(`\t`), 줄바꿈, 인코딩 찌꺼기 등 눈에 보이지 않는 문자열 전처리.
 
-### ⑥ Search Engine (QueryDSL) - The Analyst
+### ⑦ Search Engine (QueryDSL) - The Analyst
 Spring Boot 3 + QueryDSL 5.0 기반의 Type-Safe 동적 쿼리 엔진 구축.
 * **Complex Filtering:** 가격 범위(`min/max`), 할인율, 메타/유저 평점, 플랫폼 등 N개의 조건을 조합하여 검색 가능.
 * **Snapshot Query:** `Game`과 `GamePriceHistory`의 1:N 관계에서, `JPAExpressions` 서브쿼리를 사용하여 "가장 최근 가격(Last Recorded)" 만을 정확하게 조인(Latest Snapshot).
 * **Zero-Overhead Projection:** 엔티티 전체를 조회하는 비효율을 제거하기 위해, `@QueryProjection`을 사용하여 필요한 데이터만 DTO로 즉시 변환. (조회 성능 최적화)
 
+### ⑧ Member & Security (The Gatekeeper)
+Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템 구축.
+* **Stateless Architecture:** 세션을 사용하지 않고, **JWT(Access + Refresh Token)** 기반의 토큰 인증을 구현하여 MSA 환경에서의 확장성 확보.
+* **Standard Auth Flow:** `UserDetailsService`를 정석으로 구현하여 Spring Security의 표준 인증 체계(Provider -> Manager -> Filter)를 준수.
+* **Secure Password:** `BCryptPasswordEncoder`를 사용하여 비밀번호를 안전하게 단방향 암호화하여 저장.
+* **Fine-Grained Access Control:**
+    * `Public`: 게임 조회, 검색, 회원가입, 로그인
+    * `User`: 내 정보 조회, (추후) 찜하기
+    * `Admin`: 수동 크롤링 트리거(`manual-crawl`) 등 관리자 기능
+  
 ```mermaid
 sequenceDiagram
     autonumber
@@ -158,6 +168,20 @@ sequenceDiagram
 > 1. 현재 단일 인스턴스이며, 알림 누락이 서비스에 치명적이지 않음.
 > 2. 초기 단계에서는 **구현 속도와 유지보수성**을 최우선으로 함.
 > 3. *추후 인스턴스가 확장되거나, 결제 알림 등 영속성이 필수적인 기능이 추가될 때 도입 예정.*
+
+### Q. 왜 Session 대신 JWT를 선택했는가?
+단일 서버임에도 불구하고 Session 방식 대신 JWT를 도입했습니다.
+
+| 비교 항목 | Session 기반 | JWT (Token) 기반 |
+| :--- | :--- | :--- |
+| **채택 여부** | ❌ | **✅ 채택** |
+| **저장소** | 서버 메모리 (Stateful) | 클라이언트 (Stateless) |
+| **확장성** | 서버 다중화 시 세션 클러스터링 필요 | **서버가 늘어나도 별도 설정 불필요** |
+| **Client** | 웹 브라우저 친화적 | **Web/Mobile/App 어디서든 사용 용이** |
+
+> **💡 결정 이유**
+> 1.  **Collector Service와의 확장성:** 추후 수집기가 별도 인증을 태워야 하거나, 모바일 앱 출시를 고려할 때 토큰 방식이 유리함.
+> 2.  **REST API 원칙 준수:** 서버는 클라이언트의 상태를 저장하지 않아야 한다(Stateless)는 REST 아키텍처 스타일에 부합.
 
 <br>
 
@@ -347,9 +371,14 @@ docker ps
 - Method: POST
 - URL: `http://localhost:8080/api/v1/games/manual-crawl`
 
-### ④ Data Verification
+### ⑤ Data Verification
 - Adminer 접속: `http://localhost:8090`
 - System: MySQL / Server: `mysql` / User: `user` / PW: `password`
 - `games` 및 `game_price_history` 테이블 데이터 확인.
 
+### ⑥ 수동 크롤링 트리거 (Manual Trigger)
+**[Admin Only]** 관리자 권한을 가진 토큰(Bearer Token)이 필요
+- Method: POST
+- URL: `http://localhost:8080/api/v1/games/manual-crawl`
+- Header: `Authorization: Bearer {ADMIN_ACCESS_TOKEN}`
 ---
