@@ -10,11 +10,12 @@ spring:
     hibernate:
       # [중요] validate: DB 테이블과 자바 Entity가 일치하는지 검사만 함 (테이블 자동 생성 X)
       # 우리는 방금 Adminer로 테이블을 완벽하게 만들었으므로 'validate'가 정석입니다.
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        default_batch_fetch_size: 100 # N+1 문제 완화 In 쿼리로 한 번에 가져올 때 사이즈
 
 discord:
   webhook:

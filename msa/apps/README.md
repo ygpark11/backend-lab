@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 25 Completed (The Gatekeeper - Security & Auth)
+* **Status:** Level 26 Completed (The Wishlist - Personalization & Optimization)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -91,7 +91,13 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
     * `Public`: 게임 조회, 검색, 회원가입, 로그인
     * `User`: 내 정보 조회, (추후) 찜하기
     * `Admin`: 수동 크롤링 트리거(`manual-crawl`) 등 관리자 기능
-  
+
+### ⑨ Wishlist & Optimization (The Memory)
+단순한 N:M 매핑을 넘어, 대규모 트래픽 상황을 가정한 **Extreme Performance Tuning** 적용.
+* **Zero-Select Write:** 찜하기 요청 시, `SecurityContext`의 JWT에서 파싱한 ID와 `getReferenceById(Proxy)`를 결합하여 **DB 조회 없이(0 Select)** 즉시 `INSERT` 수행.
+* **MemberPrincipal Expansion:** JWT 토큰 페이로드에 `memberId(PK)`를 포함시켜, 인증 필터 단계에서 DB 접근 없이 완전한 인증 객체 생성.
+* **Fetch Join & Batch Size:** "내 찜 목록" 조회 시 QueryDSL `Fetch Join`으로 게임 정보를 한 번에 가져오고, `default_batch_fetch_size` 설정을 통해 N+1 문제 없이 가격 정보까지 효율적으로 로딩.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -336,7 +342,12 @@ metaScoreGoe(condition.getMinMetaScore())
 * **원인:** `Sound`, `Ultimate`, `Edition` 등 수식어가 너무 많아 검색 엔진이 본편을 찾지 못함.
 * **해결:** 정규 표현식(Regex)을 이용해 수식어 패턴을 정밀하게 제거하고 핵심 키워드("Dragon Ball Sparking! Zero")만 추출하여 검색 성공.
 
-
+### 💥 Issue 11: 엇갈린 이름, 거부된 저장 (Column Mismatch)
+* **증상:** 찜하기 기능 테스트 중 `Field 'user_id' doesn't have a default value` 에러 발생하며 500 응답.
+* **원인:** 초기 설계 시 DB 테이블은 `user_id`로 생성되었으나, Java 엔티티(`Wishlist`)는 `member_id`로 매핑하여 ORM 불일치 발생.
+* **해결:** 개발 단계임을 감안하여 테이블을 `DROP` 후 재생성하여 엔티티 설정(`member_id`)과 DB 스키마를 동기화.
+* **Lesson:** `ddl-auto` 설정에만 의존하지 말고, 실제 생성된 스키마를 항시 확인해야 함.
+* 
 ---
 
 ## 8. 실행 방법 (How to Run)

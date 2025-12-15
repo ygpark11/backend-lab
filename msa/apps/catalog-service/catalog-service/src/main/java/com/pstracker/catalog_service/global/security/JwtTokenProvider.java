@@ -27,6 +27,9 @@ public class JwtTokenProvider {
     private final long accessTokenValidityTime;
     private final long refreshTokenValidityTime;
 
+    private static final String AUTHORITIES_KEY = "auth";
+    private static final String MEMBER_ID_KEY = "mid";
+
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secretKey,
             @Value("${jwt.expiration.access}") long accessTokenValidityTime,
@@ -49,12 +52,16 @@ public class JwtTokenProvider {
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
 
+        MemberPrincipal principal = (MemberPrincipal) authentication.getPrincipal();
+        Long memberId = principal.getMemberId();
+
         long now = (new Date()).getTime();
 
         // Access Token 생성
         String accessToken = Jwts.builder()
                 .subject(authentication.getName())          // payload "sub": "user@email.com"
                 .claim("auth", authorities)           // payload "auth": "ROLE_USER"
+                .claim(MEMBER_ID_KEY, memberId)
                 .expiration(new Date(now + accessTokenValidityTime)) // 유효기간
                 .signWith(key)                              // 서명 (Header + Payload + SecretKey)
                 .compact();
@@ -81,19 +88,27 @@ public class JwtTokenProvider {
         // 1. 토큰 복호화
         Claims claims = parseClaims(accessToken);
 
-        if (claims.get("auth") == null) {
+        if (claims.get(AUTHORITIES_KEY) == null) {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
 
         // 2. 클레임에서 권한 정보 가져오기
+        String authStr = claims.get(AUTHORITIES_KEY).toString();
         Collection<? extends GrantedAuthority> authorities =
-                Arrays.stream(claims.get("auth").toString().split(","))
+                Arrays.stream(authStr.split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
-        // 3. UserDetails 객체를 만들어서 Authentication 리턴
-        // 검증 단계라 빈 문자열 비밀번호 사용
-        UserDetails principal = new User(claims.getSubject(), "", authorities);
+        // 3. 클레임에서 memberId 가져오기
+        Long memberId = ((Number) claims.get(MEMBER_ID_KEY)).longValue();
+
+        // 4. Role 문자열 정리 (ROLE_USER -> USER)
+        // MemberPrincipal 생성자에서 다시 "ROLE_"을 붙이므로 여기선 제거
+        String roleStr = authStr.replace("ROLE_", "");
+
+        // 5. MemberPrincipal 객체 생성 (DB 조회 없이!)
+        MemberPrincipal principal = new MemberPrincipal(memberId, claims.getSubject(), roleStr);
+
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
     }
 

@@ -15,7 +15,7 @@ public class MemberSignupDto {
     public Member toEntity(PasswordEncoder passwordEncoder) {
         return Member.builder()
                 .email(email)
-                .password(passwordEncoder.encode(password)) // [중요] 암호화
+                .password(passwordEncoder.encode(password))
                 .nickname(nickname)
                 .role(Role.USER) // 기본 가입은 USER
                 .build();

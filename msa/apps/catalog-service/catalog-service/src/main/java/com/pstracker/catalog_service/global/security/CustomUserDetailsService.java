@@ -18,17 +18,10 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         // 1. DB에서 email로 회원 조회
-        return memberRepository.findByEmail(email)
-                .map(this::createUserDetails)
+        Member member = memberRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("해당하는 유저를 찾을 수 없습니다."));
-    }
 
-    // 2. 조회한 Member 엔티티를 Security가 이해하는 UserDetails 객체로 변환
-    private UserDetails createUserDetails(Member member) {
-        return User.builder()
-                .username(member.getEmail())
-                .password(member.getPassword()) // DB에 저장된 암호화된 비밀번호
-                .roles(member.getRole().name()) // Enum 이름 그대로 ("USER", "ADMIN")
-                .build();
+        // 2. 커스텀 Principal 반환
+        return new MemberPrincipal(member);
     }
 }
