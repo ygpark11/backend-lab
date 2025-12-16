@@ -1,0 +1,22 @@
+spring:
+  profiles:
+    include: secret
+
+  datasource:
+    # [중요] 도커 호스트(localhost)의 3307 포트로 접속 -> 도커 내부 3306으로 연결됨
+    url: jdbc:mysql://localhost:3307/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100 # N+1 문제 완화 In 쿼리로 한 번에 가져올 때 사이즈
+
+jwt:
+  expiration:
+    access: 3600000      # 1시간 (ms 단위)
+    refresh: 1209600000  # 14일 (ms 단위)
