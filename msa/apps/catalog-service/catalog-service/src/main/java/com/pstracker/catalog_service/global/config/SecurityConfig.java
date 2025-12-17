@@ -2,6 +2,8 @@ package com.pstracker.catalog_service.global.config;
 
 import com.pstracker.catalog_service.global.security.JwtAuthenticationFilter;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
+import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccessHandler;
+import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +22,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -49,12 +53,20 @@ public class SecurityConfig {
                                 "/api/v1/members/login",
                                 "/api/v1/members/signup",
                                 "/favicon.ico",
-                                "/error"
+                                "/error",
+                                "/login/**",
+                                "/oauth2/**"
                         ).permitAll()
                         // 관리자 전용 (수동 크롤링)
                         .requestMatchers("/api/v1/games/manual-crawl").hasRole("ADMIN")
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService) // 1. 유저 정보 가져오기 및 저장
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler) // 2. 로그인 성공 시 토큰 발급
                 )
                 // JWT 필터를 ID/PW 필터 앞에 배치
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);

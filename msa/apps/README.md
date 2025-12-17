@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 26 Completed (The Wishlist - Personalization & Optimization)
+* **Status:** Level 27 Completed (The Social - OAuth2 Google Login & Security Hardening)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -97,6 +97,12 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
 * **Zero-Select Write:** 찜하기 요청 시, `SecurityContext`의 JWT에서 파싱한 ID와 `getReferenceById(Proxy)`를 결합하여 **DB 조회 없이(0 Select)** 즉시 `INSERT` 수행.
 * **MemberPrincipal Expansion:** JWT 토큰 페이로드에 `memberId(PK)`를 포함시켜, 인증 필터 단계에서 DB 접근 없이 완전한 인증 객체 생성.
 * **Fetch Join & Batch Size:** "내 찜 목록" 조회 시 QueryDSL `Fetch Join`으로 게임 정보를 한 번에 가져오고, `default_batch_fetch_size` 설정을 통해 N+1 문제 없이 가격 정보까지 효율적으로 로딩.
+
+### ⑩ OAuth2 Social Login (The Key)
+복잡한 가입 절차를 제거하고, `Spring Security OAuth2 Client`를 활용하여 원클릭 로그인 시스템 구축.
+* **Seamless Onboarding:** 구글 로그인 시 `CustomOAuth2UserService`가 자동으로 회원을 식별하여, 신규 유저는 '가입(Insert)', 기존 유저는 '정보 갱신(Update)'을 수행하는 `SaveOrUpdate` 로직 구현.
+* **JWT Bridge:** 소셜 로그인 성공 직후 `AuthenticationSuccessHandler`가 개입하여, OAuth2 인증 정보를 우리 시스템 전용 **JWT(Access/Refresh Token)로 즉시 교환**하여 발급.
+* **Secret Isolation:** `application.yml`(공개)과 `application-secret.yml`(비공개)을 분리하고 `.gitignore` 처리하여, DB 비밀번호 및 OAuth Client Secret 등의 민감 정보가 깃허브에 노출되는 것을 원천 차단.
 
 ```mermaid
 sequenceDiagram
@@ -293,7 +299,64 @@ metaScoreGoe(condition.getMinMetaScore())
 
 ---
 
-## 7. 트러블슈팅 (Troubleshooting Log)
+## 7. OAuth2 구현 가이드 (Implementation Guide)
+
+### 🌊 인증 흐름도 (Authentication Flow)
+사용자가 "구글 로그인" 버튼을 누른 순간부터 JWT를 발급받기까지의 과정을 시각화.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser
+    participant SpringSec as 🛡️ Spring Security
+    participant Google as 🌐 Google Auth Server
+    participant Service as 🧠 CustomOAuth2UserService
+    participant Handler as 🍪 SuccessHandler
+    participant DB as 💾 MySQL
+
+    User->>Browser: "Google 로그인" 클릭
+    Browser->>SpringSec: GET /oauth2/authorization/google
+    SpringSec->>Google: 리다이렉트 (Client ID + Scope)
+    
+    User->>Google: 계정 선택 및 동의
+    Google-->>SpringSec: Auth Code 전달 (/login/oauth2/code/google)
+    
+    Note over SpringSec, Google: 내부적으로 Access Token 교환 (Auto)
+    
+    SpringSec->>Google: 유저 정보 요청 (Profile, Email)
+    Google-->>SpringSec: 유저 정보 반환 (JSON)
+    
+    SpringSec->>Service: loadUser() 호출
+    Service->>DB: 이메일 조회 (findByEmail)
+    
+    alt 신규 유저
+        Service->>DB: INSERT (Member 생성)
+    else 기존 유저
+        Service->>DB: UPDATE (이름 등 갱신)
+    end
+    
+    Service-->>Handler: OAuth2User(Principal) 반환
+    
+    Handler->>Handler: MemberPrincipal 변환 & JWT 생성
+    Handler-->>Browser: 리다이렉트 (/?accessToken=eyJ...)
+    
+    Note right of Browser: 이제부터 JWT로 API 요청
+```
+
+### 🛠️ 구현 체크리스트 (Step-by-Step)
+스프링 부트에 소셜 로그인을 이식하기 위한 4단계 표준 절차.
+
+| 단계 | 파일/위치 | 핵심 역할 |
+| :--- | :--- | :--- |
+| **Step 1. 환경 설정** | `Google Cloud Console` | 프로젝트 생성 → `OAuth 동의 화면` 설정 → `Client ID/Secret` 발급.<br>(Redirect URI: `{BaseURL}/login/oauth2/code/google`) |
+| **Step 2. 의존성 & 설정** | `build.gradle`<br>`application-secret.yml` | `oauth2-client` 라이브러리 추가.<br>발급받은 키(ID, Secret)를 보안 파일에 등록. |
+| **Step 3. 비즈니스 로직** | `CustomOAuth2UserService` | 구글에서 받은 JSON 데이터를 `OAuthAttributes` DTO로 변환.<br>DB에 **저장(Join)하거나 갱신(Update)**하는 로직 수행. |
+| **Step 4. 토큰 발급** | `SuccessHandler`<br>`SecurityConfig` | 로그인 성공 시 **JWT를 생성**하여 클라이언트로 전달(Redirect).<br>Security 설정에 `.oauth2Login()` 및 핸들러 등록. |
+
+---
+
+## 8. 트러블슈팅 (Troubleshooting Log)
 개발 과정에서 마주친 주요 이슈와 해결 방법
 
 ### 💥 Issue 1: Docker 내부 통신 불가
@@ -347,7 +410,15 @@ metaScoreGoe(condition.getMinMetaScore())
 * **원인:** 초기 설계 시 DB 테이블은 `user_id`로 생성되었으나, Java 엔티티(`Wishlist`)는 `member_id`로 매핑하여 ORM 불일치 발생.
 * **해결:** 개발 단계임을 감안하여 테이블을 `DROP` 후 재생성하여 엔티티 설정(`member_id`)과 DB 스키마를 동기화.
 * **Lesson:** `ddl-auto` 설정에만 의존하지 말고, 실제 생성된 스키마를 항시 확인해야 함.
-* 
+
+### 💥 Issue 12: 위험한 노출 (Securing Secrets)
+* **증상:** `application.yml`에 DB 비밀번호, JWT Secret Key, OAuth Client Secret 등이 평문으로 적혀 있어 깃허브 업로드 시 보안 사고 위험.
+* **해결:**
+    1. `application-secret.yml` 파일을 생성하여 민감 정보만 별도로 격리.
+    2. `application.yml`에서는 `spring.profiles.include: secret` 설정을 통해 해당 파일을 로드하도록 연결.
+    3. `.gitignore`에 `application-secret.yml`을 등록하여 버전 관리 시스템에서 원천 배제.
+* **Result:** 로컬 개발 편의성은 유지하면서, 원격 저장소의 보안성은 완벽하게 확보.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
