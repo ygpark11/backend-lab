@@ -15,6 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,6 +41,8 @@ public class SecurityConfig {
                 // 1. CSRF 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
 
+                // CORS 설정
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // 2. 세션 정책 설정 (Stateless)
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -72,5 +79,23 @@ public class SecurityConfig {
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // 프론트엔드 주소 허용
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
+        // 모든 HTTP 메서드 허용 (GET, POST, PUT, DELETE...)
+        configuration.setAllowedMethods(List.of("*"));
+        // 모든 헤더 허용 (Authorization 등)
+        configuration.setAllowedHeaders(List.of("*"));
+        // 쿠키나 인증 정보 포함 허용
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

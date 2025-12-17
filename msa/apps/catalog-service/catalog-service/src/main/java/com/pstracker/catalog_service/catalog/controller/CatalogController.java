@@ -5,6 +5,7 @@ import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
+import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -44,10 +46,14 @@ public class CatalogController {
 
     @GetMapping("/search")
     public ResponseEntity<Page<GameSearchResultDto>> searchGames(
-            GameSearchCondition condition, // 쿼리 파라미터 매핑
-            @PageableDefault(size = 20, sort = "lastUpdated", direction = Sort.Direction.DESC) Pageable pageable
+            GameSearchCondition condition,
+            @PageableDefault(size = 20, sort = "lastUpdated", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable);
+        Long memberId = (principal != null) ? principal.getMemberId() : null;
+
+        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, memberId);
+
         return ResponseEntity.ok(result);
     }
 }

@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 27 Completed (The Social - OAuth2 Google Login & Security Hardening)
+* **Status:** Level 28 Completed (The Interface - React Frontend & Full Stack Integration)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -21,10 +21,11 @@
 
 ## 2. 아키텍처 (Fully Dockerized MSA)
 
-### 🏗 구조 및 역할 (The 5-Container Fleet)
+### 🏗 구조 및 역할 (The 5-Container Fleet + Frontend)
 | Service Name | Tech Stack | Role | Port |
 | :--- | :--- | :--- | :--- |
-| **Catalog Service** | Java 17, Spring Boot, **Spring Security** | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
+| **Frontend** | React, Vite | **[Face]** 사용자 인터페이스, 데이터 시각화 | 5173 |
+| **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
 | **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | 5000 |
 | **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | 4444 / 7900 |
 | **MySQL** | MySQL 8.0 | **[Storage]** 정규화된 데이터 저장 (Volume Mount) | 3307 |
@@ -103,6 +104,20 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
 * **Seamless Onboarding:** 구글 로그인 시 `CustomOAuth2UserService`가 자동으로 회원을 식별하여, 신규 유저는 '가입(Insert)', 기존 유저는 '정보 갱신(Update)'을 수행하는 `SaveOrUpdate` 로직 구현.
 * **JWT Bridge:** 소셜 로그인 성공 직후 `AuthenticationSuccessHandler`가 개입하여, OAuth2 인증 정보를 우리 시스템 전용 **JWT(Access/Refresh Token)로 즉시 교환**하여 발급.
 * **Secret Isolation:** `application.yml`(공개)과 `application-secret.yml`(비공개)을 분리하고 `.gitignore` 처리하여, DB 비밀번호 및 OAuth Client Secret 등의 민감 정보가 깃허브에 노출되는 것을 원천 차단.
+
+### ⑪ Frontend System (The Interface) - React & Tailwind
+API 테스트 도구를 넘어, 실제 사용자가 경험하는 **시각화된 플랫폼** 구축.
+* **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast.
+* **UX Philosophy (Dark & Fast):**
+    * **PlayStation Identity:** PS Store 고유의 Dark & Blue 컬러 테마를 완벽하게 이식.
+    * **Optimistic UI:** 찜하기/삭제 시 서버 응답을 기다리지 않고 즉시 UI를 갱신하여 쾌적한 반응 속도 제공.
+    * **Responsive Grid:** 데스크탑(5열)부터 모바일(2열)까지 자동으로 레이아웃이 최적화되는 반응형 웹.
+* **Security Integration:**
+    * **Token Interceptor:** Axios Interceptor를 구현하여, 로그인 후 발급받은 JWT(Access Token)를 모든 API 요청 헤더에 자동 주입.
+    * **Auth Guard:** `PrivateRoute` 컴포넌트를 통해 비로그인 사용자의 중요 페이지(찜 목록 등) 접근 원천 차단.
+* **Data Synchronization:**
+    * **State Management:** 백엔드 데이터(Page)와 프론트엔드 상태(State) 간의 정합성 유지 (찜 해제 시 목록 자동 갱신).
+    * **Enrichment:** 게임 목록 조회 시, 사용자의 찜 여부(`liked`)를 실시간으로 매핑하여 시각적 피드백(❤️/🤍) 제공.
 
 ```mermaid
 sequenceDiagram
@@ -419,6 +434,11 @@ sequenceDiagram
     3. `.gitignore`에 `application-secret.yml`을 등록하여 버전 관리 시스템에서 원천 배제.
 * **Result:** 로컬 개발 편의성은 유지하면서, 원격 저장소의 보안성은 완벽하게 확보.
 
+### 💥 Issue 13: 문을 열어주세요 (CORS Policy)
+* **증상:** React(5173)에서 Spring Boot(8080)로 API 요청 시 `Access-Control-Allow-Origin` 에러 발생.
+* **원인:** 브라우저 보안 정책상 다른 포트 간의 자원 공유는 기본적으로 차단됨.
+* **해결:** Spring Security 설정(`SecurityConfig`)에 `CorsConfigurationSource` 빈을 등록하여 5173 포트의 접근과 모든 메서드(GET, POST 등) 허용.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -463,4 +483,15 @@ docker ps
 - Method: POST
 - URL: `http://localhost:8080/api/v1/games/manual-crawl`
 - Header: `Authorization: Bearer {ADMIN_ACCESS_TOKEN}`
+
+### ⑦ Frontend 실행 (New!)
+리액트 앱을 로컬 개발 모드로 실행합니다.
+
+```bash
+cd apps/frontend
+npm install
+npm run dev
+# 브라우저에서 http://localhost:5173 접속
+```
+
 ---

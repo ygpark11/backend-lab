@@ -56,8 +56,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         JwtToken jwtToken = jwtTokenProvider.generateToken(newAuth);
 
         // 6. 리다이렉트 (토큰을 가지고 프론트엔드/메인으로 이동)
-        // 지금은 프론트엔드가 없으므로, 테스트를 위해 URL에 토큰을 붙여서 보냄
-        String targetUrl = UriComponentsBuilder.fromUriString("/") // 메인 경로로 이동
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173") // 👈 여기!
                 .queryParam("accessToken", jwtToken.getAccessToken())
                 .queryParam("refreshToken", jwtToken.getRefreshToken())
                 .build().toUriString();

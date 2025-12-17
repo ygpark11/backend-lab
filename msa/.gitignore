@@ -13,3 +13,13 @@ __pycache__
 .DS_Store
 .idea
 *.iml
+
+# [Frontend] React & Node.js
+apps/frontend/node_modules/
+apps/frontend/dist/
+apps/frontend/build/
+apps/frontend/.env
+apps/frontend/.env.local
+apps/frontend/.DS_Store
+apps/frontend/coverage/
+apps/frontend/*.log

@@ -10,6 +10,7 @@ import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -32,6 +33,7 @@ public class CatalogService {
 
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
+    private final WishlistRepository wishlistRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     private final IgdbApiClient igdbApiClient;
@@ -178,13 +180,34 @@ public class CatalogService {
     }
 
     /**
-     * 게임 검색 서비스
-     * @param condition 검색 조건
-     * @param pageable 페이징 정보
-     * @return 게임 검색 결과 페이지
+     * 게임 검색 + 찜 여부 마킹
+     * @param condition
+     * @param pageable
+     * @param memberId
+     * @return
      */
-    public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        log.info("🔍 Search Request: condition={}, page={}", condition, pageable.getPageNumber());
-        return gameRepository.searchGames(condition, pageable);
+    public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
+        // 1. 기존 검색 로직 실행 (QueryDSL)
+        Page<GameSearchResultDto> result = gameRepository.searchGames(condition, pageable);
+
+        // 2. 로그인한 유저라면 찜 여부 마킹 (Data Enrichment)
+        if (memberId != null && !result.isEmpty()) {
+            // 현재 페이지의 게임 ID 추출
+            List<Long> gameIds = result.getContent().stream()
+                    .map(GameSearchResultDto::getId)
+                    .toList();
+
+            // 내가 찜한 게임 ID 조회
+            List<Long> myLikedGameIds = wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds);
+
+            // DTO에 liked=true 설정
+            result.getContent().forEach(dto -> {
+                if (myLikedGameIds.contains(dto.getId())) {
+                    dto.setLiked(true);
+                }
+            });
+        }
+
+        return result;
     }
 }

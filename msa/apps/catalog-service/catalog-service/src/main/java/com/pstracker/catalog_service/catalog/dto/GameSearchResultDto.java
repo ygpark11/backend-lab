@@ -22,6 +22,9 @@ public class GameSearchResultDto {
     private Integer metaScore;
     private Double userScore;
 
+    // 찜 여부
+    private boolean liked;
+
     @QueryProjection
     public GameSearchResultDto(Long id, String name, String imageUrl,
                                Integer originalPrice, Integer price, Integer discountRate,
