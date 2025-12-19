@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
@@ -55,5 +56,16 @@ public class CatalogController {
         Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, memberId);
 
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/{gameId}")
+    public ResponseEntity<GameDetailResponse> getGameDetail(
+            @PathVariable Long gameId,
+            @AuthenticationPrincipal MemberPrincipal principal // [New] 사용자 정보 주입
+    ) {
+        Long memberId = (principal != null) ? principal.getMemberId() : null;
+
+        GameDetailResponse response = catalogService.getGameDetail(gameId, memberId);
+        return ResponseEntity.ok(response);
     }
 }

@@ -47,6 +47,12 @@ public class WishlistService {
                 });
     }
 
+    /**
+     * 내 찜 목록 조회
+     * @param memberId 멤버 ID
+     * @param pageable 페이징 정보
+     * @return 찜 목록 페이지
+     */
     public Page<WishlistResponse> getMyWishlist(Long memberId, Pageable pageable) {
         Page<Wishlist> wishlistPage = wishlistRepository.findAllByMemberId(memberId, pageable);
 

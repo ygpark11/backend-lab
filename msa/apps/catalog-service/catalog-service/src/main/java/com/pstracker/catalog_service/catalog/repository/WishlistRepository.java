@@ -14,4 +14,6 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
 
     @Query("SELECT w.game.id FROM Wishlist w WHERE w.member.id = :memberId AND w.game.id IN :gameIds")
     List<Long> findGameIdsByMemberIdAndGameIdIn(Long memberId, List<Long> gameIds);
+
+    boolean existsByMemberIdAndGameId(Long memberId, Long gameId);
 }

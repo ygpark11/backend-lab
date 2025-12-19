@@ -4,6 +4,7 @@ import com.querydsl.core.annotations.QueryProjection;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
 public class GameSearchResultDto {
@@ -22,6 +23,9 @@ public class GameSearchResultDto {
     private Integer metaScore;
     private Double userScore;
 
+    private LocalDateTime createdAt;
+    private String genreIds;
+
     // 찜 여부
     private boolean liked;
 
@@ -29,7 +33,8 @@ public class GameSearchResultDto {
     public GameSearchResultDto(Long id, String name, String imageUrl,
                                Integer originalPrice, Integer price, Integer discountRate,
                                boolean isPlusExclusive, LocalDate saleEndDate,
-                               Integer metaScore, Double userScore) {
+                               Integer metaScore, Double userScore,
+                               LocalDateTime createdAt, String genreIds) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -40,5 +45,8 @@ public class GameSearchResultDto {
         this.saleEndDate = saleEndDate;
         this.metaScore = metaScore;
         this.userScore = userScore;
+
+        this.createdAt = createdAt;
+        this.genreIds = genreIds;
     }
 }

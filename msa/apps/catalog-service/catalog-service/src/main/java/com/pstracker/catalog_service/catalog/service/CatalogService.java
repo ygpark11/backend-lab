@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
@@ -209,5 +210,35 @@ public class CatalogService {
         }
 
         return result;
+    }
+
+    /**
+     * 게임 상세 정보 조회
+     * @param gameId
+     * @return
+     */
+    public GameDetailResponse getGameDetail(Long gameId, Long memberId) {
+        // 1. 게임 기본 정보 조회
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found with id: " + gameId));
+
+        // 2. 가격 이력 조회
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
+        GamePriceHistory latestInfo = histories.isEmpty() ? null : histories.get(histories.size() - 1);
+        Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);
+
+        // 3. 차트 DTO 변환
+        List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
+                .map(h -> new GameDetailResponse.PriceHistoryDto(h.getRecordedAt().toLocalDate(), h.getPrice()))
+                .toList();
+
+        // 4. 찜 여부 확인 로직
+        boolean isLiked = false;
+        if (memberId != null) {
+            isLiked = wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
+        }
+
+        // 6. 응답 생성 (Game + LatestInfo + LowestPrice + HistoryList)
+        return GameDetailResponse.from(game, latestInfo, lowestPrice, historyDtos, isLiked);
     }
 }

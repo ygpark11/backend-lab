@@ -6,6 +6,7 @@ import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -21,22 +22,30 @@ public class WishlistResponse {
     private int discountRate;
     private boolean isOnSale;
 
+    private LocalDateTime createdAt; // 게임 생성일 (NEW 뱃지용)
+    private LocalDate saleEndDate;   // 할인 종료일 (마감임박 뱃지용)
+    private String genreIds;         // 장르 이모지용
+
     private LocalDateTime wishedAt; // 언제 찜했는지
 
     public WishlistResponse(Wishlist wishlist, GamePriceHistory latestPrice) {
         Game game = wishlist.getGame();
+
         this.gameId = game.getId();
         this.name = game.getName();
         this.imageUrl = game.getImageUrl();
         this.wishedAt = wishlist.getCreatedAt();
+
+        this.createdAt = game.getCreatedAt();
+        this.genreIds = game.getGenreIds();
 
         if (latestPrice != null) {
             this.currentPrice = latestPrice.getPrice();
             this.originalPrice = latestPrice.getOriginalPrice();
             this.discountRate = latestPrice.getDiscountRate();
             this.isOnSale = discountRate > 0;
+            this.saleEndDate = latestPrice.getSaleEndDate();
         } else {
-            // 가격 정보가 없는 경우 (출시 예정작 등)
             this.currentPrice = 0;
             this.isOnSale = false;
         }

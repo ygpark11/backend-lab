@@ -5,8 +5,8 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 28 Completed (The Interface - React Frontend & Full Stack Integration)
-* **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단 지원.
+* **Status:** Level 29 Completed (The User Experience - Frontend Polishing & Feature Completion)
+* **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
 1.  **Automation:** 인간의 개입 없이 매일 새벽, 스스로 최신 정보를 수집하고 갱신.
@@ -106,18 +106,19 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
 * **Secret Isolation:** `application.yml`(공개)과 `application-secret.yml`(비공개)을 분리하고 `.gitignore` 처리하여, DB 비밀번호 및 OAuth Client Secret 등의 민감 정보가 깃허브에 노출되는 것을 원천 차단.
 
 ### ⑪ Frontend System (The Interface) - React & Tailwind
-API 테스트 도구를 넘어, 실제 사용자가 경험하는 **시각화된 플랫폼** 구축.
-* **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast.
-* **UX Philosophy (Dark & Fast):**
-    * **PlayStation Identity:** PS Store 고유의 Dark & Blue 컬러 테마를 완벽하게 이식.
-    * **Optimistic UI:** 찜하기/삭제 시 서버 응답을 기다리지 않고 즉시 UI를 갱신하여 쾌적한 반응 속도 제공.
-    * **Responsive Grid:** 데스크탑(5열)부터 모바일(2열)까지 자동으로 레이아웃이 최적화되는 반응형 웹.
-* **Security Integration:**
-    * **Token Interceptor:** Axios Interceptor를 구현하여, 로그인 후 발급받은 JWT(Access Token)를 모든 API 요청 헤더에 자동 주입.
-    * **Auth Guard:** `PrivateRoute` 컴포넌트를 통해 비로그인 사용자의 중요 페이지(찜 목록 등) 접근 원천 차단.
+API 테스트 도구를 넘어, **상용 서비스 수준의 UX/UI**를 갖춘 시각화 플랫폼 구축.
+* **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast, Date-fns.
+* **Design System (PS Identity):**
+    * **Visual Hierarchy:** `NEW`(신작), `마감임박`(3일 내 종료), `-70%`(할인율) 등 **직관적인 뱃지 시스템**을 도입하여 사용자의 시선을 중요 정보로 유도.
+    * **Consistent Layout:** 메인 목록(List)과 찜 목록(Wishlist)의 카드 디자인을 통일하여 일관된 사용자 경험(UX) 제공.
+    * **Responsive Grid:** 데스크탑(5열)부터 모바일(2열)까지 기기에 맞춰 최적화되는 반응형 레이아웃.
+* **Smart Interaction:**
+    * **Optimistic UI:** 찜하기(❤️) 버튼 클릭 시, 서버 응답을 기다리지 않고 즉시 하트를 채워 쾌적한 반응 속도 제공.
+    * **Dynamic Filtering:** 단순 검색을 넘어 `할인율(50%↑)`, `플랫폼(PS5)`, `PS Plus 전용` 등 다중 조건 필터링 및 `가격순/평점순` 정렬 기능 구현.
+    * **Interactive Detail:** 상세 페이지에서 `역대 최저가 판정(Verdict)` 로직을 시각화하고, 설명이 부실한 게임은 `YouTube/Google 검색` 버튼으로 대체하여 이탈 방지.
 * **Data Synchronization:**
-    * **State Management:** 백엔드 데이터(Page)와 프론트엔드 상태(State) 간의 정합성 유지 (찜 해제 시 목록 자동 갱신).
-    * **Enrichment:** 게임 목록 조회 시, 사용자의 찜 여부(`liked`)를 실시간으로 매핑하여 시각적 피드백(❤️/🤍) 제공.
+    * **Real-time State Sync:** 찜 목록에서 삭제 시 즉시 리스트에서 제거되고, 상세 페이지 진입 시 찜 상태(`isLiked`)를 실시간으로 동기화.
+    * **Safe Rendering:** 백엔드 데이터(`User Score` 등)의 소수점 처리 및 예외 값(`Full Data Crawler`)에 대한 방어 로직 적용.
 
 ```mermaid
 sequenceDiagram
@@ -438,6 +439,10 @@ sequenceDiagram
 * **증상:** React(5173)에서 Spring Boot(8080)로 API 요청 시 `Access-Control-Allow-Origin` 에러 발생.
 * **원인:** 브라우저 보안 정책상 다른 포트 간의 자원 공유는 기본적으로 차단됨.
 * **해결:** Spring Security 설정(`SecurityConfig`)에 `CorsConfigurationSource` 빈을 등록하여 5173 포트의 접근과 모든 메서드(GET, POST 등) 허용.
+
+### 💥 Issue 14: 설명이 없는 게임 (Empty Description)
+* **증상:** 기획상 게임 설명 출력 부분에 출력할 데이터가 없음.
+* **해결:** 프론트엔드에서 해당 영역을 `YouTube 검색` 및 `Google 검색` 버튼을 동적으로 렌더링하여 사용자에게 대안 정보를 제공
 
 ---
 

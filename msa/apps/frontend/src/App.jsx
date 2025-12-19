@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import LoginPage from './pages/LoginPage';
 import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
+import GameDetailPage from './pages/GameDetailPage';
 
 // 로그인했는지 검사하는 문지기 컴포넌트
 const PrivateRoute = ({ children }) => {
@@ -40,6 +41,16 @@ function App() {
                     element={
                         <PrivateRoute>
                             <GameListPage />
+                        </PrivateRoute>
+                    }
+                />
+
+                {/* 게임 상세 페이지 */}
+                <Route
+                    path="/games/:id"
+                    element={
+                        <PrivateRoute>
+                            <GameDetailPage />
                         </PrivateRoute>
                     }
                 />

@@ -4,6 +4,8 @@ import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
+import com.querydsl.core.types.Order;
+import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -11,9 +13,11 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
@@ -38,7 +42,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         gamePriceHistory.isPlusExclusive,
                         gamePriceHistory.saleEndDate,
                         game.metaScore,
-                        game.userScore
+                        game.userScore,
+                        game.createdAt,
+                        game.genreIds
                 ))
                 .from(game)
                 .leftJoin(game.priceHistories, gamePriceHistory) // 1:N 조인
@@ -61,7 +67,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
-                .orderBy(game.lastUpdated.desc()) // 기본 정렬: 최신순
+                .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .fetch();
 
         // 2. 카운트 쿼리 (최적화를 위해 분리)
@@ -123,5 +129,31 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     private BooleanExpression plusExclusiveEq(Boolean isPlusExclusive) {
         return Boolean.TRUE.equals(isPlusExclusive) ? gamePriceHistory.isPlusExclusive.isTrue() : null;
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
+        List<OrderSpecifier<?>> orders = new ArrayList<>();
+
+        for (Sort.Order order : sort) {
+            Order direction = order.isAscending() ? Order.ASC : Order.DESC;
+
+            switch (order.getProperty()) {
+                case "price":
+                    orders.add(new OrderSpecifier<>(direction, gamePriceHistory.price));
+                    break;
+                case "discountRate":
+                    orders.add(new OrderSpecifier<>(direction, gamePriceHistory.discountRate));
+                    break;
+                case "metaScore":
+                    orders.add(new OrderSpecifier<>(direction, game.metaScore));
+                    break;
+                case "lastUpdated":
+                default:
+                    orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
+                    break;
+            }
+        }
+
+        return orders.toArray(new OrderSpecifier[0]);
     }
 }

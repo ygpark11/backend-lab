@@ -50,6 +50,9 @@ public class Game {
     @Column(name = "user_score")
     private Double userScore;
 
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
     @Column(name = "last_updated_at")
     private LocalDateTime lastUpdated;
 
@@ -77,6 +80,8 @@ public class Game {
 
     // --- [생성 메서드] ---
     public static Game create(String psStoreId, String name, String englishName, String publisher, String imageUrl, String description) {
+        LocalDateTime now = LocalDateTime.now();
+
         Game game = new Game();
         game.psStoreId = psStoreId;
         game.name = name;
@@ -84,7 +89,8 @@ public class Game {
         game.publisher = publisher;
         game.imageUrl = imageUrl;
         game.description = description;
-        game.lastUpdated = LocalDateTime.now();
+        game.createdAt = now;
+        game.lastUpdated = now;
         return game;
     }
 
