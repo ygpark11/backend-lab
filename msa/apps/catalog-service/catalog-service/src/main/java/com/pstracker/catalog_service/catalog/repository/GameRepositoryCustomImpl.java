@@ -63,7 +63,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         metaScoreGoe(condition.getMinMetaScore()),
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
-                        plusExclusiveEq(condition.getIsPlusExclusive())
+                        plusExclusiveEq(condition.getIsPlusExclusive()),
+                        genreContains(condition.getGenre())
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -89,7 +90,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         metaScoreGoe(condition.getMinMetaScore()),
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
-                        plusExclusiveEq(condition.getIsPlusExclusive())
+                        plusExclusiveEq(condition.getIsPlusExclusive()),
+                        genreContains(condition.getGenre())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -129,6 +131,11 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     private BooleanExpression plusExclusiveEq(Boolean isPlusExclusive) {
         return Boolean.TRUE.equals(isPlusExclusive) ? gamePriceHistory.isPlusExclusive.isTrue() : null;
+    }
+
+    private BooleanExpression genreContains(String genre) {
+        // genreIds 컬럼(String)에 해당 장르가 포함되어 있는지 검사
+        return StringUtils.hasText(genre) ? game.genreIds.containsIgnoreCase(genre) : null;
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {

@@ -28,6 +28,8 @@ public class WishlistResponse {
 
     private LocalDateTime wishedAt; // 언제 찜했는지
 
+    private Integer metaScore;
+
     public WishlistResponse(Wishlist wishlist, GamePriceHistory latestPrice) {
         Game game = wishlist.getGame();
 
@@ -38,6 +40,8 @@ public class WishlistResponse {
 
         this.createdAt = game.getCreatedAt();
         this.genreIds = game.getGenreIds();
+
+        this.metaScore = game.getMetaScore();
 
         if (latestPrice != null) {
             this.currentPrice = latestPrice.getPrice();

@@ -24,4 +24,7 @@ public class GameSearchCondition {
 
     // PS Plus 전용 할인 여부
     private Boolean isPlusExclusive;
+
+    // 장르 필터 추가
+    private String genre;
 }

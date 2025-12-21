@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 29 Completed (The User Experience - Frontend Polishing & Feature Completion)
+* **Status:** Level 30 Completed (UI/UX Master & Gamification)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -15,7 +15,9 @@
 4.  **Resilience:** 네트워크 지연, 레이아웃 변경, 보이지 않는 텍스트 등 온갖 예외 상황에서도 살아남는 강인한 수집 능력.
 5.  **Reactivity:** 가격 하락 감지 시, 0.1초 내에 사용자에게 Discord 알림 발송.
 6.  **Value-Aware:** 단순 최저가가 아닌, Metacritic 점수와 유저 평점을 함께 제공하여 '싼 게 비지떡'인지 '숨겨진 명작'인지 판별.
-7   **Insight:** 복합 조건(할인율+평점+가격) 검색을 통해 사용자가 원하는 "진짜 꿀매물"을 발굴.
+7.   **Insight:** 복합 조건(할인율+평점+가격) 검색을 통해 사용자가 원하는 "진짜 꿀매물"을 발굴.
+8. **Gamification:** '가성비 전투력', '가격 신호등', '플래티넘 딜' 등의 요소를 도입하여 재미와 직관성 극대화.
+9. **User Experience:** 장르 파도타기(Wave Animation), 글래스모피즘(Glassmorphism) UI, 다크 모드 등 최신 트렌드를 반영한 몰입형 인터페이스.
 
 ---
 
@@ -105,20 +107,20 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
 * **JWT Bridge:** 소셜 로그인 성공 직후 `AuthenticationSuccessHandler`가 개입하여, OAuth2 인증 정보를 우리 시스템 전용 **JWT(Access/Refresh Token)로 즉시 교환**하여 발급.
 * **Secret Isolation:** `application.yml`(공개)과 `application-secret.yml`(비공개)을 분리하고 `.gitignore` 처리하여, DB 비밀번호 및 OAuth Client Secret 등의 민감 정보가 깃허브에 노출되는 것을 원천 차단.
 
-### ⑪ Frontend System (The Interface) - React & Tailwind
-API 테스트 도구를 넘어, **상용 서비스 수준의 UX/UI**를 갖춘 시각화 플랫폼 구축.
-* **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast, Date-fns.
-* **Design System (PS Identity):**
-    * **Visual Hierarchy:** `NEW`(신작), `마감임박`(3일 내 종료), `-70%`(할인율) 등 **직관적인 뱃지 시스템**을 도입하여 사용자의 시선을 중요 정보로 유도.
-    * **Consistent Layout:** 메인 목록(List)과 찜 목록(Wishlist)의 카드 디자인을 통일하여 일관된 사용자 경험(UX) 제공.
-    * **Responsive Grid:** 데스크탑(5열)부터 모바일(2열)까지 기기에 맞춰 최적화되는 반응형 레이아웃.
-* **Smart Interaction:**
-    * **Optimistic UI:** 찜하기(❤️) 버튼 클릭 시, 서버 응답을 기다리지 않고 즉시 하트를 채워 쾌적한 반응 속도 제공.
-    * **Dynamic Filtering:** 단순 검색을 넘어 `할인율(50%↑)`, `플랫폼(PS5)`, `PS Plus 전용` 등 다중 조건 필터링 및 `가격순/평점순` 정렬 기능 구현.
-    * **Interactive Detail:** 상세 페이지에서 `역대 최저가 판정(Verdict)` 로직을 시각화하고, 설명이 부실한 게임은 `YouTube/Google 검색` 버튼으로 대체하여 이탈 방지.
-* **Data Synchronization:**
-    * **Real-time State Sync:** 찜 목록에서 삭제 시 즉시 리스트에서 제거되고, 상세 페이지 진입 시 찜 상태(`isLiked`)를 실시간으로 동기화.
-    * **Safe Rendering:** 백엔드 데이터(`User Score` 등)의 소수점 처리 및 예외 값(`Full Data Crawler`)에 대한 방어 로직 적용.
+### ⑪ Frontend System (The Interface) - React & Tailwind [Updated Lv.30]
+API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를 갖춘 시각화 플랫폼 구축.
+* **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast, Date-fns, Lucide-React (Icons).
+* **Gamification & Visual Features:**
+    * **Combat Power (전투력 측정기):** 메타스코어와 가격을 복합 연산하여 "가성비 지수"를 수치화하고, 불꽃 애니메이션으로 시각화.
+    * **Traffic Light (가격 신호등):** 복잡한 가격 변동 내역을 분석하여 `초록불(구매 적기)`, `노란불(평균)`, `빨간불(비쌈)`로 직관적 가이드 제공.
+    * **Platinum Deal (플래티넘 딜):** '메타스코어 85점 이상 & 할인율 50% 이상'인 명작 게임에 황금빛 아우라(Glow Effect)와 반짝임(Sparkle) 효과 자동 적용.
+    * **Genre Surfing (장르 파도타기):** 정적인 필터 대신, CSS Keyframes를 활용한 웨이브 이퀄라이저 애니메이션을 적용하여 탐색의 재미 요소 추가.
+* **Design System (Glassmorphism):**
+    * 넷플릭스 스타일의 **Hero Backdrop**과 블러 처리된 반투명 카드 UI(Glass Effect)를 적용하여 고급스러운 톤앤매너 완성.
+    * 로그인 페이지부터 상세 페이지까지 일관된 **Dark Themed UI** 제공.
+* **User-Centric Features:**
+    * **Smart Feedback:** 브라우저 기본 Alert를 제거하고, `React-Hot-Toast`를 커스텀하여 부드럽고 세련된 알림 제공.
+    * **Onboarding:** '가이드 모달'과 '이용약관 모달'을 구현하여 사용자의 이해를 돕고 법적 요건 충족.
 
 ```mermaid
 sequenceDiagram
@@ -410,7 +412,7 @@ sequenceDiagram
 * **해결:** DTO 필드에 `@JsonProperty("isPlusExclusive")`를 명시하여 JSON 키 값을 강제로 고정.
 
 ### 💥 Issue 9: IP 차단 (Access Denied)
-* **증상:** 과도한 페이지네이션(300페이지) 시도로 인해 소니 보안 시스템(Akamai)에 의해 IP 차단됨.
+* **증상:** 과도한 페이지네이션 시도로 인해 소니 보안 시스템(Akamai)에 의해 IP 차단됨.
 * **해결:**
   1. 전략 수정: 수집 대상을 '상위 10페이지'로 축소 (Pareto 법칙).
   2. 기간 존중: DB 쿼리를 수정하여, 유효한 세일 정보가 있는 게임은 크롤러에게 전달하지 않음.
@@ -500,3 +502,25 @@ npm run dev
 ```
 
 ---
+
+## 9. 향후 계획 (Future Roadmap)
+**"선택과 집중"**. 핵심 가치인 가격 추적과 추천 기능에 집중하며, 비용 효율적인 MVP 런칭을 목표
+
+### 🚀 Step 1. 서비스 런칭 (Deployment)
+* **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축)
+* **Lv.32: 무지출 배포 전략** (Home Server + Cloudflare Tunnel 활용)
+* **Lv.33: 도메인 및 보안 적용** (HTTPS, Custom Domain)
+
+### 🔔 Phase 2. 사용자를 위한 케어 (Care & Notification)
+* **Lv.34: 인앱 알림 센터 (Notification Center)**
+    * DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
+* **Lv.35: 잠들지 않는 비서 (Web Push & Automation)**
+    * Firebase(FCM)를 연동하여 브라우저가 꺼져 있어도 가격 하락 알림 발송 (무료).
+    * Spring Batch 대신 기존 스케줄러를 활용해 '알림 대상' 추출 최적화.
+
+### 🧠 Phase 3. AI Intelligence (Spring AI)
+* **Lv.36: AI 게임 큐레이터 (Description Generator)**
+    * **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
+    * (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
+* **Lv.37: 취향 저격수 (AI Recommendation)**
+    * Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.

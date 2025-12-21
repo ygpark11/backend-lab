@@ -1,60 +1,116 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Gamepad2, Info } from 'lucide-react';
+import toast from 'react-hot-toast';
+import LegalModal from '../components/LegalModal';
+
+const BG_IMAGE = "https://image.api.playstation.com/vulcan/ap/rnd/202010/0222/niMUu8FxdDS2s8cMKfrg6s2Q.png";
 
 const LoginPage = () => {
     const GOOGLE_LOGIN_URL = "http://localhost:8080/oauth2/authorization/google";
-
-    // 1. URL에 있는 파라미터(?accessToken=...)를 읽어오는 낚싯대
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
+    const [isLegalOpen, setIsLegalOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('terms');
+
     useEffect(() => {
-        // 2. 낚싯대 확인: 토큰이 걸려있나?
         const accessToken = searchParams.get('accessToken');
         const refreshToken = searchParams.get('refreshToken');
 
         if (accessToken) {
-            // 3. 월척이다! 주머니(LocalStorage)에 저장
             localStorage.setItem('accessToken', accessToken);
             localStorage.setItem('refreshToken', refreshToken);
 
-            // 4. 게임 목록 페이지로 이동 (URL도 깔끔하게 청소)
+            // [Deleted] "환영합니다" 토스트 삭제 -> 바로 깔끔하게 이동!
+
             navigate('/games', { replace: true });
         }
     }, [searchParams, navigate]);
 
+    const handleGoogleLogin = () => {
+        window.location.href = GOOGLE_LOGIN_URL;
+    };
+
+    const handleOpenLegal = (e, tab) => {
+        e.preventDefault();
+        setActiveTab(tab);
+        setIsLegalOpen(true);
+    };
+
+    const handleContact = (e) => {
+        e.preventDefault();
+        toast('문의하기 기능은 준비 중입니다! 📧', {
+            icon: <Info className="text-yellow-400 w-5 h-5" />,
+            style: { borderRadius: '10px', background: '#333', color: '#fff' },
+        });
+    };
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-ps-black text-ps-text relative overflow-hidden">
-            {/* 배경 장식 */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-ps-blue/10 to-transparent pointer-events-none" />
+        <div className="min-h-screen bg-ps-black text-white relative flex flex-col items-center justify-center overflow-hidden">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <div
+                    className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+                    style={{
+                        backgroundImage: `url(${BG_IMAGE})`,
+                        filter: 'blur(8px) brightness(0.7)',
+                        opacity: 0.6
+                    }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-ps-black via-ps-black/80 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-ps-black/50 via-transparent to-transparent"></div>
+            </div>
 
-            <div className="z-10 bg-ps-card p-10 rounded-2xl shadow-2xl max-w-md w-full text-center border border-white/5 backdrop-blur-sm">
-                <h1 className="text-4xl font-black mb-2 tracking-tighter">
-                    <span className="text-white">PS</span>
-                    <span className="text-ps-blue">-Tracker</span>
-                </h1>
-                <p className="text-ps-muted mb-10 text-sm">
-                    PlayStation 최저가 추적 & AI 추천 플랫폼
-                </p>
+            <div className="relative z-10 w-full max-w-md p-8 animate-fadeIn">
+                <div className="text-center mb-10">
+                    <div className="inline-block bg-ps-blue p-4 rounded-2xl shadow-2xl shadow-ps-blue/20 mb-6 rotate-3 transform transition-transform hover:rotate-6">
+                        <Gamepad2 className="w-12 h-12 text-white" />
+                    </div>
+                    <h1 className="text-4xl font-black tracking-tighter mb-2">
+                        PS <span className="text-ps-blue">Tracker</span>
+                    </h1>
+                    <p className="text-gray-400 text-lg font-medium">
+                        PlayStation 최저가 추적 & AI 추천 플랫폼
+                    </p>
+                </div>
 
-                <a
-                    href={GOOGLE_LOGIN_URL}
-                    className="flex items-center justify-center gap-3 w-full bg-white text-gray-800 font-bold py-3.5 px-4 rounded-xl hover:bg-gray-100 transition-all duration-200 transform hover:scale-[1.02] shadow-lg"
-                >
-                    {/* 구글 아이콘 */}
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                        <path d="M5.84 14.11c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V7.05H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.95l3.66-2.84z" fill="#FBBC05" />
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.51 6.16-4.51z" fill="#EA4335" />
-                    </svg>
-                    <span>Google 계정으로 시작하기</span>
-                </a>
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-2xl hover:border-white/20 transition-colors">
+                    <button
+                        onClick={handleGoogleLogin}
+                        className="w-full bg-white text-black font-bold py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-100 transition-all transform hover:-translate-y-1 shadow-lg"
+                    >
+                        <img
+                            src="https://www.svgrepo.com/show/475656/google-color.svg"
+                            alt="Google"
+                            className="w-6 h-6"
+                        />
+                        Google 계정으로 시작하기
+                    </button>
 
-                <p className="mt-8 text-xs text-ps-muted">
-                    로그인 시 이용약관 및 개인정보처리방침에 동의하게 됩니다.
+                    <p className="text-center text-xs text-gray-500 mt-6">
+                        로그인 시 이용약관 및 개인정보처리방침에 동의하게 됩니다.
+                    </p>
+                </div>
+            </div>
+
+            <div className="absolute bottom-6 text-center z-10">
+                <div className="flex gap-4 text-xs text-gray-500 justify-center">
+                    <a href="#" onClick={(e) => handleOpenLegal(e, 'terms')} className="hover:text-white transition-colors">이용약관</a>
+                    <span className="text-gray-700">|</span>
+                    <a href="#" onClick={(e) => handleOpenLegal(e, 'privacy')} className="hover:text-white transition-colors">개인정보처리방침</a>
+                    <span className="text-gray-700">|</span>
+                    <a href="#" onClick={handleContact} className="hover:text-white transition-colors">문의하기</a>
+                </div>
+                <p className="text-[10px] text-gray-700 mt-2">
+                    © 2025 PS Tracker. Not affiliated with Sony Interactive Entertainment.
                 </p>
             </div>
+
+            <LegalModal
+                isOpen={isLegalOpen}
+                onClose={() => setIsLegalOpen(false)}
+                defaultTab={activeTab}
+            />
         </div>
     );
 };
