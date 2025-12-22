@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 30 Completed (UI/UX Master & Gamification)
+* **Status:** Level 31 Completed (Dockerization & Orchestration)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -26,7 +26,7 @@
 ### 🏗 구조 및 역할 (The 5-Container Fleet + Frontend)
 | Service Name | Tech Stack | Role | Port |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | React, Vite | **[Face]** 사용자 인터페이스, 데이터 시각화 | 5173 |
+| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (API Gateway 역할) | 80 (Docker) / 5173 (Dev) |
 | **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
 | **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | 5000 |
 | **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | 4444 / 7900 |
@@ -121,6 +121,14 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **User-Centric Features:**
     * **Smart Feedback:** 브라우저 기본 Alert를 제거하고, `React-Hot-Toast`를 커스텀하여 부드럽고 세련된 알림 제공.
     * **Onboarding:** '가이드 모달'과 '이용약관 모달'을 구현하여 사용자의 이해를 돕고 법적 요건 충족.
+
+### ⑫ Infrastructure (The Ship) - Docker & Nginx [New!]
+개발 환경과 배포 환경의 일치성을 보장하는 **완전 컨테이너화 아키텍처** 구현.
+* **Multi-stage Build:** React 앱을 Node.js 환경에서 빌드하고, 결과물만 Nginx 이미지로 복사하여 이미지 크기를 90% 이상 경량화 (Alpine Linux 기반).
+* **Reverse Proxy:** Nginx를 프론트엔드 웹 서버이자 API Gateway로 활용.
+    * `/` 요청: React 정적 파일(HTML/JS/CSS) 서빙.
+    * `/api` 요청: 백엔드 컨테이너(`catalog-service:8080`)로 라우팅하여 CORS 문제 원천 차단.
+* **Network Isolation:** `ps-network`라는 도커 브릿지 네트워크를 구성하여, 외부에서는 오직 Nginx(80)와 Adminer(8090)만 접근 가능하도록 보안 강화 (DB와 API는 내부망에 격리).
 
 ```mermaid
 sequenceDiagram
@@ -451,76 +459,59 @@ sequenceDiagram
 ## 8. 실행 방법 (How to Run)
 
 ### ① 전체 시스템 실행 (Docker Compose)
-빌드와 실행을 한 번에 처리하는 권장 명령어
+**Frontend + Backend + Database + Crawler**를 명령어 한 줄로 통합 실행합니다.
 
-- Mac/Linux
+**1. Backend Build (필수)**
+도커 빌드 전, 최신 소스 코드를 JAR 파일로 변환합니다.
 ```bash
-./gradlew clean build -x test && docker-compose up --build -d
-```
-- Windows (PowerShell)
-```powershell
-./gradlew clean build -x test ; docker-compose up --build -d
+# Windows
+cd apps/catalog-service ; ./gradlew clean build -x test ; cd ../..
+
+# Mac/Linux
+cd apps/catalog-service && ./gradlew clean build -x test && cd ../..
 ```
 
-### ② 상태 확인
+**2. Docker Compose Up**
 ```bash
-docker ps
-# 5개의 컨테이너(mysql, api, collector, browser, adminer)가 모두 Up 상태여야 함.
+docker compose up --build -d
 ```
 
-### ③ (Optional) 브라우저 화면 훔쳐보기 (NoVNC)
-도커 내부에서 실제로 크롤링하는 화면을 볼 수 있습니다.
+**3. 접속 확인**
+- 메인 서비스: `http://localhost` (포트 번호 불필요!)
+- DB 관리툴: `http://localhost:8090` (Adminer)
+- 크롤링 모니터링 (Selenium Grid): `http://localhost:7900` (NoVNC, pw: secret)
 
-- 접속: `http://localhost:7900`
-- 비밀번호: `secret`
-
-### ④ 수동 크롤링 트리거 (Manual Trigger)
+### ② 수동 크롤링 트리거 (Manual Trigger)
 스케줄러 시간을 기다리지 않고 즉시 실행하려면:
-
 - Method: POST
-- URL: `http://localhost:8080/api/v1/games/manual-crawl`
-
-### ⑤ Data Verification
-- Adminer 접속: `http://localhost:8090`
-- System: MySQL / Server: `mysql` / User: `user` / PW: `password`
-- `games` 및 `game_price_history` 테이블 데이터 확인.
-
-### ⑥ 수동 크롤링 트리거 (Manual Trigger)
-**[Admin Only]** 관리자 권한을 가진 토큰(Bearer Token)이 필요
-- Method: POST
-- URL: `http://localhost:8080/api/v1/games/manual-crawl`
+- URL: `http://localhost/api/v1/games/manual-crawl` (8080 아님, 80 포트 사용)
 - Header: `Authorization: Bearer {ADMIN_ACCESS_TOKEN}`
 
-### ⑦ Frontend 실행 (New!)
-리액트 앱을 로컬 개발 모드로 실행합니다.
-
-```bash
-cd apps/frontend
-npm install
-npm run dev
-# 브라우저에서 http://localhost:5173 접속
-```
+### ③ Data Verification
+- Adminer 접속: `http://localhost:8090`
+- System: MySQL / Server: `mysql` / User: `user` / PW: `password`
+- `games` 및 `game_price_history` 등의 테이블 데이터 확인.
 
 ---
 
 ## 9. 향후 계획 (Future Roadmap)
-**"선택과 집중"**. 핵심 가치인 가격 추적과 추천 기능에 집중하며, 비용 효율적인 MVP 런칭을 목표
+**"선택과 집중"**. 핵심 가치인 가격 추적과 추천 기능에 집중하며, 비용 효율적인 MVP 런칭을 목표로 합니다.
 
 ### 🚀 Step 1. 서비스 런칭 (Deployment)
-* **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축)
-* **Lv.32: 무지출 배포 전략** (Home Server + Cloudflare Tunnel 활용)
-* **Lv.33: 도메인 및 보안 적용** (HTTPS, Custom Domain)
+- [x] **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축) ✅
+- [ ] **Lv.32: 무지출 배포 전략** (Home Server + Cloudflare Tunnel 활용)
+- [ ] **Lv.33: 도메인 및 보안 적용** (HTTPS, Custom Domain)
 
-### 🔔 Phase 2. 사용자를 위한 케어 (Care & Notification)
-* **Lv.34: 인앱 알림 센터 (Notification Center)**
-    * DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
-* **Lv.35: 잠들지 않는 비서 (Web Push & Automation)**
-    * Firebase(FCM)를 연동하여 브라우저가 꺼져 있어도 가격 하락 알림 발송 (무료).
-    * Spring Batch 대신 기존 스케줄러를 활용해 '알림 대상' 추출 최적화.
+### 🔔 Step 2. 사용자를 위한 케어 (Care & Notification)
+- [ ] **Lv.34: 인앱 알림 센터 (Notification Center)**
+    - DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
+- [ ] **Lv.35: 잠들지 않는 비서 (Web Push & Automation)**
+    - Firebase(FCM)를 연동하여 브라우저가 꺼져 있어도 가격 하락 알림 발송 (무료).
+    - Spring Batch 대신 기존 스케줄러를 활용해 '알림 대상' 추출 최적화.
 
-### 🧠 Phase 3. AI Intelligence (Spring AI)
-* **Lv.36: AI 게임 큐레이터 (Description Generator)**
-    * **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
-    * (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
-* **Lv.37: 취향 저격수 (AI Recommendation)**
-    * Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
+### 🧠 Step 3. AI Intelligence (Spring AI)
+- [ ] **Lv.36: AI 게임 큐레이터 (Description Generator)**
+    - **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
+    - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
+- [ ] **Lv.37: 취향 저격수 (AI Recommendation)**
+    - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.

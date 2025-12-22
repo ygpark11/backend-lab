@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { Trash2, AlertTriangle, ExternalLink, Timer, Sparkles } from 'lucide-react';
 
 const getGenreBadgeStyle = (genreString) => {
@@ -81,8 +81,8 @@ const WishlistPage = () => {
                     {loading ? Array.from({ length: 10 }).map((_, idx) => <SkeletonCard key={idx} />) : (
                         games.length > 0 ? games.map((game) => {
                             const realGameId = game.gameId || game.id;
-                            const isNew = game.createdAt && differenceInDays(new Date(), parseISO(game.createdAt)) <= 3;
-                            const daysLeft = game.saleEndDate ? differenceInDays(parseISO(game.saleEndDate), new Date()) : 99;
+                            const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
+                            const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                             const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                             const isClosing = !isLastCall && daysLeft <= 3;
 

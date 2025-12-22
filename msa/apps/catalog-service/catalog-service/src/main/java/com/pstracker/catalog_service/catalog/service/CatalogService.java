@@ -56,9 +56,6 @@ public class CatalogService {
                         request.getDescription()
                 ));
 
-        // 플랫폼 갱신
-        game.updatePlatforms(request.getPlatforms());
-
         // 2. 게임 메타 정보 업데이트 (항상 최신화)
         // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외
         game.updateInfo(
@@ -105,7 +102,6 @@ public class CatalogService {
 
         // 3. 게임 정보 저장 (평점이 있든 없든 저장)
         gameRepository.save(game);
-
 
         // 플랫폼 정보도 최신화 (혹시 나중에 PS5 버전이 추가될 수도 있으니)
         game.updatePlatforms(request.getPlatforms());
@@ -171,7 +167,7 @@ public class CatalogService {
         // 1. 기준 시간 (하루 전)
         LocalDateTime threshold = LocalDateTime.now().minusDays(1);
 
-        // 2. [New] 기준 날짜 (오늘) - 기간 존중 비교용
+        // 2. 기준 날짜 (오늘) - 기간 존중 비교용
         LocalDate today = LocalDate.now();
 
         // 3. 쿼리 실행 (today 파라미터 추가)

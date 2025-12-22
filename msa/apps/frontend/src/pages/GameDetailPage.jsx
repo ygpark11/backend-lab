@@ -6,7 +6,7 @@ import PriceChart from '../components/PriceChart';
 import Navbar from '../components/Navbar';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
 import { calculateCombatPower, getTrafficLight } from '../utils/priceUtils'; // [Use] 여기서 가져온 함수를 씁니다
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import {
     Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
     Timer, CheckCircle, XCircle, Info, HelpCircle, TrendingUp,
@@ -71,8 +71,8 @@ export default function GameDetailPage() {
     const traffic = getTrafficLight(game.priceVerdict);
     const combatPower = calculateCombatPower(game.metaScore, game.currentPrice);
 
-    const isNew = game.createdAt && differenceInDays(new Date(), parseISO(game.createdAt)) <= 3;
-    const isClosingSoon = game.saleEndDate && differenceInDays(parseISO(game.saleEndDate), new Date()) <= 3;
+    const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
+    const isClosingSoon = game.saleEndDate && differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) <= 3;
     const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
 
     return (
@@ -181,7 +181,7 @@ export default function GameDetailPage() {
                                     <span className="text-gray-400">할인 종료:</span>
                                     <span className="text-white font-bold">{game.saleEndDate.replace(/-/g, '.')}</span>
                                     {(() => {
-                                        const daysLeft = differenceInDays(parseISO(game.saleEndDate), new Date());
+                                        const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                                         if (daysLeft <= 1 && daysLeft >= 0) return <span className="text-orange-400 font-bold ml-1">({daysLeft}일 남음 - 막차!)</span>;
                                         return <span className="text-gray-400 ml-1">({daysLeft}일 남음)</span>;
                                     })()}

@@ -69,7 +69,18 @@ services:
     networks:
       - ps-network
 
-  # 5. DB 관리 도구
+  # 5. Frontend (Face) - [NEW]
+  frontend:
+    build: ./apps/frontend
+    container_name: ps-tracker-web
+    ports:
+      - "80:80"  # 브라우저에서 localhost로 접속 (기존 5173 아님)
+    depends_on:
+      - catalog-service
+    networks:
+      - ps-network
+
+  # 6. DB 관리 도구
   adminer:
     image: adminer
     container_name: ps-tracker-adminer

@@ -4,7 +4,7 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { Timer, Heart, Search, Filter, X, Sparkles, Waves } from 'lucide-react';
 
 // [Safety Fix] 장르 컬러 함수 (유틸 의존성 제거 및 내부 선언)
@@ -225,8 +225,8 @@ const GameListPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
                     {loading ? Array.from({ length: 10 }).map((_, idx) => <SkeletonCard key={idx} />) : (
                         games.length > 0 ? games.map((game) => {
-                            const isNew = game.createdAt && differenceInDays(new Date(), parseISO(game.createdAt)) <= 3;
-                            const daysLeft = game.saleEndDate ? differenceInDays(parseISO(game.saleEndDate), new Date()) : 99;
+                            const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
+                            const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                             const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                             const isClosing = !isLastCall && daysLeft <= 3;
 

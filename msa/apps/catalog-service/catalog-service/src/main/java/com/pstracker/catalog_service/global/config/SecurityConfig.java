@@ -85,13 +85,14 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 프론트엔드 주소 허용
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        // 모든 HTTP 메서드 허용 (GET, POST, PUT, DELETE...)
-        configuration.setAllowedMethods(List.of("*"));
-        // 모든 헤더 허용 (Authorization 등)
+        // 개발용(5173)과 배포용(80, 포트 생략) 둘 다 허용
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173", // 로컬 개발용 (npm run dev)
+                "http://localhost"       // 도커 배포용 (Nginx)
+        ));
+
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        // 쿠키나 인증 정보 포함 허용
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
