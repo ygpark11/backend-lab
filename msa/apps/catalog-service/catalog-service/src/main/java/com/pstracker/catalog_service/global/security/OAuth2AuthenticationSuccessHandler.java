@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +24,9 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+    @Value("${app.auth.redirect-uri}")
+    private String redirectUri;
 
     private final JwtTokenProvider jwtTokenProvider;
     private final MemberRepository memberRepository;
@@ -56,7 +60,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         JwtToken jwtToken = jwtTokenProvider.generateToken(newAuth);
 
         // 6. 리다이렉트 (토큰을 가지고 프론트엔드/메인으로 이동)
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost")
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("accessToken", jwtToken.getAccessToken())
                 .queryParam("refreshToken", jwtToken.getRefreshToken())
                 .build().toUriString();

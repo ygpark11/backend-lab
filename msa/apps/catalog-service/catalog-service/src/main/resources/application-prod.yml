@@ -6,6 +6,10 @@ spring:
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # 도커 내부 Python 수집기 주소
-  crawler:
-    url: http://collector-service:5000/run
+# 도커 내부 Python 수집기 주소
+crawler:
+  url: http://collector-service:5000/run
+
+app:
+  auth:
+    redirect-uri: http://ps-signal.com

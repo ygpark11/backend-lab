@@ -6,6 +6,11 @@ spring:
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # 로컬 Python 수집기 주소 (보통 로컬호스트)
-  crawler:
-    url: http://localhost:5000/run
+# 로컬 Python 수집기 주소 (보통 로컬호스트)
+crawler:
+  url: http://localhost:5000/run
+
+app:
+  auth:
+    redirect-uri: http://localhost
+
