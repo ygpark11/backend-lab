@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 31 Completed (Dockerization & Orchestration)
+* **Status:** Level 33 In Progress (Cloud Deployment & Domain Connection)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -122,13 +122,19 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
     * **Smart Feedback:** 브라우저 기본 Alert를 제거하고, `React-Hot-Toast`를 커스텀하여 부드럽고 세련된 알림 제공.
     * **Onboarding:** '가이드 모달'과 '이용약관 모달'을 구현하여 사용자의 이해를 돕고 법적 요건 충족.
 
-### ⑫ Infrastructure (The Ship) - Docker & Nginx [New!]
+### ⑫ Infrastructure (The Ship) - Docker & Nginx
 개발 환경과 배포 환경의 일치성을 보장하는 **완전 컨테이너화 아키텍처** 구현.
 * **Multi-stage Build:** React 앱을 Node.js 환경에서 빌드하고, 결과물만 Nginx 이미지로 복사하여 이미지 크기를 90% 이상 경량화 (Alpine Linux 기반).
 * **Reverse Proxy:** Nginx를 프론트엔드 웹 서버이자 API Gateway로 활용.
     * `/` 요청: React 정적 파일(HTML/JS/CSS) 서빙.
     * `/api` 요청: 백엔드 컨테이너(`catalog-service:8080`)로 라우팅하여 CORS 문제 원천 차단.
 * **Network Isolation:** `ps-network`라는 도커 브릿지 네트워크를 구성하여, 외부에서는 오직 Nginx(80)와 Adminer(8090)만 접근 가능하도록 보안 강화 (DB와 API는 내부망에 격리).
+
+### ⑬ Environment Strategy (Profile Isolation)
+로컬 개발 생산성과 운영 환경 안정성을 동시에 잡기 위한 Spring Profile 전략 수립.
+* **Local (`active: local`):** 개발자 PC(`localhost:3307`)에서 실행되며, 로컬 Docker DB에 접속. 코드 수정 없이 즉시 테스트 가능.
+* **Prod (`active: prod`):** Docker Compose 환경(`mysql:3306`)에서 실행되며, 컨테이너 내부 네트워크(DNS)를 통해 통신.
+* **Config Management:** `application-local.yml`과 `application-prod.yml`을 분리하여 빌드/배포 시 설정 충돌 원천 차단.
 
 ```mermaid
 sequenceDiagram
@@ -454,6 +460,14 @@ sequenceDiagram
 * **증상:** 기획상 게임 설명 출력 부분에 출력할 데이터가 없음.
 * **해결:** 프론트엔드에서 해당 영역을 `YouTube 검색` 및 `Google 검색` 버튼을 동적으로 렌더링하여 사용자에게 대안 정보를 제공
 
+### 💥 Issue 15: 클라우드 리소스 고갈 (The Capacity Crisis)
+* **증상:** Oracle Cloud 서울 리전의 고성능 ARM 인스턴스(`VM.Standard.A1.Flex`, 4 OCPU/24GB RAM) 생성 시도 시 지속적인 `Out of capacity` 오류 발생.
+* **증상:** 계획했던 고사양 서버 확보 실패로 인해 배포 일정 차질 우려.
+* **대처 (Fallback Strategy):**
+    1. Plan B 가동: 리소스 여유가 있는 **AMD Micro 인스턴스(VM.Standard.E2.1.Micro, 1 OCPU/1GB RAM)**를 우선 확보하여 '최소 기능 제품(MVP)' 배포 진행.
+    2. Docker Portability: 모든 서비스를 컨테이너 기반으로 설계했기 때문에, 추후 고성능 인스턴스 확보 시 명령어 한 줄로 마이그레이션(Migration) 가능하도록 환경 구성.
+    3. Continuous Retry: ARM 인스턴스 확보를 위해 지속적으로 슬롯 모니터링 중 (Scale-Up 예정).
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -499,7 +513,7 @@ docker compose up --build -d
 
 ### 🚀 Step 1. 서비스 런칭 (Deployment)
 - [x] **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축) ✅
-- [ ] **Lv.32: 무지출 배포 전략** (Home Server + Cloudflare Tunnel 활용)
+- [x] **Lv.32: 무지출 배포 전략** (Oracle Cloud (Always Free) + Public IP)
 - [ ] **Lv.33: 도메인 및 보안 적용** (HTTPS, Custom Domain)
 
 ### 🔔 Step 2. 사용자를 위한 케어 (Care & Notification)

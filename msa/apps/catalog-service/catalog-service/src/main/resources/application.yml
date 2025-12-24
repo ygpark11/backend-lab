@@ -1,11 +1,9 @@
 spring:
+  application:
+    name: catalog-service
   profiles:
-    include: secret
-
-  datasource:
-    # [중요] 도커 호스트(localhost)의 3307 포트로 접속 -> 도커 내부 3306으로 연결됨
-    url: jdbc:mysql://localhost:3307/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    active: local # 기본값은 로컬로 설정
+    include: secret # secret.yml도 같이 로드
 
   jpa:
     hibernate:
@@ -14,9 +12,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        default_batch_fetch_size: 100 # N+1 문제 완화 In 쿼리로 한 번에 가져올 때 사이즈
+        default_batch_fetch_size: 100
 
 jwt:
   expiration:
-    access: 3600000      # 1시간 (ms 단위)
-    refresh: 1209600000  # 14일 (ms 단위)
+    access: 3600000
+    refresh: 1209600000

@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    # 로컬에서는 호스트 포트(3307)로 접속해야 함
+    url: jdbc:mysql://localhost:3307/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: user
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 로컬 Python 수집기 주소 (보통 로컬호스트)
+  crawler:
+    url: http://localhost:5000/run

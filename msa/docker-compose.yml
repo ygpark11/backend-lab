@@ -36,16 +36,13 @@ services:
 
   # 3. Java Backend (Brain)
   catalog-service:
-    build: ./apps/catalog-service/catalog-service # Dockerfile 위치
+    build: ./apps/catalog-service/catalog-service
     container_name: ps-tracker-api
     ports:
       - "8080:8080"
     environment:
       TZ: Asia/Seoul
-      # 도커 내부에서는 'mysql'이라는 서비스 이름으로 접속
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-      # Python 수집기 주소 지정
-      CRAWLER_URL: http://collector-service:5000/run
+      SPRING_PROFILES_ACTIVE: prod
     depends_on:
       - mysql
     networks:

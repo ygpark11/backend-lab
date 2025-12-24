@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    # 도커 내부끼리는 서비스 이름(mysql)으로 통신. 포트는 내부 포트(3306)
+    url: jdbc:mysql://mysql:3306/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
+    username: user
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 도커 내부 Python 수집기 주소
+  crawler:
+    url: http://collector-service:5000/run
