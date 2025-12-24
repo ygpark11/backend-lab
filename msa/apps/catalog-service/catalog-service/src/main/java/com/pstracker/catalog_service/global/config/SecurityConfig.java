@@ -87,8 +87,9 @@ public class SecurityConfig {
 
         // 개발용(5173)과 배포용(80, 포트 생략) 둘 다 허용
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:5173", // 로컬 개발용 (npm run dev)
-                "http://localhost"       // 도커 배포용 (Nginx)
+                "http://localhost:5173", // 1. 로컬 개발용 (React npm run dev)
+                "http://localhost",      // 2. 로컬 도커 or Nginx 내부 통신
+                "http://ps-signal.com"   // 3. 운영 서버 도메인
         ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
