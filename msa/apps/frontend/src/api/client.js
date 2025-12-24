@@ -1,11 +1,18 @@
 import axios from 'axios';
 
-// 1. 기본 설정 (백엔드 주소)
+// 1. 환경 변수로 주소 분기 처리
+// 개발 모드(npm run dev)일 땐: http://localhost:8080
+// 운영 모드(Docker 배포)일 땐: '' (빈 값 -> 현재 도메인 ps-signal.com을 따라감)
+const BASE_URL = import.meta.env.MODE === 'development'
+    ? 'http://localhost:8080'
+    : '';
+
 const client = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true, // CORS 관련 쿠키/인증 정보를 주고받을 때 필수
 });
 
 // 2. 요청 가로채기 (Interceptor)
