@@ -7,7 +7,13 @@ import LegalModal from '../components/LegalModal';
 const BG_IMAGE = "https://image.api.playstation.com/vulcan/ap/rnd/202010/0222/niMUu8FxdDS2s8cMKfrg6s2Q.png";
 
 const LoginPage = () => {
-    const GOOGLE_LOGIN_URL = "http://localhost:8080/oauth2/authorization/google";
+    const IS_DEV = import.meta.env.MODE === 'development';
+
+    const BASE_URL = IS_DEV
+        ? "http://localhost:8080"
+        : "http://ps-signal.com";
+
+    const GOOGLE_LOGIN_URL = `${BASE_URL}/oauth2/authorization/google`;
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
 
