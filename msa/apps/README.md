@@ -5,7 +5,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 33 In Progress (Cloud Deployment & Domain Connection)
+* **Status:** Level 33 Part 1 Complete (Cloud Deployment & Data Migration)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -468,6 +468,21 @@ sequenceDiagram
     2. Docker Portability: 모든 서비스를 컨테이너 기반으로 설계했기 때문에, 추후 고성능 인스턴스 확보 시 명령어 한 줄로 마이그레이션(Migration) 가능하도록 환경 구성.
     3. Continuous Retry: ARM 인스턴스 확보를 위해 지속적으로 슬롯 모니터링 중 (Scale-Up 예정).
 
+### 💥 Issue 16: 길 잃은 구글 로그인 (Nginx Routing)
+* **증상:** 배포 후 구글 로그인 버튼 클릭 시, 콜백 URL(`ps-signal.com/login/oauth2/...`)에서 화면이 멈춤(404 or White Screen).
+* **원인:** Nginx가 `/api`와 `/oauth2` 요청은 백엔드로 넘겼지만, 정작 구글이 돌려주는 `/login` 경로에 대한 라우팅 설정이 없어 React(프론트)가 받아서 처리하지 못함.
+* **해결:** `nginx.conf`에 `location /login` 블록을 추가하여, 인증 코드(Code)를 백엔드가 수신하도록 경로 설정 추가.
+
+### 💥 Issue 17: Localhost의 망령 (Axios BaseURL)
+* **증상:** 배포된 사이트(`ps-signal.com`)에서 데이터를 조회하는데, 브라우저가 자꾸 사용자의 PC(`localhost:8080`)로 요청을 보내 연결 실패.
+* **원인:** Axios 설정에 `baseURL`이 `localhost:8080`으로 하드코딩되어 있었음.
+* **해결:** `import.meta.env.MODE`를 활용하여 개발 환경에선 `localhost`, 운영 환경에선 `''`(빈 값, 상대 경로)을 사용하도록 동적 할당 로직 구현.
+
+### 💥 Issue 18: 윈도우와 리눅스의 권한 차이 (SSH Permission)
+* **증상:** WSL 환경에서 `scp`로 데이터 파일 전송 시 `Permission denied (publickey)` 에러 발생.
+* **원인:** 윈도우 파일 시스템(NTFS)에 있는 SSH 키 파일은 리눅스 권한(`chmod 600`)이 적용되지 않아 보안상 거부됨.
+* **해결:** 키 파일을 WSL 내부 리눅스 홈 디렉토리(`~/`)로 복사한 뒤 권한을 변경하여 전송 성공.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -513,8 +528,9 @@ docker compose up --build -d
 
 ### 🚀 Step 1. 서비스 런칭 (Deployment)
 - [x] **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축) ✅
-- [x] **Lv.32: 무지출 배포 전략** (Oracle Cloud (Always Free) + Public IP)
-- [ ] **Lv.33: 도메인 및 보안 적용** (HTTPS, Custom Domain)
+- [x] **Lv.32: 무지출 배포 전략** (Oracle Cloud (Always Free) + Public IP) ✅
+- [x] **Lv.33-1: 실전 배포 및 데이터 이관** (Profile 분리, Nginx 라우팅, DB Migration) ✅
+- [ ] **Lv.33-2: 보안의 완성** (HTTPS 적용, Certbot, SSL 인증서 발급) 🚧
 
 ### 🔔 Step 2. 사용자를 위한 케어 (Care & Notification)
 - [ ] **Lv.34: 인앱 알림 센터 (Notification Center)**
