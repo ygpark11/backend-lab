@@ -72,6 +72,10 @@ services:
     container_name: ps-tracker-web
     ports:
       - "80:80"  # 브라우저에서 localhost로 접속 (기존 5173 아님)
+      - "443:443"  # HTTPS 포트
+    volumes: # 인증서 공유를 위한 볼륨
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     depends_on:
       - catalog-service
     networks:
@@ -83,6 +87,16 @@ services:
     container_name: ps-tracker-adminer
     ports:
       - "8090:8080"
+    networks:
+      - ps-network
+
+  # 7. 인증서 발급 도우미
+  certbot:
+    image: certbot/certbot
+    container_name: ps-tracker-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     networks:
       - ps-network
 
