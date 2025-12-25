@@ -23,3 +23,9 @@ apps/frontend/.env.local
 apps/frontend/.DS_Store
 apps/frontend/coverage/
 apps/frontend/*.log
+
+# Security & Backup
+*.sql
+*.key
+*.pem
+*.pub
