@@ -3,9 +3,12 @@
 > **"잠들지 않는 감시자."**
 > 플레이스테이션 게이머를 위한 **완전 자동화된 최저가 추적 및 AI 기반 추천** 플랫폼
 
+[![Website](https://img.shields.io/badge/Website-ps--signal.com-blue?style=for-the-badge&logo=google-chrome)](https://ps-signal.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 33 Part 1 Complete (Cloud Deployment & Data Migration)
+* **Status:** Level 33 Complete (Service Launched with HTTPS & Domain)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -26,7 +29,7 @@
 ### 🏗 구조 및 역할 (The 5-Container Fleet + Frontend)
 | Service Name | Tech Stack | Role | Port |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (API Gateway 역할) | 80 (Docker) / 5173 (Dev) |
+| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (SSL Termination) | 80, 443 (Docker) |
 | **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
 | **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | 5000 |
 | **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | 4444 / 7900 |
@@ -135,6 +138,14 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **Local (`active: local`):** 개발자 PC(`localhost:3307`)에서 실행되며, 로컬 Docker DB에 접속. 코드 수정 없이 즉시 테스트 가능.
 * **Prod (`active: prod`):** Docker Compose 환경(`mysql:3306`)에서 실행되며, 컨테이너 내부 네트워크(DNS)를 통해 통신.
 * **Config Management:** `application-local.yml`과 `application-prod.yml`을 분리하여 빌드/배포 시 설정 충돌 원천 차단.
+
+### ⑭ Security & SSL (The Shield) - Let's Encrypt & Certbot
+사용자 정보 보호와 구글 OAuth 보안 정책 준수를 위한 완벽한 HTTPS 환경 구축.
+* **SSL Termination:** Nginx가 443 포트에서 암호화된 트래픽(HTTPS)을 받아 복호화한 뒤, 내부망(80)을 통해 React와 백엔드로 전달하는 구조.
+* **Certbot Integration:**
+  * **Webroot 방식:** Nginx를 끄지 않고도 `.well-known` 챌린지를 통해 인증서를 발급받도록 도커 볼륨(`volumes`) 공유.
+  * **Auto Renewal:** `Crontab`을 활용하여 매월 1일, 15일 새벽에 인증서 만료를 체크하고 자동으로 갱신(Renew) 및 Nginx 리로드(Reload) 수행.
+* **Security Headers:** `Strict-Transport-Security` 및 `redirect 301` 설정을 통해 HTTP 접근을 강제로 HTTPS로 전환.
 
 ```mermaid
 sequenceDiagram
@@ -530,7 +541,7 @@ docker compose up --build -d
 - [x] **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축) ✅
 - [x] **Lv.32: 무지출 배포 전략** (Oracle Cloud (Always Free) + Public IP) ✅
 - [x] **Lv.33-1: 실전 배포 및 데이터 이관** (Profile 분리, Nginx 라우팅, DB Migration) ✅
-- [ ] **Lv.33-2: 보안의 완성** (HTTPS 적용, Certbot, SSL 인증서 발급) 🚧
+- [x] **Lv.33-2: 보안의 완성** (HTTPS 적용, Certbot, SSL 인증서 발급, Auto-Renewal) ✅ 🔒
 
 ### 🔔 Step 2. 사용자를 위한 케어 (Care & Notification)
 - [ ] **Lv.34: 인앱 알림 센터 (Notification Center)**
