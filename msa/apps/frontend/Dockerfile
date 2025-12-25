@@ -14,6 +14,12 @@ RUN npm run build
 # Stage 2: Serve (Nginx 환경)
 FROM nginx:alpine
 
+# 🔥 [추가] 1. 타임존 데이터 설치 (Alpine은 이게 없으면 시간이 안 바뀜)
+RUN apk add --no-cache tzdata
+
+# 🔥 [추가] 2. 한국 시간 환경변수 설정
+ENV TZ=Asia/Seoul
+
 # Nginx 설정 파일 덮어쓰기
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
