@@ -60,8 +60,9 @@
 * **Self-Healing Pagination:** 대량 수집(Max 300 Page) 시 발생할 수 있는 브라우저 메모리 누수(Memory Leak)를 방지하기 위해, 일정 주기(20페이지)마다 드라이버를 스스로 리셋(Restart)하여 장기 실행 안정성 확보.
 
 ### ③ Notification System (The Watcher)
-* **Tech:** Spring Event + `@Async` + Discord Webhook
-* **Mechanism:** 트랜잭션 분리 및 비동기 처리로 메인 로직 성능 보호.
+무분별한 알림(Spam)을 방지하고 시스템 효율성을 높이기 위해 **이원화된 알림 전략** 채택.
+* **External (Discord):** Python Collector가 담당. 크롤링 종료 후 **"일일 수집 요약 리포트(Summary Report)"**를 1회 발송하여 관리자 피로도 최소화.
+* **Internal (Event):** Java Backend가 담당. 가격 변동 감지 시 `GamePriceChangedEvent`를 발행하여, 추후 **'인앱 알림 센터(Notification History)'** 적재를 위한 데이터 파이프라인 유지 (Decoupling).
 
 ### ④ Value Integration (IGDB API) - The Intelligence
 * **Heuristic Search Algorithm:** 기계적인 ID 매칭의 한계(Region Lock)를 극복하기 위해, **'데이터의 특성'**을 활용한 휴리스틱 알고리즘 도입.
@@ -129,9 +130,10 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 개발 환경과 배포 환경의 일치성을 보장하는 **완전 컨테이너화 아키텍처** 구현.
 * **Multi-stage Build:** React 앱을 Node.js 환경에서 빌드하고, 결과물만 Nginx 이미지로 복사하여 이미지 크기를 90% 이상 경량화 (Alpine Linux 기반).
 * **Reverse Proxy:** Nginx를 프론트엔드 웹 서버이자 API Gateway로 활용.
-    * `/` 요청: React 정적 파일(HTML/JS/CSS) 서빙.
-    * `/api` 요청: 백엔드 컨테이너(`catalog-service:8080`)로 라우팅하여 CORS 문제 원천 차단.
-* **Network Isolation:** `ps-network`라는 도커 브릿지 네트워크를 구성하여, 외부에서는 오직 Nginx(80)와 Adminer(8090)만 접근 가능하도록 보안 강화 (DB와 API는 내부망에 격리).
+* **Resource Engineering (The Survival):** [NEW]
+  * **Memory Swap:** 1GB RAM 환경(Oracle Cloud Micro)의 한계를 극복하기 위해 **4GB 스왑 메모리(Swap)**를 할당, OOM Killer 방지.
+  * **JVM Tuning:** Java 컨테이너에 `-Xms128M -Xmx256M` 옵션을 적용하여 힙 메모리 사용량을 엄격하게 제한.
+  * **Container Limits:** Docker Compose `deploy.resources` 설정을 통해 Selenium 등 리소스 집약적 컨테이너가 서버 전체를 마비시키지 않도록 CPU 사용량 제한(Throttling).
 
 ### ⑬ Environment Strategy (Profile Isolation)
 로컬 개발 생산성과 운영 환경 안정성을 동시에 잡기 위한 Spring Profile 전략 수립.
@@ -203,6 +205,9 @@ sequenceDiagram
             Crawler->>Chrome: Restart Driver (Memory Leak Protection)
         end
     end
+    
+    Note over Crawler, Discord: 4. Reporting Phase (Summary)
+    Crawler--)Discord: Send Summary Report (Total & Top 5 Deals)
     deactivate Crawler
 ```
 ---
@@ -494,6 +499,14 @@ sequenceDiagram
 * **원인:** 윈도우 파일 시스템(NTFS)에 있는 SSH 키 파일은 리눅스 권한(`chmod 600`)이 적용되지 않아 보안상 거부됨.
 * **해결:** 키 파일을 WSL 내부 리눅스 홈 디렉토리(`~/`)로 복사한 뒤 권한을 변경하여 전송 성공.
 
+### 💥 Issue 19: 비밀의 방 (.env & Security)
+* **증상:** `docker-compose.yml`에 DB 비밀번호와 웹훅 URL이 하드코딩되어 있어 보안 취약점 노출.
+* **해결:**
+  1. `.env` 파일을 도입하여 민감 정보를 분리하고 `.gitignore` 처리.
+  2. 도커 컴포즈에서 `${VARIABLE}` 문법을 사용하여 환경변수 주입.
+  3. 이미 깃에 올라간 `.env` 파일은 `git rm --cached` 명령어로 **원격 저장소에서만 제거**하여 기록 세탁.
+  4. **[Note]** 노출된 이력이 있는 키 값들은 추후 **'보안의 날(Security Day)'**에 전면 교체 예정.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -556,3 +569,8 @@ docker compose up --build -d
     - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
 - [ ] **Lv.37: 취향 저격수 (AI Recommendation)**
     - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
+
+### 🛡️ Step 4. 유지보수 (Maintenance)
+- [ ] **Lv.38: 보안의 날 (Security Day)**
+  - 노출된 이력이 있는 DB 비밀번호 및 디스코드 웹훅 URL 전면 교체 (Rotation).
+  - AWS/Oracle Cloud 보안 그룹(Security Group) 점검 및 불필요한 포트 차단.
