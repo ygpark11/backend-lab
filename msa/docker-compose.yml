@@ -35,7 +35,6 @@ services:
       resources:
         limits:
           cpus: '0.5'     # CPU 사용량 50% 제한
-          memory: 400M    # 메모리 400MB 제한
     networks:
       - ps-network
 
@@ -48,11 +47,12 @@ services:
     environment:
       - TZ=Asia/Seoul
       - SPRING_PROFILES_ACTIVE=prod
-      - JAVA_OPTS=-Xms128M -Xmx256M
+      - "JAVA_OPTS=-Xms128M -Xmx256M"
     depends_on:
       - mysql
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 4. Python Collector (Hand)
   collector-service:
