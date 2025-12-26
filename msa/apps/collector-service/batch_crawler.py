@@ -471,11 +471,13 @@ def crawl_detail_and_send(driver, wait, target_url):
 
 def send_data_to_server(payload, title):
     try:
-        res = requests.post(JAVA_API_URL, json=payload, timeout=5)
+        res = requests.post(JAVA_API_URL, json=payload, timeout=30)
         if res.status_code == 200:
             logger.info(f"   📤 Sent: {title} ({payload['currentPrice']} KRW)")
         else:
             logger.error(f"   💥 Server Error ({res.status_code}): {title}")
+    except requests.exceptions.Timeout:
+        logger.error(f"   ⏳ Timeout Error: Server took too long to respond for {title}")
     except Exception as e:
         logger.error(f"   💥 Network Error sending {title}: {e}")
 

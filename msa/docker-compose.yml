@@ -21,7 +21,7 @@ services:
     networks:
       - ps-network
 
-  # 2. Selenium Grid (원격 브라우저) [NEW]
+  # 2. Selenium Grid (원격 브라우저)
   selenium-chrome:
     image: selenium/standalone-chrome:latest
     container_name: ps-tracker-browser
@@ -31,6 +31,11 @@ services:
     shm_size: "2g" # 브라우저가 메모리 부족하지 않게 설정
     environment:
       - TZ=Asia/Seoul
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'     # CPU 사용량 50% 제한
+          memory: 400M    # 메모리 400MB 제한
     networks:
       - ps-network
 
@@ -41,8 +46,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      TZ: Asia/Seoul
-      SPRING_PROFILES_ACTIVE: prod
+      - TZ=Asia/Seoul
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-Xms128M -Xmx256M
     depends_on:
       - mysql
     networks:
