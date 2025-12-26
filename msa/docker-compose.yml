@@ -6,10 +6,10 @@ services:
     image: mysql:8.0
     container_name: ps-tracker-db
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: pstracker
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Seoul
     command:
       - --character-set-server=utf8mb4
@@ -20,6 +20,7 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 2. Selenium Grid (원격 브라우저)
   selenium-chrome:
@@ -37,6 +38,7 @@ services:
           cpus: '0.5'     # CPU 사용량 50% 제한
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 3. Java Backend (Brain)
   catalog-service:
@@ -61,16 +63,19 @@ services:
     ports:
       - "5000:5000"
     environment:
-      TZ: Asia/Seoul
+      - TZ=Asia/Seoul
       # Java 서버 주소 지정
-      API_BASE_URL: http://catalog-service:8080
+      - API_BASE_URL=http://catalog-service:8080
       # Selenium Grid 주소 지정
-      SELENIUM_URL: http://selenium-chrome:4444/wd/hub
+      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
+      # .env 파일에서 불러온 값 주입
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     depends_on:
       - catalog-service
       - selenium-chrome
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 5. Frontend (Face) - [NEW]
   frontend:
@@ -86,6 +91,7 @@ services:
       - catalog-service
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 6. DB 관리 도구
   adminer:
@@ -95,6 +101,7 @@ services:
       - "8090:8080"
     networks:
       - ps-network
+    restart: unless-stopped
 
   # 7. 인증서 발급 도우미
   certbot:

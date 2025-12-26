@@ -45,6 +45,7 @@ BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
 SELENIUM_URL = os.getenv("SELENIUM_URL")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 # 동시 실행 방지 락 (Lock)
 lock = threading.Lock()
@@ -151,11 +152,52 @@ def mine_english_title(driver):
 
     return None
 
+def send_discord_summary(total_scanned, deals_list):
+    """크롤링 종료 후 요약 리포트를 디스코드로 전송"""
+    if not DISCORD_WEBHOOK_URL:
+        # URL이 없으면 조용히 리턴 (로컬 테스트 등)
+        return
+
+    try:
+        total_deals = len(deals_list)
+        if total_deals == 0:
+            logger.info("📭 No deals found today. Skipping Discord report.")
+            return
+
+        # 할인율 높은 순 정렬
+        sorted_deals = sorted(deals_list, key=lambda x: x['discountRate'], reverse=True)
+        top_5 = sorted_deals[:5]
+
+        # 메시지 작성
+        message = f"## 📢 [PS-Tracker] 일일 수집 리포트\n"
+        message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
+        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 완료 / `{total_deals}`개 할인 감지! 🔥\n\n"
+
+        message += "**🏆 오늘의 Top 5 할인**\n"
+        for game in top_5:
+            sale_price = "{:,}".format(game['currentPrice'])
+            message += f"- **[{game['discountRate']}%]** {game['title']} (~{game['saleEndDate'] or '상시'})\n"
+            message += f"  👉 `₩{sale_price}`\n"
+
+        if total_deals > 5:
+            message += f"\n...외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
+            message += "\n[🔗 사이트 바로가기](https://ps-signal.com)"
+
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
+        logger.info("🔔 Discord Summary Report sent successfully!")
+
+    except Exception as e:
+        logger.error(f"❌ Failed to send Discord summary: {e}")
+
 def run_batch_crawler_logic():
     global is_running
     logger.info("🚀 [Crawler] Batch job started - Pagination Mode On")
 
     driver = None
+
+    total_processed_count = 0
+    collected_deals = []
+
     try:
         driver = get_driver()
         wait = WebDriverWait(driver, 20)
@@ -167,7 +209,13 @@ def run_batch_crawler_logic():
             logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
             for url in targets:
                 if not is_running: break
-                crawl_detail_and_send(driver, wait, url)
+                deal_info = crawl_detail_and_send(driver, wait, url)
+
+                if deal_info:
+                    total_processed_count += 1
+                    if deal_info.get('discountRate', 0) > 0:
+                        collected_deals.append(deal_info)
+
                 visited_urls.add(url)
                 time.sleep(random.uniform(15.0, 25.0))
 
@@ -235,7 +283,13 @@ def run_batch_crawler_logic():
                 # 상세 크롤링
                 for url in page_candidates:
                     if not is_running: break
-                    crawl_detail_and_send(driver, wait, url)
+                    deal_info = crawl_detail_and_send(driver, wait, url)
+
+                    if deal_info:
+                        total_processed_count += 1
+                        if deal_info.get('discountRate', 0) > 0:
+                            collected_deals.append(deal_info)
+
                     visited_urls.add(url)
                     time.sleep(random.uniform(6.0, 10.0))
 
@@ -244,6 +298,8 @@ def run_batch_crawler_logic():
 
             logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
 
+            # 디스코드 요약 전송
+            send_discord_summary(total_processed_count, collected_deals)
     except Exception as e:
         logger.error(f"🔥 Critical Crawler Error: {e}")
         logger.error(traceback.format_exc())
@@ -466,8 +522,10 @@ def crawl_detail_and_send(driver, wait, target_url):
 
         send_data_to_server(payload, title)
 
+        return payload
     except Exception as e:
         logger.error(f"   ⚠️ Fatal Error processing {target_url}: {e}")
+        return None
 
 def send_data_to_server(payload, title):
     try:
