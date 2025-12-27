@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 33 Complete (Service Launched with HTTPS & Domain)
+* **Status:** Level 34 Complete (In-App Notification System Implemented)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -148,6 +148,11 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   * **Webroot 방식:** Nginx를 끄지 않고도 `.well-known` 챌린지를 통해 인증서를 발급받도록 도커 볼륨(`volumes`) 공유.
   * **Auto Renewal:** `Crontab`을 활용하여 매월 1일, 15일 새벽에 인증서 만료를 체크하고 자동으로 갱신(Renew) 및 Nginx 리로드(Reload) 수행.
 * **Security Headers:** `Strict-Transport-Security` 및 `redirect 301` 설정을 통해 HTTP 접근을 강제로 HTTPS로 전환.
+
+### ⑮ In-App Notification System (The Bell)
+사용자의 재방문을 유도하고 구매 전환율을 높이는 **실시간 인앱 알림 시스템**.
+* **Event-Driven Architecture:** `CatalogService`가 가격 하락을 감지하면 `GamePriceChangedEvent`를 발행하고, 리스너가 이를 비동기(`@Async`)로 처리하여 `Notification` 테이블에 적재.
+* **Reactive UX:** React Navbar에서 안 읽은 알림(Red Badge)을 실시간으로 표시하고, 클릭 시 '읽음 처리'와 동시에 해당 게임 페이지로 이동하는 UX 제공.
 
 ```mermaid
 sequenceDiagram
@@ -548,29 +553,37 @@ docker compose up --build -d
 ---
 
 ## 9. 향후 계획 (Future Roadmap)
-**"선택과 집중"**. 핵심 가치인 가격 추적과 추천 기능에 집중하며, 비용 효율적인 MVP 런칭을 목표로 합니다.
+**"선택과 집중"**. 핵심 가치인 가격 추적과 추천 기능에 집중하며, 비용 효율적인 MVP 런칭을 목표.
 
-### 🚀 Step 1. 서비스 런칭 (Deployment)
-- [x] **Lv.31: Docker Compose 통합** (Frontend + Backend + Infra 통합 배포 환경 구축) ✅
-- [x] **Lv.32: 무지출 배포 전략** (Oracle Cloud (Always Free) + Public IP) ✅
-- [x] **Lv.33-1: 실전 배포 및 데이터 이관** (Profile 분리, Nginx 라우팅, DB Migration) ✅
-- [x] **Lv.33-2: 보안의 완성** (HTTPS 적용, Certbot, SSL 인증서 발급, Auto-Renewal) ✅ 🔒
-
-### 🔔 Step 2. 사용자를 위한 케어 (Care & Notification)
-- [ ] **Lv.34: 인앱 알림 센터 (Notification Center)**
+### 🔔 Step 1. 사용자를 위한 케어 (Care & Notification)
+- [x] **Lv.34: 인앱 알림 센터 (Notification Center)**
     - DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
 - [ ] **Lv.35: 잠들지 않는 비서 (Web Push & Automation)**
     - Firebase(FCM)를 연동하여 브라우저가 꺼져 있어도 가격 하락 알림 발송 (무료).
     - Spring Batch 대신 기존 스케줄러를 활용해 '알림 대상' 추출 최적화.
 
-### 🧠 Step 3. AI Intelligence (Spring AI)
+### 🧠 Step 2. AI Intelligence (Spring AI)
 - [ ] **Lv.36: AI 게임 큐레이터 (Description Generator)**
     - **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
     - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
 - [ ] **Lv.37: 취향 저격수 (AI Recommendation)**
     - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
 
-### 🛡️ Step 4. 유지보수 (Maintenance)
+### 🛡️ Step 3. 유지보수 (Maintenance)
 - [ ] **Lv.38: 보안의 날 (Security Day)**
   - 노출된 이력이 있는 DB 비밀번호 및 디스코드 웹훅 URL 전면 교체 (Rotation).
   - AWS/Oracle Cloud 보안 그룹(Security Group) 점검 및 불필요한 포트 차단.
+
+### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability)
+- [ ] **Lv.39: 개발자 응원하기 (Donation Integration)**
+  - **개인정보 노출 없는 후원 시스템** 구축. (계좌번호 노출 X)
+  - **Buy Me a Coffee** 또는 **Toss ID** 연동을 통해 익명성과 간편함 확보.
+  - "개발자에게 몬스터 에너지 사주기" 버튼 활성화 및 후원자 전용 뱃지/이펙트(PLG 요소) 고려.
+
+### 🚀 Step 5. 확장 및 자동화 (Scale & DevOps)
+- [ ] **Lv.40: 무중단 배포 파이프라인 (CI/CD)**
+  - **Oracle Cloud ARM 인스턴스(슈퍼컴)** 확보 시점과 연계.
+  - GitHub Actions를 구축하여 `Push` -> `Test` -> `Build` -> `Deploy` 자동화.
+- [ ] **Lv.41: 제품 주도 성장 (PLG - Product Led Growth)**
+  - "나의 게임 성향 분석표" 등 SNS 공유 유발 콘텐츠 제작.
+  - 친구 초대 시 Plus 회원 전용 필터 무료 개방 등 바이럴 루프 설계.
