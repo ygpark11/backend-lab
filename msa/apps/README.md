@@ -574,16 +574,18 @@ docker compose up --build -d
   - 노출된 이력이 있는 DB 비밀번호 및 디스코드 웹훅 URL 전면 교체 (Rotation).
   - AWS/Oracle Cloud 보안 그룹(Security Group) 점검 및 불필요한 포트 차단.
 
-### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability)
-- [ ] **Lv.39: 개발자 응원하기 (Donation Integration)**
-  - **개인정보 노출 없는 후원 시스템** 구축. (계좌번호 노출 X)
-  - **Buy Me a Coffee** 또는 **Toss ID** 연동을 통해 익명성과 간편함 확보.
-  - "개발자에게 몬스터 에너지 사주기" 버튼 활성화 및 후원자 전용 뱃지/이펙트(PLG 요소) 고려.
+### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability & Business)
+- [ ] **Lv.39: 개발자 응원하기 (Donation)**
+  - 개인정보 노출 없는 익명 후원 시스템 (Buy Me a Coffee) 연동.
+- [ ] **Lv.40: 수익화 모델 구축 (Monetization)**
+  - **Freemium Logic:** 무료 회원의 찜하기 개수 제한(Limit) 로직 구현 및 예외 처리.
+  - **Membership System:** 일반/Pro 등급 구분 및 'Early Bird(초기 유저)'에 대한 무제한 혜택 적용 로직.
+  - **Affiliate & Ads:** 수익 창출을 위한 제휴 링크 및 배포 전략 수립.
 
 ### 🚀 Step 5. 확장 및 자동화 (Scale & DevOps)
-- [ ] **Lv.40: 무중단 배포 파이프라인 (CI/CD)**
+- [ ] **Lv.41: 무중단 배포 파이프라인 (CI/CD)**
   - **Oracle Cloud ARM 인스턴스(슈퍼컴)** 확보 시점과 연계.
   - GitHub Actions를 구축하여 `Push` -> `Test` -> `Build` -> `Deploy` 자동화.
-- [ ] **Lv.41: 제품 주도 성장 (PLG - Product Led Growth)**
+- [ ] **Lv.42: 제품 주도 성장 (PLG - Product Led Growth)**
   - "나의 게임 성향 분석표" 등 SNS 공유 유발 콘텐츠 제작.
   - 친구 초대 시 Plus 회원 전용 필터 무료 개방 등 바이럴 루프 설계.
