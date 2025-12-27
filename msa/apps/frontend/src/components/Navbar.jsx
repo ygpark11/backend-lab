@@ -1,18 +1,93 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gamepad2, LogOut, HelpCircle, AlertTriangle, Shield } from 'lucide-react';
+import { Gamepad2, LogOut, HelpCircle, AlertTriangle, Shield, Bell, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import client from '../api/client'; // ✅ 중앙 관리형 Axios 클라이언트 임포트
 import GuideModal from './GuideModal';
-import LegalModal from './LegalModal'; // [New] 약관 모달 임포트
+import LegalModal from './LegalModal';
 
 const Navbar = () => {
     const navigate = useNavigate();
+    const notiRef = useRef(null); // 드롭다운 외부 클릭 감지용
 
-    // 모달 상태 관리
+    // 모달 상태
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [isLegalOpen, setIsLegalOpen] = useState(false);
 
-    // 로그아웃 핸들러 (커스텀 토스트)
+    // 알림 관련 상태
+    const [isNotiOpen, setIsNotiOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+
+    // 1. 초기 로딩 시 안 읽은 알림 개수 가져오기
+    useEffect(() => {
+        fetchUnreadCount();
+
+        // 외부 클릭 시 알림창 닫기 로직
+        function handleClickOutside(event) {
+            if (notiRef.current && !notiRef.current.contains(event.target)) {
+                setIsNotiOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // ✅ API: 안 읽은 개수 조회 (client 사용)
+    const fetchUnreadCount = async () => {
+        try {
+            // 토큰 확인은 client.js 인터셉터가 하겠지만,
+            // 로그인이 안 된 상태에서 불필요한 호출을 막기 위해 체크
+            if (!localStorage.getItem('accessToken')) return;
+
+            // client.get이 알아서 Base URL 붙이고, 헤더에 토큰 넣어서 보냄
+            const response = await client.get('/api/notifications/unread-count');
+            setUnreadCount(response.data);
+        } catch (err) {
+            // 401(비로그인) 에러 등은 조용히 무시하거나 필요 시 처리
+            console.error("알림 카운트 조회 실패", err);
+        }
+    };
+
+    // ✅ API: 알림 목록 조회 (종 눌렀을 때)
+    const toggleNotification = async () => {
+        if (!isNotiOpen) {
+            // 팝업 열 때 최신 목록 가져오기
+            try {
+                const response = await client.get('/api/notifications');
+                setNotifications(response.data);
+            } catch (err) {
+                console.error("알림 목록 조회 실패", err);
+                toast.error("알림을 불러오지 못했습니다.");
+            }
+        }
+        setIsNotiOpen(!isNotiOpen);
+    };
+
+    // ✅ API: 알림 읽음 처리 및 이동
+    const handleNotificationClick = async (notiId, gameId) => {
+        try {
+            // 1. 읽음 처리 요청 (PATCH)
+            await client.patch(`/api/notifications/${notiId}/read`);
+
+            // 2. 로컬 상태 업데이트 (뱃지 감소, 읽음 표시 변경)
+            setUnreadCount(prev => Math.max(0, prev - 1));
+            setNotifications(prev => prev.map(n =>
+                n.id === notiId ? { ...n, isRead: true } : n
+            ));
+
+            // 3. 팝업 닫고 페이지 이동
+            setIsNotiOpen(false);
+            if (gameId) {
+                navigate(`/games/${gameId}`);
+            }
+        } catch (err) {
+            console.error("알림 읽음 처리 실패", err);
+            toast.error("알림 확인 중 오류가 발생했습니다.");
+        }
+    };
+
+    // 로그아웃 핸들러
     const handleLogout = () => {
         toast((t) => (
             <div className="flex flex-col gap-2 min-w-[250px]">
@@ -25,7 +100,9 @@ const Navbar = () => {
                     <button
                         onClick={() => {
                             toast.dismiss(t.id);
-                            performLogout();
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+                            window.location.href = '/';
                         }}
                         className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-red-600 transition"
                     >
@@ -39,18 +116,7 @@ const Navbar = () => {
                     </button>
                 </div>
             </div>
-        ), {
-            duration: 5000,
-            position: 'top-center',
-            style: { background: '#fff', padding: '16px', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }
-        });
-    };
-
-    // 실제 로그아웃 로직
-    const performLogout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/';
+        ), { duration: 5000, position: 'top-center' });
     };
 
     return (
@@ -58,10 +124,7 @@ const Navbar = () => {
             <nav className="sticky top-0 z-50 bg-ps-black/80 backdrop-blur-md border-b border-white/10 h-16">
                 <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
                     {/* 1. 로고 영역 */}
-                    <div
-                        className="flex items-center gap-2 cursor-pointer group"
-                        onClick={() => navigate('/games')}
-                    >
+                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/games')}>
                         <div className="bg-ps-blue p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300">
                             <Gamepad2 className="w-6 h-6 text-white" />
                         </div>
@@ -73,50 +136,87 @@ const Navbar = () => {
                     {/* 2. 우측 메뉴 영역 */}
                     <div className="flex items-center gap-2 md:gap-4">
 
-                        {/* A. 이용약관 (Shield) */}
-                        <button
-                            onClick={() => setIsLegalOpen(true)}
-                            className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
-                            title="이용약관 및 정책"
-                        >
+                        {/* A. 이용약관 */}
+                        <button onClick={() => setIsLegalOpen(true)} className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
                             <Shield className="w-5 h-5" />
                         </button>
 
-                        {/* B. 가이드 (Help) */}
-                        <button
-                            onClick={() => setIsGuideOpen(true)}
-                            className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
-                            title="가이드 보기"
-                        >
+                        {/* B. 가이드 */}
+                        <button onClick={() => setIsGuideOpen(true)} className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
                             <HelpCircle className="w-5 h-5" />
                         </button>
 
-                        {/* C. 로그아웃 */}
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-white/5"
-                        >
+                        {/* C. 알림 센터 */}
+                        <div className="relative" ref={notiRef}>
+                            <button
+                                onClick={toggleNotification}
+                                className="relative text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
+                            >
+                                <Bell className="w-5 h-5" />
+                                {/* 뱃지 (안 읽은 게 있을 때만) */}
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* 알림 드롭다운 팝업 */}
+                            {isNotiOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-80 md:w-96 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+                                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
+                                        <h3 className="text-sm font-bold text-white">알림 센터</h3>
+                                        <button onClick={() => setIsNotiOpen(false)} className="text-gray-400 hover:text-white">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+
+                                    <ul className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                                        {notifications.length === 0 ? (
+                                            <li className="py-8 text-center text-gray-500 text-sm">
+                                                새로운 알림이 없습니다. 📭
+                                            </li>
+                                        ) : (
+                                            notifications.map((noti) => (
+                                                <li
+                                                    key={noti.id}
+                                                    onClick={() => handleNotificationClick(noti.id, noti.gameId)}
+                                                    className={`px-4 py-3 border-b border-white/5 cursor-pointer hover:bg-white/5 transition-colors ${!noti.isRead ? 'bg-ps-blue/10' : ''}`}
+                                                >
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className={`text-sm font-bold ${!noti.isRead ? 'text-ps-blue' : 'text-gray-300'}`}>
+                                                            {noti.title}
+                                                        </span>
+                                                        {!noti.isRead && <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5"></span>}
+                                                    </div>
+                                                    <p className="text-xs text-gray-400 line-clamp-2">{noti.message}</p>
+                                                    <p className="text-[10px] text-gray-500 mt-2 text-right">
+                                                        {new Date(noti.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                </li>
+                                            ))
+                                        )}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* D. 로그아웃 */}
+                        <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-white/5">
                             <LogOut className="w-4 h-4" />
                             <span className="hidden md:inline">Logout</span>
                         </button>
 
-                        {/* D. 찜 목록 버튼 */}
-                        <button
-                            onClick={() => navigate('/wishlist')}
-                            className="ml-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-xs font-bold transition-all border border-white/5 hover:border-white/20 shadow-lg"
-                        >
+                        {/* E. 찜 목록 */}
+                        <button onClick={() => navigate('/wishlist')} className="ml-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-xs font-bold transition-all border border-white/5 hover:border-white/20 shadow-lg">
                             My Wishlist ❤️
                         </button>
                     </div>
                 </div>
             </nav>
 
-            {/* --- 모달 컴포넌트들 --- */}
-
-            {/* 1. 가이드 모달 */}
             <GuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
-
-            {/* 2. 약관 모달 */}
             <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
         </>
     );

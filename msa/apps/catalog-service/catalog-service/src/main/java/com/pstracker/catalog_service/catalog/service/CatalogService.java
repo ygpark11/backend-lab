@@ -152,7 +152,13 @@ public class CatalogService {
         if (newPrice < oldPrice) {
             log.info("🚨 Price Drop Detected! {} ({} -> {})", game.getName(), oldPrice, newPrice);
             eventPublisher.publishEvent(new GamePriceChangedEvent(
-                    game.getName(), game.getPsStoreId(), oldPrice, newPrice, newDiscountRate, game.getImageUrl()
+                    game.getId(),
+                    game.getName(),
+                    game.getPsStoreId(),
+                    oldPrice,
+                    newPrice,
+                    newDiscountRate,
+                    game.getImageUrl()
             ));
         }
     }
