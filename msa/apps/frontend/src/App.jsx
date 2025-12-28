@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { requestFcmToken, onForegroundMessage } from './utils/fcm';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import LoginPage from './pages/LoginPage';
@@ -13,6 +15,21 @@ const PrivateRoute = ({ children }) => {
 };
 
 function App() {
+
+    useEffect(() => {
+        // 1. 로그인된 유저만 토큰을 보내야 함
+        // (localStorage에 accessToken이 있는지 확인)
+        const token = localStorage.getItem('accessToken');
+
+        if (token) {
+            // 권한 요청하고 토큰 쏘기
+            requestFcmToken();
+
+            // 앱 켜져 있을 때 알림 받기 대기
+            onForegroundMessage();
+        }
+    }, []); // 빈 배열: 앱 처음 켜질 때 한 번만 실행
+
     return (
         <BrowserRouter>
             <Toaster

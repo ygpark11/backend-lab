@@ -77,7 +77,7 @@ services:
       - ps-network
     restart: unless-stopped
 
-  # 5. Frontend (Face) - [NEW]
+  # 5. Frontend (Face)
   frontend:
     build: ./apps/frontend
     container_name: ps-tracker-web

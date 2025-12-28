@@ -1,8 +1,11 @@
 package com.pstracker.catalog_service.notification.controller;
 
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
+import com.pstracker.catalog_service.notification.dto.FcmTokenRequest;
 import com.pstracker.catalog_service.notification.dto.NotificationResponse;
 import com.pstracker.catalog_service.notification.service.NotificationService;
+import com.pstracker.catalog_service.notification.service.NotificationTokenService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +19,7 @@ import java.util.List;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final NotificationTokenService notificationTokenService;
 
     @GetMapping
     public ResponseEntity<List<NotificationResponse>> getNotifications(
@@ -37,6 +41,16 @@ public class NotificationController {
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
         notificationService.markAsRead(id, principal.getMemberId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/token")
+    public ResponseEntity<Void> registerFcmToken(
+            @AuthenticationPrincipal MemberPrincipal memberPrincipal,
+            @Valid @RequestBody FcmTokenRequest request
+    ) {
+        notificationTokenService.saveToken(memberPrincipal.getMemberId(), request.token());
+
         return ResponseEntity.ok().build();
     }
 }
