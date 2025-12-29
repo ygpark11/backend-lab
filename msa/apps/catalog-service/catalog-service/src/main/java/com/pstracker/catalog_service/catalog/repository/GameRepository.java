@@ -34,4 +34,7 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
             @Param("threshold") LocalDateTime threshold,
             @Param("today") LocalDate today
     );
+
+    // 설명이 'Full Data Crawler'인 게임 5개 조회 (최신순)
+    List<Game> findTop5ByDescriptionOrderByIdDesc(String description);
 }

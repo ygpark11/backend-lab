@@ -121,4 +121,9 @@ public class Game {
             this.userScore = userScore;
         }
     }
+
+    // 설명만 업데이트하는 메서드
+    public void updateDescription(String summary) {
+        this.description = summary;
+    }
 }
