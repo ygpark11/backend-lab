@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
 import Navbar from '../components/Navbar';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
-import { calculateCombatPower, getTrafficLight } from '../utils/priceUtils'; // [Use] 여기서 가져온 함수를 씁니다
+import { calculateCombatPower, getTrafficLight } from '../utils/priceUtils';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import {
     Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
@@ -75,11 +75,13 @@ export default function GameDetailPage() {
     const isClosingSoon = game.saleEndDate && differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) <= 3;
     const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
 
+    // 상세 설명 데이터 유무 확인 (Full Data Crawler 문자열 제외)
+    const hasDescription = game.description && game.description !== "Full Data Crawler";
+
     return (
         <div className="min-h-screen bg-ps-black text-white relative overflow-hidden">
             {/* Hero Backdrop */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-                {/* 1. 배경 이미지 */}
                 <div
                     className="absolute inset-0 bg-cover bg-center transition-all duration-700"
                     style={{
@@ -88,8 +90,6 @@ export default function GameDetailPage() {
                         opacity: 0.6
                     }}
                 />
-
-                {/* 2. 그라데이션 오버레이 */}
                 <div className="absolute inset-0 bg-gradient-to-t from-ps-black via-ps-black/80 to-transparent"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-ps-black/50 via-transparent to-transparent"></div>
             </div>
@@ -112,7 +112,6 @@ export default function GameDetailPage() {
                                 {isClosingSoon && <span className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 마감임박</span>}
                             </div>
 
-                            {/* 전투력 측정기 */}
                             {combatPower > 0 && (
                                 <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-4 text-center hover:border-ps-blue/50 transition-colors cursor-help group shadow-lg">
                                     <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
@@ -140,7 +139,6 @@ export default function GameDetailPage() {
                             <h1 className="text-4xl md:text-5xl font-black mb-2 leading-tight text-white drop-shadow-lg">{game.title}</h1>
                             <p className="text-gray-300 text-sm mb-6 font-medium">{game.publisher}</p>
 
-                            {/* 가격 신호등 */}
                             <div className={`p-6 rounded-xl border mb-8 backdrop-blur-md bg-opacity-90 shadow-lg ${traffic.color} bg-opacity-10 border-opacity-30`}>
                                 <div className="flex items-start gap-4">
                                     <div className="shrink-0 p-2 bg-white/10 rounded-full">
@@ -151,9 +149,8 @@ export default function GameDetailPage() {
                                             {traffic.text}
                                         </h3>
                                         <p className="text-sm text-gray-300 font-medium leading-relaxed">
-                                            {traffic.desc} {/* 유틸에서 정의한 친절한 설명 */}
+                                            {traffic.desc}
                                         </p>
-
                                         {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
                                             <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2 text-sm text-gray-400">
                                                 <TrendingUp className="w-4 h-4" />
@@ -208,23 +205,31 @@ export default function GameDetailPage() {
 
                             <div className="bg-ps-card/80 backdrop-blur-md p-6 rounded-xl border border-white/5 shadow-xl">
                                 <h3 className="text-lg font-bold text-white mb-4">게임 정보</h3>
-                                {game.description && game.description !== "Full Data Crawler" ? (
-                                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{game.description}</p>
+
+                                {/* 1. 상세 설명 텍스트 영역 */}
+                                {hasDescription ? (
+                                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line mb-6">
+                                        {game.description}
+                                    </p>
                                 ) : (
-                                    <div className="flex flex-col gap-4">
-                                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
-                                            <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
-                                            <div>
-                                                <p className="text-yellow-200 text-sm font-bold">상세 설명이 제공되지 않는 게임입니다.</p>
-                                                <p className="text-yellow-500/80 text-xs mt-1">대신 아래 버튼을 통해 게임플레이 영상이나 리뷰를 찾아보세요!</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-3">
-                                            <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600/10 hover:bg-red-600/30 border border-red-600/30 text-red-400 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2"><Youtube className="w-4 h-4" /> 유튜브 검색</a>
-                                            <a href={`https://www.google.com/search?q=${encodeURIComponent(game.title)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-blue-600/10 hover:bg-blue-600/30 border border-blue-600/30 text-blue-400 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2"><Search className="w-4 h-4" /> 구글 검색</a>
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3 mb-6">
+                                        <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-yellow-200 text-sm font-bold">상세 설명이 제공되지 않는 게임입니다.</p>
+                                            <p className="text-yellow-500/80 text-xs mt-1">대신 아래 버튼을 통해 게임플레이 영상이나 리뷰를 찾아보세요!</p>
                                         </div>
                                     </div>
                                 )}
+
+                                {/* 2. 외부 검색 버튼 영역 (설명 유무와 상관없이 항상 노출!) */}
+                                <div className="flex gap-3">
+                                    <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-red-600/10 hover:bg-red-600/30 border border-red-600/30 text-red-400 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2">
+                                        <Youtube className="w-4 h-4" /> 유튜브 검색
+                                    </a>
+                                    <a href={`https://www.google.com/search?q=${encodeURIComponent(game.title)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-blue-600/10 hover:bg-blue-600/30 border border-blue-600/30 text-blue-400 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2">
+                                        <Search className="w-4 h-4" /> 구글 검색
+                                    </a>
+                                </div>
                             </div>
                         </div>
 
