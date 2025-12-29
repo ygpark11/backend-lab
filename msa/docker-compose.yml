@@ -21,6 +21,11 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 2. Selenium Grid (원격 브라우저)
   selenium-chrome:
@@ -39,6 +44,11 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 3. Java Backend (Brain)
   catalog-service:
@@ -55,6 +65,11 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 4. Python Collector (Hand)
   collector-service:
@@ -76,6 +91,11 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 5. Frontend (Face)
   frontend:
@@ -92,16 +112,26 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 6. DB 관리 도구
   adminer:
     image: adminer
     container_name: ps-tracker-adminer
-    ports:
-      - "8090:8080"
+#    ports:
+#      - "8090:8080"
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # 7. 인증서 발급 도우미
   certbot:
