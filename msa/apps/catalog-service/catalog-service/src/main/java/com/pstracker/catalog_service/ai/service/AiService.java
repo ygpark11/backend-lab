@@ -1,6 +1,5 @@
 package com.pstracker.catalog_service.ai.service;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -13,19 +12,14 @@ import java.util.List;
 @Service
 public class AiService {
 
-    private final RestClient restClient;
     private final String apiKey;
 
-    // ✅ Gemini Native API 공식 주소 (OpenAI 호환 X)
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    private static final String MODEL_NAME = "gemini-2.5-flash";
 
-    public AiService(
-            RestClient.Builder builder,
-            @Value("${spring.ai.openai.api-key}") String apiKey // 키는 그대로 사용
-    ) {
-        this.restClient = builder
-                .defaultHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
-                .build();
+    // URL 생성
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent";
+
+    public AiService(@Value("${spring.ai.openai.api-key}") String apiKey) {
         this.apiKey = apiKey;
     }
 
@@ -65,35 +59,29 @@ public class AiService {
      * 🚀 Gemini Native API 호출 로직
      */
     private String callGemini(String prompt) {
-        // 1. Gemini Native 요청 구조 생성
+        RestClient restClient = RestClient.create();
+
         GeminiRequest request = new GeminiRequest(
                 List.of(new Content(List.of(new Part(prompt))))
         );
 
-        // 2. 호출 (API Key는 Query Param으로 붙여야 함)
         GeminiResponse response = restClient.post()
-                .uri(GEMINI_API_URL + "?key=" + apiKey) // 👈 중요: 키를 URL 뒤에 붙임
+                .uri(GEMINI_API_URL + "?key=" + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
                 .retrieve()
                 .body(GeminiResponse.class);
 
-        // 3. 응답 파싱
-        if (response != null && !response.candidates().isEmpty()) {
+        if (response != null && response.candidates() != null && !response.candidates().isEmpty()) {
             return response.candidates().get(0).content().parts().get(0).text();
         }
         return null;
     }
 
-    // =============================
-    // 📦 Gemini Native DTO Records
-    // =============================
-
-    // Request
+    // DTO Records
     record GeminiRequest(List<Content> contents) {}
     record Content(List<Part> parts) {}
     record Part(String text) {}
-
-    // Response
     record GeminiResponse(List<Candidate> candidates) {}
     record Candidate(Content content, String finishReason, int index) {}
 }
