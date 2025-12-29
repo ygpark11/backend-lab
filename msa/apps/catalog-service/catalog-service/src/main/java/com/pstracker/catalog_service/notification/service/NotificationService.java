@@ -17,12 +17,12 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     /**
-     * 내 알림 전체 조회
+     * 내 알림 목록 조회 (최신 20개)
      * @param memberId 회원 ID
      * @return 알림 리스트
      */
     public List<NotificationResponse> getMyNotifications(Long memberId) {
-        return notificationRepository.findAllByMemberIdOrderByCreatedAtDesc(memberId)
+        return notificationRepository.findTop20ByMemberIdOrderByCreatedAtDesc(memberId)
                 .stream()
                 .map(NotificationResponse::from)
                 .toList();
