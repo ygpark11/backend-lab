@@ -1,6 +1,5 @@
 package com.pstracker.catalog_service.ai.service;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
@@ -9,10 +8,15 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class AiService {
 
     private final ChatClient chatClient;
+
+    // Builder를 주입받아 ChatClient를 생성
+    // Spring AI M5부터는 이 방식이 표준
+    public AiService(ChatClient.Builder builder) {
+        this.chatClient = builder.build();
+    }
 
     /**
      * [Feature A] 게임 3줄 요약 (큐레이터)
