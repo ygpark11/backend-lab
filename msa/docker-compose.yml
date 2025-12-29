@@ -43,7 +43,8 @@ services:
           cpus: '0.5'     # CPU 사용량 50% 제한
     networks:
       - ps-network
-    restart: unless-stopped
+    profiles: ["batch"]
+    restart: no
     logging:
       driver: "json-file"
       options:
@@ -90,7 +91,8 @@ services:
       - selenium-chrome
     networks:
       - ps-network
-    restart: unless-stopped
+    profiles: [ "batch" ]
+    restart: no
     logging:
       driver: "json-file"
       options:
