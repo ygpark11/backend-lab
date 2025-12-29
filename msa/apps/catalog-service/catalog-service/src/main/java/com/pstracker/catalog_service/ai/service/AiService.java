@@ -2,26 +2,32 @@ package com.pstracker.catalog_service.ai.service; // 👈 패키지 위치 확�
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiService {
 
-    private final ChatClient.Builder chatClientBuilder;
+    @Value("${spring.ai.openai.api-key}")
+    private String apiKey;
+
+    // Gemini의 '진짜' OpenAI 호환 주소로 명시적으로 지정
+    private static final String GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
 
     /**
-     * [Feature A] 게임 3줄 요약 (큐레이터)
-     * "이 게임에 대한 설명을 한국어로 3줄 이내로 요약해줘."
+     * (큐레이터)
+     * RestClient를 사용해 Gemini에게 직접 HTTP 요청을 보냅니다.
      */
     public String summarizeGame(String gameTitle) {
         try {
-            // Builder를 사용해 ChatClient 인스턴스 생성 (기본 설정 사용)
-            ChatClient chatClient = chatClientBuilder.build();
+            RestClient restClient = RestClient.create();
 
             String prompt = String.format(
                     "PlayStation 게임 '%s'에 대해 한국어로 3줄 이내로 흥미진진하게 요약 설명해줘. " +
@@ -29,14 +35,26 @@ public class AiService {
                     gameTitle
             );
 
-            // Gemini 호출!
-            String response = chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            // 요청 본문 (JSON) 생성
+            Map<String, Object> requestBody = Map.of(
+                    "model", "gemini-1.5-flash", // 👈 모델명 고정
+                    "messages", List.of(
+                            Map.of("role", "user", "content", prompt)
+                    ),
+                    "temperature", 0.7
+            );
 
-            log.info("🤖 Gemini Summary Generated for '{}'", gameTitle);
-            return response;
+            // API 호출
+            Map response = restClient.post()
+                    .uri(GEMINI_URL)
+                    .header("Authorization", "Bearer " + apiKey) // API Key 헤더
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(Map.class);
+
+            // 응답 파싱 (OpenAI 포맷: choices[0].message.content)
+            return parseContent(response);
 
         } catch (Exception e) {
             // AI 서버가 아프거나 요청이 실패해도 우리 서버는 죽지 않게 로그만 남김
@@ -47,11 +65,10 @@ public class AiService {
 
     /**
      * [Feature B] 맞춤 추천 (취향 저격수)
-     * "내가 찜한 게임들을 보고, 후보군 중에서 추천해줘."
      */
     public String recommendGames(List<String> myWishlistTitles, List<String> candidateTitles) {
         try {
-            ChatClient chatClient = chatClientBuilder.build();
+            RestClient restClient = RestClient.create();
 
             String prompt = String.format(
                     "나는 이런 게임들을 좋아해: %s. \n" +
@@ -61,15 +78,47 @@ public class AiService {
                     String.join(", ", candidateTitles)
             );
 
-            // Gemini 호출!
-            return chatClient.prompt()
-                    .user(prompt)
-                    .call()
-                    .content();
+            Map<String, Object> requestBody = Map.of(
+                    "model", "gemini-1.5-flash",
+                    "messages", List.of(
+                            Map.of("role", "user", "content", prompt)
+                    ),
+                    "temperature", 0.7
+            );
+
+            Map response = restClient.post()
+                    .uri(GEMINI_URL)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(Map.class);
+
+            return parseContent(response);
 
         } catch (Exception e) {
             log.error("❌ Gemini Recommendation Failed: {}", e.getMessage());
-            return "[]"; // 실패 시 빈 배열 반환
+            return "[]";
+        }
+    }
+
+    /**
+     * 응답에서 content 부분만 파싱
+     * @param response Gemini 응답 맵
+     * @return content 문자열 또는 null
+     */
+    private String parseContent(Map response) {
+        try {
+            if (response == null) return null;
+            List choices = (List) response.get("choices");
+            if (choices == null || choices.isEmpty()) return null;
+
+            Map firstChoice = (Map) choices.get(0);
+            Map message = (Map) firstChoice.get("message");
+            return (String) message.get("content");
+        } catch (Exception e) {
+            log.warn("⚠️ 응답 파싱 실패");
+            return null;
         }
     }
 }

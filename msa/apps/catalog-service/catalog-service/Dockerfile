@@ -18,7 +18,7 @@ COPY src src
 RUN ./gradlew clean build -x test --no-daemon
 
 # 2단계: 실행 환경 (Runner)
-FROM eclipse-temurin:17-jdk-jammy
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
