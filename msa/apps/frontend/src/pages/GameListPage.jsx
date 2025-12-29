@@ -42,6 +42,60 @@ const GameListPage = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
+    // ✅ [Lv.35 추가] 로그인 직후 알림 권한 체크 및 요청 로직
+    useEffect(() => {
+        // 1. 브라우저 지원 여부 확인
+        if (!('Notification' in window)) return;
+
+        // 2. 권한이 'default'(아직 안 물어봄) 상태일 때만 토스트 띄우기
+        if (Notification.permission === 'default') {
+            toast((t) => (
+                <div className="flex flex-col gap-3 min-w-[250px]">
+                    <div className="flex flex-col">
+                        <span className="font-bold text-sm text-gray-900">
+                            🔥 찜한 게임 할인 알림 받기
+                        </span>
+                        <span className="text-xs text-gray-500 mt-1">
+                            가격이 떨어지면 가장 먼저 알려드릴까요?
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-600 transition flex-1 shadow-md"
+                            onClick={() => {
+                                toast.dismiss(t.id);
+                                Notification.requestPermission().then((permission) => {
+                                    if (permission === 'granted') {
+                                        toast.success('알림이 설정되었습니다! 🎉');
+                                    } else if (permission === 'denied') {
+                                        toast.error('알림이 차단되었습니다 😭');
+                                    }
+                                });
+                            }}
+                        >
+                            네, 받을래요! 🔔
+                        </button>
+                        <button
+                            className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-300 transition"
+                            onClick={() => toast.dismiss(t.id)}
+                        >
+                            나중에
+                        </button>
+                    </div>
+                </div>
+            ), {
+                duration: 10000, // 10초 동안 유지
+                position: 'top-center',
+                style: {
+                    background: '#fff',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                    padding: '16px',
+                }
+            });
+        }
+    }, []);
+
     useEffect(() => {
         const genreParam = searchParams.get('genre');
         if (genreParam !== filter.genre) {

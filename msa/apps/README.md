@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 34 Complete (In-App Notification System Implemented)
+* **Status:** Level 35 Complete (Real-time Web Push & FCM Integration)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -59,10 +59,14 @@
 * **Smart Wait & Retry:** 네트워크 지연에 대비한 `Explicit Wait`와 간헐적 실패(Flaky)를 잡기 위한 `Retry Mechanism` 도입.
 * **Self-Healing Pagination:** 대량 수집(Max 300 Page) 시 발생할 수 있는 브라우저 메모리 누수(Memory Leak)를 방지하기 위해, 일정 주기(20페이지)마다 드라이버를 스스로 리셋(Restart)하여 장기 실행 안정성 확보.
 
-### ③ Notification System (The Watcher)
-무분별한 알림(Spam)을 방지하고 시스템 효율성을 높이기 위해 **이원화된 알림 전략** 채택.
-* **External (Discord):** Python Collector가 담당. 크롤링 종료 후 **"일일 수집 요약 리포트(Summary Report)"**를 1회 발송하여 관리자 피로도 최소화.
-* **Internal (Event):** Java Backend가 담당. 가격 변동 감지 시 `GamePriceChangedEvent`를 발행하여, 추후 **'인앱 알림 센터(Notification History)'** 적재를 위한 데이터 파이프라인 유지 (Decoupling).
+### ③ Notification System (The Watcher & The Messenger)
+무분별한 알림(Spam)을 방지하고, 사용자 경험을 극대화하기 위해 **삼각 편대 알림 전략** 채택.
+* **External (Discord):** Python Collector 담당. 관리자용 **"일일 수집 요약 리포트"**를 발송하여 수집 현황 모니터링.
+* **Internal (In-App):** Java Backend 담당. 가격 변동 시 DB에 알림을 적재하여, 프론트엔드 Navbar에서 **"안 읽은 알림 뱃지(🔴)"** 및 히스토리 제공.
+* **Real-time (FCM Web Push):** Google Firebase Cloud Messaging 연동.
+  * **Multi-Device:** PC와 모바일 각각의 토큰을 발급/관리하여, 사용자가 어디에 있든 즉시 알림 수신.
+  * **Background Sync:** Service Worker를 통해 브라우저가 꺼져 있거나(Mobile), 백그라운드 상태일 때도 알림 수신 가능.
+  * **Performance:** N+1 문제를 방지하기 위해 `findAllByMemberIdIn` Bulk 조회 로직을 적용하여 대량 발송 최적화.
 
 ### ④ Value Integration (IGDB API) - The Intelligence
 * **Heuristic Search Algorithm:** 기계적인 ID 매칭의 한계(Region Lock)를 극복하기 위해, **'데이터의 특성'**을 활용한 휴리스틱 알고리즘 도입.
@@ -512,6 +516,11 @@ sequenceDiagram
   3. 이미 깃에 올라간 `.env` 파일은 `git rm --cached` 명령어로 **원격 저장소에서만 제거**하여 기록 세탁.
   4. **[Note]** 노출된 이력이 있는 키 값들은 추후 **'보안의 날(Security Day)'**에 전면 교체 예정.
 
+### 💥 Issue 20: 침묵하는 알림 (Browser Permission)
+* **증상:** FCM 로직이 정상 동작함에도 알림이 뜨지 않음.
+* **원인:** 브라우저의 '알림 권한'은 계정(Member) 귀속이 아닌 **기기(Device/Browser) 귀속**임. PC에서 허용했더라도 모바일에서 다시 허용해야 함을 간과.
+* **해결:** UX적으로 로그인 직후 알림 권한 상태(`Notification.permission`)를 체크하여, 거부됨/기본 상태일 경우 권한 요청 모달을 띄우도록 유도.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -557,17 +566,17 @@ docker compose up --build -d
 
 ### 🔔 Step 1. 사용자를 위한 케어 (Care & Notification)
 - [x] **Lv.34: 인앱 알림 센터 (Notification Center)**
-    - DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
-- [ ] **Lv.35: 잠들지 않는 비서 (Web Push & Automation)**
-    - Firebase(FCM)를 연동하여 브라우저가 꺼져 있어도 가격 하락 알림 발송 (무료).
-    - Spring Batch 대신 기존 스케줄러를 활용해 '알림 대상' 추출 최적화.
+  - DB에 `Notification` 테이블을 만들고, 로그인 시 읽지 않은 알림(가격 하락 등)을 뱃지(🔴)로 표시.
+- [x] **Lv.35: 잠들지 않는 비서 (Web Push & Automation)** ✅
+  - Firebase(FCM) 연동 완료. PC/Mobile 멀티 디바이스 토큰 관리 및 백그라운드 푸시 알림 구현.
+  - `GamePriceChangedListener`를 확장하여 이벤트 발생 시 즉시 발송(Real-time) 체계 구축.
 
 ### 🧠 Step 2. AI Intelligence (Spring AI)
 - [ ] **Lv.36: AI 게임 큐레이터 (Description Generator)**
-    - **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
-    - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
+  - **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
+  - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
 - [ ] **Lv.37: 취향 저격수 (AI Recommendation)**
-    - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
+  - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
 
 ### 🛡️ Step 3. 유지보수 (Maintenance)
 - [ ] **Lv.38: 보안의 날 (Security Day)**
