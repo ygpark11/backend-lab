@@ -129,6 +129,7 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **User-Centric Features:**
     * **Smart Feedback:** 브라우저 기본 Alert를 제거하고, `React-Hot-Toast`를 커스텀하여 부드럽고 세련된 알림 제공.
     * **Onboarding:** '가이드 모달'과 '이용약관 모달'을 구현하여 사용자의 이해를 돕고 법적 요건 충족.
+    * **Persistent Search Access:** 게임 상세 설명(Description) 데이터가 없는 경우에도, 사용자가 이탈하지 않도록 **'YouTube/Google 검색 버튼'을 상시 노출**하여 능동적인 정보 탐색 경로 제공.
 
 ### ⑫ Infrastructure (The Ship) - Docker & Nginx
 개발 환경과 배포 환경의 일치성을 보장하는 **완전 컨테이너화 아키텍처** 구현.
@@ -157,6 +158,15 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 사용자의 재방문을 유도하고 구매 전환율을 높이는 **실시간 인앱 알림 시스템**.
 * **Event-Driven Architecture:** `CatalogService`가 가격 하락을 감지하면 `GamePriceChangedEvent`를 발행하고, 리스너가 이를 비동기(`@Async`)로 처리하여 `Notification` 테이블에 적재.
 * **Reactive UX:** React Navbar에서 안 읽은 알림(Red Badge)을 실시간으로 표시하고, 클릭 시 '읽음 처리'와 동시에 해당 게임 페이지로 이동하는 UX 제공.
+
+### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini [NEW]
+"비용 0원"으로 구축한 고성능 AI 게임 분석 및 추천 시스템.
+* **Gemini 2.5 Flash Integration:** 구글의 최신 경량화 모델(`gemini-2.5-flash`)을 도입.
+* **Native API via RestClient:** Spring AI 라이브러리의 과도한 추상화와 OpenAI 호환 모드의 한계(404 Error)를 극복하기 위해, `RestClient`를 사용하여 **Google Native API를 직접 연동**.
+* **Type-Safe Architecture:** `Map<String, Object>` 형태의 불안정한 호출을 지양하고, Java 17 **`record`** (Request/Response DTO)를 정의하여 컴파일 타임에 타입 안정성을 보장.
+* **Prompt Engineering:**
+  * **Summarizer:** 단순 번역이 아닌, "게이머가 사고 싶게 만드는" 마케팅 톤앤매너(Tone & Manner)를 주입하여 3줄 요약 생성.
+  * **Recommender:** 사용자의 찜 목록(Wishlist)과 현재 할인 목록을 분석하여, **"취향에 맞는 악성 재고(할인작)"**를 JSON 포맷으로 추천.
 
 ```mermaid
 sequenceDiagram
@@ -521,6 +531,11 @@ sequenceDiagram
 * **원인:** 브라우저의 '알림 권한'은 계정(Member) 귀속이 아닌 **기기(Device/Browser) 귀속**임. PC에서 허용했더라도 모바일에서 다시 허용해야 함을 간과.
 * **해결:** UX적으로 로그인 직후 알림 권한 상태(`Notification.permission`)를 체크하여, 거부됨/기본 상태일 경우 권한 요청 모달을 띄우도록 유도.
 
+### 💥 Issue 21: Spring AI의 배신 (404 Not Found)
+* **증상:** `spring-ai-openai` 라이브러리를 통해 Gemini 무료 티어를 호출했으나, 모델(`gemini-1.5-flash`)을 찾을 수 없다는 404 오류 지속 발생.
+* **원인:** Spring AI는 OpenAI 호환 엔드포인트(`/v1/chat/completions`)를 강제하는데, Google AI Studio의 무료 키는 해당 경로에서 최신 모델 호출을 지원하지 않음(Native API만 지원).
+* **해결:** 무거운 프레임워크를 걷어내고, Spring Boot 내장 **`RestClient`**를 사용하여 **Google Native API URL을 직접 호출**하는 방식으로 선회. 결과적으로 의존성을 줄이고 최신 모델(`gemini-2.5-flash`) 사용 가능해짐.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -572,11 +587,11 @@ docker compose up --build -d
   - `GamePriceChangedListener`를 확장하여 이벤트 발생 시 즉시 발송(Real-time) 체계 구축.
 
 ### 🧠 Step 2. AI Intelligence (Spring AI)
-- [ ] **Lv.36: AI 게임 큐레이터 (Description Generator)**
-  - **Spring AI** 도입. 게임 저장 시, 설명이 부실하면 LLM(Gemini/GPT)에게 "제목"을 주고 3줄 요약을 받아와 자동 저장.
-  - (검색 필요 없음! LLM의 지식을 활용하거나, 크롤링한 Raw Text를 요약)
-- [ ] **Lv.37: 취향 저격수 (AI Recommendation)**
-  - Python FastAPI 별도 구축 (선택) 또는 Spring AI Embedding Client를 활용해 간단한 추천 로직 구현.
+- [x] **Lv.36: AI 게임 큐레이터 (Description Generator) & Recommendation** ✅
+  - `RestClient` 기반의 Gemini Native API 연동 및 Java `record` DTO 구현 완료.
+  - 게임 상세 설명 요약 및 개인화 추천 로직 탑재.
+- [ ] **Lv.37: 취향 저격수 (Hyper-Personalization)**
+  - Vector DB 도입을 고려한 추천 고도화 (현재는 Prompt Engineering 기반).
 
 ### 🛡️ Step 3. 유지보수 (Maintenance)
 - [ ] **Lv.38: 보안의 날 (Security Day)**
