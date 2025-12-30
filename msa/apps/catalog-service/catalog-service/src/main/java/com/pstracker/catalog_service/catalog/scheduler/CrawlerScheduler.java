@@ -16,10 +16,10 @@ public class CrawlerScheduler {
     private String crawlerUrl;
 
     /**
-     * 매일 오전 3시 0분 0초에 실행
+     * 매일 오전 1시 30분 0초에 실행
      * cron = "초 분 시 일 월 요일"
      */
-    @Scheduled(cron = "0 0 3 * * *")
+    @Scheduled(cron = "0 30 1 * * *")
     public void scheduleCrawling() {
         log.info("⏰ Scheduled Task: Triggering Batch Crawler...");
         triggerCrawler();
