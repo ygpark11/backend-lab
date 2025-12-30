@@ -1,24 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useSearchParams} from 'react-router-dom';
+import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { Timer, Heart, Search, Filter, X, Sparkles, Waves } from 'lucide-react';
-
-// [Safety Fix] 장르 컬러 함수 (유틸 의존성 제거 및 내부 선언)
-const getGenreBadgeStyle = (genreString) => {
-    if (!genreString) return 'bg-gray-700/50 text-gray-400 border-gray-600';
-    const g = genreString;
-    if (g.includes('액션') || g.includes('Action')) return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
-    if (g.includes('롤플레잉') || g.includes('RPG')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-    if (g.includes('공포') || g.includes('Horror')) return 'bg-red-900/40 text-red-400 border-red-500/30';
-    if (g.includes('스포츠') || g.includes('레이싱')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-    if (g.includes('슈팅') || g.includes('FPS')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-    if (g.includes('어드벤처') || g.includes('Adventure')) return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'; // 노란색
-    return 'bg-blue-900/30 text-blue-300 border-blue-500/30';
-};
+import {differenceInCalendarDays, parseISO} from 'date-fns';
+import {Filter, Heart, Search, Sparkles, Timer, Waves, X} from 'lucide-react';
 
 const GameListPage = () => {
     const navigate = useNavigate();
@@ -286,7 +274,6 @@ const GameListPage = () => {
 
                             // [Logic] 플래티넘 딜 판정
                             const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
-                            const displayGenre = game.genreIds ? game.genreIds.split(',')[0] : '';
 
                             return (
                                 <div
@@ -313,14 +300,27 @@ const GameListPage = () => {
                                     </div>
 
                                     <div className="p-4">
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                            {displayGenre && (
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-bold ${getGenreBadgeStyle(displayGenre)}`}>
-                                                    {displayGenre}
+                                        <div className="flex flex-wrap gap-1.5 mb-3 min-h-[24px]">
+                                            {game.genres && game.genres.length > 0 ? (
+                                                // 1. 장르가 있을 때: 각 장르 배지 순회 출력
+                                                game.genres.map((genreName, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`text-[10px] px-2 py-0.5 rounded-full border font-bold transition-colors ${getGenreBadgeStyle(genreName)}`}
+                                                    >
+                                                        {genreName}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                // 2. 장르가 없을 때: '미분류' 배지 1개 출력
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full border font-bold transition-colors bg-gray-600/20 text-gray-400 border-gray-500/30">
+                                                    미분류
                                                 </span>
                                             )}
                                         </div>
-                                        <h3 className="text-sm font-bold text-gray-100 leading-tight line-clamp-2 min-h-[2.5rem] mb-3 group-hover:text-ps-blue transition-colors">{game.name}</h3>
+                                        <h3 className="text-sm font-bold text-gray-100 leading-tight line-clamp-2 min-h-[2.5rem] mb-3 group-hover:text-ps-blue transition-colors">
+                                            {game.name}
+                                        </h3>
                                         <div className="flex flex-col gap-0.5">
                                             {game.discountRate > 0 && <span className="text-xs text-gray-500 line-through">{game.originalPrice?.toLocaleString()}원</span>}
                                             <div className="flex justify-between items-end mt-1">

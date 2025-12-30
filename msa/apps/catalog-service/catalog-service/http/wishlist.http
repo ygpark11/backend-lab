@@ -14,4 +14,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwiYXV0a
 
 ### 찜 목록 조회
 GET http://localhost:8080/api/v1/wishlists
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwiYXV0aCI6IlJPTEVfVVNFUiIsIm1pZCI6MSwiZXhwIjoxNzY1NzYyNDk0fQ.C7blB1iZ4MveJaQeMEaUhg7fH53xBKUnFozPOEoOARE
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0QHRlc3QuY29tIiwiYXV0aCI6IlJPTEVfVVNFUiIsIm1pZCI6MSwiZXhwIjoxNzY3MDkxNDEwfQ.jj9FM5BPAj4LhVCpr-kU-svcixOk82hk7VErEZ_u95g

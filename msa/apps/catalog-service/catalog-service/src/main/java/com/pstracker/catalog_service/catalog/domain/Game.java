@@ -41,9 +41,6 @@ public class Game {
 
     private String currency = "KRW"; // 기본값
 
-    @Column(name = "genre_ids")
-    private String genreIds;
-
     @Column(name = "metacritic_score")
     private Integer metaScore;
 
@@ -69,14 +66,8 @@ public class Game {
     @Column(name = "platform")
     private Set<Platform> platforms = new HashSet<>();
 
-    // [Helper Method] 플랫폼 정보 갱신용 편의 메서드
-    public void updatePlatforms(Set<Platform> newPlatforms) {
-        // 기존 플랫폼 정보를 싹 비우고 새로 채움 (변동사항 반영)
-        this.platforms.clear();
-        if (newPlatforms != null) {
-            this.platforms.addAll(newPlatforms);
-        }
-    }
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<GameGenre> gameGenres = new HashSet<>();
 
     // --- [생성 메서드] ---
     public static Game create(String psStoreId, String name, String englishName, String publisher, String imageUrl, String description) {
@@ -96,7 +87,8 @@ public class Game {
 
     // --- [비즈니스 로직: 정보 업데이트 통합] ---
     // 크롤링 할 때마다 변할 수 있는 정보들을 한 번에 갱신합니다.
-    public void updateInfo(String name, String englishName, String publisher, String imageUrl, String description, String genreIds) {
+    public void updateInfo(String name, String englishName, String publisher,
+                           String imageUrl, String description, Set<Genre> newGenres) {
         this.name = name;
 
         // 영문명은 있을 때만 갱신
@@ -107,11 +99,55 @@ public class Game {
         this.publisher = publisher;
         this.imageUrl = imageUrl;
         this.description = description;
-        this.genreIds = genreIds;
         this.lastUpdated = LocalDateTime.now();
+
+        // 장르 동기화 로직
+        if (newGenres != null) {
+            syncGenres(newGenres);
+        }
     }
 
-    // 외부 평점(IGDB) 업데이트 전용 메서드
+    /**
+     * 장르 정보 동기화
+     * @param newGenres 새로운 장르 집합
+     */
+    private void syncGenres(Set<Genre> newGenres) {
+        // 1. 기존엔 있는데, 새 목록엔 없는 것 제거 (orphanRemoval 동작)
+        // (기존 리스트를 순회하며, 새 리스트에 없는 놈을 찾아낸다)
+        this.gameGenres.removeIf(existing -> !newGenres.contains(existing.getGenre()));
+
+        // 2. 새 목록엔 있는데, 기존엔 없는 것 추가
+        // (현재 연결된 장르들의 목록을 먼저 추출)
+        Set<Genre> currentGenres = new HashSet<>();
+        for (GameGenre gg : this.gameGenres) {
+            currentGenres.add(gg.getGenre());
+        }
+
+        for (Genre genre : newGenres) {
+            // 기존에 없는 장르만 새로 연결
+            if (!currentGenres.contains(genre)) {
+                this.gameGenres.add(new GameGenre(this, genre));
+            }
+        }
+    }
+
+    /**
+     * 플랫폼 정보 업데이트
+     * @param newPlatforms 새로운 플랫폼 집합
+     */
+    public void updatePlatforms(Set<Platform> newPlatforms) {
+        // 기존 플랫폼 정보를 싹 비우고 새로 채움 (변동사항 반영)
+        this.platforms.clear();
+        if (newPlatforms != null) {
+            this.platforms.addAll(newPlatforms);
+        }
+    }
+
+    /**
+     * 메타크리틱 점수 및 유저 점수 업데이트
+     * @param metaScore 메타크리틱 점수
+     * @param userScore 유저 점수
+     */
     public void updateRatings(Integer metaScore, Double userScore) {
         // null이 아닐 때만 갱신 (기존 데이터 보존)
         if (metaScore != null) {
@@ -122,7 +158,10 @@ public class Game {
         }
     }
 
-    // 설명만 업데이트하는 메서드
+    /**
+     * 설명(Description) 업데이트
+     * @param summary 새로운 설명 요약
+     */
     public void updateDescription(String summary) {
         this.description = summary;
     }

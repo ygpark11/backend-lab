@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
+import com.pstracker.catalog_service.catalog.domain.Genre;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
@@ -11,6 +12,7 @@ import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.catalog.repository.GenreRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +25,10 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -35,6 +39,7 @@ public class CatalogService {
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final WishlistRepository wishlistRepository;
+    private final GenreRepository genreRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     private final IgdbApiClient igdbApiClient;
@@ -45,7 +50,26 @@ public class CatalogService {
      */
     @Transactional
     public void upsertGameData(CollectRequestDto request) {
-        // 1. 게임 정보 찾기 (없으면 생성)
+
+        // 1. 장르 데이터 처리 (String "액션, 공포" -> Set<Genre> 엔티티 변환)
+        Set<Genre> genreEntities = new HashSet<>();
+        if (StringUtils.hasText(request.getGenreIds())) {
+            // 콤마로 구분된 문자열을 쪼갬
+            String[] genreNames = request.getGenreIds().split(",");
+
+            for (String name : genreNames) {
+                String cleanName = name.trim(); // 공백 제거
+                if (cleanName.isBlank()) continue;
+
+                // DB에 있으면 가져오고, 없으면 새로 저장 (Save-If-Not-Exists)
+                Genre genre = genreRepository.findByName(cleanName)
+                        .orElseGet(() -> genreRepository.save(new Genre(cleanName)));
+
+                genreEntities.add(genre);
+            }
+        }
+
+        // 2. 게임 정보 찾기 (없으면 생성)
         Game game = gameRepository.findByPsStoreId(request.getPsStoreId())
                 .orElseGet(() -> Game.create(
                         request.getPsStoreId(),
@@ -56,11 +80,19 @@ public class CatalogService {
                         request.getDescription()
                 ));
 
-        // 2. 게임 메타 정보 업데이트 (항상 최신화)
-        // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외
+        // 3. 설명 업데이트 정책 적용
+        String descriptionToUpdate = "Full Data Crawler".equals(request.getDescription())
+                ? game.getDescription()  // 기존 설명 유지 (AI 요약)
+                : request.getDescription(); // 새로운 설명 적용
+
+        // 4. 게임 메타 정보 업데이트 (장르 엔티티 전달!)
         game.updateInfo(
-                request.getTitle(), request.getEnglishTitle(), request.getPublisher(), request.getImageUrl(),
-                game.getDescription(), request.getGenreIds()
+                request.getTitle(),
+                request.getEnglishTitle(),
+                request.getPublisher(),
+                request.getImageUrl(),
+                descriptionToUpdate,
+                genreEntities
         );
 
         try {
@@ -184,10 +216,10 @@ public class CatalogService {
 
     /**
      * 게임 검색 + 찜 여부 마킹
-     * @param condition
-     * @param pageable
-     * @param memberId
-     * @return
+     * @param condition 검색 조건
+     * @param pageable 페이징 정보
+     * @param memberId (Optional) 멤버 ID
+     * @return 게임 검색 결과 페이지
      */
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         // 1. 기존 검색 로직 실행 (QueryDSL)
@@ -215,9 +247,10 @@ public class CatalogService {
     }
 
     /**
-     * 게임 상세 정보 조회
-     * @param gameId
-     * @return
+     * 게임 상세 정보 조회 + 찜 여부
+     * @param gameId 게임 ID
+     * @param memberId (Optional) 멤버 ID
+     * @return 게임 상세 응답 DTO
      */
     public GameDetailResponse getGameDetail(Long gameId, Long memberId) {
         // 1. 게임 기본 정보 조회

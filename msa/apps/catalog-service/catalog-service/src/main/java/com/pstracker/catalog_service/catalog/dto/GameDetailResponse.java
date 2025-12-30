@@ -3,12 +3,9 @@ package com.pstracker.catalog_service.catalog.dto;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public record GameDetailResponse(
@@ -97,12 +94,9 @@ public record GameDetailResponse(
         }
 
         // 3. 장르 문자열 파싱 ("Action, RPG" -> List)
-        List<String> genreList = Collections.emptyList();
-        if (StringUtils.hasText(game.getGenreIds())) {
-            genreList = Arrays.stream(game.getGenreIds().split(","))
-                    .map(String::trim)
-                    .toList();
-        }
+        List<String> genreList = game.getGameGenres().stream()
+                .map(gg -> gg.getGenre().getName())
+                .toList();
 
         return new GameDetailResponse(
                 game.getId(),

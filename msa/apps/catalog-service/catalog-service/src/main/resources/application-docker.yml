@@ -1,24 +1,25 @@
 spring:
   config:
     activate:
-      on-profile: prod
+      on-profile: docker
 
   jpa:
     hibernate:
-      ddl-auto: validate
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
 
   datasource:
-    # 운영 서버 DB 주소 (내부망)
+    # 도커 내부망 주소 사용 (mysql:3306)
     url: jdbc:mysql://mysql:3306/pstracker?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
-    # 운영 서버의 환경변수(.env)에서 가져옴
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
+    # 로컬 개발용 아이디/비번 (user/password)
+    username: user
+    password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+# 도커 내부망 파이썬 주소
 crawler:
   url: http://collector-service:5000/run
 
 app:
   auth:
-    redirect-uri: http://ps-signal.com
+    redirect-uri: http://localhost

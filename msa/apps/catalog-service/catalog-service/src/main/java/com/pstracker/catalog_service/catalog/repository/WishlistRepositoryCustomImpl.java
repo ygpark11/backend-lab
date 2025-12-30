@@ -14,7 +14,7 @@ import static com.pstracker.catalog_service.catalog.domain.QWishlist.wishlist;
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
 
 @RequiredArgsConstructor
-public class WishlistRepositoryImpl implements WishlistRepositoryCustom {
+public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 

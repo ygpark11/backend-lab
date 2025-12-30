@@ -21,7 +21,7 @@ RUN apk add --no-cache tzdata
 ENV TZ=Asia/Seoul
 
 # Nginx 설정 파일 덮어쓰기
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
 
 # 빌드된 결과물(dist)을 Nginx 웹 루트로 복사
 COPY --from=builder /app/dist /usr/share/nginx/html

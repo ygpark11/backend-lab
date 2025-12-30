@@ -1,9 +1,9 @@
 package com.pstracker.catalog_service.catalog.repository;
 
+import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
-import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -30,33 +30,18 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        // 1. 컨텐츠 조회 쿼리 (페이징 적용)
-        List<GameSearchResultDto> content = queryFactory
-                .select(new QGameSearchResultDto(
-                        game.id,
-                        game.name,
-                        game.imageUrl,
-                        gamePriceHistory.originalPrice,
-                        gamePriceHistory.price,
-                        gamePriceHistory.discountRate,
-                        gamePriceHistory.isPlusExclusive,
-                        gamePriceHistory.saleEndDate,
-                        game.metaScore,
-                        game.userScore,
-                        game.createdAt,
-                        game.genreIds
-                ))
-                .from(game)
-                .leftJoin(game.priceHistories, gamePriceHistory) // 1:N 조인
+        // 1. 엔티티 자체를 먼저 조회 (DTO 프로젝션 대신 엔티티로 가져와서 변환)
+        List<Game> games = queryFactory
+                .selectFrom(game)
+                .leftJoin(game.priceHistories, gamePriceHistory)
                 .where(
-                        // 가장 최근의 가격 이력만 가져오기
+                        // 최신 가격 이력 매칭
                         gamePriceHistory.recordedAt.eq(
                                 JPAExpressions
                                         .select(gamePriceHistory.recordedAt.max())
                                         .from(gamePriceHistory)
                                         .where(gamePriceHistory.game.eq(game))
                         ),
-                        // 동적 검색 조건들
                         nameContains(condition.getKeyword()),
                         priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
                         discountRateGoe(condition.getMinDiscountRate()),
@@ -64,14 +49,39 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreContains(condition.getGenre())
+                        genreEq(condition.getGenre()) // 🚨 변경된 장르 검색 메서드
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .fetch();
 
-        // 2. 카운트 쿼리 (최적화를 위해 분리)
+        // 2. 엔티티 -> DTO 변환 (여기서 장르 리스트 채움)
+        List<GameSearchResultDto> content = games.stream().map(g -> {
+            // 최신 가격 정보 추출
+            var latestPrice = g.getPriceHistories().stream()
+                    .max((a, b) -> a.getRecordedAt().compareTo(b.getRecordedAt()))
+                    .orElse(null);
+
+            GameSearchResultDto dto = new GameSearchResultDto(
+                    g.getId(), g.getName(), g.getImageUrl(),
+                    latestPrice != null ? latestPrice.getOriginalPrice() : 0,
+                    latestPrice != null ? latestPrice.getPrice() : 0,
+                    latestPrice != null ? latestPrice.getDiscountRate() : 0,
+                    latestPrice != null && latestPrice.isPlusExclusive(),
+                    latestPrice != null ? latestPrice.getSaleEndDate() : null,
+                    g.getMetaScore(), g.getUserScore(), g.getCreatedAt()
+            );
+
+            // 장르 리스트 매핑
+            dto.setGenres(g.getGameGenres().stream()
+                    .map(gg -> gg.getGenre().getName())
+                    .toList());
+
+            return dto;
+        }).toList();
+
+        // 3. 카운트 쿼리
         JPAQuery<Long> countQuery = queryFactory
                 .select(game.count())
                 .from(game)
@@ -91,7 +101,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreContains(condition.getGenre())
+                        genreEq(condition.getGenre())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -133,9 +143,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         return Boolean.TRUE.equals(isPlusExclusive) ? gamePriceHistory.isPlusExclusive.isTrue() : null;
     }
 
-    private BooleanExpression genreContains(String genre) {
-        // genreIds 컬럼(String)에 해당 장르가 포함되어 있는지 검사
-        return StringUtils.hasText(genre) ? game.genreIds.containsIgnoreCase(genre) : null;
+    private BooleanExpression genreEq(String genreName) {
+        if (!StringUtils.hasText(genreName)) return null;
+        return game.gameGenres.any().genre.name.eq(genreName);
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {

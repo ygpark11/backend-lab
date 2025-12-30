@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -24,7 +25,7 @@ public class WishlistResponse {
 
     private LocalDateTime createdAt; // 게임 생성일 (NEW 뱃지용)
     private LocalDate saleEndDate;   // 할인 종료일 (마감임박 뱃지용)
-    private String genreIds;         // 장르 이모지용
+    private List<String> genres;     // 장르 이모지용
 
     private LocalDateTime wishedAt; // 언제 찜했는지
 
@@ -37,11 +38,12 @@ public class WishlistResponse {
         this.name = game.getName();
         this.imageUrl = game.getImageUrl();
         this.wishedAt = wishlist.getCreatedAt();
-
         this.createdAt = game.getCreatedAt();
-        this.genreIds = game.getGenreIds();
-
         this.metaScore = game.getMetaScore();
+
+        this.genres = game.getGameGenres().stream()
+                .map(gg -> gg.getGenre().getName())
+                .toList();
 
         if (latestPrice != null) {
             this.currentPrice = latestPrice.getPrice();

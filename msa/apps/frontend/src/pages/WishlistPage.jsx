@@ -1,23 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
+import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { Trash2, AlertTriangle, ExternalLink, Timer, Sparkles } from 'lucide-react';
-
-const getGenreBadgeStyle = (genreString) => {
-    if (!genreString) return 'bg-gray-700/50 text-gray-400 border-gray-600';
-    const g = genreString;
-    if (g.includes('액션') || g.includes('Action')) return 'bg-orange-500/10 text-orange-400 border-orange-500/30';
-    if (g.includes('롤플레잉') || g.includes('RPG')) return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
-    if (g.includes('공포') || g.includes('Horror')) return 'bg-red-900/40 text-red-400 border-red-500/30';
-    if (g.includes('스포츠') || g.includes('레이싱')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-    if (g.includes('슈팅') || g.includes('FPS')) return 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30';
-    if (g.includes('어드벤처') || g.includes('Adventure')) return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
-    return 'bg-blue-900/30 text-blue-300 border-blue-500/30';
-};
+import {differenceInCalendarDays, parseISO} from 'date-fns';
+import {AlertTriangle, ExternalLink, Sparkles, Timer, Trash2} from 'lucide-react';
 
 const WishlistPage = () => {
     const [games, setGames] = useState([]);
@@ -87,7 +76,6 @@ const WishlistPage = () => {
                             const isClosing = !isLastCall && daysLeft <= 3;
 
                             const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
-                            const displayGenre = game.genreIds ? game.genreIds.split(',')[0] : '';
 
                             return (
                                 <div key={realGameId} onClick={() => navigate(`/games/${realGameId}`)} className={`group bg-ps-card rounded-xl overflow-hidden hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer border relative
@@ -106,13 +94,23 @@ const WishlistPage = () => {
                                         {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
                                     </div>
                                     <div className="p-4">
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                            {displayGenre && (
-                                                <span
-                                                    onClick={(e) => handleGenreClick(e, displayGenre)}
-                                                    className={`text-[10px] px-1.5 py-0.5 rounded border font-bold hover:opacity-80 transition-opacity ${getGenreBadgeStyle(displayGenre)}`}
-                                                >
-                                                    {displayGenre}
+                                        <div className="flex flex-wrap gap-1 mb-2 min-h-[22px]">
+                                            {game.genres && game.genres.length > 0 ? (
+                                                // 1. 장르가 있을 때: 기존처럼 클릭 가능한 장르 배지들 출력
+                                                game.genres.map((genreName, idx) => (
+                                                    <span
+                                                        key={idx}
+                                                        onClick={(e) => handleGenreClick(e, genreName)}
+                                                        className={`text-[10px] px-1.5 py-0.5 rounded border font-bold hover:opacity-80 transition-opacity cursor-pointer ${getGenreBadgeStyle(genreName)}`}
+                                                    >
+                                                        {genreName}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                // 2. 장르가 없을 때: 클릭 기능이 없는 '미분류' 배지 출력
+                                                // (미분류는 검색 조건으로 쓰기 모호하므로 cursor-pointer와 onClick을 뺐습니다)
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-gray-600/20 text-gray-400 border-gray-500/30">
+                                                    미분류
                                                 </span>
                                             )}
                                         </div>

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class GameSearchResultDto {
@@ -24,7 +25,7 @@ public class GameSearchResultDto {
     private Double userScore;
 
     private LocalDateTime createdAt;
-    private String genreIds;
+    private List<String> genres;
 
     // 찜 여부
     private boolean liked;
@@ -34,7 +35,7 @@ public class GameSearchResultDto {
                                Integer originalPrice, Integer price, Integer discountRate,
                                boolean isPlusExclusive, LocalDate saleEndDate,
                                Integer metaScore, Double userScore,
-                               LocalDateTime createdAt, String genreIds) {
+                               LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -47,6 +48,5 @@ public class GameSearchResultDto {
         this.userScore = userScore;
 
         this.createdAt = createdAt;
-        this.genreIds = genreIds;
     }
 }

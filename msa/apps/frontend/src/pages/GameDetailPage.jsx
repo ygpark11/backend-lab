@@ -128,12 +128,34 @@ export default function GameDetailPage() {
                         {/* 오른쪽: 정보 영역 */}
                         <div className="flex-1">
                             <div className="flex flex-wrap gap-2 mb-4">
-                                {game.genres.map(g => (
-                                    <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded text-xs font-bold border transition-all hover:scale-105 active:scale-95 cursor-pointer bg-black/40 backdrop-blur-sm ${getGenreBadgeStyle(g)}`}>
-                                        {g}
-                                    </button>
+                                {/* 1. 장르 영역 처리 */}
+                                {game.genres && game.genres.length > 0 ? (
+                                    // 장르가 있을 때: 클릭 가능한 버튼들 출력
+                                    game.genres.map(g => (
+                                        <button
+                                            key={g}
+                                            onClick={() => handleGenreClick(g)}
+                                            className={`px-3 py-1 rounded text-xs font-bold border transition-all hover:scale-105 active:scale-95 cursor-pointer bg-black/40 backdrop-blur-sm ${getGenreBadgeStyle(g)}`}
+                                        >
+                                            {g}
+                                        </button>
+                                    ))
+                                ) : (
+                                    // 장르가 없을 때: 클릭 기능이 없는 '미분류' 배지 출력
+                                    <span className="px-3 py-1 rounded text-xs font-bold border bg-gray-600/20 text-gray-400 border-gray-500/30 backdrop-blur-sm">
+                                        미분류
+                                    </span>
+                                )}
+
+                                {/* 2. 플랫폼 영역: 이건 장르 유무와 상관없이 항상 출력됨 */}
+                                {game.platforms && game.platforms.map(p => (
+                                    <span
+                                        key={p}
+                                        className="bg-ps-blue/20 text-ps-blue border border-ps-blue/30 px-2 py-1 rounded text-xs font-bold cursor-default backdrop-blur-sm"
+                                    >
+                                        {p}
+                                    </span>
                                 ))}
-                                {game.platforms.map(p => <span key={p} className="bg-ps-blue/20 text-ps-blue border border-ps-blue/30 px-2 py-1 rounded text-xs font-bold cursor-default backdrop-blur-sm">{p}</span>)}
                             </div>
 
                             <h1 className="text-4xl md:text-5xl font-black mb-2 leading-tight text-white drop-shadow-lg">{game.title}</h1>
