@@ -60,6 +60,9 @@ services:
       # 👇 기본값을 docker로 설정! (로컬 테스트용)
       - SPRING_PROFILES_ACTIVE=prod
       - "JAVA_OPTS=-Xms128M -Xmx256M"
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
     depends_on:
       - mysql
     networks:
