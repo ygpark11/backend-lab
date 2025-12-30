@@ -60,7 +60,7 @@ public class CatalogService {
         // 가격이 안 변했어도, '마지막 확인 시간(lastUpdated)'은 갱신되어야 수집 대상에서 제외
         game.updateInfo(
                 request.getTitle(), request.getEnglishTitle(), request.getPublisher(), request.getImageUrl(),
-                request.getDescription(), request.getGenreIds()
+                game.getDescription(), request.getGenreIds()
         );
 
         try {

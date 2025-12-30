@@ -54,8 +54,8 @@ public class AiDescriptionScheduler {
                     game.updateDescription(summary);
                     successCount++;
 
-                    // API 호출 간격 조절 (1초 휴식)
-                    Thread.sleep(1000);
+                    // API 호출 간격 조절 (5초 휴식)
+                    Thread.sleep(5000);
                 } else {
                     log.warn("⚠️ 요약 생성 실패: {}", game.getName());
                 }
