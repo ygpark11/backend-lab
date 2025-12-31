@@ -103,11 +103,11 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
     * `User`: 내 정보 조회, (추후) 찜하기
     * `Admin`: 수동 크롤링 트리거(`manual-crawl`) 등 관리자 기능
 
-### ⑨ Wishlist & Optimization (The Memory)
-단순한 N:M 매핑을 넘어, 대규모 트래픽 상황을 가정한 **Extreme Performance Tuning** 적용.
-* **Zero-Select Write:** 찜하기 요청 시, `SecurityContext`의 JWT에서 파싱한 ID와 `getReferenceById(Proxy)`를 결합하여 **DB 조회 없이(0 Select)** 즉시 `INSERT` 수행.
-* **MemberPrincipal Expansion:** JWT 토큰 페이로드에 `memberId(PK)`를 포함시켜, 인증 필터 단계에서 DB 접근 없이 완전한 인증 객체 생성.
-* **Fetch Join & Batch Size:** "내 찜 목록" 조회 시 QueryDSL `Fetch Join`으로 게임 정보를 한 번에 가져오고, `default_batch_fetch_size` 설정을 통해 N+1 문제 없이 가격 정보까지 효율적으로 로딩.
+### ⑨ Wishlist & Data Normalization (Extreme Performance & Integrity) [Updated]
+단순한 데이터 저장과 N:M 매핑을 넘어, 성능과 정규화의 균형을 맞춘 **Advanced Data Modeling** 적용.
+* **Genre Normalization (N:M):** 기존 `Game` 테이블에 문자열로 방치되던 장르 데이터를 별도의 `Genre` 및 `GameGenre` 테이블로 완전 정규화. 데이터 중복을 제거하고 장르별 필터링 성능을 향상.
+* **Batch Fetching:** 장르 정보 조회 시 발생할 수 있는 N+1 문제를 방지하기 위해 `default_batch_fetch_size: 100` 설정을 적용
+* **Zero-Select Write:** 찜하기 요청 시 DB 조회 없이 프록시 객체만으로 즉시 INSERT 수행.
 
 ### ⑩ OAuth2 Social Login (The Key)
 복잡한 가입 절차를 제거하고, `Spring Security OAuth2 Client`를 활용하여 원클릭 로그인 시스템 구축.
@@ -159,14 +159,12 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **Event-Driven Architecture:** `CatalogService`가 가격 하락을 감지하면 `GamePriceChangedEvent`를 발행하고, 리스너가 이를 비동기(`@Async`)로 처리하여 `Notification` 테이블에 적재.
 * **Reactive UX:** React Navbar에서 안 읽은 알림(Red Badge)을 실시간으로 표시하고, 클릭 시 '읽음 처리'와 동시에 해당 게임 페이지로 이동하는 UX 제공.
 
-### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini [NEW]
+### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini [Updated]
 "비용 0원"으로 구축한 고성능 AI 게임 분석 및 추천 시스템.
-* **Gemini 2.5 Flash Integration:** 구글의 최신 경량화 모델(`gemini-2.5-flash`)을 도입.
-* **Native API via RestClient:** Spring AI 라이브러리의 과도한 추상화와 OpenAI 호환 모드의 한계(404 Error)를 극복하기 위해, `RestClient`를 사용하여 **Google Native API를 직접 연동**.
-* **Type-Safe Architecture:** `Map<String, Object>` 형태의 불안정한 호출을 지양하고, Java 17 **`record`** (Request/Response DTO)를 정의하여 컴파일 타임에 타입 안정성을 보장.
-* **Prompt Engineering:**
-  * **Summarizer:** 단순 번역이 아닌, "게이머가 사고 싶게 만드는" 마케팅 톤앤매너(Tone & Manner)를 주입하여 3줄 요약 생성.
-  * **Recommender:** 사용자의 찜 목록(Wishlist)과 현재 할인 목록을 분석하여, **"취향에 맞는 악성 재고(할인작)"**를 JSON 포맷으로 추천.
+* **Gemini 2.5 Flash Integration:** 구글 Native API 직접 연동.
+* **Smart Throttling Policy (Resource Optimization):** 
+  - **Policy:** AI API의 무료 티어 제한 및 서버 자원 보호를 위해 **'하루 최대 20개 게임'**에 대해서만 상세 요약을 생성하도록 정책적 제한 적용.
+  - **Data Prioritization:* 사용자의 관심도가 높은 최신 할인 정보와 핵심 지표(가격, 변동 내역) 수집에 자원을 집중하고, 부가 정보(게임 설명 요약)는 일일 쿼터를 전략적으로 배분하여 운영의 안정성 확보.
 
 ```mermaid
 sequenceDiagram
@@ -535,6 +533,13 @@ sequenceDiagram
 * **증상:** `spring-ai-openai` 라이브러리를 통해 Gemini 무료 티어를 호출했으나, 모델(`gemini-1.5-flash`)을 찾을 수 없다는 404 오류 지속 발생.
 * **원인:** Spring AI는 OpenAI 호환 엔드포인트(`/v1/chat/completions`)를 강제하는데, Google AI Studio의 무료 키는 해당 경로에서 최신 모델 호출을 지원하지 않음(Native API만 지원).
 * **해결:** 무거운 프레임워크를 걷어내고, Spring Boot 내장 **`RestClient`**를 사용하여 **Google Native API URL을 직접 호출**하는 방식으로 선회. 결과적으로 의존성을 줄이고 최신 모델(`gemini-2.5-flash`) 사용 가능해짐.
+
+### 💥 Issue 22: AI API 할당량 제한 (API Rate Limit)
+* **기존 설계:** 10분마다 설명이 없는 게임 5개를 선별하여 실시간으로 AI 요약을 생성하는 '단기 빈번 호출' 방식 채택.
+* **문제점:** Google Gemini API의 무료 티어 일일 호출 제한(Quota)으로 인해 모든 데이터에 대한 설명 생성 불가.
+* **해결 (Architecture & Policy Trade-off):**
+  1. **스케줄링 전략 변경:** 10분 단위의 빈번한 호출(Real-time task)을 포기하고, **'일 단위 배치(Daily Batch)'** 방식으로 전환.
+  2. **데이터 운영 정책 수립:** 외부 API의 물리적 제한(일 20회)을 수용하는 동시에, 우리 프로젝트에서 **'설명'** 이 부가정보이기에 설명이 없는 게임에 대해서만 일일 제한만큼 채우는 **'정책적 절충안'** 도입.
 
 ---
 
