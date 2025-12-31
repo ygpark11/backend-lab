@@ -11,7 +11,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import {
     Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
     Timer, CheckCircle, XCircle, Info, HelpCircle, TrendingUp,
-    Coffee, Flame, Sparkles, ArrowLeft
+    Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart
 } from 'lucide-react';
 
 const renderVerdictIcon = (verdict) => {
@@ -48,16 +48,39 @@ export default function GameDetailPage() {
         fetchDetail();
     }, [id, navigate]);
 
+    // 찜 기능
     const handleLike = async () => {
+        // 처리 중이면 중복 클릭 방지
         const toastId = toast.loading('처리 중...');
+
         try {
             const response = await client.post(`/api/v1/wishlists/${id}`);
             const message = response.data;
             const added = message.includes("추가");
+
             setIsLiked(added);
-            toast.success(message, { id: toastId, icon: added ? '❤️' : '💔' });
+
+            toast.success(message, {
+                id: toastId,
+                icon: added
+                    ? <Heart className="w-5 h-5 text-red-500 fill-current animate-bounce" /> // 찜 추가 시: 빨간 하트 + 통통 튀는 애니메이션
+                    : <Heart className="w-5 h-5 text-gray-400" /> // 찜 해제 시: 회색 빈 하트
+            });
         } catch (error) {
             toast.error("요청 실패", { id: toastId });
+        }
+    };
+
+    // 공유하기 버튼 기능
+    const handleShare = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            toast.success('링크가 복사되었습니다!', {
+                style: { borderRadius: '10px', background: '#333', color: '#fff' },
+                icon: <Check className="w-5 h-5 text-green-500" />
+            });
+        } catch (err) {
+            toast.error('링크 복사에 실패했습니다.');
         }
     };
 
@@ -212,8 +235,28 @@ export default function GameDetailPage() {
                                 <a href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white text-black hover:bg-gray-200 py-4 rounded-full font-black text-center transition-transform hover:-translate-y-1 shadow-xl flex items-center justify-center gap-2 group">
                                     <Gamepad2 className="w-6 h-6 group-hover:rotate-12 transition-transform" /> PS Store에서 보기
                                 </a>
-                                <button onClick={handleLike} className={`px-8 py-4 rounded-full border transition-all font-bold flex items-center justify-center gap-2 shadow-lg hover:-translate-y-1 ${isLiked ? 'bg-red-500/20 border-red-500 text-red-500' : 'bg-black/40 border-white/20 hover:bg-white/10 text-white backdrop-blur-md'}`}>
-                                    {isLiked ? '❤️ 찜 완료' : '🤍 찜하기'}
+                                {/* 찜하기 버튼 */}
+                                <button
+                                    onClick={handleLike}
+                                    className={`px-8 py-4 rounded-full border transition-all font-bold flex items-center justify-center gap-2 shadow-lg hover:-translate-y-1 
+                                    ${isLiked
+                                        ? 'bg-red-500/10 border-red-500 text-red-500 shadow-red-500/20' // 찜 했을 때: 은은한 빨간 배경 + 빨간 테두리
+                                        : 'bg-white/5 border-white/10 hover:bg-white/10 text-gray-200 hover:text-white backdrop-blur-md' // 안 했을 때: 깔끔한 유리 느낌
+                                    }`}
+                                >
+                                    {/* 아이콘: 찜하면 빨갛게 채워짐(fill-current), 아니면 빈 하트 */}
+                                    <div className={`transition-transform duration-300 ${isLiked ? 'scale-110' : 'scale-100'}`}>
+                                        <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                                    </div>
+                                    <span>{isLiked ? '찜 목록에 있음' : '찜하기'}</span>
+                                </button>
+
+                                {/* 공유하기 버튼 UI */}
+                                <button
+                                    onClick={handleShare}
+                                    className="px-6 py-4 rounded-full border border-white/10 bg-white/5 text-gray-300 hover:bg-ps-blue hover:border-ps-blue hover:text-white transition-all font-bold flex items-center justify-center gap-2 shadow-lg hover:-translate-y-1 backdrop-blur-md group"
+                                >
+                                    <Link className="w-5 h-5 group-hover:rotate-45 transition-transform" />
                                 </button>
                             </div>
                         </div>

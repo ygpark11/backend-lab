@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gamepad2, LogOut, HelpCircle, AlertTriangle, Shield, Bell, X } from 'lucide-react';
+import { Gamepad2, LogOut, HelpCircle, AlertTriangle, Shield, Bell, X, Heart } from 'lucide-react';
 import toast from 'react-hot-toast';
-import client from '../api/client'; // ✅ 중앙 관리형 Axios 클라이언트 임포트
+import client from '../api/client';
 import GuideModal from './GuideModal';
 import LegalModal from './LegalModal';
 
@@ -208,9 +208,14 @@ const Navbar = () => {
                             <span className="hidden md:inline">Logout</span>
                         </button>
 
-                        {/* E. 찜 목록 */}
-                        <button onClick={() => navigate('/wishlist')} className="ml-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-xs font-bold transition-all border border-white/5 hover:border-white/20 shadow-lg">
-                            My Wishlist ❤️
+                        {/* 찜 목록 */}
+                        <button
+                            onClick={() => navigate('/wishlist')}
+                            className="ml-2 bg-gradient-to-r from-red-600/20 to-red-500/10 hover:from-red-600/30 hover:to-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 px-4 py-2 rounded-full text-xs font-bold transition-all shadow-lg flex items-center gap-2 group"
+                        >
+                            {/* group-hover 시 하트가 두근거리는 효과 */}
+                            <Heart className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
+                            <span>My Wishlist</span>
                         </button>
                     </div>
                 </div>

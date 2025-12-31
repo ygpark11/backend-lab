@@ -13,6 +13,16 @@ export default function RelatedGameCard({ game }) {
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
     const isClosing = daysLeft >= 0 && daysLeft <= 3;
 
+    const getDotColor = () => {
+        if (game.discountRate >= 50)
+            return 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] ring-1 ring-green-400'; // 강한 초록빛
+        if (game.discountRate >= 20)
+            return 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)] ring-1 ring-yellow-300'; // 강한 노란빛
+        if (game.discountRate > 0)
+            return 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'; // 파란빛
+        return 'bg-gray-600 border border-gray-500'; // 꺼진 불
+    };
+
     // 클릭 시 상세 페이지 이동 (화면 상단으로 스크롤 초기화 포함)
     const handleClick = () => {
         navigate(`/games/${game.id}`);
@@ -42,9 +52,13 @@ export default function RelatedGameCard({ game }) {
 
             {/* 정보 영역 */}
             <div className="p-3">
-                <h4 className="text-xs font-bold text-gray-200 line-clamp-1 mb-1 group-hover:text-ps-blue transition-colors">
-                    {game.name}
-                </h4>
+                <div className="flex justify-between items-start mb-1 gap-2">
+                    <h4 className="text-xs font-bold text-gray-200 line-clamp-1 group-hover:text-ps-blue transition-colors flex-1">
+                        {game.name}
+                    </h4>
+                    {/* 신호등 Dot */}
+                    <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 transition-all duration-500 ${getDotColor()}`} title="할인 강도"></div>
+                </div>
                 <div className="flex justify-between items-end">
                     <div>
                         {game.discountRate > 0 && <p className="text-[10px] text-gray-500 line-through">{game.originalPrice?.toLocaleString()}</p>}

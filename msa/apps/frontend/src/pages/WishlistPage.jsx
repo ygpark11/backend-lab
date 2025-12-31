@@ -6,7 +6,7 @@ import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
-import {AlertTriangle, ExternalLink, Sparkles, Timer, Trash2} from 'lucide-react';
+import {AlertTriangle, ExternalLink, Sparkles, Timer, Trash2, PiggyBank, TrendingDown} from 'lucide-react';
 
 const WishlistPage = () => {
     const [games, setGames] = useState([]);
@@ -58,12 +58,48 @@ const WishlistPage = () => {
         navigate(`/games?genre=${encodeURIComponent(genre)}`);
     };
 
+    // 총 절약 금액 계산 (return 바로 위에 두세요)
+    const totalSavings = games.reduce((acc, game) => {
+        if (!game.originalPrice || !game.currentPrice) return acc;
+        const saving = game.originalPrice - game.currentPrice;
+        return acc + (saving > 0 ? saving : 0);
+    }, 0);
+
     return (
         <div className="min-h-screen bg-ps-black text-white">
             <Navbar />
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">
-                    <div><h1 className="text-3xl font-black tracking-tight mb-2">My <span className="text-red-500">Wishlist</span> ❤️</h1>{!loading && <p className="text-ps-muted text-sm">총 <span className="text-white font-bold">{totalElements}</span>개의 게임을 찜했습니다.</p>}</div>
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight mb-2">My <span className="text-red-500">Wishlist</span> ❤️</h1>
+                        {!loading && (
+                            <div className="flex flex-col gap-1">
+                                <p className="text-ps-muted text-sm">총 <span className="text-white font-bold">{totalElements}</span>개의 게임을 찜했습니다.</p>
+
+                                {/* 절약 금액 배너 */}
+                                {totalSavings > 0 && (
+                                    <div className="mt-4 inline-flex items-center gap-4 bg-gradient-to-r from-green-900/40 to-green-800/20 border border-green-500/30 pl-4 pr-6 py-3 rounded-xl animate-fadeIn shadow-[0_0_15px_rgba(34,197,94,0.15)] backdrop-blur-md">
+                                        {/* 아이콘 영역: 원형 배경 + 아이콘 */}
+                                        <div className="bg-green-500/20 p-2 rounded-full border border-green-500/30">
+                                            <PiggyBank className="w-6 h-6 text-green-400" />
+                                        </div>
+
+                                        {/* 텍스트 영역 */}
+                                        <div className="flex flex-col">
+                                            <span className="text-green-400/80 text-[11px] font-bold uppercase tracking-wider flex items-center gap-1">
+                                                <TrendingDown className="w-3 h-3" /> Total Savings
+                                            </span>
+                                            <span className="text-white font-black text-xl tracking-tight">
+                                                <span className="text-green-400 mr-1">₩</span>
+                                                {totalSavings.toLocaleString()}
+                                                <span className="text-sm text-gray-400 font-medium ml-1">아꼈다!</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
