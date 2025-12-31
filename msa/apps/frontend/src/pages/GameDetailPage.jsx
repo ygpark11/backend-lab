@@ -11,16 +11,41 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import {
     Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
     Timer, CheckCircle, XCircle, Info, HelpCircle, TrendingUp,
-    Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart
+    Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart,
+    Circle, Triangle, Square, X
 } from 'lucide-react';
 
 const renderVerdictIcon = (verdict) => {
+    // 공통 버튼 스타일 (유리 질감 + 둥근 테두리)
+    const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg backdrop-blur-md transition-all";
+
     switch (verdict) {
-        case 'BUY_NOW': return <CheckCircle className="w-8 h-8" />;
-        case 'GOOD_OFFER': return <Info className="w-8 h-8" />;
-        case 'WAIT': return <XCircle className="w-8 h-8" />;
-        case 'TRACKING': return <Search className="w-8 h-8" />;
-        default: return <HelpCircle className="w-8 h-8" />;
+        case 'BUY_NOW': // 강력 추천 -> 초록 동그라미 버튼
+            return (
+                <div className={`${buttonBase} border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.4)]`}>
+                    <Circle className="w-8 h-8 text-green-400 stroke-[3px]" />
+                </div>
+            );
+        case 'GOOD_OFFER': // 나쁘지 않음 -> 노란 세모 버튼
+            return (
+                <div className={`${buttonBase} border-yellow-400/50 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.4)]`}>
+                    <Triangle className="w-8 h-8 text-yellow-400 stroke-[3px]" />
+                </div>
+            );
+        case 'WAIT': // 비쌈 -> 빨간 엑스 버튼
+            return (
+                <div className={`${buttonBase} border-red-500/50 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.4)]`}>
+                    <X className="w-8 h-8 text-red-500 stroke-[4px]" />
+                </div>
+            );
+        case 'TRACKING': // 수집중 -> 파란 네모 버튼
+            return (
+                <div className={`${buttonBase} border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.4)]`}>
+                    <Square className="w-8 h-8 text-blue-400 stroke-[3px]" />
+                </div>
+            );
+        default:
+            return <HelpCircle className="w-10 h-10 text-gray-500" />;
     }
 };
 
