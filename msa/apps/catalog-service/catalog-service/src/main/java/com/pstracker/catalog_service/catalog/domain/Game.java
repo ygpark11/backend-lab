@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "games")
@@ -112,16 +113,14 @@ public class Game {
      * @param newGenres 새로운 장르 집합
      */
     private void syncGenres(Set<Genre> newGenres) {
-        // 1. 기존엔 있는데, 새 목록엔 없는 것 제거 (orphanRemoval 동작)
-        // (기존 리스트를 순회하며, 새 리스트에 없는 놈을 찾아낸다)
-        this.gameGenres.removeIf(existing -> !newGenres.contains(existing.getGenre()));
+        // 1. 기존엔 있는데 새 목록엔 없으면 -> 삭제 (OrphanRemoval 동작)
+        this.gameGenres.removeIf(gg -> !newGenres.contains(gg.getGenre()));
 
-        // 2. 새 목록엔 있는데, 기존엔 없는 것 추가
-        // (현재 연결된 장르들의 목록을 먼저 추출)
-        Set<Genre> currentGenres = new HashSet<>();
-        for (GameGenre gg : this.gameGenres) {
-            currentGenres.add(gg.getGenre());
-        }
+        // 2. 새 목록엔 있는데 기존엔 없으면 -> 추가
+        // 현재 가지고 있는 장르 목록 추출
+        Set<Genre> currentGenres = this.gameGenres.stream()
+                .map(GameGenre::getGenre)
+                .collect(Collectors.toSet());
 
         for (Genre genre : newGenres) {
             // 기존에 없는 장르만 새로 연결

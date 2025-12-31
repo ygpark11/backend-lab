@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 35 Complete (Real-time Web Push & FCM Integration)
+* **Status:** Level 36 Complete (Contextual Recommendation & Genre Normalization)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -165,6 +165,17 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **Smart Throttling Policy (Resource Optimization):** 
   - **Policy:** AI API의 무료 티어 제한 및 서버 자원 보호를 위해 **'하루 최대 20개 게임'**에 대해서만 상세 요약을 생성하도록 정책적 제한 적용.
   - **Data Prioritization:* 사용자의 관심도가 높은 최신 할인 정보와 핵심 지표(가격, 변동 내역) 수집에 자원을 집중하고, 부가 정보(게임 설명 요약)는 일일 쿼터를 전략적으로 배분하여 운영의 안정성 확보.
+
+### ⑰ Contextual Recommendation Engine (The Curator) [New Lv.36]
+제한된 리소스(1GB RAM) 환경에서 AI 모델 로딩 없이, **"사용자가 관심을 가질만한 연관 게임"**을 정교하게 추천하는 하이브리드 추천 엔진.
+* **Architecture Pivot :** 초기 기획은 AI(LLM) 기반 추천이었으나, 비용/속도/리소스 효율성을 고려하여 **QueryDSL 기반의 필터링 로직**으로 기술 스택을 전환.
+* **Genre Normalization (Data Engineering):**
+  * 기존 `String`("액션, 공포")으로 비정규화되어 있던 장르 데이터를 `Genre` 및 `GameGenre`(N:M) 엔티티로 **완전 정규화**.
+  * 크롤링 시 `Find-or-Create` 전략을 사용하여 동적으로 신규 장르를 등록하고 매핑하도록 구현.
+* **Smart Ranking Algorithm:** 단순 랜덤 추천이 아닌, 사용자의 클릭을 유도하는 3단계 우선순위 정렬 알고리즘 적용.
+  1. **Genre Match:** 현재 보고 있는 게임과 장르가 일치하는가?
+  2. **Value First:** 할인율이 높고(Price Merit), 메타스코어가 높은(Quality) 게임 우선 노출.
+  3. **Recency:** 최신 데이터를 가진 게임 우선.
 
 ```mermaid
 sequenceDiagram
@@ -592,16 +603,22 @@ docker compose up --build -d
   - `GamePriceChangedListener`를 확장하여 이벤트 발생 시 즉시 발송(Real-time) 체계 구축.
 
 ### 🧠 Step 2. AI Intelligence (Spring AI)
-- [x] **Lv.36: AI 게임 큐레이터 (Description Generator) & Recommendation** ✅
+- [x] **Lv.36: AI 게임 큐레이터 (Description Generator)** ✅
   - `RestClient` 기반의 Gemini Native API 연동 및 Java `record` DTO 구현 완료.
-  - 게임 상세 설명 요약 및 개인화 추천 로직 탑재.
+  - AI를 통해 일 20개의 게임 상세 설명 요약 정보 입력 자동화.
 - [ ] **Lv.37: 취향 저격수 (Hyper-Personalization)**
-  - Vector DB 도입을 고려한 추천 고도화 (현재는 Prompt Engineering 기반).
+  - **Concept:** 별도의 AI 모델 없이 데이터 구조 개선만으로 **사용자의 현재 관심사를 관통하는 추천 시스템** 구축.
+  - **Engineering Pivot:**
+    - 기존의 'AI 텍스트 기반 추천' 기획을 **'DB 기반 필터링'**으로 전면 재설계하여 속도와 비용 효율성 확보.
+    - `QueryDSL`을 도입하여 **[장르 일치 + 고득점 + 할인 중]**인 게임을 실시간으로 선별.
+  - **Refactoring:** `String`으로 관리되던 장르 데이터를 `Genre` 엔티티로 **완전 정규화(Normalization)**하여 데이터 무결성 확보.
+  - **UI/UX:** 상세 페이지 하단에 "이 게임을 좋아한다면" 섹션 배치 및 시각적 강조(Platinum Deal).
 
-### 🛡️ Step 3. 유지보수 (Maintenance)
-- [ ] **Lv.38: 보안의 날 (Security Day)**
-  - 노출된 이력이 있는 DB 비밀번호 및 디스코드 웹훅 URL 전면 교체 (Rotation).
-  - AWS/Oracle Cloud 보안 그룹(Security Group) 점검 및 불필요한 포트 차단.
+### 🛡️ Step 3. Security & Maintenance (Next Step)
+- [ ] **Lv.38: 보안의 날 (Security Day & Hardening)**
+  - **Secret Rotation:** 노출 이력이 있거나 오래된 DB 비밀번호, JWT 키, Webhook URL 전면 교체.
+  - **Network Policy:** 불필요한 포트 차단 및 클라우드 보안 그룹(Security Group) 점검.
+  - **Dependency Check:** 라이브러리 취약점 점검 및 버전 업그레이드.
 
 ### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability & Business)
 - [ ] **Lv.39: 개발자 응원하기 (Donation)**

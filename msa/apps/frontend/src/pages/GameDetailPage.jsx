@@ -4,6 +4,7 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
 import Navbar from '../components/Navbar';
+import RelatedGameCard from '../components/RelatedGameCard';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
 import { calculateCombatPower, getTrafficLight } from '../utils/priceUtils';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
@@ -274,6 +275,22 @@ export default function GameDetailPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* (추천 게임 섹션) */}
+                    {game.relatedGames && game.relatedGames.length > 0 && (
+                        <div className="mt-16 pt-10 border-t border-white/10 animate-fadeIn">
+                            <h3 className="text-xl font-black text-white mb-6 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-yellow-400" />
+                                <span>이 게임을 좋아한다면 (Recommended)</span>
+                            </h3>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {game.relatedGames.map(related => (
+                                    <RelatedGameCard key={related.id} game={related} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

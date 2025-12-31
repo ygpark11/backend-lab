@@ -36,6 +36,8 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class CatalogService {
 
+    private static final Integer RECOMMEND_GAME_COUNT = 4;
+
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final WishlistRepository wishlistRepository;
@@ -58,7 +60,7 @@ public class CatalogService {
             String[] genreNames = request.getGenreIds().split(",");
 
             for (String name : genreNames) {
-                String cleanName = name.trim(); // 공백 제거
+                String cleanName = name.strip();
                 if (cleanName.isBlank()) continue;
 
                 // DB에 있으면 가져오고, 없으면 새로 저장 (Save-If-Not-Exists)
@@ -257,7 +259,7 @@ public class CatalogService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found with id: " + gameId));
 
-        // 2. 가격 이력 조회
+        // 2. 가격 이력 및 최저가 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
         GamePriceHistory latestInfo = histories.isEmpty() ? null : histories.get(histories.size() - 1);
         Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);
@@ -273,7 +275,16 @@ public class CatalogService {
             isLiked = wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
         }
 
-        // 6. 응답 생성 (Game + LatestInfo + LowestPrice + HistoryList)
-        return GameDetailResponse.from(game, latestInfo, lowestPrice, historyDtos, isLiked);
+        // 5. 연관 게임 추천 로직
+        // 현재 게임의 장르 ID 목록 추출
+        List<Long> genreIds = game.getGameGenres().stream()
+                .map(gg -> gg.getGenre().getId())
+                .toList();
+
+        // 6. 같은 장르이면서 조건 좋은 게임 추천 갯수만큼 추천
+        List<GameSearchResultDto> relatedGames = gameRepository.findRelatedGames(genreIds, gameId, RECOMMEND_GAME_COUNT);
+
+        // 7. 응답 생성 (Game + LatestInfo + LowestPrice + HistoryList)
+        return GameDetailResponse.from(game, latestInfo, lowestPrice, historyDtos, isLiked, relatedGames);
     }
 }

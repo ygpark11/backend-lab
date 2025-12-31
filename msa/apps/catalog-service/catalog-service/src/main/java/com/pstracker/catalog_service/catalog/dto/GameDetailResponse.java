@@ -19,7 +19,7 @@ public record GameDetailResponse(
 
         Integer currentPrice,
         Integer originalPrice,
-        Integer lowestPrice,    // 역대 최저가
+        Integer lowestPrice,
         Integer discountRate,
         boolean isPlusExclusive,
         LocalDate saleEndDate,
@@ -38,9 +38,19 @@ public record GameDetailResponse(
 
         // [기타]
         List<String> platforms,
-        List<String> genres
+        List<String> genres,
+
+        // [추천 게임 리스트]
+        List<GameSearchResultDto> relatedGames
 ) {
-    public static GameDetailResponse from(Game game, GamePriceHistory currentInfo, Integer lowestPrice, List<PriceHistoryDto> history, boolean liked) {
+    public static GameDetailResponse from(
+            Game game,
+            GamePriceHistory currentInfo,
+            Integer lowestPrice,
+            List<PriceHistoryDto> history,
+            boolean liked,
+            List<GameSearchResultDto> relatedGames
+    ){
 
         // 1. 가격 정보 추출 (누락된 변수들 정의 추가 완료)
         Integer currentPrice = (currentInfo != null) ? currentInfo.getPrice() : 0;
@@ -120,7 +130,8 @@ public record GameDetailResponse(
                 verdictMsg,
                 history,
                 game.getPlatforms().stream().map(Enum::name).toList(),
-                genreList
+                genreList,
+                relatedGames
         );
     }
 
