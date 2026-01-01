@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {AlertTriangle, ExternalLink, Sparkles, Timer, Trash2, PiggyBank, TrendingDown} from 'lucide-react';
+import PSLoader from '../components/PSLoader';
 
 const WishlistPage = () => {
     const [games, setGames] = useState([]);
@@ -64,6 +65,8 @@ const WishlistPage = () => {
         const saving = game.originalPrice - game.currentPrice;
         return acc + (saving > 0 ? saving : 0);
     }, 0);
+
+    if (loading) return <div className="min-h-screen bg-ps-black text-white"><Navbar /><PSLoader /></div>;
 
     return (
         <div className="min-h-screen bg-ps-black text-white">

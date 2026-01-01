@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Timer } from 'lucide-react';
+import { Sparkles, Timer, Circle, Triangle, Square, X } from 'lucide-react'; // 👈 도형 아이콘 추가
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
 export default function RelatedGameCard({ game }) {
@@ -13,14 +13,22 @@ export default function RelatedGameCard({ game }) {
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
     const isClosing = daysLeft >= 0 && daysLeft <= 3;
 
-    const getDotColor = () => {
-        if (game.discountRate >= 50)
-            return 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.8)] ring-1 ring-green-400'; // 강한 초록빛
-        if (game.discountRate >= 20)
-            return 'bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.8)] ring-1 ring-yellow-300'; // 강한 노란빛
-        if (game.discountRate > 0)
-            return 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]'; // 파란빛
-        return 'bg-gray-600 border border-gray-500'; // 꺼진 불
+    // 단순 색상 점 대신 -> PS 도형 아이콘(Mini-Shape) 리턴
+    const renderSignalIcon = () => {
+        // 1. 대박 할인 (50%+) -> 초록 동그라미 (O) = BUY NOW
+        if (game.discountRate >= 50) {
+            return <Circle className="w-3 h-3 text-green-500 fill-green-500 animate-pulse" />;
+        }
+        // 2. 평타 할인 (20%+) -> 노랑 세모 (△) = GOOD OFFER
+        if (game.discountRate >= 20) {
+            return <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />;
+        }
+        // 3. 짤짤이 할인 -> 파란 네모 (□) = TRACKING/INFO
+        if (game.discountRate > 0) {
+            return <Square className="w-3 h-3 text-blue-500 fill-blue-500" />;
+        }
+        // 4. 정가/할인없음 -> 회색 엑스 (X) = WAIT (여기선 빨강 대신 회색으로 은은하게)
+        return <X className="w-3 h-3 text-gray-500" />;
     };
 
     // 클릭 시 상세 페이지 이동 (화면 상단으로 스크롤 초기화 포함)
@@ -56,9 +64,12 @@ export default function RelatedGameCard({ game }) {
                     <h4 className="text-xs font-bold text-gray-200 line-clamp-1 group-hover:text-ps-blue transition-colors flex-1">
                         {game.name}
                     </h4>
-                    {/* 신호등 Dot */}
-                    <div className={`w-2 h-2 rounded-full shrink-0 mt-1.5 transition-all duration-500 ${getDotColor()}`} title="할인 강도"></div>
+
+                    <div className="shrink-0 mt-0.5" title="할인 강도">
+                        {renderSignalIcon()}
+                    </div>
                 </div>
+
                 <div className="flex justify-between items-end">
                     <div>
                         {game.discountRate > 0 && <p className="text-[10px] text-gray-500 line-through">{game.originalPrice?.toLocaleString()}</p>}

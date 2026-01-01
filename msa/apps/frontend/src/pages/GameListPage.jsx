@@ -7,6 +7,7 @@ import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {Filter, Heart, Search, Sparkles, Timer, Waves, X} from 'lucide-react';
+import PSLoader from '../components/PSLoader';
 
 const GameListPage = () => {
     const navigate = useNavigate();
@@ -160,6 +161,8 @@ const GameListPage = () => {
         setSearchParams({});
         setFilter(prev => ({ ...prev, genre: '' }));
     };
+
+    if (loading) return <div className="min-h-screen bg-ps-black text-white"><Navbar /><PSLoader /></div>;
 
     return (
         <div className="min-h-screen bg-ps-black text-white">

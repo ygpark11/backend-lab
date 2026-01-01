@@ -14,6 +14,7 @@ import {
     Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart,
     Circle, Triangle, Square, X
 } from 'lucide-react';
+import PSLoader from '../components/PSLoader';
 
 const renderVerdictIcon = (verdict) => {
     // 공통 버튼 스타일 (유리 질감 + 둥근 테두리)
@@ -114,7 +115,7 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`);
     };
 
-    if (loading) return <div className="min-h-screen bg-ps-black text-white flex justify-center items-center">Loading...</div>;
+    if (loading) return <PSLoader />;
     if (!game) return null;
 
     const traffic = getTrafficLight(game.priceVerdict);
