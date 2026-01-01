@@ -217,7 +217,9 @@ def run_batch_crawler_logic():
                         collected_deals.append(deal_info)
 
                 visited_urls.add(url)
-                time.sleep(random.uniform(15.0, 25.0))
+                # 똥컴: 렌더링(5초) + 대기(10초) = 15초
+                # 슈퍼컴: 렌더링(0.5초) + 대기(10초) = 10.5초
+                time.sleep(random.uniform(8.0, 12.0))
 
         # [Phase 2] 신규 탐색 (페이지네이션)
         if is_running:
@@ -226,12 +228,12 @@ def run_batch_crawler_logic():
             search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
 
             current_page = 1
-            max_pages = 10
+            max_pages = 15
 
             while current_page <= max_pages:
                 if not is_running: break
 
-                # [메모리 관리] 20페이지마다 드라이버 재시작
+                # [메모리 관리] 15페이지마다 드라이버 재시작
                 if current_page > 1 and current_page % 15 == 0:
                     logger.info("♻️ [Maintenance] Restarting driver to prevent memory leak...")
                     driver.quit()
@@ -291,10 +293,12 @@ def run_batch_crawler_logic():
                             collected_deals.append(deal_info)
 
                     visited_urls.add(url)
-                    time.sleep(random.uniform(6.0, 10.0))
+                    # 똥컴: 렌더링(5초) + 대기(5.5초) = 10.5초
+                    # 슈퍼컴: 렌더링(0.5초) + 대기(5.5초) = 6초
+                    time.sleep(random.uniform(4.0, 7.0))
 
                 current_page += 1
-                time.sleep(random.uniform(10.0, 15.0))
+                time.sleep(random.uniform(8.0, 12.0))
 
             logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
 

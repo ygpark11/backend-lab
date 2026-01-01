@@ -1,13 +1,13 @@
 import React from 'react';
-import {Circle, Square, Triangle, X} from 'lucide-react';
+import { Circle, Triangle, Square, X } from 'lucide-react';
 
 const PSLoader = () => {
     return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-6 animate-fadeIn">
             <div className="flex items-center gap-5">
                 {/* 1. 세모 (Original Green) */}
-                <div className="relative group">
-                    <Triangle className="absolute inset-0 w-8 h-8 text-[#00A39D] stroke-[3px] animate-[bounce_1s_infinite_-0.3s]" />
+                <div className="relative">
+                    <Triangle className="w-8 h-8 text-[#00A39D] stroke-[3px] animate-[bounce_1s_infinite_-0.3s]" />
                 </div>
 
                 {/* 2. 동그라미 (Original Red) */}

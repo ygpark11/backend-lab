@@ -35,11 +35,11 @@ public class GamePriceHistory {
     @Column(name = "discount_rate")
     private Integer discountRate;
 
-    // [New] PS Plus 전용 할인 여부
+    // PS Plus 전용 할인 여부
     @Column(name = "is_plus_exclusive")
     private boolean isPlusExclusive;
 
-    // [New] 할인 종료일
+    // 할인 종료일
     @Column(name = "sale_end_date")
     private LocalDate saleEndDate;
 

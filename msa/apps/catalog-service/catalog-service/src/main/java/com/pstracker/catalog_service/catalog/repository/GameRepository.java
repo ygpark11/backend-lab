@@ -14,13 +14,16 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     Optional<Game> findByPsStoreId(String psStoreId);
 
     /**
-     * [수집 원칙 제1조 - 기간 존중]
-     * 갱신이 필요한 게임 목록을 조회합니다.
+     * [수집 원칙 제1조 - 효율성 및 기간 존중]
+     * 크롤링(갱신) 대상 게임 목록을 조회합니다.
+     * 불필요한 트래픽을 방지하기 위해 다음 두 가지 조건을 모두 만족하는 게임만 선별합니다.
      *
-     * 조건 1: 마지막 갱신일(lastUpdated)이 기준일(threshold)보다 오래된 게임.
-     * 조건 2: "유효한 세일 기간(saleEndDate >= today)"이 남은 최신 가격 정보가 '없는' 게임.
+     * 1. 갱신 주기 도래 (Time Check):
+     * - 마지막 갱신일(lastUpdated)이 기준일(threshold)보다 과거인 게임.
      *
-     * 즉, 세일이 아직 안 끝난 게임은 조회 대상에서 제외하여 불필요한 트래픽을 방지합니다.
+     * 2. 세일 중인 게임 제외 (Optimization - NOT EXISTS):
+     * - 현재 진행 중인 세일(saleEndDate >= today)이 있다면 가격이 변동될 확률이 없으므로 수집 대상에서 제외합니다.
+     * - 즉, '정가 판매 중(NULL)'이거나 '세일이 막 종료된' 게임만 조회하여 갱신합니다.
      */
     @Query("SELECT g FROM Game g WHERE g.lastUpdated < :threshold " +
             "AND NOT EXISTS (" +
