@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Gamepad2, LogOut, HelpCircle, AlertTriangle, Shield, Bell, X, Heart } from 'lucide-react';
+import React, {useEffect, useRef, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {AlertTriangle, Bell, Gamepad2, Heart, HelpCircle, LogOut, Shield, X} from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
@@ -19,9 +19,12 @@ const Navbar = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
 
+    const [totalWishlistCount, setTotalWishlistCount] = useState(0);
+
     // 1. 초기 로딩 시 안 읽은 알림 개수 가져오기
     useEffect(() => {
         fetchUnreadCount();
+        fetchWishlistCount();
 
         // 외부 클릭 시 알림창 닫기 로직
         function handleClickOutside(event) {
@@ -46,6 +49,24 @@ const Navbar = () => {
         } catch (err) {
             // 401(비로그인) 에러 등은 조용히 무시하거나 필요 시 처리
             console.error("알림 카운트 조회 실패", err);
+        }
+    };
+
+    // ✅ API: 찜 개수 조회
+    const fetchWishlistCount = async () => {
+        try {
+            // 토큰이 없으면(비로그인) 호출 안 함
+            if (!localStorage.getItem('accessToken')) return;
+
+            // 찜 목록 가져오기
+            const response = await client.get('/api/v1/wishlists');
+
+            // 데이터가 배열(리스트)이면 그 개수를 셈
+            if (Array.isArray(response.data)) {
+                setTotalWishlistCount(response.data.length);
+            }
+        } catch (err) {
+            console.error("찜 개수 조회 실패(무시해도 됨):", err);
         }
     };
 
@@ -211,11 +232,23 @@ const Navbar = () => {
                         {/* 찜 목록 */}
                         <button
                             onClick={() => navigate('/wishlist')}
-                            className="ml-2 bg-gradient-to-r from-red-600/20 to-red-500/10 hover:from-red-600/30 hover:to-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300 px-4 py-2 rounded-full text-xs font-bold transition-all shadow-lg flex items-center gap-2 group"
+                            className="relative group bg-gradient-to-r from-pink-600/20 to-red-600/20 hover:from-pink-600 hover:to-red-600 border border-pink-500/30 hover:border-pink-500 text-pink-500 hover:text-white px-3 md:px-5 py-2 rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_15px_rgba(236,72,153,0.2)] hover:shadow-[0_0_25px_rgba(236,72,153,0.6)]"
                         >
-                            {/* group-hover 시 하트가 두근거리는 효과 */}
-                            <Heart className="w-4 h-4 fill-current group-hover:scale-110 transition-transform" />
-                            <span>My Wishlist</span>
+                            {/* 아이콘은 항상 보임 */}
+                            <Heart className={`w-4 h-4 md:w-5 md:h-5 ${totalWishlistCount > 0 ? 'fill-current animate-pulse' : ''}`} />
+
+                            {/* 👇 [수정] 텍스트는 모바일에서 숨기고(hidden), PC에서만 보임(md:inline) */}
+                            <span className="hidden md:inline font-bold text-sm">My Wishlist</span>
+
+                            {/* 카운트 뱃지 */}
+                            {totalWishlistCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-4 w-4 md:h-5 md:w-5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-4 w-4 md:h-5 md:w-5 bg-red-500 text-white text-[10px] md:text-xs font-bold items-center justify-center">
+                                        {totalWishlistCount > 9 ? '9+' : totalWishlistCount}
+                                    </span>
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>

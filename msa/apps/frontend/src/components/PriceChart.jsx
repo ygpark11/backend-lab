@@ -1,84 +1,106 @@
 import React from 'react';
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Title,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
     Tooltip,
-    Legend,
-    Filler,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
-import { format } from 'date-fns';
+    ResponsiveContainer
+} from 'recharts';
+import { format, isValid, parseISO } from 'date-fns';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
-
-export default function PriceChart({ historyData }) {
-    // 데이터가 1개 이하(변동 없음)일 때
-    if (!historyData || historyData.length <= 1) {
+// 커스텀 툴팁
+const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
         return (
-            <div className="bg-ps-card rounded-xl p-8 text-center border border-white/5 mt-6">
-                <p className="text-gray-400">📉 가격 변동 이력이 쌓이면 차트가 표시됩니다.</p>
+            <div className="bg-black/80 backdrop-blur-md border border-blue-500/30 p-4 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.2)] animate-fadeIn">
+                <p className="text-gray-400 text-xs font-bold mb-1">{label}</p>
+                <p className="text-white text-lg font-black flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_5px_#3b82f6]"></span>
+                    {payload[0].value.toLocaleString()}원
+                </p>
             </div>
         );
     }
+    return null;
+};
 
-    const labels = historyData.map((d) => format(new Date(d.date), 'MM.dd'));
-    const prices = historyData.map((d) => d.price);
+export default function PriceChart({ historyData }) {
+    if (!historyData || historyData.length === 0) {
+        return <div className="text-gray-500 text-sm text-center py-10">데이터가 충분하지 않습니다.</div>;
+    }
 
-    const data = {
-        labels,
-        datasets: [
-            {
-                label: '가격 (KRW)',
-                data: prices,
-                borderColor: '#0070D1', // PS Blue
-                backgroundColor: 'rgba(0, 112, 209, 0.15)', // 투명한 Blue
-                tension: 0.2,
-                fill: true,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-                pointBackgroundColor: '#fff',
-            },
-        ],
-    };
+    const data = historyData.map(item => {
+        try {
+            const dateObj = item.date ? parseISO(item.date) : null;
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: '#222',
-                titleColor: '#fff',
-                bodyColor: '#ddd',
-                borderColor: '#444',
-                borderWidth: 1,
-                callbacks: {
-                    label: (context) => ` ${context.raw.toLocaleString()}원`,
-                },
-            },
-        },
-        scales: {
-            y: {
-                grid: { color: '#333' }, // 어두운 그리드
-                ticks: { color: '#888' },
-            },
-            x: {
-                grid: { display: false },
-                ticks: { color: '#888' },
-            },
-        },
-    };
+            if (!isValid(dateObj)) return null;
+
+            return {
+                date: format(dateObj, 'MM.dd'),
+                price: item.price
+            };
+        } catch (e) {
+            return null;
+        }
+    }).filter(item => item !== null);
+
+    if (data.length === 0) {
+        return <div className="text-gray-500 text-sm text-center py-10">유효한 차트 데이터가 없습니다.</div>;
+    }
 
     return (
-        <div className="bg-ps-card p-6 rounded-xl shadow-lg mt-8 border border-white/5">
-            <h3 className="text-lg font-bold text-white mb-4 border-b border-white/10 pb-2">📉 가격 변동 추이</h3>
-            <div className="h-72 w-full">
-                <Line data={data} options={options} />
-            </div>
+        <div className="w-full h-[250px] md:h-[300px] select-none">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                        </linearGradient>
+                        <filter id="neonGlow" height="130%">
+                            <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                            <feOffset dx="0" dy="0" result="offsetblur"/>
+                            <feFlood floodColor="#3B82F6" floodOpacity="0.6"/>
+                            <feComposite in2="offsetblur" operator="in"/>
+                            <feMerge>
+                                <feMergeNode/>
+                                <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                        </filter>
+                    </defs>
+
+                    <CartesianGrid strokeDasharray="3 3" stroke="#444" opacity={0.15} vertical={false} />
+
+                    <XAxis
+                        dataKey="date"
+                        tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }}
+                        axisLine={false}
+                        tickLine={false}
+                        dy={10}
+                    />
+                    <YAxis
+                        tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(value) => `${value >= 10000 ? value/10000 + '만' : value}`}
+                    />
+
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3B82F6', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.5 }} />
+
+                    <Area
+                        type="monotone"
+                        dataKey="price"
+                        stroke="#3B82F6"
+                        strokeWidth={3}
+                        fill="url(#colorPrice)"
+                        filter="url(#neonGlow)"
+                        activeDot={{ r: 6, strokeWidth: 0, fill: '#fff', stroke: '#3B82F6', strokeOpacity: 0.5 }}
+                        animationDuration={1500}
+                    />
+                </AreaChart>
+            </ResponsiveContainer>
         </div>
     );
 }

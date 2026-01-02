@@ -43,6 +43,13 @@ services:
       - ps-network
     profiles: ["batch"]
     restart: no
+
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
     logging:
       driver: "json-file"
       options:
@@ -65,6 +72,12 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
     depends_on:
       - mysql
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ps-network
     restart: unless-stopped
@@ -89,8 +102,10 @@ services:
       # .env 파일에서 불러온 값 주입
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     depends_on:
-      - catalog-service
-      - selenium-chrome
+      catalog-service:
+        condition: service_healthy
+      selenium-chrome:
+        condition: service_healthy
     networks:
       - ps-network
     profiles: [ "batch" ]

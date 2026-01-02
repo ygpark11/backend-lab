@@ -115,7 +115,13 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`);
     };
 
-    if (loading) return <PSLoader />;
+    if (loading) return (
+        <div className="min-h-screen bg-ps-black text-white">
+            <Navbar />
+            <PSLoader />
+        </div>
+    );
+
     if (!game) return null;
 
     const traffic = getTrafficLight(game.priceVerdict);
