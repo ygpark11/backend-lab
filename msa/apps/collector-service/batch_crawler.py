@@ -40,6 +40,10 @@ logger.addHandler(console_handler)
 
 app = Flask(__name__)
 
+# 세션 객체 생성 (연결 재사용으로 CPU 부담 경감)
+session = requests.Session()
+session.headers.update({'Connection': 'keep-alive'})
+
 # 환경 변수 처리 (기본값 설정 강화)
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
@@ -97,7 +101,7 @@ def get_driver():
 def fetch_update_targets():
     """Java 서버 통신 예외 처리 강화"""
     try:
-        res = requests.get(TARGET_API_URL, timeout=10) # 타임아웃 추가
+        res = session.get(TARGET_API_URL, timeout=10) # 타임아웃 추가
         if res.status_code == 200:
             targets = res.json()
             logger.info(f"📥 Received {len(targets)} targets from Java Server.")
@@ -217,9 +221,9 @@ def run_batch_crawler_logic():
                         collected_deals.append(deal_info)
 
                 visited_urls.add(url)
-                # 똥컴: 렌더링(5초) + 대기(10초) = 15초
-                # 슈퍼컴: 렌더링(0.5초) + 대기(10초) = 10.5초
-                time.sleep(random.uniform(8.0, 12.0))
+                # 똥컴: 렌더링(5초) + 대기(12.5초) = 17.5초
+                # 슈퍼컴: 렌더링(0.5초) + 대기(12.5초) = 13초
+                time.sleep(random.uniform(10.0, 15.0))
 
         # [Phase 2] 신규 탐색 (페이지네이션)
         if is_running:
@@ -533,7 +537,7 @@ def crawl_detail_and_send(driver, wait, target_url):
 
 def send_data_to_server(payload, title):
     try:
-        res = requests.post(JAVA_API_URL, json=payload, timeout=30)
+        res = session.post(JAVA_API_URL, json=payload, timeout=10)
         if res.status_code == 200:
             logger.info(f"   📤 Sent: {title} ({payload['currentPrice']} KRW)")
         else:
