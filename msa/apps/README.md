@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 36 Complete (Contextual Recommendation & Genre Normalization)
+* **Status:** Level 38 Complete (Security Hardening & Secret Rotation)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -27,14 +27,14 @@
 ## 2. 아키텍처 (Fully Dockerized MSA)
 
 ### 🏗 구조 및 역할 (The 5-Container Fleet + Frontend)
-| Service Name | Tech Stack | Role | Port |
+| Service Name | Tech Stack | Role | Port (Exposure) |
 | :--- | :--- | :--- | :--- |
-| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (SSL Termination) | 80, 443 (Docker) |
-| **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | 8080 |
-| **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | 5000 |
-| **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | 4444 / 7900 |
-| **MySQL** | MySQL 8.0 | **[Storage]** 정규화된 데이터 저장 (Volume Mount) | 3307 |
-| **Adminer** | Adminer | **[Admin]** DB 관리 웹 인터페이스 | 8090 |
+| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (SSL Termination) | 80, 443 (Public) |
+| **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | Internal Only |
+| **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | Internal Only |
+| **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | Internal Only |
+| **MySQL** | MySQL 8.0 | **[Storage]** 정규화된 데이터 저장 (Volume Mount) | Internal Only |
+| **Adminer** | Adminer | **[Admin]** DB 관리 웹 인터페이스 | 127.0.0.1:8090 (Local) |
 
 ### 🔄 자동화 데이터 흐름 (Automation Flow)
 1.  **Trigger:** Java 스케줄러가 매일 새벽 4시 (혹은 API 호출 시) Python Flask 서버(`POST /run`)를 깨움.
@@ -176,6 +176,12 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   1. **Genre Match:** 현재 보고 있는 게임과 장르가 일치하는가?
   2. **Value First:** 할인율이 높고(Price Merit), 메타스코어가 높은(Quality) 게임 우선 노출.
   3. **Recency:** 최신 데이터를 가진 게임 우선.
+
+### ⑱ Network Hardening (The Fortress) - [New Lv.38]
+"공격 표면(Attack Surface)의 최소화"를 목표로 한 네트워크 보안 강화.
+* **Port Closing:** `docker-compose.yml`에서 DB(3306), Backend(8080), Selenium(4444) 등의 포트 바인딩을 제거하여 외부 접근을 원천 차단. 오직 Nginx(80/443)만 외부와 통신 가능.
+* **Localhost Binding:** 관리 도구인 `Adminer`는 `127.0.0.1:8090`으로 바인딩하여, 외부 IP 접속을 차단하고 오직 **SSH Tunneling**을 통해서만 접근 가능하도록 격리.
+* **Secret Rotation:** 보안 사고 예방을 위해 운영 중인 모든 자격 증명(DB Password, JWT Secret, OAuth Client Secret)을 난수화된 새 키로 전면 교체 및 재배포 완료.
 
 ```mermaid
 sequenceDiagram
@@ -606,19 +612,17 @@ docker compose up --build -d
 - [x] **Lv.36: AI 게임 큐레이터 (Description Generator)** ✅
   - `RestClient` 기반의 Gemini Native API 연동 및 Java `record` DTO 구현 완료.
   - AI를 통해 일 20개의 게임 상세 설명 요약 정보 입력 자동화.
-- [ ] **Lv.37: 취향 저격수 (Hyper-Personalization)**
+- [x] **Lv.37: 취향 저격수 (Hyper-Personalization)**
   - **Concept:** 별도의 AI 모델 없이 데이터 구조 개선만으로 **사용자의 현재 관심사를 관통하는 추천 시스템** 구축.
   - **Engineering Pivot:**
     - 기존의 'AI 텍스트 기반 추천' 기획을 **'DB 기반 필터링'**으로 전면 재설계하여 속도와 비용 효율성 확보.
-    - `QueryDSL`을 도입하여 **[장르 일치 + 고득점 + 할인 중]**인 게임을 실시간으로 선별.
   - **Refactoring:** `String`으로 관리되던 장르 데이터를 `Genre` 엔티티로 **완전 정규화(Normalization)**하여 데이터 무결성 확보.
   - **UI/UX:** 상세 페이지 하단에 "이 게임을 좋아한다면" 섹션 배치 및 시각적 강조(Platinum Deal).
 
 ### 🛡️ Step 3. Security & Maintenance (Next Step)
-- [ ] **Lv.38: 보안의 날 (Security Day & Hardening)**
-  - **Secret Rotation:** 노출 이력이 있거나 오래된 DB 비밀번호, JWT 키, Webhook URL 전면 교체.
-  - **Network Policy:** 불필요한 포트 차단 및 클라우드 보안 그룹(Security Group) 점검.
-  - **Dependency Check:** 라이브러리 취약점 점검 및 버전 업그레이드.
+- [x] **Lv.38: 보안의 날 (Security Day & Hardening)** ✅
+  - **Secret Rotation:** 노출 이력이 있거나 오래된 DB 비밀번호, JWT 키, Webhook URL 전면 교체 완료.
+  - **Network Policy:** Docker 포트 바인딩 제거(`127.0.0.1` 제한) 및 SSH Tunneling 환경 구축.
 
 ### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability & Business)
 - [ ] **Lv.39: 개발자 응원하기 (Donation)**
