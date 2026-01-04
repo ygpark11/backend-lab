@@ -1,5 +1,6 @@
 services:
   selenium-chrome:
+    shm_size: "2g"
     profiles: []
   catalog-service:
     environment:

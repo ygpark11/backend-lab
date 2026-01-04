@@ -64,17 +64,34 @@ def get_driver():
 
     driver = None
 
-    # [Case A] Docker / Selenium Grid 환경 (기존 방식 유지하되 옵션 강화)
+    # [공통] 성능 최적화 옵션
+    prefs = {
+        "profile.managed_default_content_settings.images": 2,       # 이미지 로딩 차단 (필수)
+        "profile.default_content_setting_values.notifications": 2,  # 알림 차단
+        "profile.default_content_setting_values.popups": 2,         # 팝업 차단
+        "profile.default_content_setting_values.geolocation": 2,    # 위치 정보 요청 차단
+    }
+
+    # [Case A] Docker / Selenium Grid 환경
     if SELENIUM_URL:
         logger.info(f"🌐 [Docker Mode] Connecting to Selenium Grid: {SELENIUM_URL}")
         options = webdriver.ChromeOptions()
         options.add_argument(f"user-agent={random_user_agent}")
         options.add_argument("--window-size=1920,1080")
+
+        # 🚀 [리소스 절약 옵션]
         options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-dev-shm-usage") # 호스트 메모리 부족 시 디스크 사용
+        options.add_argument("--disable-gpu")           # GPU 없음 명시
+        options.add_argument("--no-zygote")             # 프로세스 포크 최소화 (메모리 절약)
+        options.add_argument("--disable-extensions")    # 확장 프로그램 비활성화
+
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
+
+        # 🖼️ 이미지 로딩 차단 적용
+        options.add_experimental_option("prefs", prefs)
 
         driver = webdriver.Remote(command_executor=SELENIUM_URL, options=options)
 
@@ -82,7 +99,6 @@ def get_driver():
     else:
         logger.info("💻 [Local Mode] Starting Undetected Chrome Driver (Stealth)")
         options = uc.ChromeOptions()
-        # headless=True 대신 별도 인자 사용 권장 in uc
         if os.getenv("HEADLESS", "false").lower() == "true":
              options.add_argument("--headless=new")
 
@@ -101,7 +117,7 @@ def get_driver():
 def fetch_update_targets():
     """Java 서버 통신 예외 처리 강화"""
     try:
-        res = session.get(TARGET_API_URL, timeout=10) # 타임아웃 추가
+        res = session.get(TARGET_API_URL, timeout=30) # 타임아웃 추가
         if res.status_code == 200:
             targets = res.json()
             logger.info(f"📥 Received {len(targets)} targets from Java Server.")
@@ -237,8 +253,8 @@ def run_batch_crawler_logic():
             while current_page <= max_pages:
                 if not is_running: break
 
-                # [메모리 관리] 15페이지마다 드라이버 재시작
-                if current_page > 1 and current_page % 15 == 0:
+                # [메모리 관리] 5페이지마다 드라이버 재시작
+                if current_page > 1 and current_page % 5 == 0:
                     logger.info("♻️ [Maintenance] Restarting driver to prevent memory leak...")
                     driver.quit()
                     time.sleep(10)
@@ -537,7 +553,7 @@ def crawl_detail_and_send(driver, wait, target_url):
 
 def send_data_to_server(payload, title):
     try:
-        res = session.post(JAVA_API_URL, json=payload, timeout=10)
+        res = session.post(JAVA_API_URL, json=payload, timeout=30)
         if res.status_code == 200:
             logger.info(f"   📤 Sent: {title} ({payload['currentPrice']} KRW)")
         else:

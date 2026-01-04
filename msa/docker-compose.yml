@@ -27,7 +27,7 @@ services:
   selenium-chrome:
     image: selenium/standalone-chrome:latest
     container_name: ps-tracker-browser
-    shm_size: "2g"
+    shm_size: "512m"
     environment:
       - TZ=Asia/Seoul
     deploy:
