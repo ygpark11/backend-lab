@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   # 1. 데이터베이스
   mysql:
@@ -13,85 +14,88 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "3306:3306" # OCI 방화벽이 외부 접속은 막고 내부(10.0.x.x)만 허용함
     volumes:
       - db_data:/var/lib/mysql
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # 2. Selenium Grid
-  selenium-chrome:
-    image: selenium/standalone-chrome:latest
-    container_name: ps-tracker-browser
-    shm_size: "2g"
-    environment:
-      - TZ=Asia/Seoul
-    ports:
-      - "4444:4444"
-    networks:
-      - ps-network
-    restart: no
-
-  # 3. Java Backend (Brain)
+  # 2. Java Backend (Brain)
   catalog-service:
     build: ./apps/catalog-service/catalog-service
     container_name: ps-tracker-api
     environment:
       - TZ=Asia/Seoul
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=prod
+      - "JAVA_OPTS=-Xms128M -Xmx256M"
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
-    ports:
-      - "8080:8080"
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     depends_on:
       - mysql
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # 4. Python Collector (Hand)
-  collector-service:
-    build: ./apps/collector-service
-    container_name: ps-tracker-collector
-    environment:
-      - TZ=Asia/Seoul
-      - API_BASE_URL=http://catalog-service:8080
-      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
-    depends_on:
-      catalog-service:
-        condition: service_started
-      selenium-chrome:
-        condition: service_started
-    networks:
-      - ps-network
-    restart: no
-
-  # 5. Frontend (Face)
+  # 3. Frontend (Face)
   frontend:
     build: ./apps/frontend
     container_name: ps-tracker-web
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./apps/frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf
+      - ./apps/frontend/nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
     depends_on:
       - catalog-service
     networks:
       - ps-network
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # 6. DB 관리 도구
+  # 4. DB 관리 도구
   adminer:
     image: adminer
     container_name: ps-tracker-adminer
     ports:
-      - "127.0.0.1:8090:8080"
+      - "127.0.0.1:8090:8080" #
     networks:
       - ps-network
     restart: unless-stopped
+
+  # 5. 인증서 도구
+  certbot:
+    image: certbot/certbot
+    container_name: ps-tracker-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - ps-network
 
 volumes:
   db_data:

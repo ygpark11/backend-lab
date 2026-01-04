@@ -1,0 +1,51 @@
+version: '3.8'
+services:
+  # 1. Selenium Grid (원격 브라우저)
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    container_name: ps-tracker-browser
+    shm_size: "512m" # 물리 램 1GB 한계로 유지 (필수)
+    environment:
+      - TZ=Asia/Seoul
+    # deploy: 👈 [삭제] CPU 제한을 풀어서 서버 성능을 풀로 쓰게 함
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    networks:
+      - ps-network
+    restart: no
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 2. Python Collector (Hand)
+  collector-service:
+    build: ./apps/collector-service
+    container_name: ps-tracker-collector
+    environment:
+      - TZ=Asia/Seoul
+      - API_BASE_URL=http://10.0.0.161:8080
+      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    depends_on:
+      selenium-chrome:
+        condition: service_healthy
+    networks:
+      - ps-network
+    restart: no
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ps-network:
+    driver: bridge
