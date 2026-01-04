@@ -12,7 +12,8 @@ import {
     Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
     Timer, CheckCircle, XCircle, Info, HelpCircle, TrendingUp,
     Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart,
-    Circle, Triangle, Square, X
+    Circle, Triangle, Square, X,
+    CreditCard, ExternalLink
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 
@@ -250,6 +251,26 @@ export default function GameDetailPage() {
                                 )}
                             </div>
 
+                            <div className="mb-8 mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/30 flex items-center justify-between group hover:border-blue-500/60 transition-colors cursor-pointer shadow-lg"
+                                 onClick={() => window.open('https://search.shopping.naver.com/search/all?query=PSN+기프트카드', '_blank')}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-blue-500/20 p-3 rounded-lg border border-blue-500/30">
+                                        <CreditCard className="w-6 h-6 text-blue-300" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-white font-bold text-sm flex items-center gap-2">
+                                            지갑 충전이 필요하신가요?
+                                            <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded font-black animate-pulse">HOT</span>
+                                        </h4>
+                                        <p className="text-blue-200 text-xs mt-1">
+                                            오픈마켓 최저가 검색으로 <span className="text-white font-bold underline">알뜰하게 충전</span> 하세요!
+                                        </p>
+                                    </div>
+                                </div>
+                                <ExternalLink className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                            </div>
+
                             {game.saleEndDate && game.discountRate > 0 && (
                                 <div className="flex items-center gap-2 mb-8 text-sm bg-black/40 w-fit px-4 py-2 rounded-lg backdrop-blur-sm border border-white/5">
                                     <CalendarDays className="w-4 h-4 text-gray-400" />
@@ -343,8 +364,11 @@ export default function GameDetailPage() {
                                 <Coffee className="w-10 h-10 text-yellow-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
                                 <h4 className="font-bold text-white mb-2 text-lg">개발자에게 커피 쏘기 ☕</h4>
                                 <p className="text-xs text-gray-400 mb-6 leading-relaxed">이 서비스가 마음에 드셨나요?<br/>작은 후원이 서버 유지와<br/>새로운 기능 개발에 큰 힘이 됩니다!</p>
-                                <button onClick={() => toast('마음만 감사히 받겠습니다! 💖 (준비중)', { icon: '☕', style: { borderRadius: '10px', background: '#333', color: '#fff' } })} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 active:scale-95">
-                                    후원하기 (준비중)
+                                <button
+                                    onClick={() => window.open('https://www.buymeacoffee.com/pstracker', '_blank')}
+                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    커피 한 잔 사주기 (후원) <ExternalLink className="w-4 h-4"/>
                                 </button>
                                 <Sparkles className="absolute top-4 right-4 w-4 h-4 text-yellow-200 opacity-50 animate-pulse" />
                             </div>

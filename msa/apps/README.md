@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 38 Complete (Security Hardening & Secret Rotation)
+* **Status:** Level 40 Complete (Sustainable Business Model & Donation)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -159,14 +159,14 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 * **Event-Driven Architecture:** `CatalogService`가 가격 하락을 감지하면 `GamePriceChangedEvent`를 발행하고, 리스너가 이를 비동기(`@Async`)로 처리하여 `Notification` 테이블에 적재.
 * **Reactive UX:** React Navbar에서 안 읽은 알림(Red Badge)을 실시간으로 표시하고, 클릭 시 '읽음 처리'와 동시에 해당 게임 페이지로 이동하는 UX 제공.
 
-### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini [Updated]
+### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini
 "비용 0원"으로 구축한 고성능 AI 게임 분석 및 추천 시스템.
 * **Gemini 2.5 Flash Integration:** 구글 Native API 직접 연동.
 * **Smart Throttling Policy (Resource Optimization):** 
   - **Policy:** AI API의 무료 티어 제한 및 서버 자원 보호를 위해 **'하루 최대 20개 게임'**에 대해서만 상세 요약을 생성하도록 정책적 제한 적용.
   - **Data Prioritization:* 사용자의 관심도가 높은 최신 할인 정보와 핵심 지표(가격, 변동 내역) 수집에 자원을 집중하고, 부가 정보(게임 설명 요약)는 일일 쿼터를 전략적으로 배분하여 운영의 안정성 확보.
 
-### ⑰ Contextual Recommendation Engine (The Curator) [New Lv.36]
+### ⑰ Contextual Recommendation Engine (The Curator)
 제한된 리소스(1GB RAM) 환경에서 AI 모델 로딩 없이, **"사용자가 관심을 가질만한 연관 게임"**을 정교하게 추천하는 하이브리드 추천 엔진.
 * **Architecture Pivot :** 초기 기획은 AI(LLM) 기반 추천이었으나, 비용/속도/리소스 효율성을 고려하여 **QueryDSL 기반의 필터링 로직**으로 기술 스택을 전환.
 * **Genre Normalization (Data Engineering):**
@@ -177,11 +177,16 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   2. **Value First:** 할인율이 높고(Price Merit), 메타스코어가 높은(Quality) 게임 우선 노출.
   3. **Recency:** 최신 데이터를 가진 게임 우선.
 
-### ⑱ Network Hardening (The Fortress) - [New Lv.38]
+### ⑱ Network Hardening (The Fortress)
 "공격 표면(Attack Surface)의 최소화"를 목표로 한 네트워크 보안 강화.
 * **Port Closing:** `docker-compose.yml`에서 DB(3306), Backend(8080), Selenium(4444) 등의 포트 바인딩을 제거하여 외부 접근을 원천 차단. 오직 Nginx(80/443)만 외부와 통신 가능.
 * **Localhost Binding:** 관리 도구인 `Adminer`는 `127.0.0.1:8090`으로 바인딩하여, 외부 IP 접속을 차단하고 오직 **SSH Tunneling**을 통해서만 접근 가능하도록 격리.
 * **Secret Rotation:** 보안 사고 예방을 위해 운영 중인 모든 자격 증명(DB Password, JWT Secret, OAuth Client Secret)을 난수화된 새 키로 전면 교체 및 재배포 완료.
+
+### ⑲ Sustainable Business Model (The Win-Win Strategy)
+서비스의 지속 가능성을 확보하기 위해 "사용자 경험을 해치지 않는 수익화" 모델 구축.
+* **Privacy-First Donation:** `Buy Me a Coffee`를 연동하여, 개발자의 개인정보(계좌, 실명) 노출 없이 안전하게 후원을 받을 수 있는 익명 후원 시스템 구축 (Proxy Payment).
+* **Contextual Banner (Affiliate Lite):** 무분별한 광고 네트워크(AdSense) 대신, 사용자가 "게임을 구매하려는 순간"에 가장 필요한 정보인 **'PSN 기프트카드 최저가 검색(Naver Shopping)'** 배너를 배치.
 
 ```mermaid
 sequenceDiagram
@@ -625,17 +630,22 @@ docker compose up --build -d
   - **Network Policy:** Docker 포트 바인딩 제거(`127.0.0.1` 제한) 및 SSH Tunneling 환경 구축.
 
 ### ☕ Step 4. 지속 가능성 및 수익화 (Sustainability & Business)
-- [ ] **Lv.39: 개발자 응원하기 (Donation)**
-  - 개인정보 노출 없는 익명 후원 시스템 (Buy Me a Coffee) 연동.
-- [ ] **Lv.40: 수익화 모델 구축 (Monetization)**
-  - **Freemium Logic:** 무료 회원의 찜하기 개수 제한(Limit) 로직 구현 및 예외 처리.
-  - **Membership System:** 일반/Pro 등급 구분 및 'Early Bird(초기 유저)'에 대한 무제한 혜택 적용 로직.
-  - **Affiliate & Ads:** 수익 창출을 위한 제휴 링크 및 배포 전략 수립.
+- [x] **Lv.39: 개발자 응원하기 (Donation)** ✅
+  - 개인정보 노출 없는 익명 후원 시스템 (Buy Me a Coffee) 연동 완료.
+- [x] **Lv.40: 수익화 모델 구축 (Monetization)** ✅
+  - **Strategic Pivot:** 유료 회원제(Membership) 계획을 폐기하고, 모든 기능을 무료로 개방하여 트래픽 확보에 집중.
+  - **Contextual Banner:** 게임 상세 페이지의 '골든 존(Golden Zone)'에 기프트카드 최저가 검색 배너를 배치하여 사용자 혜택과 수익화의 균형 달성.
 
 ### 🚀 Step 5. 확장 및 자동화 (Scale & DevOps)
-- [ ] **Lv.41: 무중단 배포 파이프라인 (CI/CD)**
-  - **Oracle Cloud ARM 인스턴스(슈퍼컴)** 확보 시점과 연계.
-  - GitHub Actions를 구축하여 `Push` -> `Test` -> `Build` -> `Deploy` 자동화.
-- [ ] **Lv.42: 제품 주도 성장 (PLG - Product Led Growth)**
-  - "나의 게임 성향 분석표" 등 SNS 공유 유발 콘텐츠 제작.
-  - 친구 초대 시 Plus 회원 전용 필터 무료 개방 등 바이럴 루프 설계.
+- [ ] **Lv.41: 초경량 무중단 배포 (Lightweight CI/CD)**
+  - **Environment:** Oracle Cloud Micro (1GB RAM) 환경을 고려한 최적화 파이프라인 설계.
+  - **Pipeline:** `GitHub Actions`가 빌드 부하를 전담하고, 운영 서버는 완성된 이미지만 받아 실행(Pull & Run)하여 리소스 점유율 최소화.
+- [ ] **Lv.42: 성장 기초 공사 (Growth Foundation)**
+  - **Analytics:** Google Analytics (GA4)를 도입하여 트래픽 소스 및 사용자 행동 패턴 정량 분석.
+  - **SEO (Open Graph):** 카카오톡/SNS 공유 시 게임 포스터와 실시간 가격이 노출되도록 동적 메타 태그 구현.
+- [ ] **Lv.43: 서버 관측성 확보 (Observability with PLG)**
+  - **Stack:** Prometheus(Metrics) + Loki(Logs) + Grafana(Dashboard) 도입.
+  - **Optimization:** 저사양 서버 부하를 방지하기 위해 Self-Hosted 방식 대신 **Grafana Cloud (SaaS)** 무료 티어 연동.
+  - **Features:**
+    - Spring Boot Actuator 지표 수집 (JVM Heap, CPU 사용량 등).
+    - 애플리케이션 로그 중앙화 및 에러 발생 시 그라파나 알림(Alerting) 구축.
