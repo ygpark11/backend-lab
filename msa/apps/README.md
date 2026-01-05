@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 40 Complete (Sustainable Business Model & Donation)
+* **Status:** Level 40.5 Complete (Distributed Architecture & OCI Private Network)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -26,15 +26,19 @@
 
 ## 2. 아키텍처 (Fully Dockerized MSA)
 
-### 🏗 구조 및 역할 (The 5-Container Fleet + Frontend)
-| Service Name | Tech Stack | Role | Port (Exposure) |
-| :--- | :--- | :--- | :--- |
-| **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy (SSL Termination) | 80, 443 (Public) |
-| **Catalog Service** | Java 17, Spring Boot | **[Brain]** 스케줄러, **회원/인증 관리**, DB 적재 | Internal Only |
-| **Collector Service** | Python 3.10, Flask | **[Hand]** HTTP 명령 수신, Selenium Grid 원격 제어 | Internal Only |
-| **Selenium Grid** | Standalone Chrome | **[Eyes]** 도커 내부에서 브라우저 실행 (Remote Driver) | Internal Only |
-| **MySQL** | MySQL 8.0 | **[Storage]** 정규화된 데이터 저장 (Volume Mount) | Internal Only |
-| **Adminer** | Adminer | **[Admin]** DB 관리 웹 인터페이스 | 127.0.0.1:8090 (Local) |
+### 🏗 분산 인프라 구조 (Dual-Node Architecture)
+안정성과 리소스 효율을 극대화하기 위해 **Brain(데이터/API)**과 **Hand(수집)** 역할을 물리적으로 분리하여 운영 중.
+
+| Node (Server) | Service Name | Tech Stack | Role | Access Policy |
+| :--- | :--- | :--- | :--- | :--- |
+| **Node 1: Brain**<br>(10.0.0.161) | **Frontend** | React, Nginx | **[Face]** UI/UX, Reverse Proxy | Public (80, 443) |
+| | **Catalog Service** | Java 17 | **[Brain]** 비즈니스 로직, 인증 | Private (8080) |
+| | **MySQL** | MySQL 8.0 | **[Storage]** 데이터 저장소 | Private (3306) |
+| **Node 2: Hand**<br>(10.0.0.61) | **Collector Service** | Python 3.10 | **[Hand]** 크롤링 수행 | Private (5000) |
+| | **Selenium Grid** | Chrome | **[Eyes]** 브라우저 실행 | Internal Only |
+
+> **🔐 Private Network Policy:**
+> Node 1과 Node 2는 오직 **OCI 내부망(VCN 10.0.0.0/16)**을 통해서만 통신하며, DB 및 API 포트는 외부 인터넷(Public)에 노출되지 않음.
 
 ### 🔄 자동화 데이터 흐름 (Automation Flow)
 1.  **Trigger:** Java 스케줄러가 매일 새벽 4시 (혹은 API 호출 시) Python Flask 서버(`POST /run`)를 깨움.
@@ -103,7 +107,7 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
     * `User`: 내 정보 조회, (추후) 찜하기
     * `Admin`: 수동 크롤링 트리거(`manual-crawl`) 등 관리자 기능
 
-### ⑨ Wishlist & Data Normalization (Extreme Performance & Integrity) [Updated]
+### ⑨ Wishlist & Data Normalization (Extreme Performance & Integrity)
 단순한 데이터 저장과 N:M 매핑을 넘어, 성능과 정규화의 균형을 맞춘 **Advanced Data Modeling** 적용.
 * **Genre Normalization (N:M):** 기존 `Game` 테이블에 문자열로 방치되던 장르 데이터를 별도의 `Genre` 및 `GameGenre` 테이블로 완전 정규화. 데이터 중복을 제거하고 장르별 필터링 성능을 향상.
 * **Batch Fetching:** 장르 정보 조회 시 발생할 수 있는 N+1 문제를 방지하기 위해 `default_batch_fetch_size: 100` 설정을 적용
@@ -115,7 +119,7 @@ Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템
 * **JWT Bridge:** 소셜 로그인 성공 직후 `AuthenticationSuccessHandler`가 개입하여, OAuth2 인증 정보를 우리 시스템 전용 **JWT(Access/Refresh Token)로 즉시 교환**하여 발급.
 * **Secret Isolation:** `application.yml`(공개)과 `application-secret.yml`(비공개)을 분리하고 `.gitignore` 처리하여, DB 비밀번호 및 OAuth Client Secret 등의 민감 정보가 깃허브에 노출되는 것을 원천 차단.
 
-### ⑪ Frontend System (The Interface) - React & Tailwind [Updated Lv.30]
+### ⑪ Frontend System (The Interface) - React & Tailwind
 API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를 갖춘 시각화 플랫폼 구축.
 * **Tech Stack:** React 18, Vite, Tailwind CSS (Dark Mode), Axios, React-Hot-Toast, Date-fns, Lucide-React (Icons).
 * **Gamification & Visual Features:**
@@ -135,10 +139,14 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 개발 환경과 배포 환경의 일치성을 보장하는 **완전 컨테이너화 아키텍처** 구현.
 * **Multi-stage Build:** React 앱을 Node.js 환경에서 빌드하고, 결과물만 Nginx 이미지로 복사하여 이미지 크기를 90% 이상 경량화 (Alpine Linux 기반).
 * **Reverse Proxy:** Nginx를 프론트엔드 웹 서버이자 API Gateway로 활용.
-* **Resource Engineering (The Survival):** [NEW]
+* **Resource Engineering (The Survival):
   * **Memory Swap:** 1GB RAM 환경(Oracle Cloud Micro)의 한계를 극복하기 위해 **4GB 스왑 메모리(Swap)**를 할당, OOM Killer 방지.
   * **JVM Tuning:** Java 컨테이너에 `-Xms128M -Xmx256M` 옵션을 적용하여 힙 메모리 사용량을 엄격하게 제한.
   * **Container Limits:** Docker Compose `deploy.resources` 설정을 통해 Selenium 등 리소스 집약적 컨테이너가 서버 전체를 마비시키지 않도록 CPU 사용량 제한(Throttling).
+* **Distributed Architecture (The Division):
+  * **Brain & Hand Split:** 고사양을 요구하는 크롬 브라우저(Selenium)와 수집기(Python)를 별도 서버(Node 2)로 격리하여, 메인 서버(Node 1)의 안정성을 보장.
+  * **Private Communication:** `Java(Brain)`가 `Python(Hand)`에게 크롤링 명령을 내리고, `Python`이 다시 `Java`로 데이터를 보내는 양방향 통신을 **사설 IP(Private IP)** 기반으로 구축하여 보안성 강화.
+  * **Firewall Strategy:** OCI Security List와 Ubuntu `iptables` 이중 잠금 설정을 통해, 내부 식구(10.0.x.x)끼리는 자유롭게 통신하되 외부 침입은 원천 차단.
 
 ### ⑬ Environment Strategy (Profile Isolation)
 로컬 개발 생산성과 운영 환경 안정성을 동시에 잡기 위한 Spring Profile 전략 수립.
@@ -191,21 +199,31 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Scheduler as ⏰ Scheduler (Java)
-    participant Crawler as 🐍 Collector (Python)
-    participant Chrome as 🌐 Selenium Grid
-    participant Store as 🛒 PS Store
-    participant Service as 🧠 Catalog Service
-    participant IGDB as 👾 IGDB API
-    participant DB as 💾 MySQL
-    participant Discord as 🔔 Discord
 
-    Note over Scheduler, Crawler: 1. Trigger Phase (Level 24 예정)
-    Scheduler->>Crawler: POST /run (Start Batch)
+    %% 물리적 서버 그룹핑 (Distributed Architecture 시각화)
+    box "Node 1: Brain Server (Java/DB)" #e1f5fe
+        participant Scheduler as ⏰ Scheduler
+        participant Service as 🧠 Catalog Service
+        participant DB as 💾 MySQL
+    end
+
+    box "Node 2: Hand Server (Python/Chrome)" #fff3e0
+        participant Crawler as 🐍 Collector
+        participant Chrome as 🌐 Selenium Grid
+    end
+
+    box "External World" #f5f5f5
+        participant Store as 🛒 PS Store
+        participant IGDB as 👾 IGDB API
+        participant Discord as 🔔 Discord
+    end
+
+    Note over Scheduler, Crawler: 1. Trigger Phase (Private Network)
+    Scheduler->>Crawler: POST /run (Brain -> Hand)
     activate Crawler
     
     Note over Crawler, Store: 2. Crawling Phase
-    loop Pagination (Max 10)
+    loop Pagination (Max 15)
         Crawler->>Chrome: Connect & Request Page
         Chrome->>Store: GET /category/...
         Store-->>Chrome: Response HTML
@@ -213,12 +231,12 @@ sequenceDiagram
         Note right of Crawler: Precision Logic (Strikethrough)
 
         loop Per Game
-            Crawler->>Service: POST /collect (Info & Price)
+            %% Hand에서 Brain으로 데이터 전송
+            Crawler->>Service: POST /collect (Hand -> Brain)
             activate Service
             
             Note over Service, DB: 3. Logic & Mash-up Phase
             
-            %% [Level 23 추가] IGDB 연동 구간
             Service->>IGDB: Search Game (ID -> Name)
             IGDB-->>Service: Return Ratings (Meta/User)
             
@@ -240,7 +258,7 @@ sequenceDiagram
             deactivate Service
         end
         
-        opt Every 20 Pages
+        opt Every 5 Pages
             Crawler->>Chrome: Restart Driver (Memory Leak Protection)
         end
     end
@@ -394,41 +412,86 @@ metaScoreGoe(condition.getMinMetaScore())
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User
-    participant Browser
-    participant SpringSec as 🛡️ Spring Security
-    participant Google as 🌐 Google Auth Server
-    participant Service as 🧠 CustomOAuth2UserService
-    participant Handler as 🍪 SuccessHandler
-    participant DB as 💾 MySQL
 
-    User->>Browser: "Google 로그인" 클릭
-    Browser->>SpringSec: GET /oauth2/authorization/google
-    SpringSec->>Google: 리다이렉트 (Client ID + Scope)
+    %% 1. 서버 그룹핑 (물리적 분리 시각화)
+    box "Node 1: Brain Server (Java/DB)" #e1f5fe
+        participant Scheduler as ⏰ Scheduler
+        participant Service as 🧠 Catalog Service
+        participant DB as 💾 MySQL
+    end
+
+    box "Node 2: Hand Server (Python/Chrome)" #fff3e0
+        participant Crawler as 🐍 Collector
+        participant Chrome as 🌐 Selenium Grid
+    end
+
+    %% 2. 외부 세상 (External API)
+    box "External World (SaaS)" #f5f5f5
+        participant Store as 🛒 PS Store
+        participant IGDB as 👾 IGDB API
+        participant AI as ✨ Gemini AI
+        participant FCM as 🔥 Firebase
+        participant Discord as 🔔 Discord
+    end
+
+    Note over Scheduler, Crawler: 1. Trigger Phase (Private Network)
+    Scheduler->>Crawler: POST /run (Brain -> Hand)
+    activate Crawler
     
-    User->>Google: 계정 선택 및 동의
-    Google-->>SpringSec: Auth Code 전달 (/login/oauth2/code/google)
-    
-    Note over SpringSec, Google: 내부적으로 Access Token 교환 (Auto)
-    
-    SpringSec->>Google: 유저 정보 요청 (Profile, Email)
-    Google-->>SpringSec: 유저 정보 반환 (JSON)
-    
-    SpringSec->>Service: loadUser() 호출
-    Service->>DB: 이메일 조회 (findByEmail)
-    
-    alt 신규 유저
-        Service->>DB: INSERT (Member 생성)
-    else 기존 유저
-        Service->>DB: UPDATE (이름 등 갱신)
+    Note over Crawler, Store: 2. Crawling Phase
+    loop Pagination (Max 15)
+        Crawler->>Chrome: Connect & Request Page
+        Chrome->>Store: GET /category/...
+        Store-->>Chrome: Response HTML
+        Crawler->>Chrome: get_attribute("textContent")
+        Note right of Crawler: Precision Logic
+
+        loop Per Game (Data Pipeline)
+            %% Hand -> Brain 전송
+            Crawler->>Service: POST /collect (Info & Price)
+            activate Service
+            
+            Note over Service, DB: 3. Logic & Mash-up Phase
+            
+            %% [Level 23] IGDB 연동
+            Service->>IGDB: Search Game (Meta Score)
+            IGDB-->>Service: Ratings
+            
+            %% [Level 36] AI 연동 (Description)
+            opt Description Missing (Quota Limit)
+                Service->>AI: Generate Summary
+                AI-->>Service: KR Description
+            end
+            
+            %% DB 비교 및 저장
+            Service->>DB: Fetch Latest History
+            DB-->>Service: Return Entity
+            Service->>Service: isSameCondition() Check
+            
+            alt Condition Changed (Update)
+                Service->>DB: INSERT New History
+                
+                %% [Level 35] 알림 발송 (다중 채널)
+                opt Price Drop Detected
+                    par Async Notification
+                        Service--)Discord: Send Webhook
+                        Service--)FCM: Send Push (Web/Mobile)
+                    end
+                end
+            else No Change (Skip)
+                Service->>Service: Skip INSERT
+            end
+            deactivate Service
+        end
+        
+        opt Every 5 Pages
+            Crawler->>Chrome: Restart Driver
+        end
     end
     
-    Service-->>Handler: OAuth2User(Principal) 반환
-    
-    Handler->>Handler: MemberPrincipal 변환 & JWT 생성
-    Handler-->>Browser: 리다이렉트 (/?accessToken=eyJ...)
-    
-    Note right of Browser: 이제부터 JWT로 API 요청
+    Note over Crawler, Discord: 4. Reporting Phase
+    Crawler--)Discord: Send Daily Summary
+    deactivate Crawler
 ```
 
 ### 🛠️ 구현 체크리스트 (Step-by-Step)
@@ -563,43 +626,64 @@ sequenceDiagram
   1. **스케줄링 전략 변경:** 10분 단위의 빈번한 호출(Real-time task)을 포기하고, **'일 단위 배치(Daily Batch)'** 방식으로 전환.
   2. **데이터 운영 정책 수립:** 외부 API의 물리적 제한(일 20회)을 수용하는 동시에, 우리 프로젝트에서 **'설명'** 이 부가정보이기에 설명이 없는 게임에 대해서만 일일 제한만큼 채우는 **'정책적 절충안'** 도입.
 
+### 💥 Issue 23: 공존할 수 없는 거인들 (Resource Conflict & OOM)
+* **증상:** 크롤링 스케줄이 도는 순간 Java API 서버가 먹통이 되거나, MySQL이 **OOM Killer**에 의해 강제 종료됨.
+* **원인:** 1GB RAM(Oracle Cloud Free Tier)이라는 극한의 환경에서 Spring Boot(Java), MySQL, Selenium(Chrome)이라는 '메모리 3대장'을 한 서버에 구겨 넣은 것이 화근. 특히 Chrome이 브라우저를 띄우는 순간 메모리 스파이크를 견디지 못함.
+* **해결 (The Great Split):** 물리적 서버를 **Brain(1호기)**과 **Hand(2호기)**로 분리하는 '이원화 아키텍처' 도입.
+  * **Brain (Node 1):** API와 DB만 전담하여 메모리 사용량을 60% 미만으로 안정화.
+  * **Hand (Node 2):** 크롤러와 브라우저만 배치하여, 수집 중 메모리가 튀더라도 본진(DB)에는 영향이 없도록 격리.
+  * **Network:** OCI 내부망(Private IP)을 통한 통신으로 보안과 속도 두 마리 토끼를 잡음.
 ---
 
 ## 8. 실행 방법 (How to Run)
 
-### ① 전체 시스템 실행 (Docker Compose)
-**Frontend + Backend + Database + Crawler**를 명령어 한 줄로 통합 실행합니다.
+환경에 따라 **로컬 개발(통합)** 모드와 **운영 서버(분산)** 모드로 나누어 실행
 
-**1. Backend Build (필수)**
-도커 빌드 전, 최신 소스 코드를 JAR 파일로 변환합니다.
+### 🏠 A. 로컬 개발 환경 (Local Development)
+개발 편의성을 위해 **Brain(Java/DB)과 Hand(Crawler)를 하나의 도커 컴포즈로 통합**하여 실행
+
+**1. Run All Services 로컬 전용 통합 설정 파일을 사용**
 ```bash
-# Windows
-cd apps/catalog-service ; ./gradlew clean build -x test ; cd ../..
-
-# Mac/Linux
-cd apps/catalog-service && ./gradlew clean build -x test && cd ../..
+docker compose -f docker-compose-local-dev.yml up -d --build
 ```
 
-**2. Docker Compose Up**
+**2. 접속 확인**
+- Service URL: `http://localhost:8080` (API), `http://localhost` (Web)
+- Crawler Monitor: `http://localhost:4444` (Selenium Grid)
+- DB Admin: `http://localhost:8090` (Adminer)
+
+---
+
+### ☁️ B. 운영 서버 환경 (Production - Distributed)
+리소스 효율과 안정성을 위해 **Brain(Node 1)**과 **Hand(Node 2)**로 역할을 분리하여 배포
+
+**① Node 1: Brain Server (10.0.0.161)**
+- 역할: API Hosting, Database, Frontend
 ```bash
-docker compose up --build -d
+# Run Brain Services
+docker compose -f docker-compose.brain.yml up -d --build
 ```
 
-**3. 접속 확인**
-- 메인 서비스: `http://localhost` (포트 번호 불필요!)
-- DB 관리툴: `http://localhost:8090` (Adminer)
-- 크롤링 모니터링 (Selenium Grid): `http://localhost:7900` (NoVNC, pw: secret)
+**② Node 2: Hand Server (10.0.0.61)**
+- 역할: Selenium Browser, Python Collector
+```bash
+# Run Hand Services
+docker compose -f docker-compose.hand.yml up -d --build
+```
 
-### ② 수동 크롤링 트리거 (Manual Trigger)
-스케줄러 시간을 기다리지 않고 즉시 실행하려면:
+**③ Internal Communication Check**
+- 1호기(Brain)에서 2호기(Hand)로 크롤링 명령이 정상적으로 가는지 테스트합니다. (사설 IP 통신)
+```bash
+# Node 1 터미널에서 실행
+curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
+```
+---
+
+### 🕹️ 수동 크롤링 트리거 (API)
+운영 중인 서버에서 즉시 수집을 시작하고 싶다면 외부 API를 호출(관리자 권한 필요)
+- URL: https://ps-signal.com/api/v1/games/manual-crawl
 - Method: POST
-- URL: `http://localhost/api/v1/games/manual-crawl` (8080 아님, 80 포트 사용)
-- Header: `Authorization: Bearer {ADMIN_ACCESS_TOKEN}`
-
-### ③ Data Verification
-- Adminer 접속: `http://localhost:8090`
-- System: MySQL / Server: `mysql` / User: `user` / PW: `password`
-- `games` 및 `game_price_history` 등의 테이블 데이터 확인.
+- Header: Authorization: Bearer {ADMIN_ACCESS_TOKEN}
 
 ---
 
