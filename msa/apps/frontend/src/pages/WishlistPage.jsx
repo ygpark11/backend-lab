@@ -121,7 +121,11 @@ const WishlistPage = () => {
                                 <div key={realGameId} onClick={() => navigate(`/games/${realGameId}`)} className={`group bg-ps-card rounded-xl overflow-hidden hover:scale-105 transition-transform duration-200 shadow-lg cursor-pointer border relative
                                      ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-red-500/50'}`}>
                                     <div className="aspect-[3/4] overflow-hidden relative">
-                                        <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
+                                        <PSGameImage
+                                            src={game.imageUrl}
+                                            alt={game.name}
+                                            width={800}
+                                            className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
 
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>
 

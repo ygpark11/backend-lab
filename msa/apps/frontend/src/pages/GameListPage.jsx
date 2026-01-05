@@ -288,7 +288,11 @@ const GameListPage = () => {
                                     `}
                                 >
                                     <div className="aspect-[3/4] overflow-hidden relative">
-                                        <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <PSGameImage
+                                            src={game.imageUrl}
+                                            alt={game.name}
+                                            width={800}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                                         {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
                                         {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
