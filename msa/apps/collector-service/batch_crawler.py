@@ -175,7 +175,6 @@ def mine_english_title(driver):
 def send_discord_summary(total_scanned, deals_list):
     """크롤링 종료 후 요약 리포트를 디스코드로 전송"""
     if not DISCORD_WEBHOOK_URL:
-        # URL이 없으면 조용히 리턴 (로컬 테스트 등)
         return
 
     try:
@@ -184,27 +183,42 @@ def send_discord_summary(total_scanned, deals_list):
             logger.info("📭 No deals found today. Skipping Discord report.")
             return
 
-        # 할인율 높은 순 정렬
+        # 할인율 높은 순 정렬 및 상위 5개 추출
         sorted_deals = sorted(deals_list, key=lambda x: x['discountRate'], reverse=True)
         top_5 = sorted_deals[:5]
 
-        # 메시지 작성
+        # [헤더] 통계 요약
         message = f"## 📢 [PS-Tracker] 일일 수집 리포트\n"
         message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
-        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 완료 / `{total_deals}`개 할인 감지! 🔥\n\n"
+        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지! 🔥\n"
+        message += "━━━━━━━━━━━━━━━━━━"
 
+        # [메인] Top 5 골든 딜 상세 리스팅
         message += "**🏆 오늘의 Top 5 할인**\n"
-        for game in top_5:
+        for i, game in enumerate(top_5, 1):
             sale_price = "{:,}".format(game['currentPrice'])
-            message += f"- **[{game['discountRate']}%]** {game['title']} (~{game['saleEndDate'] or '상시'})\n"
-            message += f"  👉 `₩{sale_price}`\n"
+            plat_list = game.get('platforms', [])
+            plat_str = f" | `{'/'.join(plat_list)}`" if plat_list else ""
 
+            # 한 게임씩 블록화하여 출력
+            message += f"{i}️⃣ **[{game['discountRate']}%] {game['title']}**\n"
+            message += f"　 💰 **₩{sale_price}**{plat_str}\n"
+            message += f"　 ⏳ ~{game['saleEndDate'] or '상시 종료'}\n"
+
+            # 가독성을 위한 구분선 추가 (마지막 항목 제외)
+            if i < len(top_5):
+                message += "───\n"
+
+        # [푸터] 하단 정보 및 링크
+        message += "━━━━━━━━━━━━━━━━━━\n"
         if total_deals > 5:
-            message += f"\n...외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
-            message += "\n[🔗 사이트 바로가기](https://ps-signal.com)"
+            message += f"외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
 
+        message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
+
+        # 디스코드 전송
         requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
-        logger.info("🔔 Discord Summary Report sent successfully!")
+        logger.info("🔔 Polished Discord Summary Report sent!")
 
     except Exception as e:
         logger.error(f"❌ Failed to send Discord summary: {e}")
