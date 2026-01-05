@@ -38,6 +38,8 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - CRAWLER_URL=http://10.0.0.61:5000/run
+    ports:
+      - "8080:8080"
     depends_on:
       - mysql
     healthcheck:
