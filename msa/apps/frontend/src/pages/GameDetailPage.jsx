@@ -16,6 +16,7 @@ import {
     CreditCard, ExternalLink
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
+import PSGameImage from '../components/common/PSGameImage';
 
 const renderVerdictIcon = (verdict) => {
     // 공통 버튼 스타일 (유리 질감 + 둥근 테두리)
@@ -139,13 +140,10 @@ export default function GameDetailPage() {
         <div className="min-h-screen bg-ps-black text-white relative overflow-hidden">
             {/* Hero Backdrop */}
             <div className="absolute inset-0 z-0 pointer-events-none">
-                <div
-                    className="absolute inset-0 bg-cover bg-center transition-all duration-700"
-                    style={{
-                        backgroundImage: `url(${game.imageUrl})`,
-                        filter: 'blur(8px) brightness(0.7)',
-                        opacity: 0.6
-                    }}
+                <PSGameImage
+                    src={game.imageUrl}
+                    alt="Background"
+                    className="absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-60 blur-[8px] brightness-70"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-ps-black via-ps-black/80 to-transparent"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-ps-black/50 via-transparent to-transparent"></div>
@@ -163,7 +161,7 @@ export default function GameDetailPage() {
                         {/* 왼쪽: 이미지 & 전투력 */}
                         <div className="w-full md:w-1/3 space-y-6">
                             <div className={`rounded-xl overflow-hidden shadow-2xl border relative group bg-ps-card ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-white/10'}`}>
-                                <img src={game.imageUrl} alt={game.title} className="w-full object-cover aspect-[3/4]" />
+                                <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover aspect-[3/4]" />
                                 {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-xl pointer-events-none animate-pulse"></div>}
                                 {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-xs font-black px-2 py-1 rounded shadow-lg z-10">NEW</span>}
                                 {isClosingSoon && <span className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 마감임박</span>}
