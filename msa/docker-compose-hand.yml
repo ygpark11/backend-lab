@@ -4,12 +4,12 @@ services:
   selenium-chrome:
     image: selenium/standalone-chrome:latest
     container_name: ps-tracker-browser
-    shm_size: "512m" # 물리 램 1GB 한계로 유지 (필수)
+    shm_size: "512m"
     environment:
       - TZ=Asia/Seoul
     networks:
       - ps-network
-    restart: no
+    restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
       interval: 5s
@@ -37,7 +37,7 @@ services:
         condition: service_healthy
     networks:
       - ps-network
-    restart: no
+    restart: unless-stopped
     logging:
       driver: "json-file"
       options:

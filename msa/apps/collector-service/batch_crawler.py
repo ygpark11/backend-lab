@@ -227,8 +227,21 @@ def run_batch_crawler_logic():
         targets = fetch_update_targets()
         if targets:
             logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
-            for url in targets:
+
+            for i, url in enumerate(targets):
                 if not is_running: break
+
+                # 40개마다 브라우저를 껐다 켜서 누수된 메모리를 강제로 반환
+                if i > 0 and i % 40 == 0:
+                    logger.info(f"♻️ [Phase 1] Memory Cleanup at item {i}... Restarting Driver.")
+                    try:
+                        driver.quit()
+                    except: pass
+                    time.sleep(5)
+                    driver = get_driver()
+                    wait = WebDriverWait(driver, 20)
+
+                # 크롤링 수행
                 deal_info = crawl_detail_and_send(driver, wait, url)
 
                 if deal_info:
@@ -237,9 +250,13 @@ def run_batch_crawler_logic():
                         collected_deals.append(deal_info)
 
                 visited_urls.add(url)
-                # 똥컴: 렌더링(5초) + 대기(12.5초) = 17.5초
-                # 슈퍼컴: 렌더링(0.5초) + 대기(12.5초) = 13초
-                time.sleep(random.uniform(10.0, 15.0))
+
+                # 휴식 타임
+                if i > 0 and i % 10 == 0:
+                    logger.info("💤 Taking a short break (Anti-Ban)...")
+                    time.sleep(random.uniform(12.0, 15.0))
+                else:
+                    time.sleep(random.uniform(4.0, 7.0))
 
         # [Phase 2] 신규 탐색 (페이지네이션)
         if is_running:
@@ -253,10 +270,12 @@ def run_batch_crawler_logic():
             while current_page <= max_pages:
                 if not is_running: break
 
-                # [메모리 관리] 5페이지마다 드라이버 재시작
-                if current_page > 1 and current_page % 5 == 0:
+                # [메모리 관리] 2페이지마다 드라이버 재시작
+                if current_page > 1 and current_page % 2 == 0:
                     logger.info("♻️ [Maintenance] Restarting driver to prevent memory leak...")
-                    driver.quit()
+                    try:
+                        driver.quit()
+                    except: pass
                     time.sleep(10)
                     driver = get_driver()
                     wait = WebDriverWait(driver, 20)
@@ -318,7 +337,7 @@ def run_batch_crawler_logic():
                     time.sleep(random.uniform(4.0, 7.0))
 
                 current_page += 1
-                time.sleep(random.uniform(8.0, 12.0))
+                time.sleep(random.uniform(6.0, 9.0))
 
             logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
 
