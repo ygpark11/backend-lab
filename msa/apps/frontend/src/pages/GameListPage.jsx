@@ -291,7 +291,6 @@ const GameListPage = () => {
                                         <PSGameImage
                                             src={game.imageUrl}
                                             alt={game.name}
-                                            width={800}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
 
                                         {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}

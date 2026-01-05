@@ -124,7 +124,6 @@ const WishlistPage = () => {
                                         <PSGameImage
                                             src={game.imageUrl}
                                             alt={game.name}
-                                            width={800}
                                             className="w-full h-full object-cover group-hover:opacity-40 transition-opacity" />
 
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>

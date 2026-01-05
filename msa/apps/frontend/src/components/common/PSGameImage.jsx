@@ -8,21 +8,6 @@ const PSGameImage = ({ src, alt, className }) => {
         setHasError(false);
     }, [src]);
 
-    const getOptimizedUrl = (originalUrl, targetWidth) => {
-        if (!originalUrl) return "";
-        if (!targetWidth) return originalUrl; // width가 없으면 원본 반환
-
-        try {
-            // 이미 물음표(?)가 있으면 &로 연결, 없으면 ?로 연결
-            const separator = originalUrl.includes('?') ? '&' : '?';
-            return `${originalUrl}${separator}w=${targetWidth}&thumb=true`;
-        } catch (e) {
-            return originalUrl;
-        }
-    };
-
-    const finalSrc = width ? getOptimizedUrl(src, width) : src;
-
     // 1. 이미지 주소가 아예 없거나, 로딩 중 에러가 발생했을 때 보여줄 '기본 화면'
     if (!src || hasError) {
         return (
@@ -44,7 +29,7 @@ const PSGameImage = ({ src, alt, className }) => {
     // 2. 정상적인 이미지 태그
     return (
         <img
-            src={finalSrc}
+            src={src}
             alt={alt}
             className={className}
             onError={() => setHasError(true)} // 로딩 실패 시 에러 상태를 true로 변경
