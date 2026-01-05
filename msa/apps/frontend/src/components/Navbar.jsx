@@ -25,16 +25,23 @@ const Navbar = () => {
     useEffect(() => {
         fetchUnreadCount();
         fetchWishlistCount();
+    }, []);
 
-        // 외부 클릭 시 알림창 닫기 로직
+    useEffect(() => {
+        if (!isNotiOpen) return;
+
         function handleClickOutside(event) {
             if (notiRef.current && !notiRef.current.contains(event.target)) {
                 setIsNotiOpen(false);
             }
         }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isNotiOpen]);
 
     // ✅ API: 안 읽은 개수 조회 (client 사용)
     const fetchUnreadCount = async () => {
@@ -111,12 +118,17 @@ const Navbar = () => {
     // 로그아웃 핸들러
     const handleLogout = () => {
         toast((t) => (
-            <div className="flex flex-col gap-2 min-w-[250px]">
-                <div className="flex items-center gap-2 font-bold text-gray-800">
-                    <AlertTriangle className="w-5 h-5 text-red-500" />
-                    <span>로그아웃 하시겠습니까?</span>
+            <div className="flex flex-col gap-4 min-w-[260px] bg-[#1a1a1a] text-white">
+                <div className="flex items-center gap-3">
+                    <div className="bg-red-500/10 p-2 rounded-lg">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="font-bold text-sm text-gray-100">로그아웃 하시겠습니까?</span>
+                        <span className="text-[11px] text-gray-500">로그인 세션이 종료됩니다.</span>
+                    </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">로그인 화면으로 이동합니다.</p>
+
                 <div className="flex gap-2">
                     <button
                         onClick={() => {
@@ -125,19 +137,29 @@ const Navbar = () => {
                             localStorage.removeItem('refreshToken');
                             window.location.href = '/';
                         }}
-                        className="flex-1 bg-red-500 text-white py-2 rounded-lg text-sm font-bold hover:bg-red-600 transition"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-lg shadow-red-900/20"
                     >
                         네, 로그아웃
                     </button>
                     <button
                         onClick={() => toast.dismiss(t.id)}
-                        className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm font-bold hover:bg-gray-300 transition"
+                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 py-2 rounded-lg text-xs font-bold transition-colors border border-white/10"
                     >
                         취소
                     </button>
                 </div>
             </div>
-        ), { duration: 5000, position: 'top-center' });
+        ), {
+            duration: 5000,
+            position: 'top-center',
+            style: {
+                background: '#1a1a1a',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '16px',
+                padding: '16px',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+            }
+        });
     };
 
     return (
