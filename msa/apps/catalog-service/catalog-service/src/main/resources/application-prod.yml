@@ -16,9 +16,12 @@ spring:
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+server:
+  forward-headers-strategy: native
+
 crawler:
   url: http://collector-service:5000/run
 
 app:
   auth:
-    redirect-uri: http://ps-signal.com
+    redirect-uri: https://ps-signal.com
