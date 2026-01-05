@@ -7,10 +7,6 @@ services:
     shm_size: "512m" # 물리 램 1GB 한계로 유지 (필수)
     environment:
       - TZ=Asia/Seoul
-    # deploy: 👈 [삭제] CPU 제한을 풀어서 서버 성능을 풀로 쓰게 함
-    #   resources:
-    #     limits:
-    #       cpus: '0.5'
     networks:
       - ps-network
     restart: no
@@ -29,6 +25,8 @@ services:
   collector-service:
     build: ./apps/collector-service
     container_name: ps-tracker-collector
+    ports:
+      - "5000:5000"
     environment:
       - TZ=Asia/Seoul
       - API_BASE_URL=http://10.0.0.161:8080

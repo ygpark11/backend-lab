@@ -14,7 +14,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3306:3306" # OCI 방화벽이 외부 접속은 막고 내부(10.0.x.x)만 허용함
+      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
     networks:
@@ -37,7 +37,7 @@ services:
       - MYSQL_USER=${MYSQL_USER}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE}
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      - CRAWLER_URL=http://10.0.0.61:5000/run
     depends_on:
       - mysql
     healthcheck:
@@ -82,7 +82,7 @@ services:
     image: adminer
     container_name: ps-tracker-adminer
     ports:
-      - "127.0.0.1:8090:8080" #
+      - "127.0.0.1:8090:8080"
     networks:
       - ps-network
     restart: unless-stopped
