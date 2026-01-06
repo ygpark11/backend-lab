@@ -22,4 +22,5 @@ crawler:
 
 app:
   auth:
+    cookie-secure: false
     redirect-uri: http://localhost

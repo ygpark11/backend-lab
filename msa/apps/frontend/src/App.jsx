@@ -1,85 +1,79 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // useState 추가
 import { requestFcmToken, onForegroundMessage } from './utils/fcm';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import client from './api/client'; // client import 필요
+import PSLoader from './components/PSLoader'; // 로딩바 추가
+
 import LoginPage from './pages/LoginPage';
 import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
 import GameDetailPage from './pages/GameDetailPage';
 
-// 로그인했는지 검사하는 문지기 컴포넌트
-const PrivateRoute = ({ children }) => {
-    const token = localStorage.getItem('accessToken');
-    // 토큰이 없으면 로그인 페이지로 쫓아냄
-    return token ? children : <Navigate to="/" />;
-};
-
 function App() {
+    // 1. 인증 상태 관리 (null: 확인 중, true: 로그인됨, false: 안됨)
+    const [isAuthenticated, setIsAuthenticated] = useState(null);
 
     useEffect(() => {
-        // 1. 로그인된 유저만 토큰을 보내야 함
-        // (localStorage에 accessToken이 있는지 확인)
-        const token = localStorage.getItem('accessToken');
+        const checkAuth = async () => {
+            try {
+                await client.get('/api/v1/members/me');
+                setIsAuthenticated(true);
 
-        if (token) {
-            // 권한 요청하고 토큰 쏘기
-            requestFcmToken();
+                // 로그인 성공 시 FCM 설정
+                requestFcmToken();
+                onForegroundMessage();
+            } catch (error) {
+                // 401 에러 등이 나면 로그인 안 된 것
+                setIsAuthenticated(false);
+            }
+        };
 
-            // 앱 켜져 있을 때 알림 받기 대기
-            onForegroundMessage();
-        }
-    }, []); // 빈 배열: 앱 처음 켜질 때 한 번만 실행
+        checkAuth();
+    }, []);
+
+    // 2. 인증 체크 중이면 로딩 화면 보여주기
+    if (isAuthenticated === null) {
+        return (
+            <div className="min-h-screen bg-ps-black text-white flex items-center justify-center">
+                <PSLoader />
+            </div>
+        );
+    }
 
     return (
         <BrowserRouter>
             <Toaster
                 position="top-center"
                 toastOptions={{
-                    style: {
-                        background: '#333',
-                        color: '#fff',
-                    },
-                    success: {
-                        iconTheme: {
-                            primary: '#0070D1', // PS Blue
-                            secondary: '#fff',
-                        },
-                    },
+                    style: { background: '#333', color: '#fff' },
+                    success: { iconTheme: { primary: '#0070D1', secondary: '#fff' } },
                 }}
             />
 
             <Routes>
-                {/* 로그인 페이지 */}
-                <Route path="/" element={<LoginPage />} />
+                {/* 로그인 페이지: 이미 로그인된 상태면 /games로 튕겨내기
+                   (replace: 뒤로가기 방지)
+                */}
+                <Route
+                    path="/"
+                    element={isAuthenticated ? <Navigate to="/games" replace /> : <LoginPage setIsAuthenticated={setIsAuthenticated} />}
+                />
 
-                {/* 게임 목록 페이지 (보안 적용: 로그인한 사람만 접근 가능) */}
+                {/* 나머지 페이지: 로그인 안 됐으면 / 로 튕겨내기 */}
                 <Route
                     path="/games"
-                    element={
-                        <PrivateRoute>
-                            <GameListPage />
-                        </PrivateRoute>
-                    }
+                    element={isAuthenticated ? <GameListPage /> : <Navigate to="/" replace />}
                 />
 
-                {/* 게임 상세 페이지 */}
                 <Route
                     path="/games/:id"
-                    element={
-                        <PrivateRoute>
-                            <GameDetailPage />
-                        </PrivateRoute>
-                    }
+                    element={isAuthenticated ? <GameDetailPage /> : <Navigate to="/" replace />}
                 />
 
-                {/* 내 찜 목록 */}
                 <Route
                     path="/wishlist"
-                    element={
-                        <PrivateRoute>
-                            <WishlistPage />
-                        </PrivateRoute>
-                    }
+                    element={isAuthenticated ? <WishlistPage /> : <Navigate to="/" replace />}
                 />
             </Routes>
         </BrowserRouter>

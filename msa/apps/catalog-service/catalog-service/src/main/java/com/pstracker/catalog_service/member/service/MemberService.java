@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.member.service;
 
 import com.pstracker.catalog_service.global.security.JwtToken;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
+import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.dto.MemberLoginDto;
 import com.pstracker.catalog_service.member.dto.MemberSignupDto;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
@@ -57,5 +58,13 @@ public class MemberService {
 
         log.info("🔑 Login Success: {}", request.getEmail());
         return jwtToken;
+    }
+
+    /**
+     * 회원 조회 (ID)
+     */
+    public Member findById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
     }
 }

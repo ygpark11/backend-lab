@@ -8,15 +8,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
 
@@ -27,6 +30,15 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     @Value("${app.auth.redirect-uri}")
     private String redirectUri;
+
+    @Value("${jwt.expiration.access}")
+    private long accessTokenValidityTime;
+
+    @Value("${jwt.expiration.refresh}")
+    private long refreshTokenValidityTime;
+
+    @Value("${app.auth.cookie-secure}")
+    private boolean cookieSecure;
 
     private final JwtTokenProvider jwtTokenProvider;
     private final MemberRepository memberRepository;
@@ -59,12 +71,32 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         // 5. JWT 토큰 발급
         JwtToken jwtToken = jwtTokenProvider.generateToken(newAuth);
 
-        // 6. 리다이렉트 (토큰을 가지고 프론트엔드/메인으로 이동)
-        String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
-                .queryParam("accessToken", jwtToken.getAccessToken())
-                .queryParam("refreshToken", jwtToken.getRefreshToken())
-                .build().toUriString();
+        // 6. HttpOnly 쿠키 생성 (AccessToken)
+        // 밀리초(ms) 단위를 초(s) 단위로 변환 (/ 1000)
+        String encodedAccess = URLEncoder.encode(jwtToken.getAccessToken(), StandardCharsets.UTF_8);
+        ResponseCookie accessTokenCookie = ResponseCookie.from(AuthConstants.ACCESS_TOKEN, encodedAccess)
+                .path("/")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .maxAge(accessTokenValidityTime / 1000) // JWT 만료시간과 동일하게 설정
+                .build();
 
-        getRedirectStrategy().sendRedirect(request, response, targetUrl);
+        // 7. HttpOnly 쿠키 생성 (RefreshToken)
+        String encodedRefresh = URLEncoder.encode(jwtToken.getRefreshToken(), StandardCharsets.UTF_8);
+        ResponseCookie refreshTokenCookie = ResponseCookie.from(AuthConstants.REFRESH_TOKEN, encodedRefresh)
+                .path("/")
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .sameSite("Lax")
+                .maxAge(refreshTokenValidityTime / 1000) // JWT 만료시간과 동일하게 설정
+                .build();
+
+        // 8. 응답 헤더에 쿠키 추가
+        response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
+
+        // 9. 리다이렉트
+        getRedirectStrategy().sendRedirect(request, response, redirectUri);
     }
 }

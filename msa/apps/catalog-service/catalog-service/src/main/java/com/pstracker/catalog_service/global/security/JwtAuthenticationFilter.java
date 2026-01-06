@@ -2,17 +2,22 @@ package com.pstracker.catalog_service.global.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -34,11 +39,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    // Request Header에서 토큰 정보 추출
+    // Cookie에서 토큰을 추출하는 메서드
     private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-            return bearerToken.substring(7); // "Bearer " 이후의 문자열만 반환
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            return Arrays.stream(cookies)
+                    // 상수 사용
+                    .filter(cookie -> AuthConstants.ACCESS_TOKEN.equals(cookie.getName()))
+                    .map(cookie -> {
+                        try {
+                            return URLDecoder.decode(cookie.getValue(), StandardCharsets.UTF_8);
+                        } catch (Exception e) {
+                            log.error("Cookie decoding failed", e);
+                            return cookie.getValue();
+                        }
+                    })
+                    .findFirst()
+                    .orElse(null);
         }
         return null;
     }

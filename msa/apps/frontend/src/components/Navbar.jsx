@@ -37,24 +37,16 @@ const Navbar = () => {
         }
 
         document.addEventListener('mousedown', handleClickOutside);
-
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isNotiOpen]);
 
     // ✅ API: 안 읽은 개수 조회 (client 사용)
     const fetchUnreadCount = async () => {
         try {
-            // 토큰 확인은 client.js 인터셉터가 하겠지만,
-            // 로그인이 안 된 상태에서 불필요한 호출을 막기 위해 체크
-            if (!localStorage.getItem('accessToken')) return;
-
-            // client.get이 알아서 Base URL 붙이고, 헤더에 토큰 넣어서 보냄
             const response = await client.get('/api/notifications/unread-count');
             setUnreadCount(response.data);
         } catch (err) {
-            // 401(비로그인) 에러 등은 조용히 무시하거나 필요 시 처리
+            // 비로그인 상태면 client.js의 401 처리가 작동하므로 여기선 로깅
             console.error("알림 카운트 조회 실패", err);
         }
     };
@@ -62,13 +54,8 @@ const Navbar = () => {
     // ✅ API: 찜 개수 조회
     const fetchWishlistCount = async () => {
         try {
-            // 토큰이 없으면(비로그인) 호출 안 함
-            if (!localStorage.getItem('accessToken')) return;
-
             // 찜 목록 가져오기
             const response = await client.get('/api/v1/wishlists');
-
-            // 데이터가 배열(리스트)이면 그 개수를 셈
             if (Array.isArray(response.data)) {
                 setTotalWishlistCount(response.data.length);
             }
@@ -118,32 +105,39 @@ const Navbar = () => {
     // 로그아웃 핸들러
     const handleLogout = () => {
         toast((t) => (
-            <div className="flex flex-col gap-4 min-w-[260px] bg-[#1a1a1a] text-white">
+            <div className="flex flex-col gap-4 min-w-[280px] bg-[#1a1a1a] text-white p-1">
                 <div className="flex items-center gap-3">
                     <div className="bg-red-500/10 p-2 rounded-lg">
                         <AlertTriangle className="w-5 h-5 text-red-500" />
                     </div>
                     <div className="flex flex-col">
                         <span className="font-bold text-sm text-gray-100">로그아웃 하시겠습니까?</span>
-                        <span className="text-[11px] text-gray-500">로그인 세션이 종료됩니다.</span>
+                        <span className="text-[11px] text-gray-500">안전하게 세션을 종료합니다.</span>
                     </div>
                 </div>
 
                 <div className="flex gap-2">
                     <button
-                        onClick={() => {
+                        onClick={async () => {
                             toast.dismiss(t.id);
-                            localStorage.removeItem('accessToken');
-                            localStorage.removeItem('refreshToken');
-                            window.location.href = '/';
+                            try {
+                                // 💡 서버에 로그아웃을 알려 쿠키를 만료시킵니다.
+                                await client.post('/api/v1/auth/logout');
+                            } catch (err) {
+                                console.error("로그아웃 API 호출 실패(무시하고 진행)", err);
+                            } finally {
+                                // 💡 로컬의 모든 흔적을 지우고 무조건 메인으로 리다이렉트
+                                localStorage.clear();
+                                window.location.href = '/';
+                            }
                         }}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-lg shadow-red-900/20"
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-lg shadow-red-900/20"
                     >
                         네, 로그아웃
                     </button>
                     <button
                         onClick={() => toast.dismiss(t.id)}
-                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 py-2 rounded-lg text-xs font-bold transition-colors border border-white/10"
+                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-400 py-2.5 rounded-xl text-xs font-bold transition-colors border border-white/10"
                     >
                         취소
                     </button>
@@ -152,12 +146,13 @@ const Navbar = () => {
         ), {
             duration: 5000,
             position: 'top-center',
+            // 다크모드 시인성 확보를 위한 스타일
             style: {
                 background: '#1a1a1a',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '20px',
                 padding: '16px',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)'
             }
         });
     };

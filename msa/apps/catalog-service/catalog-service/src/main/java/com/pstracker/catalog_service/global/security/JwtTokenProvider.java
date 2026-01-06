@@ -68,6 +68,9 @@ public class JwtTokenProvider {
 
         // Refresh Token 생성
         String refreshToken = Jwts.builder()
+                .subject(authentication.getName())
+                .claim(AUTHORITIES_KEY, authorities)
+                .claim(MEMBER_ID_KEY, memberId)
                 .expiration(new Date(now + refreshTokenValidityTime))
                 .signWith(key)
                 .compact();

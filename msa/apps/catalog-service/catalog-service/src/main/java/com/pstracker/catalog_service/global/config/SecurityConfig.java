@@ -1,8 +1,6 @@
 package com.pstracker.catalog_service.global.config;
 
-import com.pstracker.catalog_service.global.security.JwtAuthenticationFilter;
-import com.pstracker.catalog_service.global.security.JwtTokenProvider;
-import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccessHandler;
+import com.pstracker.catalog_service.global.security.*;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -30,6 +28,9 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
 
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -52,13 +53,19 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
 
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 에러 처리
+                        .accessDeniedHandler(customAccessDeniedHandler)        // 403 에러 처리
+                )
+
                 // 4. 요청별 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",
-                                "/api/v1/members/login",
                                 "/api/v1/members/signup",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/reissue",
                                 "/favicon.ico",
                                 "/error",
                                 "/login/**",

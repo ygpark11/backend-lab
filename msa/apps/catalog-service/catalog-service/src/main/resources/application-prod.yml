@@ -24,4 +24,5 @@ crawler:
 
 app:
   auth:
+    cookie-secure: true
     redirect-uri: https://ps-signal.com

@@ -1,12 +1,14 @@
 package com.pstracker.catalog_service.member.controller;
 
-import com.pstracker.catalog_service.global.security.JwtToken;
-import com.pstracker.catalog_service.member.dto.MemberLoginDto;
+import com.pstracker.catalog_service.global.security.MemberPrincipal;
+import com.pstracker.catalog_service.member.domain.Member;
+import com.pstracker.catalog_service.member.dto.MemberInfoResponse;
 import com.pstracker.catalog_service.member.dto.MemberSignupDto;
 import com.pstracker.catalog_service.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,18 +26,21 @@ public class MemberController {
         return ResponseEntity.ok(memberService.signup(request));
     }
 
-    // 로그인
-    @PostMapping("/login")
-    public ResponseEntity<JwtToken> login(@RequestBody MemberLoginDto request) {
-        JwtToken token = memberService.login(request);
-        return ResponseEntity.ok(token);
-    }
-
-    // [테스트용] 내 정보 확인 (토큰 필요)
+    /**
+     * [실무용] 내 정보 상세 조회 API
+     * 역할: 로그인 체크 + 사용자 정보(닉네임, 권한 등) 제공
+     */
     @GetMapping("/me")
-    public ResponseEntity<String> getMyInfo() {
-        // SecurityContext에 저장된 ID 꺼내기
-        String currentEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        return ResponseEntity.ok("Hello! Your Email is: " + currentEmail);
+    public ResponseEntity<MemberInfoResponse> getMyInfo(@AuthenticationPrincipal MemberPrincipal principal) {
+        // 1. 시큐리티 컨텍스트에 인증 정보가 없는 경우 (혹은 익명 사용자)
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // 2. MemberPrincipal에서 실제 Member 엔티티를 꺼냄
+        Member member = memberService.findById(principal.getMemberId());
+
+        // 3. DTO로 변환하여 반환 (JSON)
+        return ResponseEntity.ok(MemberInfoResponse.from(member));
     }
 }
