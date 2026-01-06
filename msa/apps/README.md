@@ -99,13 +99,8 @@ Spring Boot 3 + QueryDSL 5.0 기반의 Type-Safe 동적 쿼리 엔진 구축.
 
 ### ⑧ Member & Security (The Gatekeeper)
 Spring Security 6.1+ (Lambda DSL)와 JWT를 활용한 Stateless 인증 시스템 구축.
-* **Stateless Architecture:** 세션을 사용하지 않고, **JWT(Access + Refresh Token)** 기반의 토큰 인증을 구현하여 MSA 환경에서의 확장성 확보.
-* **Standard Auth Flow:** `UserDetailsService`를 정석으로 구현하여 Spring Security의 표준 인증 체계(Provider -> Manager -> Filter)를 준수.
-* **Secure Password:** `BCryptPasswordEncoder`를 사용하여 비밀번호를 안전하게 단방향 암호화하여 저장.
-* **Fine-Grained Access Control:**
-    * `Public`: 게임 조회, 검색, 회원가입, 로그인
-    * `User`: 내 정보 조회, (추후) 찜하기
-    * `Admin`: 수동 크롤링 트리거(`manual-crawl`) 등 관리자 기능
+* **HttpOnly Cookie Architecture:** JWT를 브라우저의 로컬 스토리지(LocalStorage)가 아닌 HttpOnly 쿠키에 저장하여 XSS(교차 사이트 스크립팅) 공격을 원천 차단.
+* **Silent Refresh:** 프론트엔드에서 토큰 만료를 인지하지 못해도, API 호출 시 401 에러가 발생하면 인터셉터가 자동으로 쿠키를 통해 토큰을 재발급받는 투명한(Silent) 인증 갱신 구현.
 
 ### ⑨ Wishlist & Data Normalization (Extreme Performance & Integrity)
 단순한 데이터 저장과 N:M 매핑을 넘어, 성능과 정규화의 균형을 맞춘 **Advanced Data Modeling** 적용.
@@ -302,6 +297,22 @@ sequenceDiagram
 
 <br>
 
+### Q. JWT를 왜 헤더(LocalStorage)가 아닌 쿠키(HttpOnly)에 담았는가?
+초기에는 구현이 쉬운 Header 방식을 사용했으나, 보안성을 최우선으로 고려하여 **HttpOnly Cookie** 방식으로 전면 전환했습니다.
+
+| 비교 항목 | Authorization Header (LocalStorage) | HttpOnly Cookie |
+| :--- | :--- | :--- |
+| **채택 여부** | ❌ (Legacy) | **✅ 채택 (Current)** |
+| **접근 주체** | Javascript (`localStorage.getItem`) | **Server Only** (브라우저가 자동 전송) |
+| **XSS 취약점** | **매우 취약** (해커가 스크립트로 탈취 가능) | **안전** (JS 접근 원천 차단) |
+| **구현 난이도** | 하 (직관적) | **상** (CORS, SameSite, Race Condition 처리 필요) |
+
+> **💡 결정 이유**
+> 1. **XSS 방어:** 게시판 등에서 악성 스크립트가 실행되더라도, 해커가 토큰을 탈취할 수 없도록 원천 봉쇄.
+> 2. **보안 표준 준수:** 금융/공공 기관 수준의 보안 가이드라인을 준수하기 위해 다소 복잡하더라도 안전한 길을 선택.
+
+---
+
 ## 5. 수집 정책: 4원칙 (The Crawling Constitution)
 
 시스템의 안정성과 지속 가능성을 위해 아래 3가지 원칙을 준수합니다.
@@ -412,86 +423,52 @@ metaScoreGoe(condition.getMinMetaScore())
 ```mermaid
 sequenceDiagram
     autonumber
-
-    %% 1. 서버 그룹핑 (물리적 분리 시각화)
-    box "Node 1: Brain Server (Java/DB)" #e1f5fe
-        participant Scheduler as ⏰ Scheduler
-        participant Service as 🧠 Catalog Service
-        participant DB as 💾 MySQL
-    end
-
-    box "Node 2: Hand Server (Python/Chrome)" #fff3e0
-        participant Crawler as 🐍 Collector
-        participant Chrome as 🌐 Selenium Grid
-    end
-
-    %% 2. 외부 세상 (External API)
-    box "External World (SaaS)" #f5f5f5
-        participant Store as 🛒 PS Store
-        participant IGDB as 👾 IGDB API
-        participant AI as ✨ Gemini AI
-        participant FCM as 🔥 Firebase
-        participant Discord as 🔔 Discord
-    end
-
-    Note over Scheduler, Crawler: 1. Trigger Phase (Private Network)
-    Scheduler->>Crawler: POST /run (Brain -> Hand)
-    activate Crawler
     
-    Note over Crawler, Store: 2. Crawling Phase
-    loop Pagination (Max 15)
-        Crawler->>Chrome: Connect & Request Page
-        Chrome->>Store: GET /category/...
-        Store-->>Chrome: Response HTML
-        Crawler->>Chrome: get_attribute("textContent")
-        Note right of Crawler: Precision Logic
+    actor User
+    participant React as ⚛️ Frontend (App.jsx)
+    participant Client as 📡 Axios Interceptor
+    participant Server as ☕ Backend (Auth)
+    participant DB as 💾 MySQL
 
-        loop Per Game (Data Pipeline)
-            %% Hand -> Brain 전송
-            Crawler->>Service: POST /collect (Info & Price)
-            activate Service
-            
-            Note over Service, DB: 3. Logic & Mash-up Phase
-            
-            %% [Level 23] IGDB 연동
-            Service->>IGDB: Search Game (Meta Score)
-            IGDB-->>Service: Ratings
-            
-            %% [Level 36] AI 연동 (Description)
-            opt Description Missing (Quota Limit)
-                Service->>AI: Generate Summary
-                AI-->>Service: KR Description
-            end
-            
-            %% DB 비교 및 저장
-            Service->>DB: Fetch Latest History
-            DB-->>Service: Return Entity
-            Service->>Service: isSameCondition() Check
-            
-            alt Condition Changed (Update)
-                Service->>DB: INSERT New History
-                
-                %% [Level 35] 알림 발송 (다중 채널)
-                opt Price Drop Detected
-                    par Async Notification
-                        Service--)Discord: Send Webhook
-                        Service--)FCM: Send Push (Web/Mobile)
-                    end
-                end
-            else No Change (Skip)
-                Service->>Service: Skip INSERT
-            end
-            deactivate Service
-        end
+    Note over User, DB: 1. 초기 로그인 (Login Phase)
+    User->>React: 구글 로그인 클릭
+    React->>Server: GET /oauth2/authorization/google
+    Server->>Server: OAuth2 인증 & MemberPrincipal 생성
+    Server->>Server: JWT 생성 (Access/Refresh)
+    Server-->>React: Response + Set-Cookie (HttpOnly)
+    Note right of React: 브라우저 쿠키 저장소에<br/>토큰 자동 저장 (JS 접근 불가)
+
+    Note over User, DB: 2. 토큰 만료 및 재발급 (Silent Refresh)
+    User->>React: 페이지 새로고침 / 이동
+    React->>Client: API 요청 (ex: /api/v1/members/me)
+    Client->>Server: Request (Cookie 자동 전송)
+    
+    alt Access Token Valid
+        Server-->>Client: 200 OK (Data)
+        Client-->>React: 화면 렌더링
+    else Access Token Expired (401)
+        Server-->>Client: 401 Unauthorized
         
-        opt Every 5 Pages
-            Crawler->>Chrome: Restart Driver
+        Note right of Client: 🚨 401 감지! Request Queue 가동
+        
+        par Race Condition 방어
+            Client->>Client: isRefreshing = true
+            Client->>Client: 나머지 요청들은 Queue에 대기
+        end
+
+        Client->>Server: POST /reissue (Refresh Token 쿠키 전송)
+        
+        alt Refresh Token Valid
+            Server->>Server: 새 Access Token 발급
+            Server-->>Client: 200 OK + Set-Cookie (New Access Token)
+            Note right of Client: 재발급 성공! Queue 해제
+            Client->>Server: 원래 요청 재시도 (Retry)
+            Server-->>Client: 200 OK
+        else Refresh Token Invalid
+            Server-->>Client: 401 Unauthorized
+            Client->>React: 로그아웃 처리 (Redirect to Login)
         end
     end
-    
-    Note over Crawler, Discord: 4. Reporting Phase
-    Crawler--)Discord: Send Daily Summary
-    deactivate Crawler
 ```
 
 ### 🛠️ 구현 체크리스트 (Step-by-Step)
