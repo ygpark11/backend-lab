@@ -1,54 +1,72 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useNavigate, useParams} from 'react-router-dom';
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
 import Navbar from '../components/Navbar';
 import RelatedGameCard from '../components/RelatedGameCard';
-import { getGenreBadgeStyle } from '../utils/uiUtils';
-import { calculateCombatPower, getTrafficLight } from '../utils/priceUtils';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import {getGenreBadgeStyle} from '../utils/uiUtils';
+import {calculateCombatPower, getTrafficLight} from '../utils/priceUtils';
+import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
-    Gamepad2, AlertCircle, CalendarDays, Youtube, Search,
-    Timer, CheckCircle, XCircle, Info, HelpCircle, TrendingUp,
-    Coffee, Flame, Sparkles, ArrowLeft, Share2, Link, Check, Heart,
-    Circle, Triangle, Square, X,
-    CreditCard, ExternalLink
+    AlertCircle,
+    ArrowLeft,
+    CalendarDays,
+    Check,
+    Circle,
+    Coffee,
+    CreditCard,
+    ExternalLink,
+    Flame,
+    Gamepad2,
+    Heart,
+    HelpCircle,
+    Link,
+    Search,
+    Sparkles,
+    Square,
+    Timer,
+    TrendingUp,
+    Triangle,
+    Trophy,
+    Users,
+    X,
+    Youtube
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 
 const renderVerdictIcon = (verdict) => {
-    // 공통 버튼 스타일 (유리 질감 + 둥근 테두리)
-    const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg backdrop-blur-md transition-all";
+    // 공통 버튼 스타일 (유리 질감 + 둥근 테두리 + 흰색 테마)
+    const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border-2 shadow-lg backdrop-blur-md transition-all border-white/40 bg-white/10";
 
     switch (verdict) {
-        case 'BUY_NOW': // 강력 추천 -> 초록 동그라미 버튼
+        case 'BUY_NOW': // 강력 추천 -> 흰색 동그라미
             return (
-                <div className={`${buttonBase} border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.4)]`}>
-                    <Circle className="w-8 h-8 text-green-400 stroke-[3px]" />
+                <div className={`${buttonBase} shadow-[0_0_15px_rgba(255,255,255,0.3)]`}>
+                    <Circle className="w-8 h-8 text-white fill-white/20 stroke-[3px]" />
                 </div>
             );
-        case 'GOOD_OFFER': // 나쁘지 않음 -> 노란 세모 버튼
+        case 'GOOD_OFFER': // 나쁘지 않음 -> 흰색 세모
             return (
-                <div className={`${buttonBase} border-yellow-400/50 bg-yellow-400/10 shadow-[0_0_15px_rgba(250,204,21,0.4)]`}>
-                    <Triangle className="w-8 h-8 text-yellow-400 stroke-[3px]" />
+                <div className={`${buttonBase} shadow-[0_0_15px_rgba(255,255,255,0.3)]`}>
+                    <Triangle className="w-8 h-8 text-white fill-white/20 stroke-[3px]" />
                 </div>
             );
-        case 'WAIT': // 비쌈 -> 빨간 엑스 버튼
+        case 'WAIT': // 비쌈 -> 흰색 엑스
             return (
-                <div className={`${buttonBase} border-red-500/50 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.4)]`}>
-                    <X className="w-8 h-8 text-red-500 stroke-[4px]" />
+                <div className={`${buttonBase} shadow-[0_0_15px_rgba(255,255,255,0.3)]`}>
+                    <X className="w-8 h-8 text-white stroke-[4px]" />
                 </div>
             );
-        case 'TRACKING': // 수집중 -> 파란 네모 버튼
+        case 'TRACKING': // 수집중 -> 흰색 네모
             return (
-                <div className={`${buttonBase} border-blue-500/50 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.4)]`}>
-                    <Square className="w-8 h-8 text-blue-400 stroke-[3px]" />
+                <div className={`${buttonBase} shadow-[0_0_15px_rgba(255,255,255,0.3)]`}>
+                    <Square className="w-8 h-8 text-white fill-white/20 stroke-[3px]" />
                 </div>
             );
         default:
-            return <HelpCircle className="w-10 h-10 text-gray-500" />;
+            return <HelpCircle className="w-10 h-10 text-white/50" />;
     }
 };
 
@@ -216,23 +234,31 @@ export default function GameDetailPage() {
                             <h1 className="text-4xl md:text-5xl font-black mb-2 leading-tight text-white drop-shadow-lg">{game.title}</h1>
                             <p className="text-gray-300 text-sm mb-6 font-medium">{game.publisher}</p>
 
-                            <div className={`p-6 rounded-xl border mb-8 backdrop-blur-md bg-opacity-90 shadow-lg ${traffic.color} bg-opacity-10 border-opacity-30`}>
+                            <div className={`p-6 rounded-xl border mb-6 backdrop-blur-sm shadow-xl transition-colors duration-300 ${traffic.color} bg-opacity-90 border-white/20`}>
                                 <div className="flex items-start gap-4">
-                                    <div className="shrink-0 p-2 bg-white/10 rounded-full">
+                                    <div className="shrink-0 p-3 bg-white/20 rounded-full backdrop-blur-md shadow-inner">
                                         {renderVerdictIcon(game.priceVerdict)}
                                     </div>
-                                    <div>
-                                        <h3 className={`text-xl font-black mb-1 ${traffic.text.includes('기회') ? 'text-green-400' : traffic.text.includes('잠깐') ? 'text-red-400' : 'text-yellow-400'}`}>
+
+                                    <div className="flex-1">
+                                        {/* 제목*/}
+                                        <h3 className="text-xl font-black mb-1 text-white drop-shadow-md">
                                             {traffic.text}
                                         </h3>
-                                        <p className="text-sm text-gray-300 font-medium leading-relaxed">
+
+                                        {/* 설명*/}
+                                        <p className="text-sm text-white/95 font-medium leading-relaxed">
                                             {traffic.desc}
                                         </p>
+
+                                        {/* 역대 최저가 정보 */}
                                         {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
-                                            <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-2 text-sm text-gray-400">
-                                                <TrendingUp className="w-4 h-4" />
-                                                <span>역대 최저가:</span>
-                                                <span className="font-bold text-white underline">{game.lowestPrice.toLocaleString()}원</span>
+                                            <div className="mt-4 pt-3 border-t border-white/20 flex items-center gap-2 text-sm text-white">
+                                                <TrendingUp className="w-4 h-4 text-white" />
+                                                <span className="font-bold opacity-90">역대 최저가:</span>
+                                                <span className="font-black bg-white/20 px-2 py-0.5 rounded text-base shadow-sm border border-white/10">
+                                                    {game.lowestPrice.toLocaleString()}원
+                                                </span>
                                             </div>
                                         )}
                                     </div>
@@ -314,7 +340,7 @@ export default function GameDetailPage() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-16">
-                        <div className="lg:col-span-2 space-y-8">
+                        <div className="lg:col-span-2 space-y-8 min-w-0">
                             <div className="bg-ps-card/80 backdrop-blur-md p-6 rounded-xl border border-white/5 shadow-xl">
                                 <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 가격 변동 그래프</h3>
                                 <PriceChart historyData={game.priceHistory} />
@@ -353,8 +379,29 @@ export default function GameDetailPage() {
                         <div className="space-y-6">
                             <div className="bg-ps-card/80 backdrop-blur-md p-6 rounded-xl border border-white/5 shadow-xl">
                                 <h3 className="text-lg font-bold text-white mb-6">Scores</h3>
-                                {game.metaScore > 0 && <div className="flex items-center justify-between mb-4"><span className="font-bold text-gray-300 flex items-center gap-2">Ⓜ️ Metascore</span><span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.metaScore >= 80 ? 'bg-green-500 text-black' : 'bg-yellow-500 text-black'}`}>{game.metaScore}</span></div>}
-                                {game.userScore > 0 && <div className="flex items-center justify-between"><span className="font-bold text-gray-300 flex items-center gap-2">👤 User Score</span><span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.userScore >= 70 ? 'bg-blue-500 text-white' : 'bg-gray-600 text-white'}`}>{Number(game.userScore).toFixed(1)}</span></div>}
+                                {/* Metascore: 트로피 아이콘 */}
+                                {game.metaScore > 0 && (
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="font-bold text-gray-300 flex items-center gap-2">
+                                            <Trophy className="w-5 h-5 text-yellow-500" /> Metascore
+                                        </span>
+                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.metaScore >= 80 ? 'bg-green-900 text-green-400 border border-green-500/30' : 'bg-yellow-900 text-yellow-400 border border-yellow-500/30'}`}>
+                                            {game.metaScore}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* User Score: 유저 아이콘 */}
+                                {game.userScore > 0 && (
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-bold text-gray-300 flex items-center gap-2">
+                                            <Users className="w-5 h-5 text-blue-400" /> User Score
+                                        </span>
+                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.userScore >= 7.0 ? 'bg-blue-900 text-blue-400 border border-blue-500/30' : 'bg-gray-800 text-gray-400 border border-gray-600/30'}`}>
+                                            {Number(game.userScore).toFixed(1)}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-white/10 text-center shadow-2xl relative overflow-hidden group">

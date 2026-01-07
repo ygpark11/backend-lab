@@ -1,43 +1,96 @@
 import React, {useEffect, useState} from 'react';
-import {useNavigate, useSearchParams} from 'react-router-dom';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
-import {Filter, Heart, Search, Sparkles, Timer, Waves, X} from 'lucide-react';
+import {useNavigate, useSearchParams, useLocation} from 'react-router-dom'; // useLocation 추가
+import {
+    Banknote,
+    ChevronDown,
+    Clock,
+    Filter,
+    Gamepad2,
+    Heart,
+    Search,
+    Sparkles,
+    Timer,
+    TrendingUp,
+    Trophy,
+    Waves,
+    X
+} from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 
 const GameListPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const [filter, setFilter] = useState({
-        keyword: '',
-        genre: searchParams.get('genre') || '',
-        minDiscountRate: '',
-        minMetaScore: '',
-        platform: '',
-        isPlusExclusive: false,
-        sort: 'lastUpdated,desc'
+    // 초기 상태를 URL(searchParams)에서 읽어와서 설정 (새로고침/공유 대비)
+    const [page, setPage] = useState(() => {
+        const pageParam = searchParams.get('page');
+        return pageParam ? parseInt(pageParam) : 0;
     });
 
+    const [filter, setFilter] = useState(() => ({
+        keyword: searchParams.get('keyword') || '',
+        genre: searchParams.get('genre') || '',
+        minDiscountRate: searchParams.get('minDiscountRate') || '',
+        minMetaScore: searchParams.get('minMetaScore') || '',
+        platform: searchParams.get('platform') || '',
+        isPlusExclusive: searchParams.get('isPlusExclusive') === 'true',
+        sort: searchParams.get('sort') || 'lastUpdated,desc'
+    }));
+
+    useEffect(() => {
+        if (!location.search) {
+            setPage(0);
+            setFilter({
+                keyword: '',
+                genre: '',
+                minDiscountRate: '',
+                minMetaScore: '',
+                platform: '',
+                isPlusExclusive: false,
+                sort: 'lastUpdated,desc'
+            });
+            setShowFilter(false);
+        }
+    }, [location.search]);
+
     const [showFilter, setShowFilter] = useState(false);
-    const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
-    // ✅ [Lv.35 추가] 로그인 직후 알림 권한 체크 및 요청 로직
-    useEffect(() => {
-        // 1. 브라우저 지원 여부 확인
-        if (!('Notification' in window)) return;
+    const [isSortOpen, setIsSortOpen] = useState(false);
 
-        // 2. 권한이 'default'(아직 안 물어봄) 상태일 때만 토스트 띄우기
+    // filter나 page 상태가 바뀔 때마다 URL에 반영
+    useEffect(() => {
+        const params = {};
+
+        // 값이 있는 것만 URL에 넣기 (깔끔한 URL 유지)
+        if (page > 0) params.page = page;
+        if (filter.keyword) params.keyword = filter.keyword;
+        if (filter.genre) params.genre = filter.genre;
+        if (filter.minDiscountRate) params.minDiscountRate = filter.minDiscountRate;
+        if (filter.minMetaScore) params.minMetaScore = filter.minMetaScore;
+        if (filter.platform) params.platform = filter.platform;
+        if (filter.isPlusExclusive) params.isPlusExclusive = 'true';
+        if (filter.sort !== 'lastUpdated,desc') params.sort = filter.sort;
+
+        setSearchParams(params, { replace: true });
+
+    }, [filter, page, setSearchParams]);
+
+    // 알림 권한 요청
+    useEffect(() => {
+        if (!('Notification' in window)) return;
         if (Notification.permission === 'default') {
             toast((t) => (
                 <div className="flex flex-col gap-3 min-w-[250px]">
@@ -74,7 +127,7 @@ const GameListPage = () => {
                     </div>
                 </div>
             ), {
-                duration: 10000, // 10초 동안 유지
+                duration: 10000,
                 position: 'top-center',
                 style: {
                     background: '#fff',
@@ -86,31 +139,31 @@ const GameListPage = () => {
         }
     }, []);
 
-    useEffect(() => {
-        const genreParam = searchParams.get('genre');
-        if (genreParam !== filter.genre) {
-            setFilter(prev => ({
-                ...prev,
-                genre: genreParam || '',
-                keyword: genreParam ? '' : prev.keyword
-            }));
-            setPage(0);
-        }
-    }, [searchParams]);
-
     const handleFilterChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFilter(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
-        if (name === 'sort') setPage(0);
+        if (name !== 'keyword') {
+            setPage(0);
+        }
     };
 
     const executeSearch = () => { setPage(0); fetchGames(0); };
     const handleKeyDown = (e) => { if (e.key === 'Enter') executeSearch(); };
 
-    useEffect(() => { fetchGames(page); }, [page, filter.sort, filter.genre]);
+    useEffect(() => {
+        fetchGames(page);
+    }, [
+        page,
+        filter.sort,
+        filter.genre,
+        filter.minDiscountRate,
+        filter.minMetaScore,
+        filter.platform,
+        filter.isPlusExclusive
+    ]);
 
     const fetchGames = async (pageNumber) => {
         setLoading(true);
@@ -159,8 +212,8 @@ const GameListPage = () => {
     };
 
     const clearGenreFilter = () => {
-        setSearchParams({});
         setFilter(prev => ({ ...prev, genre: '' }));
+        setPage(0);
     };
 
     if (loading) return <div className="min-h-screen bg-ps-black text-white"><Navbar /><PSLoader /></div>;
@@ -173,12 +226,10 @@ const GameListPage = () => {
                 {/* 장르 파도타기 배너 */}
                 {filter.genre && (
                     <div className="mb-6 relative overflow-hidden rounded-xl border border-blue-500/30 group">
-                        {/* 배경: 은은하게 흐르는 그라데이션 애니메이션 */}
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 animate-pulse"></div>
 
                         <div className="relative p-5 flex items-center justify-between z-10">
                             <div className="flex items-center gap-4">
-                                {/* [New] 제미니 스타일: 디지털 파형 이퀄라이저 */}
                                 <div className="flex items-end gap-1 h-6">
                                     <div className="w-1.5 bg-blue-400 rounded-full animate-[bounce_1s_infinite] h-3"></div>
                                     <div className="w-1.5 bg-purple-400 rounded-full animate-[bounce_1.2s_infinite] h-5 delay-75"></div>
@@ -216,12 +267,53 @@ const GameListPage = () => {
                             <input type="text" name="keyword" placeholder="게임 제목 검색..." value={filter.keyword} onChange={handleFilterChange} onKeyDown={handleKeyDown} className="w-full bg-black/50 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all" />
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
                         </div>
-                        <select name="sort" value={filter.sort} onChange={handleFilterChange} className="bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-ps-blue outline-none font-bold hover:border-ps-blue transition-colors cursor-pointer">
-                            <option value="lastUpdated,desc">⚡ 최신순</option>
-                            <option value="price,asc">💸 낮은 가격순</option>
-                            <option value="discountRate,desc">🔥 높은 할인율순</option>
-                            <option value="metaScore,desc">🏆 높은 평점순</option>
-                        </select>
+
+                        {/* 커스텀 드롭다운 (Custom Dropdown) */}
+                        <div className="relative min-w-[160px]">
+                            <button
+                                onClick={() => setIsSortOpen(!isSortOpen)}
+                                onBlur={() => setTimeout(() => setIsSortOpen(false), 200)}
+                                className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all focus:outline-none focus:border-ps-blue"
+                            >
+                                <span className="flex items-center gap-2">
+                                    {filter.sort === 'lastUpdated,desc' && <><Clock className="w-4 h-4 text-blue-400" /> 최신순</>}
+                                    {filter.sort === 'price,asc' && <><Banknote className="w-4 h-4 text-green-400" /> 낮은 가격순</>}
+                                    {filter.sort === 'discountRate,desc' && <><TrendingUp className="w-4 h-4 text-red-400" /> 높은 할인율순</>}
+                                    {filter.sort === 'metaScore,desc' && <><Trophy className="w-4 h-4 text-yellow-400" /> 높은 평점순</>}
+                                </span>
+                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isSortOpen && (
+                                <div className="absolute top-full mt-2 right-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn origin-top">
+                                    <div className="py-1">
+                                        {[
+                                            { value: 'lastUpdated,desc', label: '최신순', icon: Clock, color: 'text-blue-400' },
+                                            { value: 'price,asc', label: '낮은 가격순', icon: Banknote, color: 'text-green-400' },
+                                            { value: 'discountRate,desc', label: '높은 할인율순', icon: TrendingUp, color: 'text-red-400' },
+                                            { value: 'metaScore,desc', label: '높은 평점순', icon: Trophy, color: 'text-yellow-400' }
+                                        ].map((option) => (
+                                            <button
+                                                key={option.value}
+                                                onClick={() => {
+                                                    setFilter(prev => ({ ...prev, sort: option.value }));
+                                                    setIsSortOpen(false);
+                                                }}
+                                                className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${
+                                                    filter.sort === option.value
+                                                        ? 'bg-white/10 text-white'
+                                                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                                                }`}
+                                            >
+                                                <option.icon className={`w-4 h-4 ${option.color}`} />
+                                                {option.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <button onClick={() => setShowFilter(!showFilter)} className={`px-4 py-3 rounded-lg border text-sm font-bold flex items-center gap-2 transition-colors whitespace-nowrap ${showFilter ? 'bg-ps-blue border-ps-blue text-white' : 'border-white/20 text-gray-300 hover:bg-white/10'}`}>
                             <Filter className="w-4 h-4" /> 필터
                         </button>
@@ -276,7 +368,6 @@ const GameListPage = () => {
                             const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                             const isClosing = !isLastCall && daysLeft <= 3;
 
-                            // [Logic] 플래티넘 딜 판정
                             const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
 
                             return (
@@ -309,7 +400,6 @@ const GameListPage = () => {
                                     <div className="p-4">
                                         <div className="flex flex-wrap gap-1.5 mb-3 min-h-[24px]">
                                             {game.genres && game.genres.length > 0 ? (
-                                                // 1. 장르가 있을 때: 각 장르 배지 순회 출력
                                                 game.genres.map((genreName, index) => (
                                                     <span
                                                         key={index}
@@ -319,7 +409,6 @@ const GameListPage = () => {
                                                     </span>
                                                 ))
                                             ) : (
-                                                // 2. 장르가 없을 때: '미분류' 배지 1개 출력
                                                 <span className="text-[10px] px-2 py-0.5 rounded-full border font-bold transition-colors bg-gray-600/20 text-gray-400 border-gray-500/30">
                                                     미분류
                                                 </span>
@@ -332,16 +421,32 @@ const GameListPage = () => {
                                             {game.discountRate > 0 && <span className="text-xs text-gray-500 line-through">{game.originalPrice?.toLocaleString()}원</span>}
                                             <div className="flex justify-between items-end mt-1">
                                                 <span className="text-lg font-black text-white">{game.price?.toLocaleString()}원</span>
-                                                {game.metaScore > 0 && <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${game.metaScore >= 80 ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'}`}>{game.metaScore}</span>}
+                                                {game.metaScore > 0 && (
+                                                    <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${
+                                                        game.metaScore >= 80
+                                                            ? 'bg-green-900 text-green-300 border border-green-500/30'
+                                                            : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'
+                                                    }`}>
+                                                        {game.metaScore}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             );
                         }) : (
-                            <div className="col-span-full text-center py-20 bg-ps-card rounded-xl border border-white/5">
-                                <p className="text-xl text-white mb-2">검색 결과가 없습니다 😢</p>
-                                <p className="text-ps-muted">{filter.genre ? `"${filter.genre}" 장르에는 해당하는 게임이 없네요.` : "검색어를 변경하거나 필터를 조정해보세요."}</p>
+                            /* 검색 결과 없음 UI */
+                            <div className="col-span-full text-center py-20 bg-ps-card/50 rounded-xl border border-white/5 flex flex-col items-center justify-center gap-4">
+                                <div className="bg-gray-800/50 p-6 rounded-full animate-pulse">
+                                    <Gamepad2 className="w-12 h-12 text-gray-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white mb-2">검색 결과가 없습니다</h3>
+                                    <p className="text-gray-400">
+                                        {filter.genre ? <><span className="text-ps-blue font-bold">'{filter.genre}'</span> 장르에는 해당하는 게임이 없네요.</> : "검색어를 변경하거나 필터를 조정해보세요."}
+                                    </p>
+                                </div>
                             </div>
                         )
                     )}

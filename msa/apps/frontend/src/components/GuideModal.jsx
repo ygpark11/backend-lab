@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Flame, Circle, Triangle, Square, Timer, Sparkles } from 'lucide-react';
+import { X, Flame, Circle, Triangle, Square, Timer, Sparkles, Tag, Siren, Rocket } from 'lucide-react';
 
 const GuideModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -25,7 +25,9 @@ const GuideModal = ({ isOpen, onClose }) => {
                             <Flame className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-white text-lg">가성비 전투력 🔥</h3>
+                            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                                가성비 전투력 <Flame className="w-5 h-5 text-orange-500" />
+                            </h3>
                             <p className="text-gray-400 text-sm leading-relaxed">
                                 <span className="text-orange-400 font-bold">메타스코어(재미)</span>와 <span className="text-green-400 font-bold">가격(저렴함)</span>을 조합해 계산한 수치입니다. 점수가 높을수록 "갓성비" 게임입니다!
                             </p>
@@ -35,10 +37,12 @@ const GuideModal = ({ isOpen, onClose }) => {
                     {/* 2. 신호등 */}
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
-                            <Circle className="w-6 h-6 fill-current" />
+                            <Siren className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-white text-lg">가격 신호등 🚦</h3>
+                            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                                가격 신호등 <Siren className="w-5 h-5 text-green-500" />
+                            </h3>
                             <p className="text-xs text-gray-500 mb-2">PS 컨트롤러 버튼 모양으로 상태를 알려드려요.</p>
                             <ul className="text-sm text-gray-400 space-y-2 mt-1">
                                 <li className="flex items-center gap-2">
@@ -64,10 +68,12 @@ const GuideModal = ({ isOpen, onClose }) => {
                     {/* 3. 플래티넘 & 막차 */}
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
-                            <Sparkles className="w-6 h-6" />
+                            <Tag className="w-6 h-6" />
                         </div>
                         <div>
-                            <h3 className="font-bold text-white text-lg">뱃지 설명 🏷️</h3>
+                            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                                뱃지 설명 <Tag className="w-5 h-5 text-yellow-400" />
+                            </h3>
                             <ul className="text-sm text-gray-400 space-y-2 mt-1">
                                 <li className="flex items-center gap-2">
                                     <Sparkles className="w-4 h-4 text-yellow-400" />
@@ -84,8 +90,8 @@ const GuideModal = ({ isOpen, onClose }) => {
 
                 {/* 푸터 */}
                 <div className="p-4 border-t border-white/10 bg-black/20 text-center">
-                    <button onClick={onClose} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors">
-                        알겠습니다! 🚀
+                    <button onClick={onClose} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                        알겠습니다! <Rocket className="w-4 h-4" />
                     </button>
                 </div>
             </div>

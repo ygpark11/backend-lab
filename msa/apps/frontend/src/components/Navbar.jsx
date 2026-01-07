@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
-import {AlertTriangle, Bell, Gamepad2, Heart, HelpCircle, LogOut, Shield, X} from 'lucide-react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X} from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
@@ -8,7 +8,8 @@ import LegalModal from './LegalModal';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const notiRef = useRef(null); // 드롭다운 외부 클릭 감지용
+    const location = useLocation();
+    const notiRef = useRef(null);
 
     // 모달 상태
     const [isGuideOpen, setIsGuideOpen] = useState(false);
@@ -27,6 +28,11 @@ const Navbar = () => {
         fetchWishlistCount();
     }, []);
 
+    // 2. 경로가 변경될 때마다(페이지 이동 시) 알림창 닫기
+    useEffect(() => {
+        setIsNotiOpen(false);
+    }, [location.pathname]);
+
     useEffect(() => {
         if (!isNotiOpen) return;
 
@@ -40,21 +46,25 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isNotiOpen]);
 
-    // ✅ API: 안 읽은 개수 조회 (client 사용)
+    // 로고 클릭 핸들러 (최종 버전)
+    const handleLogoClick = () => {
+        navigate('/games');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    // API: 안 읽은 개수 조회
     const fetchUnreadCount = async () => {
         try {
             const response = await client.get('/api/notifications/unread-count');
             setUnreadCount(response.data);
         } catch (err) {
-            // 비로그인 상태면 client.js의 401 처리가 작동하므로 여기선 로깅
             console.error("알림 카운트 조회 실패", err);
         }
     };
 
-    // ✅ API: 찜 개수 조회
+    // API: 찜 개수 조회
     const fetchWishlistCount = async () => {
         try {
-            // 찜 목록 가져오기
             const response = await client.get('/api/v1/wishlists');
             if (Array.isArray(response.data)) {
                 setTotalWishlistCount(response.data.length);
@@ -64,10 +74,9 @@ const Navbar = () => {
         }
     };
 
-    // ✅ API: 알림 목록 조회 (종 눌렀을 때)
+    // API: 알림 목록 조회
     const toggleNotification = async () => {
         if (!isNotiOpen) {
-            // 팝업 열 때 최신 목록 가져오기
             try {
                 const response = await client.get('/api/notifications');
                 setNotifications(response.data);
@@ -79,19 +88,14 @@ const Navbar = () => {
         setIsNotiOpen(!isNotiOpen);
     };
 
-    // ✅ API: 알림 읽음 처리 및 이동
+    // API: 알림 읽음 처리 및 이동
     const handleNotificationClick = async (notiId, gameId) => {
         try {
-            // 1. 읽음 처리 요청 (PATCH)
             await client.patch(`/api/notifications/${notiId}/read`);
-
-            // 2. 로컬 상태 업데이트 (뱃지 감소, 읽음 표시 변경)
             setUnreadCount(prev => Math.max(0, prev - 1));
             setNotifications(prev => prev.map(n =>
                 n.id === notiId ? { ...n, isRead: true } : n
             ));
-
-            // 3. 팝업 닫고 페이지 이동
             setIsNotiOpen(false);
             if (gameId) {
                 navigate(`/games/${gameId}`);
@@ -121,12 +125,10 @@ const Navbar = () => {
                         onClick={async () => {
                             toast.dismiss(t.id);
                             try {
-                                // 💡 서버에 로그아웃을 알려 쿠키를 만료시킵니다.
                                 await client.post('/api/v1/auth/logout');
                             } catch (err) {
                                 console.error("로그아웃 API 호출 실패(무시하고 진행)", err);
                             } finally {
-                                // 💡 로컬의 모든 흔적을 지우고 무조건 메인으로 리다이렉트
                                 localStorage.clear();
                                 window.location.href = '/';
                             }
@@ -146,7 +148,6 @@ const Navbar = () => {
         ), {
             duration: 5000,
             position: 'top-center',
-            // 다크모드 시인성 확보를 위한 스타일
             style: {
                 background: '#1a1a1a',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -162,7 +163,7 @@ const Navbar = () => {
             <nav className="sticky top-0 z-50 bg-ps-black/80 backdrop-blur-md border-b border-white/10 h-16">
                 <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
                     {/* 1. 로고 영역 */}
-                    <div className="flex items-center gap-2 cursor-pointer group" onClick={() => navigate('/games')}>
+                    <div className="flex items-center gap-2 cursor-pointer group" onClick={handleLogoClick}>
                         <div className="bg-ps-blue p-1.5 rounded-lg group-hover:rotate-12 transition-transform duration-300">
                             <Gamepad2 className="w-6 h-6 text-white" />
                         </div>
@@ -173,25 +174,20 @@ const Navbar = () => {
 
                     {/* 2. 우측 메뉴 영역 */}
                     <div className="flex items-center gap-2 md:gap-4">
-
-                        {/* A. 이용약관 */}
                         <button onClick={() => setIsLegalOpen(true)} className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
                             <Shield className="w-5 h-5" />
                         </button>
 
-                        {/* B. 가이드 */}
                         <button onClick={() => setIsGuideOpen(true)} className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10">
                             <HelpCircle className="w-5 h-5" />
                         </button>
 
-                        {/* C. 알림 센터 */}
                         <div className="relative" ref={notiRef}>
                             <button
                                 onClick={toggleNotification}
                                 className="relative text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"
                             >
                                 <Bell className="w-5 h-5" />
-                                {/* 뱃지 (안 읽은 게 있을 때만) */}
                                 {unreadCount > 0 && (
                                     <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -200,7 +196,6 @@ const Navbar = () => {
                                 )}
                             </button>
 
-                            {/* 알림 드롭다운 팝업 */}
                             {isNotiOpen && (
                                 <div className="absolute top-full right-0 mt-2 w-80 md:w-96 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
                                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
@@ -212,8 +207,9 @@ const Navbar = () => {
 
                                     <ul className="max-h-[300px] overflow-y-auto custom-scrollbar">
                                         {notifications.length === 0 ? (
-                                            <li className="py-8 text-center text-gray-500 text-sm">
-                                                새로운 알림이 없습니다. 📭
+                                            <li className="py-12 text-center flex flex-col items-center gap-3 text-gray-500">
+                                                <BellOff className="w-8 h-8 opacity-50" />
+                                                <span className="text-xs font-bold">새로운 알림이 없습니다.</span>
                                             </li>
                                         ) : (
                                             notifications.map((noti) => (
@@ -240,24 +236,17 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* D. 로그아웃 */}
                         <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-red-400 transition-colors p-2 rounded-lg hover:bg-white/5">
                             <LogOut className="w-4 h-4" />
                             <span className="hidden md:inline">Logout</span>
                         </button>
 
-                        {/* 찜 목록 */}
                         <button
                             onClick={() => navigate('/wishlist')}
-                            className="relative group bg-gradient-to-r from-pink-600/20 to-red-600/20 hover:from-pink-600 hover:to-red-600 border border-pink-500/30 hover:border-pink-500 text-pink-500 hover:text-white px-3 md:px-5 py-2 rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_15px_rgba(236,72,153,0.2)] hover:shadow-[0_0_25px_rgba(236,72,153,0.6)]"
+                            className="relative group bg-gradient-to-r from-pink-600/10 to-purple-600/10 hover:from-pink-600 hover:to-purple-600 border border-pink-500/30 hover:border-pink-400 text-pink-400 hover:text-white px-3 md:px-5 py-2 rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_10px_rgba(236,72,153,0.1)] hover:shadow-[0_0_20px_rgba(236,72,153,0.6)]"
                         >
-                            {/* 아이콘은 항상 보임 */}
                             <Heart className={`w-4 h-4 md:w-5 md:h-5 ${totalWishlistCount > 0 ? 'fill-current animate-pulse' : ''}`} />
-
-                            {/* 👇 [수정] 텍스트는 모바일에서 숨기고(hidden), PC에서만 보임(md:inline) */}
                             <span className="hidden md:inline font-bold text-sm">My Wishlist</span>
-
-                            {/* 카운트 뱃지 */}
                             {totalWishlistCount > 0 && (
                                 <span className="absolute -top-1 -right-1 flex h-4 w-4 md:h-5 md:w-5">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>

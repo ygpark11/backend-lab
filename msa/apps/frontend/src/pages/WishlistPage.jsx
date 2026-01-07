@@ -6,7 +6,17 @@ import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
-import {AlertTriangle, ExternalLink, Sparkles, Timer, Trash2, PiggyBank, TrendingDown} from 'lucide-react';
+import {
+    AlertTriangle,
+    ExternalLink,
+    Gamepad2,
+    Heart,
+    PiggyBank,
+    Sparkles,
+    Timer,
+    Trash2,
+    TrendingDown
+} from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 
@@ -75,7 +85,11 @@ const WishlistPage = () => {
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-black tracking-tight mb-2">My <span className="text-red-500">Wishlist</span> ❤️</h1>
+                        <h1 className="text-3xl font-black tracking-tight mb-2 flex items-center gap-3">
+                            <span>My <span className="text-red-500">Wishlist</span></span>
+                            {/* 하트 아이콘 + 네온 효과 */}
+                            <Heart className="w-8 h-8 text-red-500 fill-current animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" />
+                        </h1>
                         {!loading && (
                             <div className="flex flex-col gap-1">
                                 <p className="text-ps-muted text-sm">총 <span className="text-white font-bold">{totalElements}</span>개의 게임을 찜했습니다.</p>
@@ -164,7 +178,11 @@ const WishlistPage = () => {
                                                 <span className="text-lg font-black text-white">{game.currentPrice?.toLocaleString()}원</span>
 
                                                 {game.metaScore > 0 && (
-                                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${game.metaScore >= 80 ? 'bg-green-600/20 text-green-400' : 'bg-yellow-600/20 text-yellow-400'}`}>
+                                                    <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${
+                                                        game.metaScore >= 80
+                                                            ? 'bg-green-900 text-green-300 border border-green-500/30'
+                                                            : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'
+                                                    }`}>
                                                         {game.metaScore}
                                                     </span>
                                                 )}
@@ -174,9 +192,18 @@ const WishlistPage = () => {
                                 </div>
                             );
                         }) : (
-                            <div className="col-span-full text-center py-20 bg-ps-card rounded-xl border border-white/5">
-                                <p className="text-xl text-white mb-2">아직 찜한 게임이 없습니다 😢</p>
-                                <button onClick={() => navigate('/games')} className="px-6 py-2 bg-ps-blue rounded-full font-bold hover:bg-blue-600 transition shadow-lg">게임 구경하러 가기</button>
+                            <div className="col-span-full text-center py-20 bg-ps-card rounded-xl border border-white/5 flex flex-col items-center justify-center gap-4">
+                                <div className="bg-gray-800/50 p-6 rounded-full">
+                                    {/* 혹은 찜 아이콘 */}
+                                    <Heart className="w-12 h-12 text-gray-600" />
+                                </div>
+                                <div>
+                                    <p className="text-xl text-white font-bold mb-2">아직 찜한 게임이 없습니다</p>
+                                    <p className="text-gray-400 text-sm mb-6">마음에 드는 게임을 찾아보세요!</p>
+                                    <button onClick={() => navigate('/games')} className="px-8 py-3 bg-ps-blue rounded-full font-bold hover:bg-blue-600 transition shadow-lg hover:shadow-blue-500/20 flex items-center gap-2 mx-auto">
+                                        <Gamepad2 className="w-4 h-4"/> 게임 구경하러 가기
+                                    </button>
+                                </div>
                             </div>
                         )
                     )}
