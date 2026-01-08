@@ -3,7 +3,9 @@ package com.pstracker.catalog_service.global.config;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 
 import javax.annotation.PostConstruct;
 import java.io.FileInputStream;
@@ -11,52 +13,50 @@ import java.io.IOException;
 import java.io.InputStream;
 
 @Configuration
+@Slf4j
 public class FirebaseConfig {
 
     @PostConstruct
     public void init() {
+        if (!FirebaseApp.getApps().isEmpty()) {
+            return;
+        }
+
         try {
-            if (!FirebaseApp.getApps().isEmpty()) {
-                return;
-            }
-
-            InputStream serviceAccount = null;
-            // 1. 환경변수에서 경로 확인 (운영 서버용)
-            String configPath = System.getenv("FIREBASE_CONFIG_PATH");
-
-            // 환경변수에 경로가 있고 파일이 존재하면 읽기
-            if (configPath != null && !configPath.isEmpty()) {
-                try {
-                    serviceAccount = new FileInputStream(configPath);
-                    System.out.println("🔥 Firebase 설정 로드 (외부 파일): " + configPath);
-                } catch (IOException e) {
-                    System.err.println("⚠️ 외부 파일 로드 실패, 내부 리소스를 찾습니다. (" + e.getMessage() + ")");
-                }
-            }
-
-            // 외부 파일이 없으면 내부 resources 폴더 확인 (로컬 개발용)
-            if (serviceAccount == null) {
-                serviceAccount = getClass().getResourceAsStream("/firebase-service-account.json");
-                if (serviceAccount != null) {
-                    System.out.println("🔥 Firebase 설정 로드 (내부 리소스)");
-                }
-            }
-
-            // 파일을 못 찾았으면 예외 처리
-            if (serviceAccount == null) {
-                throw new IOException("firebase-service-account.json 파일을 찾을 수 없습니다.");
-            }
+            GoogleCredentials credentials = loadCredentials();
 
             FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .setCredentials(credentials)
                     .build();
 
             FirebaseApp.initializeApp(options);
-            System.out.println("🔥 Firebase Admin SDK 초기화 성공!");
-
+            log.info("🔥 Firebase Admin SDK 초기화 성공!");
         } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("❌ Firebase 초기화 실패: " + e.getMessage());
+            log.error("❌ Firebase 초기화 중 오류 발생: {}", e.getMessage(), e);
+        }
+    }
+
+    private GoogleCredentials loadCredentials() throws IOException {
+        String configPath = System.getenv("FIREBASE_CONFIG_PATH");
+
+        if (configPath != null && !configPath.isEmpty()) {
+            try (InputStream in = new FileInputStream(configPath)) {
+                log.info("🔥 Firebase 설정 로드 (외부 파일): {}", configPath);
+                return GoogleCredentials.fromStream(in);
+            } catch (IOException e) {
+                log.error("⚠️ 외부 파일 로드 실패, 내부 리소스를 찾습니다. : {}", e.getMessage(), e);
+            }
+        }
+
+        // 내부 리소스 시도
+        ClassPathResource resource = new ClassPathResource("firebase-service-account.json");
+        if (!resource.exists()) {
+            throw new IOException("`firebase-service-account.json` 파일을 찾을 수 없습니다.");
+        }
+
+        try (InputStream in = resource.getInputStream()) {
+            log.info("🔥 Firebase 설정 로드 (내부 리소스)");
+            return GoogleCredentials.fromStream(in);
         }
     }
 }
