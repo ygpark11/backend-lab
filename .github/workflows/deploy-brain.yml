@@ -57,8 +57,8 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: .msa/apps/catalog-service/catalog-service
-          file: .msa/apps/catalog-service/catalog-service/Dockerfile
+          context: msa/apps/catalog-service/catalog-service
+          file: msa/apps/catalog-service/catalog-service/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-api:latest
 
