@@ -73,13 +73,15 @@ jobs:
             cd ~/backend-lab/msa
 
             # 1. 최신 설정파일(docker-compose 등) 받기
+            git fetch --all
+            git reset --hard origin/master
             git pull origin master
 
             # 2. 방금 올라온 따끈따끈한 이미지 받아오기
-            docker compose -f docker-compose.brain.yml pull catalog-service
+            docker compose -f docker-compose-brain.yml pull catalog-service
 
-            # 3. 컨테이너 교체 (무중단에 가깝게 샥!)
-            docker compose -f docker-compose.brain.yml up -d catalog-service
+            # 3. 컨테이너 교체
+            docker compose -f docker-compose-brain.yml up -d catalog-service
 
             # 4. 뒷정리 (이미지 찌꺼기 청소)
             docker image prune -f
