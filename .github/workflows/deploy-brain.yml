@@ -5,8 +5,8 @@ on:
   push:
     branches: [ "master" ]
     paths:
-      - 'apps/catalog-service/**'       # 자바 쪽 코드가 변경되거나
-      - 'docker-compose.brain.yml'      # 1호기 설정이 변경되거나
+      - 'msa/apps/catalog-service/**'       # 자바 쪽 코드가 변경되거나
+      - 'msa/docker-compose.brain.yml'      # 1호기 설정이 변경되거나
       - '.github/workflows/deploy-brain.yml' # 이 파일 자체가 변경될 때만 실행
 
 jobs:
@@ -43,7 +43,7 @@ jobs:
       # 5. 빌드 (테스트 제외하고 빠르게)
       - name: Build with Gradle
         run: |
-          cd apps/catalog-service/catalog-service
+          cd msa/apps/catalog-service/catalog-service
           ./gradlew clean build -x test
 
       # 6. 도커 허브 로그인 (제자님이 등록한 시크릿 사용)
@@ -57,8 +57,8 @@ jobs:
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/catalog-service/catalog-service
-          file: ./apps/catalog-service/catalog-service/Dockerfile
+          context: .msa/apps/catalog-service/catalog-service
+          file: .msa/apps/catalog-service/catalog-service/Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-api:latest
 
