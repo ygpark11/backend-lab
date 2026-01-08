@@ -28,7 +28,8 @@ services:
 
   # 2. Java Backend (Brain)
   catalog-service:
-    build: ./apps/catalog-service/catalog-service
+    #build: ./apps/catalog-service/catalog-service
+    image: ygpark1334/ps-tracker-api:latest
     container_name: ps-tracker-api
     environment:
       - TZ=Asia/Seoul
