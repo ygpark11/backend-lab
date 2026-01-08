@@ -38,7 +38,7 @@ jobs:
 
       # 4. Gradle 실행 권한 부여
       - name: Grant execute permission for gradlew
-        run: chmod +x apps/catalog-service/catalog-service/gradlew
+        run: chmod +x msa/apps/catalog-service/catalog-service/gradlew
 
       # 5. 빌드 (테스트 제외하고 빠르게)
       - name: Build with Gradle
