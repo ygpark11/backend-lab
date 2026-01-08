@@ -3,11 +3,9 @@ services:
   mysql:
     image: mysql:8.0
     container_name: ps-tracker-db
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Seoul
     command:
       - --character-set-server=utf8mb4
@@ -37,12 +35,11 @@ services:
   catalog-service:
     build: ./apps/catalog-service/catalog-service
     container_name: ps-tracker-api
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Seoul
       - SPRING_PROFILES_ACTIVE=docker
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
     ports:
       - "8080:8080"
     depends_on:
@@ -55,11 +52,12 @@ services:
   collector-service:
     build: ./apps/collector-service
     container_name: ps-tracker-collector
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Seoul
       - API_BASE_URL=http://catalog-service:8080
       - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
-      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
     depends_on:
       catalog-service:
         condition: service_started

@@ -4,11 +4,9 @@ services:
   mysql:
     image: mysql:8.0
     container_name: ps-tracker-db
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Seoul
     command:
       - --character-set-server=utf8mb4
@@ -31,13 +29,12 @@ services:
     #build: ./apps/catalog-service/catalog-service
     image: ygpark1334/ps-tracker-api:latest
     container_name: ps-tracker-api
+    env_file:
+      - .env
     environment:
       - TZ=Asia/Seoul
       - SPRING_PROFILES_ACTIVE=prod
       - "JAVA_OPTS=-Xms128M -Xmx256M"
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-      - MYSQL_DATABASE=${MYSQL_DATABASE}
       - CRAWLER_URL=http://10.0.0.61:5000/run
     ports:
       - "8080:8080"

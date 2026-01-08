@@ -73,8 +73,6 @@ jobs:
             cd ~/backend-lab/msa
 
             # 1. 최신 설정파일(docker-compose 등) 받기
-            git fetch --all
-            git reset --hard origin/master
             git pull origin master
 
             # 2. 방금 올라온 따끈따끈한 이미지 받아오기
