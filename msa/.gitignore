@@ -32,3 +32,6 @@ apps/frontend/*.log
 
 # 환경변수 및 비밀정보 파일 무시
 .env
+
+# Firebase Admin SDK Key
+firebase-service-account.json

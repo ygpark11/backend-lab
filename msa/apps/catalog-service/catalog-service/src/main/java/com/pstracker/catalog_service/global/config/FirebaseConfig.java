@@ -18,9 +18,29 @@ public class FirebaseConfig {
                 return;
             }
 
-            // resources 폴더 안의 키 파일 이름이 정확해야 함
-            InputStream serviceAccount = getClass().getResourceAsStream("/firebase-service-account.json");
+            InputStream serviceAccount = null;
+            // 1. 환경변수에서 경로 확인 (운영 서버용)
+            String configPath = System.getenv("FIREBASE_CONFIG_PATH");
 
+            // 환경변수에 경로가 있고 파일이 존재하면 읽기
+            if (configPath != null && !configPath.isEmpty()) {
+                try {
+                    serviceAccount = new FileInputStream(configPath);
+                    System.out.println("🔥 Firebase 설정 로드 (외부 파일): " + configPath);
+                } catch (IOException e) {
+                    System.err.println("⚠️ 외부 파일 로드 실패, 내부 리소스를 찾습니다. (" + e.getMessage() + ")");
+                }
+            }
+
+            // 외부 파일이 없으면 내부 resources 폴더 확인 (로컬 개발용)
+            if (serviceAccount == null) {
+                serviceAccount = getClass().getResourceAsStream("/firebase-service-account.json");
+                if (serviceAccount != null) {
+                    System.out.println("🔥 Firebase 설정 로드 (내부 리소스)");
+                }
+            }
+
+            // 파일을 못 찾았으면 예외 처리
             if (serviceAccount == null) {
                 throw new IOException("firebase-service-account.json 파일을 찾을 수 없습니다.");
             }

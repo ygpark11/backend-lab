@@ -36,6 +36,8 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - "JAVA_OPTS=-Xms128M -Xmx256M"
       - CRAWLER_URL=http://10.0.0.61:5000/run
+    volumes:
+      - ./firebase-service-account.json:/app/firebase-service-account.json
     ports:
       - "8080:8080"
     depends_on:
