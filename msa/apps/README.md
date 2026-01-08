@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 40.5 Complete (Distributed Architecture & OCI Private Network)
+* **Status:** Level 41 In Progress (Building CI/CD Pipelines)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -698,9 +698,13 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
   - **Contextual Banner:** 게임 상세 페이지의 '골든 존(Golden Zone)'에 기프트카드 최저가 검색 배너를 배치하여 사용자 혜택과 수익화의 균형 달성.
 
 ### 🚀 Step 5. 확장 및 자동화 (Scale & DevOps)
-- [ ] **Lv.41: 초경량 무중단 배포 (Lightweight CI/CD)**
+- [ ] **Lv.41: 초경량 무중단 배포 (Lightweight CI/CD)** 🚧 **[In Progress]**
   - **Environment:** Oracle Cloud Micro (1GB RAM) 환경을 고려한 최적화 파이프라인 설계.
   - **Pipeline:** `GitHub Actions`가 빌드 부하를 전담하고, 운영 서버는 완성된 이미지만 받아 실행(Pull & Run)하여 리소스 점유율 최소화.
+  - **Status:**
+    - [x] **Phase 1. Brain (Backend)**: GitHub Actions + Docker Hub + SSH Deploy 구축 완료 ✅
+    - [ ] **Phase 2. Face (Frontend)**: React + Nginx 이미지 최적화 및 배포 대기
+    - [ ] **Phase 3. Hand (Collector)**: Python 수집기 (2호기) 배포 파이프라인 대기
 - [ ] **Lv.42: 성장 기초 공사 (Growth Foundation)**
   - **Analytics:** Google Analytics (GA4)를 도입하여 트래픽 소스 및 사용자 행동 패턴 정량 분석.
   - **SEO (Open Graph):** 카카오톡/SNS 공유 시 게임 포스터와 실시간 가격이 노출되도록 동적 메타 태그 구현.
