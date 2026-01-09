@@ -19,7 +19,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 # --- [설정 및 로깅 초기화] ---
@@ -39,12 +38,9 @@ logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
 app = Flask(__name__)
-
-# 세션 객체 생성 (연결 재사용으로 CPU 부담 경감)
 session = requests.Session()
 session.headers.update({'Connection': 'keep-alive'})
 
-# 환경 변수 처리 (기본값 설정 강화)
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
@@ -62,6 +58,11 @@ def get_driver():
     random_user_agent = ua.random
     logger.info(f"🎭 Generated User-Agent: {random_user_agent}")
 
+    w = random.randint(1800, 1920)
+    h = random.randint(950, 1080)
+    random_window_size = f"{w},{h}"
+    logger.info(f"📏 Random Window Size: {random_window_size}")
+
     driver = None
 
     # [공통] 성능 최적화 옵션
@@ -70,14 +71,19 @@ def get_driver():
         "profile.default_content_setting_values.notifications": 2,  # 알림 차단
         "profile.default_content_setting_values.popups": 2,         # 팝업 차단
         "profile.default_content_setting_values.geolocation": 2,    # 위치 정보 요청 차단
+        "disk-cache-size": 4096                                     # 디스크 캐시 크기 제한
     }
 
     # [Case A] Docker / Selenium Grid 환경
     if SELENIUM_URL:
         logger.info(f"🌐 [Docker Mode] Connecting to Selenium Grid: {SELENIUM_URL}")
         options = webdriver.ChromeOptions()
+
+        # Eager 모드 설정
+        options.page_load_strategy = 'eager'
+
         options.add_argument(f"user-agent={random_user_agent}")
-        options.add_argument("--window-size=1920,1080")
+        options.add_argument(f"--window-size={random_window_size}")
 
         # 🚀 [리소스 절약 옵션]
         options.add_argument("--no-sandbox")
@@ -85,6 +91,7 @@ def get_driver():
         options.add_argument("--disable-gpu")           # GPU 없음 명시
         options.add_argument("--no-zygote")             # 프로세스 포크 최소화 (메모리 절약)
         options.add_argument("--disable-extensions")    # 확장 프로그램 비활성화
+        options.add_argument("--dns-prefetch-disable")  # DNS 프리페치 비활성화
 
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
@@ -95,15 +102,25 @@ def get_driver():
 
         driver = webdriver.Remote(command_executor=SELENIUM_URL, options=options)
 
+        # CDP를 통한 네트워크 차단 설정 (추가 최적화)
+        try:
+            driver.execute_cdp_cmd("Network.setBlockedURLs", {
+                "urls": ["*.png", "*.jpg", "*.gif", "*.css", "*.woff", "*.woff2", "*google-analytics*"]
+            })
+            driver.execute_cdp_cmd("Network.enable", {})
+        except Exception as e:
+            logger.warning(f"⚠️ CDP Optimization skipped: {e}")
+
     # [Case B] 로컬 환경 (Undetected Chromedriver 사용 - 강력함)
     else:
-        logger.info("💻 [Local Mode] Starting Undetected Chrome Driver (Stealth)")
+        logger.info("💻 [Local Mode] Starting Undetected Chrome")
         options = uc.ChromeOptions()
+        options.page_load_strategy = 'eager'
         if os.getenv("HEADLESS", "false").lower() == "true":
              options.add_argument("--headless=new")
 
         options.add_argument(f"user-agent={random_user_agent}")
-        options.add_argument("--window-size=1920,1080")
+        options.add_argument(f"--window-size={random_window_size}")
         options.add_argument("--disable-popup-blocking")
 
         # UC는 드라이버 설치를 자동으로 관리함
@@ -225,7 +242,7 @@ def send_discord_summary(total_scanned, deals_list):
 
 def run_batch_crawler_logic():
     global is_running
-    logger.info("🚀 [Crawler] Batch job started - Pagination Mode On")
+    logger.info("🚀 [Crawler] Batch job started - Safety Optimized Mode")
 
     driver = None
 
@@ -234,7 +251,7 @@ def run_batch_crawler_logic():
 
     try:
         driver = get_driver()
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 10)
         visited_urls = set()
 
         # [Phase 1] 기존 타겟 갱신
@@ -253,7 +270,7 @@ def run_batch_crawler_logic():
                     except: pass
                     time.sleep(5)
                     driver = get_driver()
-                    wait = WebDriverWait(driver, 20)
+                    wait = WebDriverWait(driver, 10)
 
                 # 크롤링 수행
                 deal_info = crawl_detail_and_send(driver, wait, url)
@@ -265,12 +282,7 @@ def run_batch_crawler_logic():
 
                 visited_urls.add(url)
 
-                # 휴식 타임
-                if i > 0 and i % 10 == 0:
-                    logger.info("💤 Taking a short break (Anti-Ban)...")
-                    time.sleep(random.uniform(12.0, 15.0))
-                else:
-                    time.sleep(random.uniform(4.0, 7.0))
+                time.sleep(random.uniform(2.5, 4.0))
 
         # [Phase 2] 신규 탐색 (페이지네이션)
         if is_running:
@@ -290,9 +302,9 @@ def run_batch_crawler_logic():
                     try:
                         driver.quit()
                     except: pass
-                    time.sleep(10)
+                    time.sleep(5)
                     driver = get_driver()
-                    wait = WebDriverWait(driver, 20)
+                    wait = WebDriverWait(driver, 10)
 
                 target_list_url = f"{base_category_path}/{current_page}{search_params}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
@@ -302,7 +314,7 @@ def run_batch_crawler_logic():
 
                     # 스크롤 로직
                     try:
-                        WebDriverWait(driver, 25).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
+                        WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
                     except TimeoutException:
                         logger.warning(f"   ⚠️ Page load timeout. Retrying...")
                         driver.refresh()
@@ -310,9 +322,9 @@ def run_batch_crawler_logic():
 
                     # 스크롤 로직
                     driver.execute_script(f"window.scrollTo(0, {random.randint(800, 1200)});")
-                    time.sleep(random.uniform(1.0, 2.0))
+                    time.sleep(random.uniform(0.5, 1.5))
                     driver.execute_script(f"window.scrollTo(0, {random.randint(3000, 4500)});")
-                    time.sleep(random.uniform(2.0, 3.0))
+                    time.sleep(random.uniform(1.5, 2.5))
 
                 except Exception as e:
                     logger.warning(f"⚠️ Page Load Error on {current_page}: {e}")
@@ -346,12 +358,10 @@ def run_batch_crawler_logic():
                             collected_deals.append(deal_info)
 
                     visited_urls.add(url)
-                    # 똥컴: 렌더링(5초) + 대기(5.5초) = 10.5초
-                    # 슈퍼컴: 렌더링(0.5초) + 대기(5.5초) = 6초
-                    time.sleep(random.uniform(4.0, 7.0))
+                    time.sleep(random.uniform(2.5, 4.0))
 
                 current_page += 1
-                time.sleep(random.uniform(6.0, 9.0))
+                time.sleep(random.uniform(3.0, 5.0))
 
             logger.info(f"✅ Batch job finished. Total processed: {len(visited_urls)} games.")
 
@@ -432,7 +442,7 @@ def crawl_detail_and_send(driver, wait, target_url):
         # 최대 2번 시도 (DOM 렌더링 지연 대비)
         for attempt in range(2):
             if found_valid_offer: break
-            if attempt > 0: time.sleep(1.5)
+            if attempt > 0: time.sleep(1)
 
             # 모든 오퍼(offer0 ~ offer2)를 다 확인해서 가장 싼 가격을 선택
             for i in range(3):
