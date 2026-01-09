@@ -59,7 +59,8 @@ services:
 
   # 3. Frontend (Face)
   frontend:
-    build: ./apps/frontend
+    #build: ./apps/frontend
+    image: ygpark1334/ps-tracker-web:latest
     container_name: ps-tracker-web
     ports:
       - "80:80"

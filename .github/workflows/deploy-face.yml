@@ -1,0 +1,66 @@
+name: Deploy Face (Frontend)
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'msa/apps/frontend/**'            # 리액트 코드가 바뀌거나
+      - 'msa/docker-compose.brain.yml'    # 1호기 설정(Nginx 등)이 바뀌거나
+      - '.github/workflows/deploy-face.yml' # 이 파일 자체가 바뀔 때
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. 도커 로그인
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 3. 빌드 & 푸시 (변수 주입 포함)
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: msa/apps/frontend
+          file: msa/apps/frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-web:latest
+          # 👇 [핵심] 리액트 빌드 시점에 환경변수 주입 (Secrets -> ARG)
+          build-args: |
+            VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
+            VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+            VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+            VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+            VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+            VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
+            VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+            VITE_FIREBASE_VAPID_KEY=${{ secrets.VITE_FIREBASE_VAPID_KEY }}
+
+      # 4. 서버 배포 (SSH)
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/backend-lab/msa
+            
+            # 최신 설정 파일 받기
+            git pull origin master
+
+            # 1. 최신 이미지 당겨오기
+            docker compose -f docker-compose-brain.yml pull frontend
+            
+            # 2. 컨테이너 교체
+            docker compose -f docker-compose-brain.yml up -d frontend
+            
+            # 3. 찌꺼기 청소
+            docker image prune -f
