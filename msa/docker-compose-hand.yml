@@ -23,8 +23,11 @@ services:
 
   # 2. Python Collector (Hand)
   collector-service:
-    build: ./apps/collector-service
+    #build: ./apps/collector-service
+    image: ygpark1334/ps-tracker-collector:latest
     container_name: ps-tracker-collector
+    env_file:
+      - .env
     ports:
       - "5000:5000"
     environment:

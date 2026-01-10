@@ -75,7 +75,7 @@ jobs:
             # 1. 최신 설정파일(docker-compose 등) 받기
             git pull origin master
 
-            # 2. 방금 올라온 따끈따끈한 이미지 받아오기
+            # 2. 최신 이미지 당겨오기
             docker compose -f docker-compose-brain.yml pull catalog-service
 
             # 3. 컨테이너 교체
