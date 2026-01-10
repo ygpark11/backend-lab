@@ -565,9 +565,47 @@ def crawl_detail_and_send(driver, wait, target_url):
         # 5. 전송
         image_url = ""
         try:
-            img_elem = driver.find_element(By.CSS_SELECTOR, "img[data-qa='gameBackgroundImage#heroImage#image']")
-            image_url = img_elem.get_attribute("src").split("?")[0]
-        except: pass
+            # 모든 JSON 스크립트 태그를 가져옴.
+            scripts = driver.find_elements(By.CSS_SELECTOR, "script[type='application/json']")
+            for script in scripts:
+                content = script.get_attribute("innerHTML")
+                # "media" 키워드가 없으면 건너뛰어서 속도 향상
+                if "media" not in content or "url" not in content:
+                    continue
+
+                try:
+                    data = json.loads(content)
+                    # cache 객체 내부 순회 (Concept:1234, Product:1234 등 동적 키 대응)
+                    cache = data.get("cache", {})
+                    for key, val in cache.items():
+                        # personalizedMeta -> media 구조 확인
+                        if "personalizedMeta" in val and "media" in val["personalizedMeta"]:
+                            media_list = val["personalizedMeta"]["media"]
+                            # 우선순위: MASTER > GAMEHUB_COVER_ART > 아무거나
+                            for media in media_list:
+                                if media.get("role") == "MASTER":
+                                    image_url = media.get("url")
+                                    break
+                                if media.get("role") == "GAMEHUB_COVER_ART" and not image_url:
+                                    image_url = media.get("url")
+
+                            if image_url: break # 이미지를 찾았으면 루프 종료
+                    if image_url: break
+                except: pass
+
+            if image_url:
+                logger.info(f"   📸 Image found via JSON Script (Master/Cover)")
+        except Exception as e:
+            logger.warning(f"   ⚠️ JSON extraction error: {e}")
+
+        # [전략 2] Meta Tag 백업 (og:image)
+        # 만약 JSON 구조가 바뀌었을 때를 대비한 안전장치
+        if not image_url:
+            try:
+                meta_img = driver.find_element(By.CSS_SELECTOR, "meta[property='og:image']")
+                image_url = meta_img.get_attribute("content").split("?")[0]
+                logger.info(f"   📸 Image found via Meta Tag")
+            except: pass
 
         ps_store_id = target_url.split("/")[-1].split("?")[0]
 
