@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 41 In Progress (Building CI/CD Pipelines)
+* **Status:** Level 41 Complete (Fully Automated CI/CD Pipelines)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -143,13 +143,54 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   * **Private Communication:** `Java(Brain)`가 `Python(Hand)`에게 크롤링 명령을 내리고, `Python`이 다시 `Java`로 데이터를 보내는 양방향 통신을 **사설 IP(Private IP)** 기반으로 구축하여 보안성 강화.
   * **Firewall Strategy:** OCI Security List와 Ubuntu `iptables` 이중 잠금 설정을 통해, 내부 식구(10.0.x.x)끼리는 자유롭게 통신하되 외부 침입은 원천 차단.
 
-### ⑬ Environment Strategy (Profile Isolation)
+### ⑬ DevOps Pipeline (The Factory) - GitHub Actions
+"내 로컬에선 되는데?"라는 의존성을 제거하고, 코드 푸시 한 번으로 배포까지 완료되는 **Zero-Touch 배포 파이프라인** 구축.
+
+#### 🏭 Build Time vs Run Time 전략 (The Separation)
+로컬 개발 환경과 달리, CI/CD 환경에서는 **"변수 주입 시점"**이 핵심. PS-Tracker는 보안과 프레임워크의 구조적 특성에 따라 주입 시점을 분리하여 설계함.
+
+| 구분 | Build Time (공장/조립) | Run Time (현장/실행) |
+| :--- | :--- | :--- |
+| **개념** | 도커 이미지를 굽는(Build) 시점 | 컨테이너를 실행(Up)하는 시점 |
+| **주체** | **GitHub Actions** (Runner) | **Operating Server** (Brain/Hand) |
+| **대상** | **Frontend (React)** | **Backend (Java/Python)** |
+| **이유** | React는 빌드 시점에 환경변수가 JS 코드로 치환(Hardcoded)되어 정적 파일로 변환됨. | 서버 애플리케이션은 실행 시점에 OS 환경변수나 파일을 읽어서 동적으로 설정함. |
+| **방법** | `ARG` & `build-args`로 GitHub Secrets 주입 | `env_file` (.env) 및 `Volume Mount`로 서버 파일 주입 |
+
+#### 🔄 CI/CD 파이프라인 흐름도 (Workflow)
+```mermaid
+graph TD
+    User[👨‍💻 Developer] -->|Git Push| Repo[GitHub Repository]
+    
+    subgraph "CI: The Factory (GitHub Actions)"
+        Repo -->|Trigger| Action[🚀 Workflow Start]
+        Action -->|Inject Secrets| Build[🐳 Docker Build]
+        Note right of Build: Frontend: ARG 주입 (Build Time)<br/>Backend: 순수 코드 빌드
+        Build -->|Push| Hub[📦 Docker Hub]
+    end
+    
+    subgraph "CD: The Field (Production Servers)"
+        Hub -->|SSH Trigger| Brain[🖥️ Node 1: Brain]
+        Hub -->|SSH Trigger| Hand[🖥️ Node 2: Hand]
+        
+        Brain -->|Pull Image| BrainRun[🏃 Run Container]
+        Hand -->|Pull Image| HandRun[🏃 Run Container]
+        
+        Note right of BrainRun: Backend: .env 주입 (Run Time)<br/>Volume: Firebase Key 마운트
+    end
+```
+#### 환경 변수 관리 전략 (Secrets Management)
+- **GitHub Secrets:** CI 단계에서 필요한 빌드 재료(React Key)와 배포 자격 증명(SSH Key, Docker ID)을 암호화하여 저장.
+- **Server .env:** CD 단계(런타임)에서 필요한 DB 비밀번호, Discord URL 등은 운영 서버 내부의 `.env` 파일로 격리하여 관리.
+- **Hybrid Loading:** `FirebaseConfig` 등 핵심 설정 클래스는 "환경변수가 있으면 그것을(Prod), 없으면 내부 파일을(Local)" 읽도록 설계하여 코드 수정 없이 환경 대응.
+
+### ⑭ Environment Strategy (Profile Isolation)
 로컬 개발 생산성과 운영 환경 안정성을 동시에 잡기 위한 Spring Profile 전략 수립.
 * **Local (`active: local`):** 개발자 PC(`localhost:3307`)에서 실행되며, 로컬 Docker DB에 접속. 코드 수정 없이 즉시 테스트 가능.
 * **Prod (`active: prod`):** Docker Compose 환경(`mysql:3306`)에서 실행되며, 컨테이너 내부 네트워크(DNS)를 통해 통신.
 * **Config Management:** `application-local.yml`과 `application-prod.yml`을 분리하여 빌드/배포 시 설정 충돌 원천 차단.
 
-### ⑭ Security & SSL (The Shield) - Let's Encrypt & Certbot
+### ⑮ Security & SSL (The Shield) - Let's Encrypt & Certbot
 사용자 정보 보호와 구글 OAuth 보안 정책 준수를 위한 완벽한 HTTPS 환경 구축.
 * **SSL Termination:** Nginx가 443 포트에서 암호화된 트래픽(HTTPS)을 받아 복호화한 뒤, 내부망(80)을 통해 React와 백엔드로 전달하는 구조.
 * **Certbot Integration:**
@@ -157,19 +198,19 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   * **Auto Renewal:** `Crontab`을 활용하여 매월 1일, 15일 새벽에 인증서 만료를 체크하고 자동으로 갱신(Renew) 및 Nginx 리로드(Reload) 수행.
 * **Security Headers:** `Strict-Transport-Security` 및 `redirect 301` 설정을 통해 HTTP 접근을 강제로 HTTPS로 전환.
 
-### ⑮ In-App Notification System (The Bell)
+### ⑯ In-App Notification System (The Bell)
 사용자의 재방문을 유도하고 구매 전환율을 높이는 **실시간 인앱 알림 시스템**.
 * **Event-Driven Architecture:** `CatalogService`가 가격 하락을 감지하면 `GamePriceChangedEvent`를 발행하고, 리스너가 이를 비동기(`@Async`)로 처리하여 `Notification` 테이블에 적재.
 * **Reactive UX:** React Navbar에서 안 읽은 알림(Red Badge)을 실시간으로 표시하고, 클릭 시 '읽음 처리'와 동시에 해당 게임 페이지로 이동하는 UX 제공.
 
-### ⑯ AI Curator & Recommendation (The Brain 2.0) - Google Gemini
+### ⑰ AI Curator & Recommendation (The Brain 2.0) - Google Gemini
 "비용 0원"으로 구축한 고성능 AI 게임 분석 및 추천 시스템.
 * **Gemini 2.5 Flash Integration:** 구글 Native API 직접 연동.
 * **Smart Throttling Policy (Resource Optimization):** 
   - **Policy:** AI API의 무료 티어 제한 및 서버 자원 보호를 위해 **'하루 최대 20개 게임'**에 대해서만 상세 요약을 생성하도록 정책적 제한 적용.
   - **Data Prioritization:* 사용자의 관심도가 높은 최신 할인 정보와 핵심 지표(가격, 변동 내역) 수집에 자원을 집중하고, 부가 정보(게임 설명 요약)는 일일 쿼터를 전략적으로 배분하여 운영의 안정성 확보.
 
-### ⑰ Contextual Recommendation Engine (The Curator)
+### ⑱ Contextual Recommendation Engine (The Curator)
 제한된 리소스(1GB RAM) 환경에서 AI 모델 로딩 없이, **"사용자가 관심을 가질만한 연관 게임"**을 정교하게 추천하는 하이브리드 추천 엔진.
 * **Architecture Pivot :** 초기 기획은 AI(LLM) 기반 추천이었으나, 비용/속도/리소스 효율성을 고려하여 **QueryDSL 기반의 필터링 로직**으로 기술 스택을 전환.
 * **Genre Normalization (Data Engineering):**
@@ -180,13 +221,13 @@ API 테스트 도구를 넘어, **상용 서비스 수준의 High-End UX/UI**를
   2. **Value First:** 할인율이 높고(Price Merit), 메타스코어가 높은(Quality) 게임 우선 노출.
   3. **Recency:** 최신 데이터를 가진 게임 우선.
 
-### ⑱ Network Hardening (The Fortress)
+### ⑲ Network Hardening (The Fortress)
 "공격 표면(Attack Surface)의 최소화"를 목표로 한 네트워크 보안 강화.
 * **Port Closing:** `docker-compose.yml`에서 DB(3306), Backend(8080), Selenium(4444) 등의 포트 바인딩을 제거하여 외부 접근을 원천 차단. 오직 Nginx(80/443)만 외부와 통신 가능.
 * **Localhost Binding:** 관리 도구인 `Adminer`는 `127.0.0.1:8090`으로 바인딩하여, 외부 IP 접속을 차단하고 오직 **SSH Tunneling**을 통해서만 접근 가능하도록 격리.
 * **Secret Rotation:** 보안 사고 예방을 위해 운영 중인 모든 자격 증명(DB Password, JWT Secret, OAuth Client Secret)을 난수화된 새 키로 전면 교체 및 재배포 완료.
 
-### ⑲ Sustainable Business Model (The Win-Win Strategy)
+### ⑳ Sustainable Business Model (The Win-Win Strategy)
 서비스의 지속 가능성을 확보하기 위해 "사용자 경험을 해치지 않는 수익화" 모델 구축.
 * **Privacy-First Donation:** `Buy Me a Coffee`를 연동하여, 개발자의 개인정보(계좌, 실명) 노출 없이 안전하게 후원을 받을 수 있는 익명 후원 시스템 구축 (Proxy Payment).
 * **Contextual Banner (Affiliate Lite):** 무분별한 광고 네트워크(AdSense) 대신, 사용자가 "게임을 구매하려는 순간"에 가장 필요한 정보인 **'PSN 기프트카드 최저가 검색(Naver Shopping)'** 배너를 배치.
@@ -610,6 +651,22 @@ sequenceDiagram
   * **Brain (Node 1):** API와 DB만 전담하여 메모리 사용량을 60% 미만으로 안정화.
   * **Hand (Node 2):** 크롤러와 브라우저만 배치하여, 수집 중 메모리가 튀더라도 본진(DB)에는 영향이 없도록 격리.
   * **Network:** OCI 내부망(Private IP)을 통한 통신으로 보안과 속도 두 마리 토끼를 잡음.
+
+### 💥 Issue 24: 사라진 환경변수 (Build Args vs Env)
+* **증상:** 로컬에선 잘 되던 React 앱이, 배포 후 실행하면 `Missing App configuration` 에러를 뱉으며 Firebase 접속 실패.
+* **원인:** `docker-compose.yml`의 `env_file`은 **컨테이너 실행(Run-Time)** 시에만 변수를 넘겨줌. 하지만 React(Vite)는 **빌드(Build-Time)** 시점에 환경변수를 코드로 구워내야 함. GitHub Actions는 `.env` 파일이 없으므로 빈 값으로 빌드됨.
+* **해결:**
+  1. `Dockerfile`에 `ARG` 변수 선언.
+  2. GitHub Actions 워크플로우에서 `build-args` 옵션으로 GitHub Secrets 값을 주입.
+  3. 로컬 도커 설정(`docker-compose-local.yml`)에서도 `args` 섹션을 추가하여 빌드 시점 변수 주입 보장.
+
+### 💥 Issue 25: 고립된 컨테이너 (Volume Mount)
+* **증상:** `FileNotFoundException: firebase-service-account.json`.
+* **원인:** 보안을 위해 깃허브에 올리지 않은(gitignore) 키 파일이, 클린 빌드 환경인 GitHub Actions에는 존재하지 않아 이미지에 포함되지 않음.
+* **해결 (Decoupling):**
+  1. **Code:** "파일이 없으면 환경변수 경로를 읽어라"는 하이브리드 로직(`FirebaseConfig`) 구현.
+  2. **Deploy:** Docker Compose의 `volumes`를 통해 호스트의 파일을 컨테이너 내부로 **런타임 마운트(Runtime Mount)**.
+
 ---
 
 ## 8. 실행 방법 (How to Run)
@@ -698,13 +755,13 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
   - **Contextual Banner:** 게임 상세 페이지의 '골든 존(Golden Zone)'에 기프트카드 최저가 검색 배너를 배치하여 사용자 혜택과 수익화의 균형 달성.
 
 ### 🚀 Step 5. 확장 및 자동화 (Scale & DevOps)
-- [ ] **Lv.41: 초경량 무중단 배포 (Lightweight CI/CD)** 🚧 **[In Progress]**
+- [x] **Lv.41: 초경량 배포 (Lightweight CI/CD)**
   - **Environment:** Oracle Cloud Micro (1GB RAM) 환경을 고려한 최적화 파이프라인 설계.
   - **Pipeline:** `GitHub Actions`가 빌드 부하를 전담하고, 운영 서버는 완성된 이미지만 받아 실행(Pull & Run)하여 리소스 점유율 최소화.
   - **Status:**
     - [x] **Phase 1. Brain (Backend)**: GitHub Actions + Docker Hub + SSH Deploy 구축 완료 ✅
-    - [ ] **Phase 2. Face (Frontend)**: React + Nginx 이미지 최적화 및 배포 대기
-    - [ ] **Phase 3. Hand (Collector)**: Python 수집기 (2호기) 배포 파이프라인 대기
+    - [x] **Phase 2. Face (Frontend)**: React 빌드 시점 변수 주입(Build Args) 및 Nginx 최적화 완료 ✅
+    - [x] **Phase 3. Hand (Collector)**: Multi-Node(2호기) 원격 배포 파이프라인 구축 완료 ✅
 - [ ] **Lv.42: 성장 기초 공사 (Growth Foundation)**
   - **Analytics:** Google Analytics (GA4)를 도입하여 트래픽 소스 및 사용자 행동 패턴 정량 분석.
   - **SEO (Open Graph):** 카카오톡/SNS 공유 시 게임 포스터와 실시간 가격이 노출되도록 동적 메타 태그 구현.
