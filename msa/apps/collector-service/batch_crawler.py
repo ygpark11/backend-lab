@@ -208,7 +208,7 @@ def parse_json_data(json_str, target_url):
             "platforms": product_data.get("platforms", []),
             "psStoreId": product_data.get("id", ""),
             "imageUrl": "",
-            "description": "Full Data (JS-Extracted)",
+            "description": "Full Data Crawler",
             "genreIds": "",
             "originalPrice": 0, "currentPrice": 0, "discountRate": 0,
             "saleEndDate": None, "isPlusExclusive": False, "psPlusPrice": 0,
