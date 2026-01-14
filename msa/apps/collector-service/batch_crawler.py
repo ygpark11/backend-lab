@@ -56,11 +56,11 @@ CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 
 CONFIG = {
     "LOW": {
-        "strategy": "none",
-        "sleep_min": 3.0,
-        "sleep_max": 5.0,
-        "restart_interval": 30,
-        "window_stop": True,
+        "strategy": "normal",
+        "sleep_min": 2.0,
+        "sleep_max": 4.0,
+        "restart_interval": 20,
+        "window_stop": False,
         "cool_down_interval": 0,
         "cool_down_seconds": 0
     },
