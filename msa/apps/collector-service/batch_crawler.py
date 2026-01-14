@@ -39,6 +39,7 @@ app = Flask(__name__)
 session = requests.Session()
 session.headers.update({'Connection': 'keep-alive'})
 
+# 환경 변수
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
@@ -48,41 +49,46 @@ DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 lock = threading.Lock()
 is_running = False
 
-# =========================================================
-# ⚙️ 하이브리드 모드 설정 (JSON 엔진 최적화)
-# =========================================================
+# ==========================================
+# ⚙️ 환경별 최적화 설정 (Low Spec vs High Spec)
+# ==========================================
+# CRAWLER_MODE=HIGH : 고사양 (속도 + 스마트 휴식)
+# CRAWLER_MODE=LOW  : 저사양 (생존 + 잦은 재시작)
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 
-CONFIG = {
-    "LOW": {  # 🐢 오라클 프리티어
-        "restart_interval": 50,
-        "page_load_strategy": "none",
-        "sleep_min": 4.5,
-        "sleep_max": 6.5,
-        "timeout": 12,
-        "use_cdp_block": True,
-        "window_stop": True
-    },
-    "HIGH": { # 🏎️ 고사양 서버/PC
-        "restart_interval": 500,
+MODES = {
+    "LOW": {
+        # 1GB 램 생존 전략
+        "restart_interval_p1": 15,  # 15개마다 재시작 (메모리 초기화)
+        "restart_interval_p2": 1,   # 1페이지마다 재시작
+        "long_break_interval": 0,   # 재시작이 곧 휴식이므로 별도 휴식 없음
         "page_load_strategy": "normal",
-        "sleep_min": 2.0,
-        "sleep_max": 3.5,
+        "timeout": 25,
+        "sleep_min": 3.0,
+        "sleep_max": 5.0
+    },
+    "HIGH": {
+        # 고사양 완주 전략 (Anti-Ban 강화)
+        "restart_interval_p1": 200, # 메모리 넉넉하니 200개까지 쭉
+        "restart_interval_p2": 5,
+        "long_break_interval": 50,  # [NEW] 50개마다
+        "long_break_duration": 30,  # [NEW] 30초간 강제 휴식 (차단 방지 핵심)
+        "page_load_strategy": "normal",
         "timeout": 15,
-        "use_cdp_block": False,
-        "window_stop": False
+        "sleep_min": 1.5,
+        "sleep_max": 3.0
     }
 }
 
-CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
+CONF = MODES.get(CURRENT_MODE, MODES["LOW"])
 
-logger.info(f"🔧 Crawler Mode Initialized: [{CURRENT_MODE}]")
-logger.info(f"   👉 Strategy: {CONF['page_load_strategy']} | Restart: {CONF['restart_interval']}")
+logger.info(f"🔧 Crawler Initialized in [{CURRENT_MODE}] Mode")
+logger.info(f"   👉 Auto-Rest(Anti-Ban): Every {CONF.get('long_break_interval', 'N/A')} items")
 # =========================================================
 
 
 def get_driver():
-    """드라이버 설정"""
+    """드라이버 생성"""
     ua = UserAgent()
     random_user_agent = ua.random
     logger.info(f"🎭 Generated User-Agent: {random_user_agent}")
@@ -100,385 +106,257 @@ def get_driver():
         "disk-cache-size": 4096
     }
 
+    common_options = [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-extensions",
+        "--disable-application-cache"
+    ]
+
     if SELENIUM_URL:
-        logger.info(f"🌐 [Docker Mode] Grid: {SELENIUM_URL}")
+        logger.info(f"🌐 [Docker Mode] Connecting to Grid: {SELENIUM_URL}")
         options = webdriver.ChromeOptions()
         options.page_load_strategy = CONF['page_load_strategy']
         options.add_argument(f"user-agent={random_user_agent}")
         options.add_argument(f"--window-size={random_window_size}")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-
-        if CURRENT_MODE == "LOW":
-            options.add_argument("--disable-extensions")
-            options.add_argument("--disable-background-networking")
-
+        for opt in common_options: options.add_argument(opt)
         options.add_experimental_option("prefs", prefs)
         driver = webdriver.Remote(command_executor=SELENIUM_URL, options=options)
-
     else:
-        logger.info(f"💻 [Local Mode] Starting Chrome ({CURRENT_MODE} Spec)")
+        logger.info("💻 [Local Mode] Starting Undetected Chrome")
         options = uc.ChromeOptions()
         options.page_load_strategy = CONF['page_load_strategy']
-
         if os.getenv("HEADLESS", "false").lower() == "true":
              options.add_argument("--headless=new")
-
         options.add_argument(f"user-agent={random_user_agent}")
         options.add_argument(f"--window-size={random_window_size}")
-        options.add_argument("--disable-popup-blocking")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-
+        for opt in common_options: options.add_argument(opt)
         driver = uc.Chrome(options=options, use_subprocess=True)
 
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
-    if CONF["use_cdp_block"]:
-        try:
-            driver.execute_cdp_cmd("Network.setBlockedURLs", {
-                "urls": ["*.png", "*.jpg", "*.gif", "*.webp", "*.css", "*.woff", "*.woff2", "*google-analytics*"]
-            })
-            driver.execute_cdp_cmd("Network.enable", {})
-        except Exception:
-            pass
-
     return driver
 
 def clean_text(text):
-    """
-    문자열 세탁 함수:
-    1. None 체크
-    2. 상표권 기호(™, ®, ©) 제거
-    3. 스마트 쿼트(’, “)를 일반 따옴표로 변환
-    4. 앞뒤 공백 제거
-    """
-    if not text:
-        return ""
-
-    # [Step 1] 특수 문자 / 상표권 기호 제거 (필요한 것만 콕 집어서)
-    # \u2122(TM), \u00ae(R), \u00a9(C) 등
+    if not text: return ""
     text = re.sub(r'[™®©℠]', '', text)
-
-    # [Step 2] 따옴표 정규화 (맥/워드에서 붙는 둥근 따옴표 처리)
     text = text.replace('’', "'").replace('‘', "'").replace('“', '"').replace('”', '"')
-
-    # [Step 3] 이상한 공백 제거 (Zero-width space 등)
-    # \s+ 는 모든 공백(줄바꿈 포함)을 찾아서 단일 스페이스로 치환
-    text = re.sub(r'\s+', ' ', text)
-
-    return text.strip()
+    return re.sub(r'\s+', ' ', text).strip()
 
 def extract_ps_store_data(html_source, target_url):
-    """HTML 소스에서 JSON 데이터를 추출 (가격 정보 보유 스크립트 우선 선별 + KST)"""
+    """
+    JSON 파싱 엔진 V6 (Fallback 강화판)
+    - ID 매칭 실패 시, 가격표가 있는 다른 객체라도 수집하도록 안전장치 추가
+    """
     try:
         pattern = r'<script id="env:[^"]+" type="application/json">(.*?)</script>'
-        matches = re.findall(pattern, html_source)
+        matches = re.findall(pattern, html_source, re.DOTALL)
 
-        if not matches:
-            return None
+        if not matches: return None
 
-        best_json_str = None
-        max_score = -1
+        # [1단계] URL에서 타겟 ID 추출
+        target_id = None
+        id_match = re.search(r'([A-Z]{2,4}\d{4,}-\w{4,}_\d{2})', target_url)
+        if not id_match:
+            id_match = re.search(r'([A-Z]{4}\d{5}_00)', target_url)
+        if id_match: target_id = id_match.group(1)
 
+        best_json_data = None
+        best_score = -float('inf') # 음수 무한대로 초기화
+
+        # [2단계] JSON 채점 (V5 로직 유지)
         for json_str in matches:
+            if len(json_str) < 500: continue
             try:
                 data = json.loads(json_str)
                 cache = data.get("cache", {})
-
                 score = 0
-                has_name = False
-                has_price = False
 
-                for k, v in cache.items():
-                    score += 1 # 기본 점수 (데이터 양)
-
-                    # Product 타입이면서 이름이 있는지 확인
-                    if v.get("__typename") == "Product" and v.get("name"):
-                        has_name = True
-
-                        # [New] 가격 정보(webctas)가 실제로 존재하는지 확인
-                        webctas = v.get("webctas", [])
-                        if webctas:
-                            for cta_ref in webctas:
-                                cta_key = cta_ref.get("__ref")
-                                cta_obj = cache.get(cta_key)
-                                # 가격 객체와 금액 정보가 있는지 깊게 검사
-                                if cta_obj and cta_obj.get("price") and cta_obj["price"].get("basePrice"):
-                                    has_price = True
-                                    break
-
-                # 점수 계산
-                if has_name:
-                    score += 100000   # 이름 있으면 10만점
-                if has_price:
-                    score += 500000   # 가격까지 있으면 50만점 (무조건 1순위)
-
-                if score > max_score:
-                    max_score = score
-                    best_json_str = json_str
-            except:
-                continue
-
-        # Fallback
-        if not best_json_str:
-            best_json_str = max(matches, key=len)
-
-        data = json.loads(best_json_str)
-        cache = data.get("cache", {})
-
-        product_data = None
-
-        def is_valid_product(obj):
-            if not obj or obj.get("__typename") != "Product": return False
-            return bool(obj.get("webctas"))
-
-        # Main Product 찾기 (ROOT_QUERY -> ID 매칭 순)
-        root_query = cache.get("ROOT_QUERY", {})
-        for key, val in root_query.items():
-            if "productRetrieve" in key and isinstance(val, dict) and "__ref" in val:
-                candidate = cache.get(val["__ref"])
-                if is_valid_product(candidate):
-                    product_data = candidate
-                    break
-                elif candidate and not product_data:
-                    product_data = candidate
-
-        url_id_match = re.search(r'([A-Z]{4}\d{5}_00)', target_url)
-        target_id_part = url_id_match.group(1) if url_id_match else None
-
-        if target_id_part:
-            if not product_data or not is_valid_product(product_data):
                 for key, val in cache.items():
                     if val.get("__typename") == "Product":
-                        if target_id_part in str(val.get("id", "")):
-                            if is_valid_product(val):
-                                product_data = val
-                                break
-                            if not product_data: product_data = val
+                        score += 10
+                        # ID 일치
+                        if target_id and target_id in str(val.get("id", "")):
+                            score += 100000
+                            # 가격표 없으면 감점 (하지만 Case 8을 위해 감점 폭을 줄임)
+                            if not val.get("webctas"): score -= 20000
+                        # 가격표 보유
+                        if val.get("webctas"): score += 5000
 
+                if score > best_score:
+                    best_score = score
+                    best_json_data = data
+            except: continue
+
+        if not best_json_data: return None
+
+        # [3단계] 데이터 추출 (3단 그물망 적용)
+        cache = best_json_data.get("cache", {})
+        product_data = None
+
+        # Priority 1: [ID 일치] + [가격표(webctas) 있음] -> Case 2~7 완벽 커버
+        # (가장 정확하고 이상적인 데이터)
+        if target_id:
+            for k, v in cache.items():
+                if (v.get("__typename") == "Product" and
+                    target_id in str(v.get("id", "")) and
+                    v.get("webctas")):
+                    product_data = v
+                    break
+
+        # Priority 2: [가격표(webctas) 있음] (ID 불일치 허용) -> Case 8 완벽 커버
+        # (ID가 껍데기라 실패했을 때, 내부에 숨은 진짜 판매 상품을 찾아냄)
         if not product_data:
-            return None
+            for k, v in cache.items():
+                if v.get("__typename") == "Product" and v.get("webctas"):
+                    product_data = v
+                    break
 
+        # Priority 3: [ID 일치] (가격표 없음) -> 최후의 수단
+        # (가격이 없더라도 메타데이터라도 건져야 하는 경우)
+        if not product_data and target_id:
+            for k, v in cache.items():
+                 if v.get("__typename") == "Product" and target_id in str(v.get("id", "")):
+                    product_data = v
+                    break
+
+        if not product_data: return None
+
+        # --- 데이터 파싱 ---
         title = clean_text(product_data.get("name", ""))
         english_title = clean_text(product_data.get("invariantName", ""))
-        publisher = clean_text(product_data.get("publisherName", "Unknown Publisher"))
 
-        parsed_item = {
-            "title": title,
-            "englishTitle": english_title,
-            "publisher": publisher,
-            "platforms": product_data.get("platforms", []),
-            "psStoreId": product_data.get("id", ""),
-            "imageUrl": "",
-            "description": "Full Data Crawler (JSON)",
-            "genreIds": "",
+        # 이미지
+        image_url = ""
+        meta = product_data.get("personalizedMeta", {})
+        for m in meta.get("media", []):
+            if m.get("role") == "MASTER": image_url = m.get("url"); break
+        if not image_url:
+            for m in product_data.get("media", []):
+                if m.get("role") == "MASTER": image_url = m.get("url"); break
+                elif m.get("role") == "GAMEHUB_COVER_ART" and not image_url: image_url = m.get("url")
+        if not image_url and product_data.get("media"):
+             image_url = product_data.get("media")[0].get("url", "")
 
-            "originalPrice": 0,
-            "currentPrice": 0,
-            "discountRate": 0,
-            "saleEndDate": None,
-            "isPlusExclusive": False,
-            "psPlusPrice": 0,
-            "inCatalog": False
-        }
-
-        # 이미지 & 장르
-        media_list = product_data.get("media", [])
-        if not media_list:
-             meta = product_data.get("personalizedMeta", {})
-             media_list = meta.get("media", [])
-
-        for media in media_list:
-            if media.get("role") == "MASTER":
-                parsed_item["imageUrl"] = media.get("url"); break
-            if media.get("role") == "GAMEHUB_COVER_ART" and not parsed_item["imageUrl"]:
-                parsed_item["imageUrl"] = media.get("url")
-
-        genres = product_data.get("localizedGenres", [])
-        parsed_item["genreIds"] = ", ".join([g.get("value") for g in genres])
-
+        # 가격 추출
         webctas = product_data.get("webctas", [])
         prices_found = []
-
-        KST = timezone(timedelta(hours=9)) # 한국 시간
+        KST = timezone(timedelta(hours=9))
 
         for cta_ref in webctas:
-            cta_key = cta_ref.get("__ref")
-            if not cta_key: continue
-            cta_obj = cache.get(cta_key)
+            cta_obj = cache.get(cta_ref.get("__ref"))
             if not cta_obj: continue
-            cta_type = cta_obj.get("type")
 
-            # 카탈로그 체크
-            if cta_type == "ADD_TO_LIBRARY":
-                price_meta = cta_obj.get("price", {})
-                upsell = price_meta.get("upsellText", "")
-                sub = price_meta.get("subscriptionService", "")
-                if "카탈로그" in upsell or "PS_PLUS_" in sub:
-                    parsed_item["inCatalog"] = True
+            in_catalog = cta_obj.get("type") == "ADD_TO_LIBRARY"
+            price_info = cta_obj.get("price", {})
+            curr = price_info.get("discountedValue", 0)
+            orig = price_info.get("basePriceValue", 0)
+            is_plus = price_info.get("isExclusive", False)
 
-            # 가격 추출 (구매, 장바구니, 예약)
-            if cta_type in ["ADD_TO_CART", "PURCHASE", "PRE_ORDER"]:
-                price_info = cta_obj.get("price", {})
+            end_date = None
+            if price_info.get("endTime"):
+                try:
+                    ts = int(price_info.get("endTime"))
+                    dt = datetime.fromtimestamp(ts/1000, tz=timezone.utc).astimezone(KST)
+                    end_date = dt.strftime('%Y-%m-%d')
+                except: pass
 
-                if price_info.get("isFree") is True and price_info.get("basePriceValue") == 0:
-                    continue
+            if curr > 0:
+                prices_found.append({
+                    "curr": curr, "orig": orig, "is_plus": is_plus,
+                    "end_date": end_date, "in_catalog": in_catalog
+                })
 
-                curr_price = price_info.get("discountedValue", 0)
-                orig_price = price_info.get("basePriceValue", 0)
-                is_exclusive = price_info.get("isExclusive", False)
-                end_time_ts = price_info.get("endTime")
+        parsed = {
+            "title": title,
+            "englishTitle": english_title,
+            "publisher": clean_text(product_data.get("publisherName", "Unknown")),
+            "platforms": product_data.get("platforms", []),
+            "psStoreId": product_data.get("id", ""),
+            "imageUrl": image_url,
+            "description": f"Hybrid V6 (SafetyNet)",
+            "genreIds": ", ".join([g.get("value") for g in product_data.get("localizedGenres", [])]),
+            "originalPrice": 0, "currentPrice": 0, "discountRate": 0,
+            "saleEndDate": None, "isPlusExclusive": False, "inCatalog": False
+        }
 
-                sale_end_date = None
-                if end_time_ts:
-                    try:
-                        dt_utc = datetime.fromtimestamp(int(end_time_ts) / 1000, tz=timezone.utc)
-                        dt_kst = dt_utc.astimezone(KST)
-                        sale_end_date = dt_kst.strftime('%Y-%m-%d')
-                    except: pass
-
-                if curr_price > 0:
-                    prices_found.append({
-                        "curr": curr_price,
-                        "orig": orig_price,
-                        "is_plus": is_exclusive,
-                        "end_date": sale_end_date
-                    })
-
-        # 최적 가격 결정
         if prices_found:
-            normal_offers = [p for p in prices_found if not p['is_plus']]
-            plus_offers = [p for p in prices_found if p['is_plus']]
+            normal = [p for p in prices_found if not p['is_plus']]
+            if normal:
+                best = min(normal, key=lambda x: x['curr'])
+                parsed.update({"currentPrice": best['curr'], "originalPrice": best['orig'],
+                               "saleEndDate": best['end_date'], "inCatalog": best['in_catalog']})
+            plus = [p for p in prices_found if p['is_plus']]
+            if plus:
+                best_plus = min(plus, key=lambda x: x['curr'])
+                if parsed["currentPrice"] == 0 or best_plus['curr'] < parsed["currentPrice"]:
+                    parsed.update({"currentPrice": best_plus['curr'], "originalPrice": best_plus['orig'],
+                                   "saleEndDate": best_plus['end_date'], "isPlusExclusive": True})
+            if parsed["originalPrice"] > parsed["currentPrice"]:
+                parsed["discountRate"] = int(round(((parsed["originalPrice"] - parsed["currentPrice"]) / parsed["originalPrice"]) * 100))
 
-            if normal_offers:
-                best_normal = min(normal_offers, key=lambda x: x['curr'])
-                parsed_item["currentPrice"] = best_normal['curr']
-                parsed_item["originalPrice"] = best_normal['orig']
-                parsed_item["saleEndDate"] = best_normal['end_date']
+        return parsed
 
-            if plus_offers:
-                best_plus = min(plus_offers, key=lambda x: x['curr'])
-                parsed_item["psPlusPrice"] = best_plus['curr']
-
-                if parsed_item["currentPrice"] == 0:
-                    parsed_item["currentPrice"] = best_plus['curr']
-                    parsed_item["originalPrice"] = best_plus['orig']
-                    parsed_item["saleEndDate"] = best_plus['end_date']
-                    parsed_item["isPlusExclusive"] = True
-                elif best_plus['curr'] < parsed_item["currentPrice"]:
-                     parsed_item["isPlusExclusive"] = True
-
-            if parsed_item["originalPrice"] > parsed_item["currentPrice"]:
-                parsed_item["discountRate"] = int(round(((parsed_item["originalPrice"] - parsed_item["currentPrice"]) / parsed_item["originalPrice"]) * 100))
-
-            if parsed_item["psPlusPrice"] > 0 and parsed_item["originalPrice"] > parsed_item["psPlusPrice"]:
-                 plus_rate = int(round(((parsed_item["originalPrice"] - parsed_item["psPlusPrice"]) / parsed_item["originalPrice"]) * 100))
-                 parsed_item["description"] += f" | Max Discount: {plus_rate}% (PS+)"
-
-        return parsed_item
-
-    except Exception as e:
-        logger.error(f"   ⚠️ JSON Parse Error: {e}")
-        return None
-
-# =========================================================
+    except Exception: return None
 
 def crawl_detail_and_send(driver, wait, target_url):
     try:
-        # 1. 페이지 접근 (네트워크 차단 적용된 상태)
         driver.get(target_url)
-
-        # [Hybrid] 소스 로딩 대기
         time.sleep(CONF["sleep_min"])
 
-        if CONF["window_stop"]:
-            try: driver.execute_script("window.stop();")
-            except: pass
-
-        # 2. 페이지 소스 가져오기 (DOM 탐색 안 함)
-        page_source = driver.page_source
-
-        # 3. JSON 엔진 가동 🚀
-        payload = extract_ps_store_data(page_source, target_url)
-
-        # 4. 데이터 검증 및 재시도 (심폐소생술)
-        if not payload or payload["title"] == "":
-            logger.warning(f"   ⚠️ JSON not found/empty. Retrying refresh... : {target_url}")
-            try:
-                driver.refresh()
-                time.sleep(4.0) # 새로고침 후에는 좀 더 대기
-                if CONF["window_stop"]:
-                    try: driver.execute_script("window.stop();")
-                    except: pass
-
-                page_source = driver.page_source
-                payload = extract_ps_store_data(page_source, target_url)
-            except:
-                pass
+        payload = extract_ps_store_data(driver.page_source, target_url)
 
         if not payload:
-            logger.error(f"   ❌ Final Data Extraction Failed: {target_url}")
+            logger.warning(f"   ⚠️ Retrying parse: {target_url}")
+            driver.refresh()
+            time.sleep(CONF["sleep_max"])
+            payload = extract_ps_store_data(driver.page_source, target_url)
+
+        if not payload:
+            logger.error(f"   ❌ Failed: {target_url}")
             return None
 
-        # 5. 전송
-        if not payload.get("title"):
+        if payload['currentPrice'] == 0 and payload['originalPrice'] == 0:
             return None
 
-        if payload.get("currentPrice") == 0 and payload.get("originalPrice") == 0:
-            logger.warning(f"   🚫 Skip: Price info not found (0 KRW) for {payload['title']}")
-            return None
-
-        send_data_to_server(payload, payload["title"])
+        send_data_to_server(payload, payload['title'])
         return payload
 
     except Exception as e:
-        logger.error(f"   ⚠️ Fatal Error processing {target_url}: {e}")
+        logger.error(f"   ⚠️ Error: {target_url} / {e}")
         return None
 
-def fetch_update_targets():
+def send_data_to_server(payload, title):
     try:
-        res = session.get(TARGET_API_URL, timeout=30)
+        res = session.post(JAVA_API_URL, json=payload, timeout=30)
         if res.status_code == 200:
-            targets = res.json()
-            logger.info(f"📥 Received {len(targets)} targets.")
-            return targets
-        return []
-    except Exception as e:
-        logger.error(f"❌ Connection Error: {e}")
-        return []
+            logger.info(f"   📤 Sent: {title} | ₩{payload['currentPrice']:,} | {payload['discountRate']}%")
+        else:
+            logger.error(f"   💥 Server Error ({res.status_code}): {title}")
+    except:
+        logger.error(f"   💥 Network Error: {title}")
 
 def send_discord_summary(total_scanned, deals_list):
     if not DISCORD_WEBHOOK_URL: return
     try:
-        total_deals = len(deals_list)
-        if total_deals == 0: return
+        if not deals_list: return
+        deals_list.sort(key=lambda x: x['discountRate'], reverse=True)
+        top_5 = deals_list[:5]
 
-        sorted_deals = sorted(deals_list, key=lambda x: x['discountRate'], reverse=True)
-        top_5 = sorted_deals[:5]
-
-        message = f"## 📢 [PS-Tracker] 일일 수집 리포트 ({CURRENT_MODE})\n"
-        message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
-        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지!\n"
-        message += "━━━━━━━━━━━━━━━━━━\n"
-
-        for i, game in enumerate(top_5, 1):
-            sale_price = "{:,}".format(game['currentPrice'])
-            message += f"{i}️⃣ **[{game['discountRate']}%] {game['title']}**\n"
-            message += f"　 💰 **₩{sale_price}**\n"
-            if i < len(top_5): message += "───\n"
-
-        message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
+        msg = f"## 📢 [PS-Tracker] 수집 리포트 ({CURRENT_MODE})\n"
+        msg += f"**🗓️ {datetime.now().strftime('%Y-%m-%d')}** | 스캔: `{total_scanned}` / 할인: **`{len(deals_list)}`**\n"
+        msg += "━━━━━━━━━━━━━━━━━━\n"
+        for i, g in enumerate(top_5, 1):
+            msg += f"{i}️⃣ **[{g['discountRate']}%] {g['title']}** (₩{g['currentPrice']:,})\n"
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": msg})
     except: pass
 
 def run_batch_crawler_logic():
     global is_running
-    logger.info(f"🚀 [Crawler] Batch job started - Mode: {CURRENT_MODE} (JSON Engine)")
+    logger.info(f"🚀 [Crawler] Started (Mode: {CURRENT_MODE})")
 
     driver = None
-    total_processed_count = 0
+    total_processed = 0
     collected_deals = []
 
     try:
@@ -489,144 +367,126 @@ def run_batch_crawler_logic():
         # [Phase 1] 기존 타겟 갱신
         targets = fetch_update_targets()
         if targets:
-            logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
-
+            logger.info(f"--- [Phase 1] Refreshing {len(targets)} Items ---")
             for i, url in enumerate(targets):
                 if not is_running: break
 
-                if i > 0 and i % CONF["restart_interval"] == 0:
-                    logger.info(f"♻️ [Phase 1] Memory Cleanup at item {i}...")
+                # 1. 메모리 재시작 관리
+                if i > 0 and i % CONF["restart_interval_p1"] == 0:
+                    logger.info(f"♻️ [Memory] Restarting Driver...")
+                    try: driver.quit()
+                    except: pass
+                    time.sleep(3)
+                    driver = get_driver()
+                    wait = WebDriverWait(driver, CONF['timeout'])
+
+                # 2. [NEW] 슈퍼컴 모드 전용 스마트 휴식 (Anti-Ban)
+                # HIGH 모드일 때 50개마다 30초씩 강제로 쉬어서 IP 차단을 방지
+                long_break_iv = CONF.get("long_break_interval", 0)
+                if long_break_iv > 0 and i > 0 and i % long_break_iv == 0:
+                     sleep_dur = CONF.get("long_break_duration", 30)
+                     logger.info(f"💤 [Anti-Ban] Cool-down for {sleep_dur}s...")
+                     time.sleep(sleep_dur)
+
+                deal = crawl_detail_and_send(driver, wait, url)
+                if deal:
+                    total_processed += 1
+                    if deal['discountRate'] > 0: collected_deals.append(deal)
+
+                visited_urls.add(url)
+                time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+
+        # [Phase 2] 신규 탐색
+        if is_running:
+            logger.info("--- [Phase 2] Discovery Mode ---")
+            base_url = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
+            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+
+            for page in range(1, 16):
+                if not is_running: break
+
+                if page > 1 and page % CONF["restart_interval_p2"] == 0:
+                    logger.info(f"♻️ [Memory] Phase 2 Restart...")
                     try: driver.quit()
                     except: pass
                     time.sleep(5)
                     driver = get_driver()
                     wait = WebDriverWait(driver, CONF['timeout'])
 
-                deal_info = crawl_detail_and_send(driver, wait, url)
-
-                if deal_info:
-                    total_processed_count += 1
-                    if deal_info.get('discountRate', 0) > 0:
-                        collected_deals.append(deal_info)
-                visited_urls.add(url)
-
-                # 랜덤 대기 (차단 방지)
-                if random.random() < 0.3:
-                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
-        # [Phase 2] 신규 탐색 (Phase 2는 리스트 페이지라 JSON 파싱 어려움 -> 기존 유지하되 리스트만 긁음)
-        if is_running:
-            logger.info(f"🔭 [Phase 2] Starting Deep Discovery...")
-            base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
-
-            current_page = 1
-            max_pages = 15
-
-            while current_page <= max_pages:
-                if not is_running: break
-
-                p2_restart = 2 if CURRENT_MODE == "LOW" else 20
-
-                if current_page > 1 and current_page % p2_restart == 0:
-                     logger.info("♻️ [Maintenance] Restarting driver...")
-                     try: driver.quit()
-                     except: pass
-                     time.sleep(5)
-                     driver = get_driver()
-                     wait = WebDriverWait(driver, CONF['timeout'])
-
-                target_list_url = f"{base_category_path}/{current_page}{search_params}"
-                logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
+                target_list_url = f"{base_url}/{page}{search_params}"
+                logger.info(f"   📖 Scanning Page {page}/15")
 
                 try:
                     driver.get(target_list_url)
-                    time.sleep(2.0)
-
-                    if CONF["window_stop"]:
-                        try:
-                            driver.set_script_timeout(5)
-                            driver.execute_script("window.stop();")
-                        except Exception: pass
 
                     try:
-                        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
+                        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "psw-product-tile")))
                     except TimeoutException:
+                        logger.warning("      ⚠️ Timeout. Retrying...")
                         driver.refresh()
                         time.sleep(3)
+                        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "psw-product-tile")))
 
-                    try:
-                        driver.execute_script(f"window.scrollTo(0, {random.randint(800, 1200)});")
-                        time.sleep(1)
-                    except Exception: pass
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight/2);")
+                    time.sleep(1)
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                    time.sleep(2)
+
+                    candidates = []
+                    elems = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
+                    for el in elems:
+                        u = el.get_attribute("href")
+                        if u and "/ko-kr/product/" in u and u not in visited_urls:
+                            candidates.append(u)
+
+                    candidates = list(set(candidates))
+                    logger.info(f"      Found {len(candidates)} items.")
+
+                    for url in candidates:
+                        if not is_running: break
+                        deal = crawl_detail_and_send(driver, wait, url)
+                        if deal:
+                            total_processed += 1
+                            if deal['discountRate'] > 0: collected_deals.append(deal)
+                        visited_urls.add(url)
+                        time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                 except Exception as e:
-                    logger.warning(f"⚠️ Page Load Error on {current_page}: {e}")
-                    current_page += 1
+                    logger.error(f"   🔥 Page {page} Error: {e}")
                     continue
 
-                page_candidates = []
-                try:
-                    link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
-                    for el in link_elements:
-                        url = el.get_attribute("href")
-                        if url and "/ko-kr/product/" in url and url not in visited_urls:
-                            if url not in page_candidates: page_candidates.append(url)
-                except: pass
-
-                if not page_candidates: break
-
-                for url in page_candidates:
-                    if not is_running: break
-                    deal_info = crawl_detail_and_send(driver, wait, url) # 여기는 JSON 엔진 사용
-                    if deal_info:
-                        total_processed_count += 1
-                        if deal_info.get('discountRate', 0) > 0:
-                            collected_deals.append(deal_info)
-                    visited_urls.add(url)
-                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
-                current_page += 1
-
-            send_discord_summary(total_processed_count, collected_deals)
+        send_discord_summary(total_processed, collected_deals)
 
     except Exception as e:
-        logger.error(f"🔥 Critical Crawler Error: {e}")
+        logger.error(f"🔥 Critical Error: {e}")
         logger.error(traceback.format_exc())
     finally:
         if driver:
             try: driver.quit()
             except: pass
         with lock: is_running = False
+        logger.info("🛑 Finished.")
 
-def send_data_to_server(payload, title):
+def fetch_update_targets():
     try:
-        # Java 서버로 전송
-        res = session.post(JAVA_API_URL, json=payload, timeout=30)
-        if res.status_code == 200:
-            price_display = f"{payload['currentPrice']} KRW"
-            if payload.get("inCatalog"): price_display += " [Catalog]"
-            logger.info(f"   📤 Sent: {title} ({price_display})")
-        else:
-            logger.error(f"   💥 Server Error ({res.status_code}): {title}")
-    except:
-        logger.error(f"   💥 Network Error sending {title}")
+        res = session.get(TARGET_API_URL, timeout=10)
+        return res.json() if res.status_code == 200 else []
+    except: return []
 
 @app.route('/run', methods=['POST'])
 def trigger_crawl():
     global is_running
     with lock:
-        if is_running: return jsonify({"status": "error", "message": "Crawler is already running"}), 409
+        if is_running: return jsonify({"status": "running"}), 409
         is_running = True
     thread = threading.Thread(target=run_batch_crawler_logic)
     thread.daemon = True
     thread.start()
-    return jsonify({"status": "success", "message": "Crawler started"}), 200
+    return jsonify({"status": "started", "mode": CURRENT_MODE}), 200
 
 @app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({"status": "UP", "crawler_running": is_running, "mode": CURRENT_MODE}), 200
+def health():
+    return jsonify({"status": "UP", "running": is_running, "mode": CURRENT_MODE}), 200
 
 if __name__ == "__main__":
-    logger.info(f"👂 [Collector] Server starting on port 5000 (Mode: {CURRENT_MODE})")
     app.run(host="0.0.0.0", port=5000)

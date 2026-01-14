@@ -58,6 +58,7 @@ services:
       - TZ=Asia/Seoul
       - API_BASE_URL=http://catalog-service:8080
       - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
+      - CRAWLER_MODE=HIGH
     depends_on:
       catalog-service:
         condition: service_started
