@@ -58,7 +58,7 @@ CONFIG = {
         "page_load_strategy": "none",
         "sleep_min": 2.0,
         "sleep_max": 3.5,
-        "timeout": 20,      # [수정] 10초 -> 20초 (CPU 부하 대비)
+        "timeout": 20,
         "window_stop": True
     },
     "HIGH": {
@@ -133,7 +133,7 @@ def clean_text(text):
 
 def get_json_from_browser(driver):
     """
-    [수정] 점수 기반 추출 로직 적용
+    점수 기반 추출 로직 적용
     단순 길이 비교가 아니라, 가격 정보(basePrice)가 있는 데이터를 우선 선택합니다.
     """
     try:
@@ -317,7 +317,7 @@ def crawl_detail_and_send(driver, wait, target_url):
         if not payload or not payload.get("title"):
             return None
 
-        # [수정] 0원 데이터 전송 방지 로직 (pass -> return None)
+        # 0원 데이터 전송 방지 로직
         if payload.get("currentPrice") == 0 and payload.get("originalPrice") == 0:
             logger.info(f"   🚫 Skip (0 Won): {payload['title']}")
             return None
@@ -391,6 +391,7 @@ def run_batch_crawler_logic():
         wait = WebDriverWait(driver, CONF['timeout'])
         visited_urls = set()
 
+        # --- [Phase 1: 기존 타겟 갱신] ---
         targets = fetch_update_targets()
         if targets:
             logger.info(f"Target Update: {len(targets)} games")
@@ -398,7 +399,7 @@ def run_batch_crawler_logic():
                 if not is_running: break
 
                 if i > 0 and i % CONF["restart_interval"] == 0:
-                    logger.info("♻️ Restarting driver (Memory Cleanup)...")
+                    logger.info("♻️ [Phase 1] Restarting driver (Memory Cleanup)...")
                     try: driver.quit()
                     except: pass
                     time.sleep(3)
@@ -413,6 +414,7 @@ def run_batch_crawler_logic():
 
                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
+        # --- [Phase 2: 신규 발굴 (Deep Discovery)] ---
         if is_running:
             logger.info(f"🔭 [Phase 2] Starting Deep Discovery...")
             base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
@@ -424,6 +426,7 @@ def run_batch_crawler_logic():
             while current_page <= max_pages:
                 if not is_running: break
 
+                # 브라우저 메모리 청소 (2페이지마다)
                 if current_page > 1 and current_page % 2 == 0:
                      logger.info("♻️ [Phase 2] Restarting driver...")
                      try: driver.quit()
@@ -435,12 +438,17 @@ def run_batch_crawler_logic():
                 target_list_url = f"{base_category_path}/{current_page}{search_params}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
 
-                try:
-                    driver.get(target_list_url)
+                # 리스트 페이지 로딩 "3번 재시도" (데이터 유실 방지)
+                page_load_success = False
+                for try_cnt in range(1, 4): # 1, 2, 3회 시도
                     try:
-                        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
+                        driver.get(target_list_url)
+                        # 리스트는 무거우니 30초 대기
+                        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
+                        page_load_success = True
+                        break # 성공하면 재시도 중단
                     except TimeoutException:
-                        logger.warning(f"   ⚠️ List page timeout. Retrying...")
+                        logger.warning(f"   ⚠️ List load timeout (Attempt {try_cnt}/3). Retrying...")
                         driver.refresh()
                         time.sleep(3)
 
@@ -448,24 +456,29 @@ def run_batch_crawler_logic():
                         try: driver.execute_script("window.stop();")
                         except: pass
 
-                except Exception as e:
-                    logger.warning(f"⚠️ Page Load Error on {current_page}: {e}")
+                # 3번 다 실패했으면? -> 이번 페이지는 어쩔 수 없이 스킵하고 다음 페이지로
+                if not page_load_success:
+                    logger.error(f"   ❌ Failed to load page {current_page} after 3 attempts. Skipping...")
                     current_page += 1
                     continue
 
+                # 링크 추출
                 page_candidates = []
                 try:
                     link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
                     for el in link_elements:
                         url = el.get_attribute("href")
+                        # Phase 1에서 본거거나, 방금 본거면 제외 (중복 방지)
                         if url and "/ko-kr/product/" in url and url not in visited_urls:
                             if url not in page_candidates: page_candidates.append(url)
                 except: pass
 
+                # 로딩은 성공했는데, 게임이 진짜 0개다? -> 여기가 진짜 끝!
                 if not page_candidates:
-                    logger.info(f"🛑 No new games found on page {current_page}. Finishing Phase 2.")
-                    break
+                    logger.info(f"🛑 Page loaded successfully but no new games found. Reached the end at page {current_page}.")
+                    break # Phase 2 종료
 
+                # 추출된 게임들 상세 크롤링 시작
                 for url in page_candidates:
                     if not is_running: break
 
