@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,6 +11,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.springframework.util.StringUtils.hasText;
 
 @Entity
 @Table(name = "games")
@@ -92,13 +93,18 @@ public class Game {
                            String imageUrl, String description, Set<Genre> newGenres) {
         this.name = name;
 
-        // 영문명은 있을 때만 갱신
-        if (StringUtils.hasText(englishName)) {
+        if (!hasText(englishName) && hasText(englishName)) {
             this.englishName = englishName;
         }
 
-        this.publisher = publisher;
-        this.imageUrl = imageUrl;
+        if(!hasText(this.publisher) && hasText(publisher)) {
+            this.publisher = publisher;
+        }
+
+        if(!hasText(this.imageUrl) && hasText(imageUrl)) {
+            this.imageUrl = imageUrl;
+
+        }
         this.description = description;
         this.lastUpdated = LocalDateTime.now();
 
