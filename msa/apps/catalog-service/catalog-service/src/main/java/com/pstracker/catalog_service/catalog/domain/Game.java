@@ -93,7 +93,7 @@ public class Game {
                            String imageUrl, String description, Set<Genre> newGenres) {
         this.name = name;
 
-        if (!hasText(englishName) && hasText(englishName)) {
+        if (hasText(englishName)) {
             this.englishName = englishName;
         }
 
@@ -101,7 +101,7 @@ public class Game {
             this.publisher = publisher;
         }
 
-        if(!hasText(this.imageUrl) && hasText(imageUrl)) {
+        if(hasText(imageUrl)) {
             this.imageUrl = imageUrl;
         }
 
