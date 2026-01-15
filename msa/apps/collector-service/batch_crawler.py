@@ -474,10 +474,14 @@ def run_batch_crawler_logic():
                     current_page += 1
                     continue
 
+                raw_game_count = 0
                 # 링크 추출
                 page_candidates = []
+
                 try:
                     link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
+                    raw_game_count = len(link_elements)
+
                     for el in link_elements:
                         url = el.get_attribute("href")
                         # Phase 1에서 본거거나, 방금 본거면 제외 (중복 방지)
@@ -485,10 +489,16 @@ def run_batch_crawler_logic():
                             if url not in page_candidates: page_candidates.append(url)
                 except: pass
 
-                # 로딩은 성공했는데, 게임이 진짜 0개다? -> 여기가 진짜 끝!
+                # 화면에 게임이 아예 하나도 없다? -> 진짜 끝난 것임 (종료)
+                if raw_game_count == 0:
+                    logger.info(f"🛑 No games found on HTML (Raw count 0). Reached the real end at page {current_page}.")
+                    break
+
+                # 게임은 있는데, 다 이미 수집한 것들이다? -> 다음 페이지로 이동 (Continue)
                 if not page_candidates:
-                    logger.info(f"🛑 Page loaded successfully but no new games found. Reached the end at page {current_page}.")
-                    break # Phase 2 종료
+                    logger.info(f"   ⚠️ All games on page {current_page} were already scanned in Phase 1. Moving to next page...")
+                    current_page += 1
+                    continue
 
                 # 추출된 게임들 상세 크롤링 시작
                 for url in page_candidates:

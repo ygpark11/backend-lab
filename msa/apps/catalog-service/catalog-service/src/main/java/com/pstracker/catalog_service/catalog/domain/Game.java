@@ -97,14 +97,14 @@ public class Game {
             this.englishName = englishName;
         }
 
-        if(!hasText(this.publisher) && hasText(publisher)) {
+        if(!hasText(this.publisher) || (this.publisher.equals("Unknown") && hasText(publisher))) {
             this.publisher = publisher;
         }
 
         if(!hasText(this.imageUrl) && hasText(imageUrl)) {
             this.imageUrl = imageUrl;
-
         }
+
         this.description = description;
         this.lastUpdated = LocalDateTime.now();
 
