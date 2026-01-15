@@ -42,6 +42,11 @@ services:
     networks:
       - ps-network
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s   # 30초마다 찔러봄
+      timeout: 10s    # 10초 동안 대답 없으면 경고
+      retries: 3
     logging:
       driver: "json-file"
       options:

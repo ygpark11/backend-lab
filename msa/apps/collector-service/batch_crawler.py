@@ -387,7 +387,19 @@ def run_batch_crawler_logic():
     collected_deals = []
 
     try:
-        driver = get_driver()
+        driver = None
+        for try_cnt in range(1, 4):
+            try:
+                driver = get_driver()
+                logger.info("✅ Driver started successfully.")
+                break
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to start driver (Attempt {try_cnt}/3): {e}")
+                time.sleep(10) # 10초 숨 고르기 후 재시도
+
+        if not driver:
+            logger.error("❌ Critical: Failed to start driver after 3 attempts.")
+            return # 완전 종료
         wait = WebDriverWait(driver, CONF['timeout'])
         visited_urls = set()
 
