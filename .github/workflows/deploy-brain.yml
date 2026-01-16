@@ -82,7 +82,7 @@ jobs:
             docker compose -f docker-compose-brain.yml up -d catalog-service
 
             # 4. Nginx가 변경된 백엔드 IP를 알 수 있도록 설정 리로드 
-            docker exec ps-tracker-web nginx -s reload
+            docker restart ps-tracker-web
 
             # 5. 뒷정리 (이미지 찌꺼기 청소)
             docker image prune -f
