@@ -24,6 +24,8 @@ public class GameSearchResultDto {
     private Integer metaScore;
     private Double userScore;
 
+    private boolean inCatalog;
+
     private LocalDateTime createdAt;
     private List<String> genres;
 
@@ -35,7 +37,7 @@ public class GameSearchResultDto {
                                Integer originalPrice, Integer price, Integer discountRate,
                                boolean isPlusExclusive, LocalDate saleEndDate,
                                Integer metaScore, Double userScore,
-                               LocalDateTime createdAt) {
+                               boolean inCatalog, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -46,7 +48,7 @@ public class GameSearchResultDto {
         this.saleEndDate = saleEndDate;
         this.metaScore = metaScore;
         this.userScore = userScore;
-
+        this.inCatalog = inCatalog;
         this.createdAt = createdAt;
     }
 }

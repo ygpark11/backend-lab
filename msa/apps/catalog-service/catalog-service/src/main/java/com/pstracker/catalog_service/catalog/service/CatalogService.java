@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.Genre;
+import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
@@ -118,22 +119,39 @@ public class CatalogService {
      * @param genres 장르 엔티티 집합
      */
     private void updateGameMetadata(Game game, CollectRequestDto request, Set<Genre> genres) {
-        // 설명 업데이트 정책: "Full Data Crawler"인 경우 기존 설명 유지(AI 요약본 보존)
-        String descriptionToUpdate = "Full Data Crawler".equals(request.getDescription())
-                ? game.getDescription()
-                : request.getDescription();
-
         game.updateInfo(
                 request.getTitle(),
                 request.getEnglishTitle(),
                 request.getPublisher(),
                 request.getImageUrl(),
-                descriptionToUpdate,
+                request.getDescription(),
                 genres
         );
 
         // 플랫폼 정보 최신화
-        game.updatePlatforms(request.getPlatforms());
+        Set<Platform> platforms = resolvePlatforms(request.getPlatforms());
+        game.updatePlatforms(platforms);
+    }
+
+    /**
+     * 플랫폼 문자열 파싱 및 Enum 매핑
+     * @param platformNames 플랫폼 이름 리스트
+     * @return 플랫폼 Enum 집합
+     */
+    private Set<Platform> resolvePlatforms(List<String> platformNames) {
+        Set<Platform> platforms = new HashSet<>();
+        if (platformNames == null || platformNames.isEmpty()) {
+            return platforms;
+        }
+
+        for (String name : platformNames) {
+            try {
+                platforms.add(Platform.valueOf(name.toUpperCase().trim()));
+            } catch (IllegalArgumentException e) {
+                log.warn("⚠️ Unknown Platform detected: {}", name);
+            }
+        }
+        return platforms;
     }
 
     /**
@@ -172,19 +190,29 @@ public class CatalogService {
     private void processPriceInfo(Game game, CollectRequestDto request) {
         Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game);
 
+        // [방어 로직 1] 가격 데이터 자체가 이상하면(0원 등) 저장하지 않음 (이미 크롤러에서 막았지만 이중 잠금)
+        if (request.getCurrentPrice() == null || request.getCurrentPrice() == 0) {
+            return;
+        }
+
         // 변경 사항이 없으면 종료
         if (!shouldSaveHistory(latestHistoryOpt, request)) {
-            log.debug("👌 Price Unchanged: {}", game.getName());
             return;
         }
 
         // 6-1. 이력 저장
         GamePriceHistory newHistory = GamePriceHistory.create(
-                game, request.getOriginalPrice(), request.getCurrentPrice(),
-                request.getDiscountRate(), request.isPlusExclusive(), request.getSaleEndDate()
+                game,
+                request.getOriginalPrice(),
+                request.getCurrentPrice(),
+                request.getDiscountRate(),
+                request.isPlusExclusive(),
+                request.getSaleEndDate(),
+                request.isInCatalog()
         );
+
         priceHistoryRepository.save(newHistory);
-        log.info("📈 Price Updated: {} ({} KRW)", game.getName(), request.getCurrentPrice());
+        log.debug("📈 Price Updated: {} ({} KRW)", game.getName(), request.getCurrentPrice());
 
         // 6-2. 가격 하락 알림 발행
         publishAlertIfDropped(game, latestHistoryOpt, request.getCurrentPrice(), request.getDiscountRate());
@@ -202,7 +230,8 @@ public class CatalogService {
                         request.getCurrentPrice(),
                         request.getDiscountRate(),
                         request.isPlusExclusive(),
-                        request.getSaleEndDate()))
+                        request.getSaleEndDate(),
+                        request.isInCatalog()))
                 .orElse(true); // 이력이 없으면 무조건 저장
     }
 
@@ -281,7 +310,7 @@ public class CatalogService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
-        // 가격 이력 조회 (최신순 정렬 등을 DB 레벨에서 처리하면 더 좋음)
+        // 가격 이력 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
         GamePriceHistory currentInfo = histories.isEmpty() ? null : histories.get(histories.size() - 1);
         Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);

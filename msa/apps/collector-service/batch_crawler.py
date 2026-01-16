@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify
 
 import undetected_chromedriver as uc
-from fake_useragent import UserAgent
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -78,11 +77,18 @@ logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Timeout: {CONF['timeout']}s"
 # --- [3. 핵심 기능: 드라이버 및 데이터 추출] ---
 
 def get_driver():
-    """브라우저 드라이버 생성 (1280x720 표준 해상도 적용)"""
-    ua = UserAgent()
-    random_user_agent = ua.random
+    """브라우저 드라이버 생성 (PC 환경 고정 + 1920x1080 해상도 적용)"""
 
-    window_size = "1280,720"
+    DESKTOP_USER_AGENTS = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"
+    ]
+
+    random_user_agent = random.choice(DESKTOP_USER_AGENTS)
+
+    window_size = "1920,1080"
 
     logger.info(f"🎭 UA: {random_user_agent} | 📏 Size: {window_size}")
 
@@ -243,7 +249,7 @@ def parse_json_data(json_str, target_url):
 
             if cta_type == "ADD_TO_LIBRARY":
                 upsell = cta_obj.get("price", {}).get("upsellText", "")
-                if "카탈로그" in upsell or "PS_PLUS" in str(cta_obj):
+                if any(k in upsell for k in ["카탈로그", "구독"]) or "PS_PLUS" in str(cta_obj):
                     parsed_item["inCatalog"] = True
 
             if cta_type in ["ADD_TO_CART", "PURCHASE", "PRE_ORDER"]:

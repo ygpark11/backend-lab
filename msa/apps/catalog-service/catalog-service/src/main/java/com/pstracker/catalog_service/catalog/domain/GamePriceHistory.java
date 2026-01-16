@@ -46,22 +46,28 @@ public class GamePriceHistory {
     @Column(name = "recorded_at")
     private LocalDateTime recordedAt;
 
+    @Column(name = "in_catalog", nullable = false)
+    private boolean inCatalog;
+
     // --- [비즈니스 로직: 데이터 동등성 비교] ---
     /**
      * 새로 수집된 데이터가 현재 이력과 동일한 가격 조건을 가지고 있는지 확인
      * (가격, 할인율, 플러스 혜택 여부, 세일 종료일 등)
      */
-    public boolean isSameCondition(Integer newPrice, Integer newDiscountRate, boolean newPlusExclusive, LocalDate newSaleEndDate) {
+    public boolean isSameCondition(Integer newPrice, Integer newDiscountRate,
+                                   boolean newPlusExclusive, LocalDate newSaleEndDate,
+                                   boolean newInCatalog) {
         // 1. 가격 비교
         if (!this.price.equals(newPrice)) return false;
 
         // 2. 할인율 비교 (null safe)
-        Integer currentDiscount = this.discountRate == null ? 0 : this.discountRate;
-        Integer targetDiscount = newDiscountRate == null ? 0 : newDiscountRate;
-        if (!currentDiscount.equals(targetDiscount)) return false;
+        int currentDiscount = this.discountRate == null ? 0 : this.discountRate;
+        int targetDiscount = newDiscountRate == null ? 0 : newDiscountRate;
+        if (currentDiscount != targetDiscount) return false;
 
-        // 3. PS Plus 여부 비교
+        // 3. 조건 비교 (PS Plus 전용 여부 / 카탈로그 여부)
         if (this.isPlusExclusive != newPlusExclusive) return false;
+        if (this.inCatalog != newInCatalog) return false;
 
         // 4. 세일 종료일 비교 (날짜가 바뀌었으면 새로운 프로모션일 수 있음)
         // 둘 다 null이면 같음, 하나만 null이면 다름, 둘 다 있으면 equals
@@ -72,7 +78,9 @@ public class GamePriceHistory {
     }
 
     // --- [생성 메서드] ---
-    public static GamePriceHistory create(Game game, Integer originalPrice, Integer price, Integer discountRate, boolean isPlusExclusive, LocalDate saleEndDate) {
+    public static GamePriceHistory create(Game game, Integer originalPrice, Integer price,
+                                          Integer discountRate, boolean isPlusExclusive,
+                                          LocalDate saleEndDate, boolean inCatalog) {
         GamePriceHistory history = new GamePriceHistory();
         history.game = game;
         history.originalPrice = originalPrice;
@@ -80,6 +88,7 @@ public class GamePriceHistory {
         history.discountRate = discountRate;
         history.isPlusExclusive = isPlusExclusive;
         history.saleEndDate = saleEndDate;
+        history.inCatalog = inCatalog;
         history.recordedAt = LocalDateTime.now();
         return history;
     }

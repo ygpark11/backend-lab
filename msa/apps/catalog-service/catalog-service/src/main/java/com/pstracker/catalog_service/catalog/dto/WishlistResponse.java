@@ -31,6 +31,8 @@ public class WishlistResponse {
 
     private Integer metaScore;
 
+    private boolean inCatalog;
+
     public WishlistResponse(Wishlist wishlist, GamePriceHistory latestPrice) {
         Game game = wishlist.getGame();
 
@@ -51,9 +53,11 @@ public class WishlistResponse {
             this.discountRate = latestPrice.getDiscountRate();
             this.isOnSale = discountRate > 0;
             this.saleEndDate = latestPrice.getSaleEndDate();
+            this.inCatalog = latestPrice.isInCatalog();
         } else {
             this.currentPrice = 0;
             this.isOnSale = false;
+            this.inCatalog = false;
         }
     }
 }

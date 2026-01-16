@@ -51,7 +51,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreEq(condition.getGenre())
+                        genreEq(condition.getGenre()),
+                        inCatalogEq(condition.getInCatalog())
                 )
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -81,7 +82,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         userScoreGoe(condition.getMinUserScore()),
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreEq(condition.getGenre())
+                        genreEq(condition.getGenre()),
+                        inCatalogEq(condition.getInCatalog())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -145,7 +147,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                     latestPrice != null ? latestPrice.getDiscountRate() : 0,
                     latestPrice != null && latestPrice.isPlusExclusive(),
                     latestPrice != null ? latestPrice.getSaleEndDate() : null,
-                    g.getMetaScore(), g.getUserScore(), g.getCreatedAt()
+                    g.getMetaScore(), g.getUserScore(), latestPrice.isInCatalog(), g.getCreatedAt()
             );
 
             // 장르 이름 매핑
@@ -195,6 +197,10 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     private BooleanExpression genreEq(String genreName) {
         if (!StringUtils.hasText(genreName)) return null;
         return game.gameGenres.any().genre.name.eq(genreName);
+    }
+
+    private BooleanExpression inCatalogEq(Boolean inCatalog) {
+        return Boolean.TRUE.equals(inCatalog) ? gamePriceHistory.inCatalog.isTrue() : null;
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {

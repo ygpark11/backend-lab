@@ -91,27 +91,32 @@ public class Game {
     // 크롤링 할 때마다 변할 수 있는 정보들을 한 번에 갱신합니다.
     public void updateInfo(String name, String englishName, String publisher,
                            String imageUrl, String description, Set<Genre> newGenres) {
-        this.name = name;
+        if (hasText(name) && !name.equals(this.name)) {
+            this.name = name;
+        }
 
         if (hasText(englishName)) {
             this.englishName = englishName;
         }
 
-        if(!hasText(this.publisher) || (this.publisher.equals("Unknown") && hasText(publisher))) {
+        // 기존 데이터가 없거나 "Unknown"일 때만 -> 새 데이터로 덮어씌움
+        // 만약 기존에 "Square Enix"가 있는데 크롤러가 "Unknown"을 보내면? -> 무시함(기존 유지)
+        boolean isNewValid = hasText(publisher) && !"Unknown".equals(publisher);
+        boolean isCurrentInvalid = !hasText(this.publisher) || "Unknown".equals(this.publisher);
+
+        if (isNewValid || (isCurrentInvalid && hasText(publisher))) {
             this.publisher = publisher;
         }
 
-        if(hasText(imageUrl)) {
-            this.imageUrl = imageUrl;
+        if (hasText(description) && !"Full Data Crawler".equals(description)) {
+            this.description = description;
         }
 
-        this.description = description;
-        this.lastUpdated = LocalDateTime.now();
-
-        // 장르 동기화 로직
-        if (newGenres != null) {
+        if (newGenres != null && !newGenres.isEmpty()) {
             syncGenres(newGenres);
         }
+
+        this.lastUpdated = LocalDateTime.now();
     }
 
     /**
@@ -142,8 +147,8 @@ public class Game {
      */
     public void updatePlatforms(Set<Platform> newPlatforms) {
         // 기존 플랫폼 정보를 싹 비우고 새로 채움 (변동사항 반영)
-        this.platforms.clear();
-        if (newPlatforms != null) {
+        if (newPlatforms != null && !newPlatforms.isEmpty()) {
+            this.platforms.clear();
             this.platforms.addAll(newPlatforms);
         }
     }

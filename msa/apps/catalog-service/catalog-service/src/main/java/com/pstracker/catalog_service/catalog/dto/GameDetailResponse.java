@@ -39,6 +39,7 @@ public record GameDetailResponse(
         // [기타]
         List<String> platforms,
         List<String> genres,
+        boolean inCatalog,
 
         // [추천 게임 리스트]
         List<GameSearchResultDto> relatedGames
@@ -58,8 +59,8 @@ public record GameDetailResponse(
         Integer discountRate = (currentInfo != null) ? currentInfo.getDiscountRate() : 0;
         boolean isPlus = (currentInfo != null) && currentInfo.isPlusExclusive();
         LocalDate endDate = (currentInfo != null) ? currentInfo.getSaleEndDate() : null;
+        boolean isInCatalog = (currentInfo != null) ? currentInfo.isInCatalog() : null;
 
-        // --- 🧠 스마트 판정 로직 v4 (History Count Base) ---
         PriceVerdict verdict;
         String verdictMsg;
 
@@ -131,6 +132,7 @@ public record GameDetailResponse(
                 history,
                 game.getPlatforms().stream().map(Enum::name).toList(),
                 genreList,
+                isInCatalog,
                 relatedGames
         );
     }

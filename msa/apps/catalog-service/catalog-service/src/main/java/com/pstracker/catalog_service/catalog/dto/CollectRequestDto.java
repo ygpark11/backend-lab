@@ -1,12 +1,12 @@
 package com.pstracker.catalog_service.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pstracker.catalog_service.catalog.domain.Platform;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.util.Set;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -22,12 +22,17 @@ public class CollectRequestDto {
     private Integer originalPrice;
     private Integer currentPrice;
     private Integer discountRate;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
     private LocalDate saleEndDate;
 
     private String genreIds;       // "Action, RPG" 형태의 문자열
+
     @JsonProperty("isPlusExclusive")
     private boolean isPlusExclusive; // PS Plus 전용 할인 여부
 
-    // [New] 플랫폼 목록 (Python에서 ["PS4", "PS5"] 형태로 보냄)
-    private Set<Platform> platforms;
+    @JsonProperty("inCatalog")
+    private boolean inCatalog;
+
+    private List<String> platforms;
 }
