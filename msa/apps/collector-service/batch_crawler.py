@@ -421,7 +421,22 @@ def run_batch_crawler_logic():
                     try: driver.quit()
                     except: pass
                     time.sleep(3)
-                    driver = get_driver()
+
+                    # 재시작 실패 방지: 3번까지 재시도
+                    driver = None
+                    for try_cnt in range(1, 4):
+                        try:
+                            driver = get_driver()
+                            logger.info(f"   ✅ Driver restarted successfully (Phase 1, Try {try_cnt}).")
+                            break
+                        except Exception as e:
+                            logger.warning(f"   ⚠️ Failed to restart driver (Phase 1, Attempt {try_cnt}/3): {e}")
+                            time.sleep(10) # 10초 숨 고르기
+
+                    if not driver:
+                        logger.error("❌ Critical: Failed to restart driver in Phase 1. Skipping to next...")
+                        break # Phase 1 중단 (다음 단계로)
+
                     wait = WebDriverWait(driver, CONF['timeout'])
 
                 res = crawl_detail_and_send(driver, wait, url)
@@ -446,12 +461,27 @@ def run_batch_crawler_logic():
 
                 # [메모리 관리] 2페이지마다 브라우저 재시작
                 if current_page > 1 and current_page % 2 == 0:
-                     logger.info("♻️ [Phase 2] Restarting driver (Memory Cleanup)...")
-                     try: driver.quit()
-                     except: pass
-                     time.sleep(5)
-                     driver = get_driver()
-                     wait = WebDriverWait(driver, CONF['timeout'])
+                    logger.info("♻️ [Phase 2] Restarting driver (Memory Cleanup)...")
+                    try: driver.quit()
+                    except: pass
+                    time.sleep(5)
+
+                    # 재시작 실패 방지: 3번까지 재시도
+                    driver = None
+                    for try_cnt in range(1, 4):
+                        try:
+                            driver = get_driver()
+                            logger.info(f"   ✅ Driver restarted successfully (Phase 2, Try {try_cnt}).")
+                            break
+                        except Exception as e:
+                            logger.warning(f"   ⚠️ Failed to restart driver (Phase 2, Attempt {try_cnt}/3): {e}")
+                            time.sleep(10)
+
+                    if not driver:
+                        logger.error("❌ Critical: Failed to restart driver in Phase 2. Stopping Phase 2.")
+                        break # Phase 2 중단
+
+                    wait = WebDriverWait(driver, CONF['timeout'])
 
                 target_list_url = f"{base_category_path}/{current_page}{search_params}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
