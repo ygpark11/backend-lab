@@ -444,77 +444,85 @@ def run_batch_crawler_logic():
             while current_page <= max_pages:
                 if not is_running: break
 
-                # 브라우저 메모리 청소 (2페이지마다)
+                # [메모리 관리] 2페이지마다 브라우저 재시작
                 if current_page > 1 and current_page % 2 == 0:
-                     logger.info("♻️ [Phase 2] Restarting driver...")
+                     logger.info("♻️ [Phase 2] Restarting driver (Memory Cleanup)...")
                      try: driver.quit()
                      except: pass
-                     time.sleep(3)
+                     time.sleep(5)
                      driver = get_driver()
                      wait = WebDriverWait(driver, CONF['timeout'])
 
                 target_list_url = f"{base_category_path}/{current_page}{search_params}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
 
-                # 리스트 페이지 로딩 "3번 재시도" (데이터 유실 방지)
+                raw_game_count = 0
+                page_candidates = []
                 page_load_success = False
-                for try_cnt in range(1, 4): # 1, 2, 3회 시도
+
+                # 리스트 페이지 로딩 (최대 3회 재시도)
+                for try_cnt in range(1, 4):
                     try:
                         driver.get(target_list_url)
-                        # 리스트는 무거우니 30초 대기
-                        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']")))
-                        page_load_success = True
-                        break # 성공하면 재시도 중단
-                    except TimeoutException:
-                        logger.warning(f"   ⚠️ List load timeout (Attempt {try_cnt}/3). Retrying...")
-                        driver.refresh()
+
+                        # DOM 그리는 시간이 필요하므로 대기
                         time.sleep(3)
 
-                    if CONF["window_stop"]:
-                        try: driver.execute_script("window.stop();")
-                        except: pass
+                        # 오라클 프리티어는 화면 렌더링이 느림 -> 강제 스크롤로 로딩 유발
+                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
+                        time.sleep(1)
+                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-                # 3번 다 실패했으면? -> 이번 페이지는 어쩔 수 없이 스킵하고 다음 페이지로
+                        # 명시적 대기: 게임 링크가 뜰 때까지
+                        WebDriverWait(driver, 30).until(
+                            EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']"))
+                        )
+
+                        # 요소 추출 시도
+                        link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
+                        if len(link_elements) > 0:
+                            page_load_success = True
+
+                            for el in link_elements:
+                                url = el.get_attribute("href")
+                                if url and "/ko-kr/product/" in url and url not in visited_urls:
+                                    if url not in page_candidates: page_candidates.append(url)
+
+                            raw_game_count = len(link_elements)
+                            break # 성공했으니 재시도 루프 탈출
+                        else:
+                            raise Exception("Elements list is empty")
+
+                    except Exception as e:
+                        logger.warning(f"   ⚠️ List load failed (Attempt {try_cnt}/3). Retrying... Error: {str(e)[:50]}")
+                        # 실패 시 새로고침 대신 잠시 대기
+                        time.sleep(5)
+
+                # 3번 시도했는데도 실패했거나, 게임이 0개인 경우
                 if not page_load_success:
-                    logger.error(f"   ❌ Failed to load page {current_page} after 3 attempts. Skipping...")
+                    logger.error(f"   ❌ Failed to load page {current_page} properly. Skipping...")
                     current_page += 1
                     continue
 
-                raw_game_count = 0
-                # 링크 추출
-                page_candidates = []
-
-                try:
-                    link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
-                    raw_game_count = len(link_elements)
-
-                    for el in link_elements:
-                        url = el.get_attribute("href")
-                        # Phase 1에서 본거거나, 방금 본거면 제외 (중복 방지)
-                        if url and "/ko-kr/product/" in url and url not in visited_urls:
-                            if url not in page_candidates: page_candidates.append(url)
-                except: pass
-
-                # 화면에 게임이 아예 하나도 없다? -> 진짜 끝난 것임 (종료)
+                # 로딩은 성공했는데 진짜 0개면 -> 이건 진짜 끝난 것
+                # 단, 혹시 모르니 "페이지 로딩 성공" 플래그가 있는데 0개인 경우만 종료
                 if raw_game_count == 0:
-                    logger.info(f"🛑 No games found on HTML (Raw count 0). Reached the real end at page {current_page}.")
+                    logger.info(f"🛑 No games found on HTML. Assuming end of list at page {current_page}.")
                     break
 
-                # 게임은 있는데, 다 이미 수집한 것들이다? -> 다음 페이지로 이동 (Continue)
-                if not page_candidates:
-                    logger.info(f"   ⚠️ All games on page {current_page} were already scanned in Phase 1. Moving to next page...")
-                    current_page += 1
-                    continue
+                logger.info(f"      ✅ Found {len(page_candidates)} new items on page {current_page}.")
 
                 # 추출된 게임들 상세 크롤링 시작
                 for url in page_candidates:
                     if not is_running: break
 
+                    # 상세 페이지는 로직
                     res = crawl_detail_and_send(driver, wait, url)
                     if res:
                         total_processed_count += 1
                         if res.get('discountRate', 0) > 0: collected_deals.append(res)
                     visited_urls.add(url)
+
                     time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                 current_page += 1
