@@ -140,42 +140,55 @@ def clean_text(text):
 def get_json_from_browser(driver):
     """
     점수 기반 추출 로직 적용
-    단순 길이 비교가 아니라, 가격 정보(basePrice)가 있는 데이터를 우선 선택합니다.
+    단순 길이 비교가 아니라, 가격 정보(basePrice)가 있는 데이터를 우선 선택
+    브라우저(JS)는 단순히 텍스트만 추출해서 넘기고,
+    무거운 분석 작업(점수 계산)은 Python에서 수행하여 'Script Timeout' 방지
     """
     try:
-        script_content = driver.execute_script("""
+        # 1. 브라우저에서는 그냥 모든 JSON 텍스트를 리스트로 가져오기만 함 (부하 최소화)
+        json_candidates = driver.execute_script("""
             const scripts = document.querySelectorAll('script[type="application/json"]');
-            let bestContent = null;
-            let maxScore = -1;
-
+            const data = [];
             for (const s of scripts) {
-                const txt = s.textContent;
-
-                // 1. 기본 필터
-                if (!txt.includes('apolloState') && !txt.includes('Product')) continue;
-
-                // 2. 점수 계산
-                let score = 0;
-
-                // 길이 점수 (10만 글자당 1점)
-                score += (txt.length / 100000);
-
-                // 핵심 데이터 가산점
-                if (txt.includes('"__typename":"Product"') && txt.includes('"name":')) {
-                    score += 100;
-                }
-                if (txt.includes('"webctas"') && txt.includes('"basePrice"')) {
-                    score += 500; // 가격 정보가 있으면 압도적 1순위
-                }
-
-                if (score > maxScore) {
-                    maxScore = score;
-                    bestContent = txt;
+                if (s.textContent) {
+                    data.push(s.textContent);
                 }
             }
-            return bestContent;
+            return data;
         """)
-        return script_content
+
+        if not json_candidates:
+            return None
+
+        # 2. Python에서 분석 (CPU 효율이 훨씬 좋음)
+        best_content = None
+        max_score = -1
+
+        for txt in json_candidates:
+            # 기본 필터
+            if 'apolloState' not in txt and 'Product' not in txt:
+                continue
+
+            # 점수 계산 logic (Python으로 이동)
+            score = 0
+
+            # 길이 점수 (10만 글자당 1점)
+            score += (len(txt) / 100000)
+
+            # 핵심 데이터 가산점
+            if '"__typename":"Product"' in txt and '"name":' in txt:
+                score += 100
+
+            # 가격 정보가 있으면 압도적 1순위
+            if '"webctas"' in txt and '"basePrice"' in txt:
+                score += 500
+
+            if score > max_score:
+                max_score = score
+                best_content = txt
+
+        return best_content
+
     except Exception as e:
         logger.warning(f"   ⚠️ JS Extraction Failed: {e}")
         return None
