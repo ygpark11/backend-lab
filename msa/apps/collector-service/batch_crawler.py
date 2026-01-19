@@ -150,8 +150,11 @@ def get_json_from_browser(driver):
             const scripts = document.querySelectorAll('script[type="application/json"]');
             const data = [];
             for (const s of scripts) {
-                if (s.textContent) {
-                    data.push(s.textContent);
+                const txt = s.textContent;
+                if (!txt) continue;
+
+                if (txt.includes('apolloState') || txt.includes('Product') || txt.includes('webctas')) {
+                    data.push(txt);
                 }
             }
             return data;

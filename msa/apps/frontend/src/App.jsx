@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'; // useState 추가
 import { requestFcmToken, onForegroundMessage } from './utils/fcm';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import RouteChangeTracker from "./components/common/RouteChangeTracker";
 import { Toaster } from 'react-hot-toast';
 import client from './api/client'; // client import 필요
 import PSLoader from './components/PSLoader'; // 로딩바 추가
@@ -43,6 +44,8 @@ function App() {
 
     return (
         <BrowserRouter>
+            <RouteChangeTracker />
+
             <Toaster
                 position="top-center"
                 toastOptions={{

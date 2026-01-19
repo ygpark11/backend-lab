@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
+import SEO from '../components/common/SEO';
 
 const renderVerdictIcon = (verdict) => {
     // 공통 버튼 스타일 (유리 질감 + 둥근 테두리 + 흰색 테마)
@@ -142,6 +143,8 @@ export default function GameDetailPage() {
         </div>
     );
 
+    if (loading) return <PSLoader />;
+
     if (!game) return null;
 
     const traffic = getTrafficLight(game.priceVerdict);
@@ -156,6 +159,15 @@ export default function GameDetailPage() {
 
     return (
         <div className="min-h-screen bg-ps-black text-white relative overflow-hidden">
+
+            {/* SEO 컴포넌트 */}
+            <SEO
+                title={game.title}
+                description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원 (${game.discountRate}% 할인). 메타스코어: ${game.metaScore}점.`}
+                image={game.imageUrl}
+                url={`https://ps-signal.com/games/${id}`}
+            />
+
             {/* Hero Backdrop */}
             <div className="absolute inset-0 z-0 pointer-events-none">
                 <PSGameImage
