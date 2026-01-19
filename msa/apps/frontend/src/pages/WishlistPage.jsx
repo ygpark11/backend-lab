@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
+import SEO from '../components/common/SEO';
 
 const WishlistPage = () => {
     const [games, setGames] = useState([]);
@@ -81,6 +82,9 @@ const WishlistPage = () => {
 
     return (
         <div className="min-h-screen bg-ps-black text-white">
+
+            <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." />
+
             <Navbar />
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">

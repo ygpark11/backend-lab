@@ -4,6 +4,7 @@ import { Gamepad2, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LegalModal from '../components/LegalModal';
 import client from '../api/client';
+import SEO from '../components/common/SEO';
 
 const BG_IMAGE = "https://image.api.playstation.com/vulcan/ap/rnd/202010/0222/niMUu8FxdDS2s8cMKfrg6s2Q.png";
 
@@ -38,6 +39,7 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen bg-ps-black text-white relative flex flex-col items-center justify-center overflow-hidden">
+            <SEO title="로그인 - PS Tracker" description="PlayStation Game 최저가 정보 & 할인 정보 플랫폼에 로그인하세요." />
             {/* Background Overlay */}
             <div className="absolute inset-0 z-0">
                 <img

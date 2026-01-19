@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
+import SEO from '../components/common/SEO';
 
 const GameListPage = () => {
     const navigate = useNavigate();
@@ -220,6 +221,11 @@ const GameListPage = () => {
 
     return (
         <div className="min-h-screen bg-ps-black text-white">
+            <SEO
+                title="게임 목록"
+                description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보"
+            />
+
             <Navbar />
 
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
