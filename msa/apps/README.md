@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 41 Complete (Fully Automated CI/CD Pipelines)
+* **Status:** Level 42 Complete (Growth Foundation & SEO Architecture)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -232,6 +232,18 @@ graph TD
 * **Privacy-First Donation:** `Buy Me a Coffee`를 연동하여, 개발자의 개인정보(계좌, 실명) 노출 없이 안전하게 후원을 받을 수 있는 익명 후원 시스템 구축 (Proxy Payment).
 * **Contextual Banner (Affiliate Lite):** 무분별한 광고 네트워크(AdSense) 대신, 사용자가 "게임을 구매하려는 순간"에 가장 필요한 정보인 **'PSN 기프트카드 최저가 검색(Naver Shopping)'** 배너를 배치.
 
+### ㉑ Growth & Observability (The Mirror) - GA4 & SEO
+데이터에 기반한 의사결정과 오가닉 트래픽(Organic Traffic) 증대를 위한 성장 인프라 구축.
+* **Google Analytics 4 (GA4) Integration:**
+  * **SPA Tracking:** 페이지 이동 시 새로고침이 발생하지 않는 React SPA의 특성을 고려하여, `History API` 변화를 감지하는 **Custom Route Tracker**를 구현, 가상 페이지뷰(Virtual Pageview)를 정확히 집계.
+  * **Build-Time Injection:** 보안과 유연성을 위해 GA4 측정 ID를 코드에 하드코딩하지 않고, **Docker Build Argument(`ARG`)**와 **GitHub Secrets**를 통해 이미지 빌드 시점에 안전하게 주입.
+* **Dynamic SEO Strategy (React Helmet Async):**
+  * **Contextual Meta Tags:** 모든 페이지가 동일한 제목을 갖는 SPA의 치명적 단점을 해결하기 위해, 게임 상세 페이지 진입 시 **`<title>`과 `<meta description>`을 동적으로 교체**.
+  * **UX Improvement:** 브라우저 탭에 "PS-Tracker" 대신 "철권 8 | 54,000원"과 같이 핵심 정보를 노출하여, 다중 탭 사용자의 가시성과 재방문율 개선.
+  * **Google Bot Optimized:** JavaScript 실행 능력이 있는 구글 검색 로봇(Google Bot)을 타겟팅하여 검색 노출 최적화 달성. (Social Share Preview는 Next.js 마이그레이션이 필요하여 전략적 보류)
+* **Dependency Engineering:**
+  * **React 19 Compatibility:** 최신 React 19와 레거시 라이브러리 간의 의존성 충돌(`Peer Dependency Conflict`) 문제를 해결하기 위해, Docker 빌드 파이프라인에 `--legacy-peer-deps` 옵션 적용 및 `react-is` 수동 주입을 통해 호환성 확보.
+  
 ```mermaid
 sequenceDiagram
     autonumber
@@ -762,12 +774,20 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
     - [x] **Phase 1. Brain (Backend)**: GitHub Actions + Docker Hub + SSH Deploy 구축 완료 ✅
     - [x] **Phase 2. Face (Frontend)**: React 빌드 시점 변수 주입(Build Args) 및 Nginx 최적화 완료 ✅
     - [x] **Phase 3. Hand (Collector)**: Multi-Node(2호기) 원격 배포 파이프라인 구축 완료 ✅
-- [ ] **Lv.42: 성장 기초 공사 (Growth Foundation)**
-  - **Analytics:** Google Analytics (GA4)를 도입하여 트래픽 소스 및 사용자 행동 패턴 정량 분석.
-  - **SEO (Open Graph):** 카카오톡/SNS 공유 시 게임 포스터와 실시간 가격이 노출되도록 동적 메타 태그 구현.
+- [x] **Lv.42: 성장 기초 공사 (Growth Foundation)** ✅
+  - **Data Pipeline:** Google Analytics 4 (GA4) 연동 및 Docker 빌드 타임 환경변수 주입 파이프라인 구축 완료.
+  - **SEO Optimization:** `react-helmet-async`를 도입하여 SPA 환경에서도 페이지별 고유한 제목과 설명을 제공, 구글 검색 노출 및 브라우저 탭 가시성 확보.
+  - **Technical Pivot:** CSR(Client Side Rendering) 아키텍처의 한계로 인한 SNS(카카오톡) 썸네일 크롤링 제약을 확인하고, 이를 위한 오버 엔지니어링(SSR 도입) 대신 **검색 엔진 최적화와 사용자 경험(UX) 개선**에 집중하는 실리적 전략 선택.
 - [ ] **Lv.43: 서버 관측성 확보 (Observability with PLG)**
   - **Stack:** Prometheus(Metrics) + Loki(Logs) + Grafana(Dashboard) 도입.
   - **Optimization:** 저사양 서버 부하를 방지하기 위해 Self-Hosted 방식 대신 **Grafana Cloud (SaaS)** 무료 티어 연동.
   - **Features:**
     - Spring Boot Actuator 지표 수집 (JVM Heap, CPU 사용량 등).
     - 애플리케이션 로그 중앙화 및 에러 발생 시 그라파나 알림(Alerting) 구축.
+- [ ] **Lv.44: 코드 신뢰성 확보 (Test Coverage)**
+  - JUnit 5 & Mockito 도입. 핵심 비즈니스 로직에 대한 테스트 구축.
+- [ ] **Lv.45: 전략적 캐싱 레이어 구축 (Performance vs Scalability)**
+  - **Abstraction First:** Spring Cache 추상화(`@Cacheable`)를 적용하여 비즈니스 로직과 캐시 구현체를 분리.
+  - **Local-First Strategy:** 현재의 단일 인스턴스 및 1GB RAM 환경을 고려하여, 네트워크 I/O 비용이 없는 Caffeine(로컬 캐시)**을 우선 적용해 응답 속도를 극대화.
+  - **Redis-Ready:** 추후 다중 인스턴스 확장(Scale-out) 시 코드 수정 없이 설정만으로 Redis(글로벌 캐시)로 전환 가능한 '구현체 교체 가능 아키텍처' 검증.
+  - **Target:** DB 조회가 빈번한 게임 상세 정보 및 장르별 목록 조회 성능 최적화.
