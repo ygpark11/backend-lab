@@ -38,3 +38,15 @@ jwt:
   expiration:
     access: 3600000
     refresh: 1209600000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus, metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}

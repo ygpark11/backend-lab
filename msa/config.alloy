@@ -1,0 +1,43 @@
+// 1. Prometheus Scrape (Spring Boot Actuator 긁어오기)
+prometheus.scrape "spring_app" {
+    targets = [
+        // 같은 도커 네트워크에 있으므로 서비스명(catalog-service)으로 접근
+        {__address__ = "catalog-service:8080"},
+    ]
+    metrics_path = "/actuator/prometheus"
+}
+
+// 2. Prometheus Remote Write (Grafana Cloud로 전송)
+prometheus.remote_write "grafana_cloud_metrics" {
+    endpoint {
+        url = sys.env("GRAFANA_METRICS_URL")
+
+        basic_auth {
+            username = sys.env("GRAFANA_METRICS_USER")
+            password = sys.env("GRAFANA_TOKEN")
+        }
+    }
+}
+
+// 3. Loki Local File Read (로그 파일 읽기)
+local.file_match "app_logs" {
+    path_targets = [{"__path__" = "/var/log/pstracker/*.log"}]
+    sync_period = "5s"
+}
+
+loki.source.file "log_scrape" {
+    targets    = local.file_match.app_logs.targets
+    forward_to = [loki.write.grafana_cloud_logs.receiver]
+}
+
+// 4. Loki Write (Grafana Cloud로 로그 전송)
+loki.write "grafana_cloud_logs" {
+    endpoint {
+        url = sys.env("GRAFANA_LOGS_URL")
+
+        basic_auth {
+            username = sys.env("GRAFANA_LOGS_USER")
+            password = sys.env("GRAFANA_TOKEN")
+        }
+    }
+}

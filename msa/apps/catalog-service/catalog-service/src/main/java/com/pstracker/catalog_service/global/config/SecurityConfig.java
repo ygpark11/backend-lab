@@ -66,7 +66,7 @@ public class SecurityConfig {
                                 "/api/v1/members/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue",
-                                "/actuator/health",
+                                "/actuator/**",
                                 "/favicon.ico",
                                 "/error",
                                 "/login/**",
