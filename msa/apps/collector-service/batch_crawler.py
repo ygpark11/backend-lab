@@ -512,7 +512,7 @@ def run_batch_crawler_logic():
                         driver.get(target_list_url)
 
                         # DOM 그리는 시간이 필요하므로 대기
-                        time.sleep(3)
+                        time.sleep(5)
 
                         # 오라클 프리티어는 화면 렌더링이 느림 -> 강제 스크롤로 로딩 유발
                         driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
