@@ -102,12 +102,15 @@ services:
       - ps-network
 
   alloy:
+    environment:
+      - TZ=Asia/Seoul
     image: grafana/alloy:latest
     container_name: ps-tracker-alloy
     command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy:ro
       - ./logs/backend:/var/log/pstracker:ro
+      - /etc/localtime:/etc/localtime:ro
     env_file:
       - .env
     ports:
