@@ -22,7 +22,7 @@ prometheus.remote_write "grafana_cloud_metrics" {
 // 3. Loki Local File Read (로그 파일 읽기)
 local.file_match "app_logs" {
     path_targets = [{"__path__" = "/var/log/pstracker/*.log"}]
-    sync_period = "5s"
+    sync_period = "30s"
 }
 
 loki.source.file "log_scrape" {
