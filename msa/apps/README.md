@@ -8,7 +8,7 @@
 
 ## 1. 프로젝트 개요 (Overview)
 * **Start Date:** 2025.11.23
-* **Status:** Level 42 Complete (Growth Foundation & SEO Architecture)
+* **Status:** Level 43 Complete (Observability with PLG)
 * **Goal:** "가격(Price)" 정보를 넘어 "가치(Value/Rating)" 정보를 통합하여 합리적 구매 판단을 지원하는 플랫폼
 
 ### 🎯 핵심 가치 (Value Proposition)
@@ -178,6 +178,12 @@ graph TD
         
         Note right of BrainRun: Backend: .env 주입 (Run Time)<br/>Volume: Firebase Key 마운트
     end
+    
+    subgraph "Observability: The Eye (Grafana Cloud)"
+        BrainRun -->|Metric & Log| Alloy[🕵️ Alloy Agent]
+        Alloy -->|Push| Grafana[📊 Grafana Dashboard]
+        Grafana -.->|Alert| Discord[🔔 Discord Alert]
+    end
 ```
 #### 환경 변수 관리 전략 (Secrets Management)
 - **GitHub Secrets:** CI 단계에서 필요한 빌드 재료(React Key)와 배포 자격 증명(SSH Key, Docker ID)을 암호화하여 저장.
@@ -243,7 +249,18 @@ graph TD
   * **Google Bot Optimized:** JavaScript 실행 능력이 있는 구글 검색 로봇(Google Bot)을 타겟팅하여 검색 노출 최적화 달성. (Social Share Preview는 Next.js 마이그레이션이 필요하여 전략적 보류)
 * **Dependency Engineering:**
   * **React 19 Compatibility:** 최신 React 19와 레거시 라이브러리 간의 의존성 충돌(`Peer Dependency Conflict`) 문제를 해결하기 위해, Docker 빌드 파이프라인에 `--legacy-peer-deps` 옵션 적용 및 `react-is` 수동 주입을 통해 호환성 확보.
-  
+
+### ㉒ Observability (The Watchtower) - Grafana Alloy
+"보이지 않는 서버는 관리할 수 없다." 1GB 램 환경에서도 부담 없이 돌아가는 **초경량 관측 시스템** 구축.
+* **Architecture:** 무거운 `Prometheus` 서버를 직접 띄우는 대신, 경량 수집기인 **Grafana Alloy** 컨테이너만 띄워 데이터를 SaaS(Grafana Cloud)로 전송하는 **Push 방식** 채택.
+* **Resource Optimization:**
+  * **Memory Limit:** Alloy 컨테이너에 `memory: 128MB` 하드 리밋을 적용하여, 수집기가 메인 서버(Brain)의 자원을 침범하지 못하도록 격리.
+  * **Log Strategy:** 실시간 로그 수집 주기를 30초(`sync_period`)로 조절하여 디스크 I/O 부하 최소화.
+* **Deadman Alert (Discord):**
+  * **Rule:** "Brain 서버가 3분 이상 응답이 없거나(Metric=0), 데이터가 끊기면(No Data)" 즉시 알림 발송.
+  * **Separation:** 정보성 알림(`#general`)과 긴급 장애 알림(`#server-monitor`) 채널을 분리하여 운영 효율성 증대.
+* **Security:** Alloy의 디버깅 포트(`12345`)를 `127.0.0.1`로 바인딩하여 외부 접근을 차단하고, API 키는 OS 환경변수로 주입하여 코드에서 격리.
+
 ```mermaid
 sequenceDiagram
     autonumber
@@ -778,12 +795,11 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
   - **Data Pipeline:** Google Analytics 4 (GA4) 연동 및 Docker 빌드 타임 환경변수 주입 파이프라인 구축 완료.
   - **SEO Optimization:** `react-helmet-async`를 도입하여 SPA 환경에서도 페이지별 고유한 제목과 설명을 제공, 구글 검색 노출 및 브라우저 탭 가시성 확보.
   - **Technical Pivot:** CSR(Client Side Rendering) 아키텍처의 한계로 인한 SNS(카카오톡) 썸네일 크롤링 제약을 확인하고, 이를 위한 오버 엔지니어링(SSR 도입) 대신 **검색 엔진 최적화와 사용자 경험(UX) 개선**에 집중하는 실리적 전략 선택.
-- [ ] **Lv.43: 서버 관측성 확보 (Observability with PLG)**
-  - **Stack:** Prometheus(Metrics) + Loki(Logs) + Grafana(Dashboard) 도입.
-  - **Optimization:** 저사양 서버 부하를 방지하기 위해 Self-Hosted 방식 대신 **Grafana Cloud (SaaS)** 무료 티어 연동.
-  - **Features:**
-    - Spring Boot Actuator 지표 수집 (JVM Heap, CPU 사용량 등).
-    - 애플리케이션 로그 중앙화 및 에러 발생 시 그라파나 알림(Alerting) 구축.
+- [x] **Lv.43: 서버 관측성 확보 (Observability with PLG)**
+  - **Architecture:** `Spring Boot Actuator` → `Grafana Alloy` (Lightweight Agent) → `Grafana Cloud` (SaaS) 파이프라인 구축.
+  - **Resource Diet:** 1GB RAM 환경을 고려하여 Alloy 컨테이너에 **128MB/0.3CPU 리소스 제한** 적용 및 로그 수집 주기 최적화.
+  - **Deadman Switch:** 서버 다운이나 데이터 수집 중단을 감지하여 3분 내 **Discord(#server-monitor)**로 긴급 알림 발송.
+  - **Visualization:** JVM Heap, HikariCP Connection Pool, CPU 사용량 등을 한눈에 볼 수 있는 실시간 대시보드 연동.
 - [ ] **Lv.44: 코드 신뢰성 확보 (Test Coverage)**
   - JUnit 5 & Mockito 도입. 핵심 비즈니스 로직에 대한 테스트 구축.
 - [ ] **Lv.45: 전략적 캐싱 레이어 구축 (Performance vs Scalability)**
