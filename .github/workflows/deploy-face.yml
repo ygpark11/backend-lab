@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - 'msa/apps/frontend/**'            # 리액트 코드가 바뀌거나
-      - 'msa/docker-compose.brain.yml'    # 1호기 설정(Nginx 등)이 바뀌거나
+      - 'msa/docker-compose-brain.yml'    # 1호기 설정(Nginx 등)이 바뀌거나
       - '.github/workflows/deploy-face.yml' # 이 파일 자체가 바뀔 때
 
 jobs:
