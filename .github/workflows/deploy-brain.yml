@@ -7,7 +7,6 @@ on:
     paths:
       - 'msa/apps/catalog-service/**'       # 자바 쪽 코드가 변경되거나
       - 'msa/docker-compose-brain.yml'      # 1호기 설정이 변경되거나
-      - 'msa/config.alloy'                  # Alloy 설정파일이 변경되거나
       - '.github/workflows/deploy-brain.yml' # 이 파일 자체가 변경될 때만 실행
 
 jobs:

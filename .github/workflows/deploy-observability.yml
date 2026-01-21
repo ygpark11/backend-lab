@@ -1,0 +1,31 @@
+name: Deploy Observability (Alloy)
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'msa/config.alloy'                           # Alloy 설정 파일
+      - 'msa/docker-compose-brain.yml'               # # 1호기 설정이 변경되거나
+      - '.github/workflows/deploy-observability.yml' # 이 파일 자체가 변경될 때만 실행
+
+jobs:
+  deploy-alloy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Alloy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/backend-lab/msa
+
+            # 1. 최신 설정파일 받기
+            git pull origin master
+
+            # 2. Alloy 컨테이너만 콕 집어서 재시작 (이미지 빌드 필요 없음)
+            docker compose -f docker-compose-brain.yml up -d alloy
+
+            # 3. 불필요한 이미지 정리
+            docker image prune -f
