@@ -5,6 +5,7 @@ prometheus.scrape "spring_app" {
         {__address__ = "catalog-service:8080"},
     ]
     metrics_path = "/actuator/prometheus"
+    forward_to   = [prometheus.remote_write.grafana_cloud_metrics.receiver]
 }
 
 // 2. Prometheus Remote Write (Grafana Cloud로 전송)
