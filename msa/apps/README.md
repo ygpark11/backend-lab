@@ -44,10 +44,10 @@
 ```mermaid
 graph TD
     %% --- [External Network] ---
-    subgraph Public_Network [🌐 Public Network]
+    subgraph Public_Network ["🌐 Public Network"]
         User([User / Browser])
         
-        subgraph External_Services [Third-Party Services]
+        subgraph External_Services ["Third-Party Services"]
             Discord([🔔 Discord API])
             FCM([🔥 Firebase FCM])
             Gemini([✨ Google Gemini])
@@ -56,10 +56,10 @@ graph TD
     end
 
     %% --- [Oracle Cloud Infrastructure] ---
-    subgraph Oracle_Cloud [☁️ Oracle Cloud Infrastructure (OCI)]
+    subgraph Oracle_Cloud ["☁️ Oracle Cloud Infrastructure (OCI)"]
         
         %% Node 1: Brain (Main Server)
-        subgraph Node_1 [🖥️ Node 1: Brain Server]
+        subgraph Node_1 ["🖥️ Node 1: Brain Server"]
             Nginx[Nginx Proxy]
             Front[React App]
             SB[Spring Boot API]
@@ -68,7 +68,7 @@ graph TD
         end
 
         %% Node 2: Hand (Worker Server)
-        subgraph Node_2 [🖥️ Node 2: Worker Server]
+        subgraph Node_2 ["🖥️ Node 2: Worker Server"]
             Py[Python Collector]
             Chrome[Selenium Grid]
         end
