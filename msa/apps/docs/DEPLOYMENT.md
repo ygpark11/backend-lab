@@ -127,7 +127,10 @@ graph TD
     subgraph "CI: The Factory (GitHub Actions)"
         Repo -->|Trigger| Action["🚀 Workflow Start"]
         Action -->|Inject Secrets| Build["🐳 Docker Build"]
-        Note right of Build: Frontend: ARG 주입 (Build Time)<br/>Backend: 순수 코드 빌드
+        
+        NoteBuild["Frontend: ARG 주입 (Build Time)<br/>Backend: 순수 코드 빌드"]
+        Build -.- NoteBuild
+        
         Build -->|Push| Hub["📦 Docker Hub"]
     end
     
@@ -138,7 +141,8 @@ graph TD
         Brain -->|Pull Image| BrainRun["🏃 Run Container"]
         Hand -->|Pull Image| HandRun["🏃 Run Container"]
         
-        Note right of BrainRun: Backend: .env 주입 (Run Time)<br/>Volume: Firebase Key 마운트
+        NoteDeploy["Backend: .env 주입 (Run Time)<br/>Volume: Firebase Key 마운트"]
+        BrainRun -.- NoteDeploy
     end
     
     subgraph "Observability: The Eye (Grafana Cloud)"
@@ -146,6 +150,10 @@ graph TD
         Alloy -->|Push| Grafana["📊 Grafana Dashboard"]
         Grafana -.->|Alert| Discord["🔔 Discord Alert"]
     end
+    
+    %% 주석 노드 스타일링 (흰색 배경, 점선 테두리)
+    style NoteBuild fill:#fff,stroke:#333,stroke-dasharray: 5 5
+    style NoteDeploy fill:#fff,stroke:#333,stroke-dasharray: 5 5
 ```
 
 ### 🔄 워크플로우 파일 구조 (`.github/workflows/`)

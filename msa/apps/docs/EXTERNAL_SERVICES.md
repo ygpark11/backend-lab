@@ -12,11 +12,11 @@
 사용자 요청 시점에 AI를 호출하는 것이 아니라, **별도의 스케줄러(Daily Batch)** 가 데이터를 채워 넣는 구조입니다.
 
 ```mermaid
-graph LR
-    DB[(MySQL)] -->|1. 조회 (설명 없는 게임)| Batch["Daily Batch Job"]
-    Batch -->|2. 프롬프트 전송| Gemini["✨ Gemini 2.5 Flash"]
-    Gemini -->|3. 요약 텍스트 반환| Batch
-    Batch -->|4. 업데이트| DB
+flowchart LR
+    DB[("MySQL")] -->|"1. 조회 (설명 없는 게임)"| Batch["Daily Batch Job"]
+    Batch -->|"2. 프롬프트 전송"| Gemini["✨ Gemini 2.5 Flash"]
+    Gemini -->|"3. 요약 텍스트 반환"| Batch
+    Batch -->|"4. 업데이트"| DB
 ```
 
 ### 🧠 기술적 의사결정 (Technical Decisions)
