@@ -14,18 +14,18 @@
 ```mermaid
 graph LR
     subgraph "Node 1: Brain Server"
-        App[Spring Boot API]
-        Logs[Log Files]
-        Alloy[🕵️ Grafana Alloy]
+        App["Spring Boot API"]
+        Logs["Log Files"]
+        Alloy["🕵️ Grafana Alloy"]
     end
 
     subgraph "Grafana Cloud (SaaS)"
-        Mimir[📈 Prometheus (Metrics)]
-        Loki[📝 Loki (Logs)]
-        Dash[📊 Dashboard]
+        Mimir["📈 Prometheus (Metrics)"]
+        Loki["📝 Loki (Logs)"]
+        Dash["📊 Dashboard"]
     end
 
-    Discord[🔔 Discord Alert]
+    Discord["🔔 Discord Alert"]
 
     App -->|Actuator| Alloy
     Logs -->|File Read| Alloy

@@ -122,29 +122,29 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
 
 ```mermaid
 graph TD
-    User[👨‍💻 Developer] -->|Git Push| Repo[GitHub Repository]
+    User[👨‍💻 Developer] -->|Git Push| Repo["GitHub Repository"]
     
     subgraph "CI: The Factory (GitHub Actions)"
-        Repo -->|Trigger| Action[🚀 Workflow Start]
-        Action -->|Inject Secrets| Build[🐳 Docker Build]
+        Repo -->|Trigger| Action["🚀 Workflow Start"]
+        Action -->|Inject Secrets| Build["🐳 Docker Build"]
         Note right of Build: Frontend: ARG 주입 (Build Time)<br/>Backend: 순수 코드 빌드
-        Build -->|Push| Hub[📦 Docker Hub]
+        Build -->|Push| Hub["📦 Docker Hub"]
     end
     
     subgraph "CD: The Field (Production Servers)"
-        Hub -->|SSH Trigger| Brain[🖥️ Node 1: Brain]
-        Hub -->|SSH Trigger| Hand[🖥️ Node 2: Hand]
+        Hub -->|SSH Trigger| Brain["🖥️ Node 1: Brain"]
+        Hub -->|SSH Trigger| Hand["🖥️ Node 2: Hand"]
         
-        Brain -->|Pull Image| BrainRun[🏃 Run Container]
-        Hand -->|Pull Image| HandRun[🏃 Run Container]
+        Brain -->|Pull Image| BrainRun["🏃 Run Container"]
+        Hand -->|Pull Image| HandRun["🏃 Run Container"]
         
         Note right of BrainRun: Backend: .env 주입 (Run Time)<br/>Volume: Firebase Key 마운트
     end
     
     subgraph "Observability: The Eye (Grafana Cloud)"
-        BrainRun -->|Metric & Log| Alloy[🕵️ Alloy Agent]
-        Alloy -->|Push| Grafana[📊 Grafana Dashboard]
-        Grafana -.->|Alert| Discord[🔔 Discord Alert]
+        BrainRun -->|Metric & Log| Alloy["🕵️ Alloy Agent"]
+        Alloy -->|Push| Grafana["📊 Grafana Dashboard"]
+        Grafana -.->|Alert| Discord["🔔 Discord Alert"]
     end
 ```
 
