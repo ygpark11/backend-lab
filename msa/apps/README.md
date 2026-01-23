@@ -22,7 +22,7 @@
 ## 2. 핵심 기술 성과 (Key Engineering Achievements)
 
 ### 🚀 자동화 및 아키텍처 (Automation & Architecture)
-* **이원화된 노드 아키텍처:** 메모리 부족(OOM) 문제를 해결하기 위해 **API 서버(Brain)**와 **수집 서버(Hand)**를 물리적으로 분리하고, 사설망(Private Network)을 통해 통신하도록 설계하여 안정성 확보.
+* **이원화된 노드 아키텍처:** 메모리 부족(OOM) 문제를 해결하기 위해 **API 서버(Brain)** 와 **수집 서버(Hand)** 를 물리적으로 분리하고, 사설망(Private Network)을 통해 통신하도록 설계하여 안정성 확보.
 * **스마트 수집 파이프라인:** 무조건적인 `INSERT`를 지양하고, 기존 데이터와 비교하여 **'유의미한 변동(가격, 할인 조건)'이 있을 때만 DB에 저장**하는 로직(Smart Upsert)을 구현하여 데이터 낭비 방지.
 * **Zero-Touch 배포:** GitHub Actions를 활용하여 코드 푸시부터 배포까지 전 과정을 자동화.
 

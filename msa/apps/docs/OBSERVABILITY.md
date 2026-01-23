@@ -1,12 +1,12 @@
 # 📡 관측성 및 모니터링 가이드 (Observability with PLG)
 
-이 문서는 제한된 리소스(1GB RAM) 환경에서 서버의 상태를 실시간으로 감시하기 위해 구축한 **PLG 스택(Prometheus, Loki, Grafana)**의 아키텍처와 설정 방법을 설명합니다.
+이 문서는 제한된 리소스(1GB RAM) 환경에서 서버의 상태를 실시간으로 감시하기 위해 구축한 **PLG 스택(Prometheus, Loki, Grafana)** 의 아키텍처와 설정 방법을 설명합니다.
 
 ---
 
 ## 1. 모니터링 아키텍처 (Architecture)
 
-우리는 자체 모니터링 서버를 구축하는 대신, **Grafana Cloud (SaaS)**를 활용하여 운영 부담을 덜고 리소스를 절약하는 전략을 선택했습니다.
+우리는 자체 모니터링 서버를 구축하는 대신, **Grafana Cloud (SaaS)** 를 활용하여 운영 부담을 덜고 리소스를 절약하는 전략을 선택했습니다.
 
 ### 🏗️ 데이터 흐름 (Data Flow)
 서버에 설치된 초경량 수집기(**Alloy**)가 데이터를 긁어서(Pull/Read), 클라우드 저장소로 전송(Push)합니다.
@@ -164,7 +164,7 @@ steps:
 
 ## 6. 사용자 관측성 (Client-Side Observability with GA4)
 
-서버의 건강 상태(Grafana)뿐만 아니라, **실제 사용자가 서비스를 어떻게 이용하는지(User Behavior)**를 추적하기 위해 Google Analytics 4 (GA4)를 도입했습니다.
+서버의 건강 상태(Grafana)뿐만 아니라, **실제 사용자가 서비스를 어떻게 이용하는지(User Behavior)** 를 추적하기 위해 Google Analytics 4 (GA4)를 도입했습니다.
 
 ### 🎯 도입 배경 (Why & What)
 * **Why GA4?:** 무료이면서도 강력한 데이터 분석 기능을 제공하며, React 생태계와 연동이 용이함.
