@@ -91,6 +91,7 @@ public class Game {
     // 크롤링 할 때마다 변할 수 있는 정보들을 한 번에 갱신합니다.
     public void updateInfo(String name, String englishName, String publisher,
                            String imageUrl, String description, Set<Genre> newGenres) {
+
         if (hasText(name) && !name.equals(this.name)) {
             this.name = name;
         }
@@ -106,6 +107,10 @@ public class Game {
 
         if (isNewValid || (isCurrentInvalid && hasText(publisher))) {
             this.publisher = publisher;
+        }
+
+        if (hasText(imageUrl)) {
+            this.imageUrl = imageUrl;
         }
 
         if (hasText(description) && !"Full Data Crawler".equals(description)) {
