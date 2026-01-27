@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles, Timer, Circle, Triangle, Square, X } from 'lucide-react'; // 👈 도형 아이콘 추가
 import { differenceInCalendarDays, parseISO } from 'date-fns';
+import PSGameImage from "./common/PSGameImage.jsx";
 
 export default function RelatedGameCard({ game }) {
     const navigate = useNavigate();
@@ -46,7 +47,11 @@ export default function RelatedGameCard({ game }) {
         >
             {/* 이미지 영역 */}
             <div className="aspect-[16/9] overflow-hidden relative">
-                <img src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <PSGameImage
+                    src={game.imageUrl}
+                    alt={game.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
 
                 {game.discountRate > 0 && (
                     <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-md z-10">
