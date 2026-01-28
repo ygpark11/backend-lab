@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {useNavigate, useSearchParams, useLocation} from 'react-router-dom'; // useLocation 추가
@@ -217,7 +216,7 @@ const GameListPage = () => {
         setPage(0);
     };
 
-    if (loading) return <div className="min-h-screen bg-ps-black text-white"><Navbar /><PSLoader /></div>;
+    if (loading) return <div className="min-h-screen pt-20"><PSLoader /></div>;
 
     return (
         <div className="min-h-screen bg-ps-black text-white">
@@ -225,8 +224,6 @@ const GameListPage = () => {
                 title="게임 목록"
                 description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보"
             />
-
-            <Navbar />
 
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
                 {/* 장르 파도타기 배너 */}

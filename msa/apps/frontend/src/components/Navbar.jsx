@@ -22,16 +22,23 @@ const Navbar = () => {
 
     const [totalWishlistCount, setTotalWishlistCount] = useState(0);
 
-    // 1. 초기 로딩 시 안 읽은 알림 개수 가져오기
-    useEffect(() => {
-        fetchUnreadCount();
-        fetchWishlistCount();
-    }, []);
-
-    // 2. 경로가 변경될 때마다(페이지 이동 시) 알림창 닫기
+    // 처음 로딩 + 이동 시
     useEffect(() => {
         setIsNotiOpen(false);
-    }, [location.pathname]);
+        fetchUnreadCount();
+        fetchWishlistCount();
+
+        const handleRealtimeMessage = () => {
+            fetchUnreadCount();
+        };
+
+        window.addEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
+
+        return () => {
+            window.removeEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
+        };
+
+    }, [location.key]);
 
     useEffect(() => {
         if (!isNotiOpen) return;

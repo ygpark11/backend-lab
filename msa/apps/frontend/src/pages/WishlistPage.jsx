@@ -3,7 +3,6 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import {useNavigate} from 'react-router-dom';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
-import Navbar from '../components/Navbar';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
@@ -78,14 +77,13 @@ const WishlistPage = () => {
         return acc + (saving > 0 ? saving : 0);
     }, 0);
 
-    if (loading) return <div className="min-h-screen bg-ps-black text-white"><Navbar /><PSLoader /></div>;
+    if (loading) return <div className="min-h-screen pt-20 flex justify-center"><PSLoader /></div>;
 
     return (
         <div className="min-h-screen bg-ps-black text-white">
 
             <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." />
 
-            <Navbar />
             <div className="p-6 md:p-10 pb-20 max-w-7xl mx-auto">
                 <div className="mb-8 flex items-center justify-between">
                     <div>

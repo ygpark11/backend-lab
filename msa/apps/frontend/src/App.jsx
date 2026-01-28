@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'; // useState 추가
+import { useEffect, useState } from 'react';
 import { requestFcmToken, onForegroundMessage } from './utils/fcm';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import RouteChangeTracker from "./components/common/RouteChangeTracker";
 import { Toaster } from 'react-hot-toast';
-import client from './api/client'; // client import 필요
-import PSLoader from './components/PSLoader'; // 로딩바 추가
+import client from './api/client';
+import PSLoader from './components/PSLoader';
 
+import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
@@ -20,8 +21,6 @@ function App() {
             try {
                 await client.get('/api/v1/members/me');
                 setIsAuthenticated(true);
-
-                // 로그인 성공 시 FCM 설정
                 requestFcmToken();
                 onForegroundMessage();
             } catch (error) {
@@ -64,20 +63,11 @@ function App() {
                 />
 
                 {/* 나머지 페이지: 로그인 안 됐으면 / 로 튕겨내기 */}
-                <Route
-                    path="/games"
-                    element={isAuthenticated ? <GameListPage /> : <Navigate to="/" replace />}
-                />
-
-                <Route
-                    path="/games/:id"
-                    element={isAuthenticated ? <GameDetailPage /> : <Navigate to="/" replace />}
-                />
-
-                <Route
-                    path="/wishlist"
-                    element={isAuthenticated ? <WishlistPage /> : <Navigate to="/" replace />}
-                />
+                <Route element={isAuthenticated ? <Layout /> : <Navigate to="/" replace />}>
+                    <Route path="/games" element={<GameListPage />} />
+                    <Route path="/games/:id" element={<GameDetailPage />} />
+                    <Route path="/wishlist" element={<WishlistPage />} />
+                </Route>
             </Routes>
         </BrowserRouter>
     );

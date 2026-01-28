@@ -3,7 +3,6 @@ import {useNavigate, useParams} from 'react-router-dom';
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
-import Navbar from '../components/Navbar';
 import RelatedGameCard from '../components/RelatedGameCard';
 import {getGenreBadgeStyle} from '../utils/uiUtils';
 import {calculateCombatPower, getTrafficLight} from '../utils/priceUtils';
@@ -136,14 +135,7 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`);
     };
 
-    if (loading) return (
-        <div className="min-h-screen bg-ps-black text-white">
-            <Navbar />
-            <PSLoader />
-        </div>
-    );
-
-    if (loading) return <PSLoader />;
+    if (loading) return <div className="pt-20"><PSLoader /></div>;
 
     if (!game) return null;
 
@@ -180,7 +172,6 @@ export default function GameDetailPage() {
             </div>
 
             <div className="relative z-10">
-                <Navbar />
 
                 <div className="p-6 md:p-10 pb-20 max-w-5xl mx-auto">
                     <button onClick={() => navigate(-1)} className="mb-6 flex items-center text-gray-400 hover:text-white transition-colors text-sm font-bold gap-1">
