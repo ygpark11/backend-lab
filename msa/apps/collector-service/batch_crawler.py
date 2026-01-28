@@ -52,12 +52,12 @@ is_running = False
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 
 CONFIG = {
-    "LOW": {  # 🐢 1Core / 1GB RAM 최적화
+    "LOW": {
         "restart_interval": 30,
         "page_load_strategy": "none",
-        "sleep_min": 2.0,
-        "sleep_max": 3.5,
-        "timeout": 20,
+        "sleep_min": 3.0, # DOM 방식은 로딩 대기가 중요하므로 조금 늘림
+        "sleep_max": 5.0,
+        "timeout": 25,    # 요소 찾기 대기 시간 확보
         "window_stop": True
     },
     "HIGH": {
@@ -71,37 +71,24 @@ CONFIG = {
 }
 
 CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
-logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Timeout: {CONF['timeout']}s")
+logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | DOM Parsing Mode")
 
-
-# --- [3. 핵심 기능: 드라이버 및 데이터 추출] ---
+# --- [3. 핵심 기능: 드라이버 설정] ---
 
 def get_driver():
-    """브라우저 드라이버 생성 (PC 환경 고정 + 1920x1080 해상도 적용)"""
-
     DESKTOP_USER_AGENTS = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0"
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     ]
-
     random_user_agent = random.choice(DESKTOP_USER_AGENTS)
-
     window_size = "1920,1080"
 
-    logger.info(f"🎭 UA: {random_user_agent} | 📏 Size: {window_size}")
-
     prefs = {
-        "profile.managed_default_content_settings.images": 2,
-        "profile.default_content_setting_values.notifications": 2,
-        "profile.default_content_setting_values.popups": 2,
-        "profile.default_content_setting_values.geolocation": 2,
+        "profile.managed_default_content_settings.images": 2, # 이미지는 로딩 안 함 (속도 향상)
         "disk-cache-size": 4096
     }
 
     driver = None
-
     if SELENIUM_URL:
         options = webdriver.ChromeOptions()
         options.page_load_strategy = CONF['page_load_strategy']
@@ -111,244 +98,221 @@ def get_driver():
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--disable-gpu")
         options.add_experimental_option("prefs", prefs)
-
         driver = webdriver.Remote(command_executor=SELENIUM_URL, options=options)
     else:
         options = uc.ChromeOptions()
         options.page_load_strategy = CONF['page_load_strategy']
-
         if os.getenv("HEADLESS", "false").lower() == "true":
              options.add_argument("--headless=new")
-
         options.add_argument(f"user-agent={random_user_agent}")
         options.add_argument(f"--window-size={window_size}")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-
         driver = uc.Chrome(options=options, use_subprocess=True)
-
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
     return driver
 
-def clean_text(text):
-    if not text: return ""
-    text = re.sub(r'[™®©℠]', '', text)
-    text = text.replace('’', "'").replace('‘', "'").replace('“', '"').replace('”', '"')
-    return re.sub(r'\s+', ' ', text).strip()
-
-def get_json_from_browser(driver):
-    """
-    점수 기반 추출 로직 적용
-    단순 길이 비교가 아니라, 가격 정보(basePrice)가 있는 데이터를 우선 선택
-    브라우저(JS)는 단순히 텍스트만 추출해서 넘기고,
-    무거운 분석 작업(점수 계산)은 Python에서 수행하여 'Script Timeout' 방지
-    """
+def mine_english_title(driver):
     try:
-        # 1. 브라우저에서는 그냥 모든 JSON 텍스트를 리스트로 가져오기만 함 (부하 최소화)
-        json_candidates = driver.execute_script("""
-            const scripts = document.querySelectorAll('script[type="application/json"]');
-            const data = [];
-            for (const s of scripts) {
-                const txt = s.textContent;
-                if (!txt) continue;
-
-                if (txt.includes('apolloState') || txt.includes('Product') || txt.includes('webctas')) {
-                    data.push(txt);
-                }
-            }
-            return data;
-        """)
-
-        if not json_candidates:
-            return None
-
-        # 2. Python에서 분석 (CPU 효율이 훨씬 좋음)
-        best_content = None
-        max_score = -1
-
-        for txt in json_candidates:
-            # 기본 필터
-            if 'apolloState' not in txt and 'Product' not in txt:
-                continue
-
-            # 점수 계산 logic (Python으로 이동)
-            score = 0
-
-            # 길이 점수 (10만 글자당 1점)
-            score += (len(txt) / 100000)
-
-            # 핵심 데이터 가산점
-            if '"__typename":"Product"' in txt and '"name":' in txt:
-                score += 100
-
-            # 가격 정보가 있으면 압도적 1순위
-            if '"webctas"' in txt and '"basePrice"' in txt:
-                score += 500
-
-            if score > max_score:
-                max_score = score
-                best_content = txt
-
-        return best_content
-
-    except Exception as e:
-        logger.warning(f"   ⚠️ JS Extraction Failed: {e}")
-        return None
-
-def parse_json_data(json_str, target_url):
-    if not json_str: return None
-
-    try:
-        data = json.loads(json_str)
-        cache = data.get("cache", {})
-        product_data = None
-
-        # 1. URL ID 매칭
-        url_id_match = re.search(r'([A-Z]{4}\d{5}_00)', target_url)
-        if url_id_match:
-            target_id = url_id_match.group(1)
-            for val in cache.values():
-                if val.get("__typename") == "Product" and target_id in str(val.get("id", "")):
-                    product_data = val
-                    break
-
-        # 2. 정보량(webctas) 기반 매칭
-        if not product_data:
-            for val in cache.values():
-                if val.get("__typename") == "Product" and (val.get("webctas") or val.get("name")):
-                    if not product_data or (len(val.get("webctas", [])) > len(product_data.get("webctas", []))):
-                        product_data = val
-
-        if not product_data: return None
-
-        title = clean_text(product_data.get("name", ""))
-        parsed_item = {
-            "title": title,
-            "englishTitle": clean_text(product_data.get("invariantName", "")),
-            "publisher": clean_text(product_data.get("publisherName", "Unknown")),
-            "platforms": product_data.get("platforms", []),
-            "psStoreId": product_data.get("id", ""),
-            "imageUrl": "",
-            "description": "Full Data Crawler",
-            "genreIds": "",
-            "originalPrice": 0, "currentPrice": 0, "discountRate": 0,
-            "saleEndDate": None, "isPlusExclusive": False, "psPlusPrice": 0,
-            "inCatalog": False
-        }
-
-        media_list = product_data.get("media", [])
-        if not media_list:
-             meta = product_data.get("personalizedMeta", {})
-             media_list = meta.get("media", [])
-
-        for media in media_list:
-            if media.get("role") == "MASTER":
-                parsed_item["imageUrl"] = media.get("url"); break
-            if media.get("role") == "GAMEHUB_COVER_ART" and not parsed_item["imageUrl"]:
-                parsed_item["imageUrl"] = media.get("url")
-
-        genres = product_data.get("localizedGenres", [])
-        parsed_item["genreIds"] = ", ".join([g.get("value") for g in genres])
-
-        webctas = product_data.get("webctas", [])
-        prices_found = []
-        KST = timezone(timedelta(hours=9))
-
-        for cta_ref in webctas:
-            cta_key = cta_ref.get("__ref")
-            if not cta_key: continue
-            cta_obj = cache.get(cta_key)
-            if not cta_obj: continue
-
-            cta_type = cta_obj.get("type")
-
-            if cta_type == "ADD_TO_LIBRARY":
-                upsell = cta_obj.get("price", {}).get("upsellText", "")
-                if any(k in upsell for k in ["카탈로그", "구독"]) or "PS_PLUS" in str(cta_obj):
-                    parsed_item["inCatalog"] = True
-
-            if cta_type in ["ADD_TO_CART", "PURCHASE", "PRE_ORDER"]:
-                price_info = cta_obj.get("price", {})
-                if price_info.get("isFree") is True and price_info.get("basePriceValue") == 0:
-                    continue
-
-                curr = price_info.get("discountedValue", 0)
-                orig = price_info.get("basePriceValue", 0)
-                is_plus = price_info.get("isExclusive", False)
-                end_ts = price_info.get("endTime")
-
-                end_date = None
-                if end_ts:
-                    try:
-                        dt = datetime.fromtimestamp(int(end_ts)/1000, tz=timezone.utc).astimezone(KST)
-                        end_date = dt.strftime('%Y-%m-%d')
-                    except: pass
-
-                if curr > 0:
-                    prices_found.append({"curr": curr, "orig": orig, "is_plus": is_plus, "end_date": end_date})
-
-        if prices_found:
-            best_offer = min(prices_found, key=lambda x: x['curr'])
-            parsed_item["currentPrice"] = best_offer['curr']
-            parsed_item["originalPrice"] = best_offer['orig']
-            parsed_item["saleEndDate"] = best_offer['end_date']
-            parsed_item["isPlusExclusive"] = best_offer['is_plus']
-
-            if parsed_item["originalPrice"] > parsed_item["currentPrice"]:
-                parsed_item["discountRate"] = int(round(((parsed_item["originalPrice"] - parsed_item["currentPrice"]) / parsed_item["originalPrice"]) * 100))
-
-        return parsed_item
-
-    except Exception as e:
-        logger.error(f"   ⚠️ Python Parse Error: {e}")
-        return None
+        src = driver.page_source
+        match = re.search(r'"invariantName"\s*:\s*"([^"]+)"', src)
+        if match:
+            raw_title = match.group(1)
+            try: raw_title = raw_title.encode('utf-8').decode('unicode_escape')
+            except: pass
+            raw_title = raw_title.replace("’", "'").replace("‘", "'")
+            return re.sub(r'[™®â¢]', '', raw_title).strip()
+    except: return None
+    return None
 
 def crawl_detail_and_send(driver, wait, target_url):
     try:
         driver.get(target_url)
+        time.sleep(CONF["sleep_min"]) # 기본 대기
 
-        # 1차 대기
-        try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "script[type='application/json']")))
-        except TimeoutException:
-            logger.warning(f"   ⏳ Timeout (1st try): {target_url} - Retrying...")
-            try:
-                driver.refresh()
-                time.sleep(3.0)
-                if CONF["window_stop"]:
-                    try: driver.execute_script("window.stop();")
-                    except: pass
-                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "script[type='application/json']")))
-            except TimeoutException:
-                logger.error(f"   ❌ Timeout (Final): No JSON script found - {target_url}")
-                return None
-
+        # 오라클 프리티어용 강제 중단 (무한 로딩 방지)
         if CONF["window_stop"]:
             try: driver.execute_script("window.stop();")
             except: pass
 
-        json_str = get_json_from_browser(driver)
+        # 1. 제목 로딩 대기
+        try:
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-qa='mfe-game-title#name']")))
+        except TimeoutException:
+            logger.warning(f"   ⏳ Timeout (Title not found): {target_url} - Retrying refresh...")
+            try:
+                driver.refresh()
+                time.sleep(5.0)
+                if CONF["window_stop"]:
+                    try: driver.execute_script("window.stop();")
+                    except: pass
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-qa='mfe-game-title#name']")))
+            except TimeoutException:
+                logger.error(f"   ❌ Final Timeout: Page failed to load - {target_url}")
+                return None
 
-        if not json_str:
-            logger.warning(f"   🚫 Empty Data (JS returned null): {target_url}")
+        try:
+            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "[data-qa^='mfeCtaMain#offer']")))
+        except:
+            logger.info("   ℹ️ No price container found (Free or Unreleased)")
+            pass
+
+        # 2. 제목 추출
+        try:
+            title = driver.find_element(By.CSS_SELECTOR, "[data-qa='mfe-game-title#name']").text.strip()
+        except:
+            logger.error(f"   ❌ Error: Title element found but text missing - {target_url}")
             return None
 
-        payload = parse_json_data(json_str, target_url)
+        english_title = mine_english_title(driver)
 
-        if not payload or not payload.get("title"):
+        # 3. 플랫폼 추출
+        platform_set = set()
+        try:
+            tag_elements = driver.find_elements(By.CSS_SELECTOR, "[data-qa^='mfe-game-title#productTag']")
+            for el in tag_elements:
+                raw_text = el.get_attribute("textContent").strip().upper()
+                if "PS5" in raw_text: platform_set.add("PS5")
+                if "PS4" in raw_text: platform_set.add("PS4")
+                if "VR2" in raw_text: platform_set.add("PS_VR2")
+                elif "VR" in raw_text: platform_set.add("PS_VR")
+        except: pass
+        platforms = list(platform_set)
+
+        # 4. 장르 추출
+        genre_ids = ""
+        try:
+            genre_element = driver.find_element(By.CSS_SELECTOR, "[data-qa='gameInfo#releaseInformation#genre-value']")
+            genre_ids = genre_element.text
+        except: pass
+
+        # 5. 가격 정보 추출 (DOM 순회)
+        # 여러 에디션이 있을 수 있으므로 offer0, offer1, offer2... 순회하며 '가장 싼 가격'을 찾음
+        best_offer_data = None
+        min_price = float('inf')
+        is_in_catalog_global = False
+
+        # DOM이 다 그려지길 잠시 대기
+        time.sleep(1)
+
+        for i in range(3): # 상위 3개 오퍼 확인
+            try:
+                container_sel = f"[data-qa='mfeCtaMain#offer{i}']"
+                try:
+                    offer_container = driver.find_element(By.CSS_SELECTOR, container_sel)
+                except: continue # 해당 번호의 오퍼가 없으면 다음으로
+
+                # --- [A] 카탈로그 포함 여부 체크 (HTML 분석 기반) ---
+                # 1. 라디오 버튼 값 확인 (가장 확실함)
+                try:
+                    radio_input = offer_container.find_element(By.CSS_SELECTOR, "input[type='radio']")
+                    input_val = radio_input.get_attribute("value")
+                    # 예: UPSELL_PS_PLUS_GAME_CATALOG:ADD_TO_CART...
+                    if "UPSELL_PS_PLUS_GAME_CATALOG" in input_val:
+                        is_in_catalog_global = True
+                except: pass
+
+                # 2. 텍스트 확인 (보조) - "스페셜에 가입하여" 등의 문구
+                if not is_in_catalog_global:
+                    if "게임 카탈로그" in offer_container.text or "스페셜에 가입" in offer_container.text:
+                        is_in_catalog_global = True
+
+                # --- [B] 가격 추출 ---
+                try:
+                    price_sel = f"[data-qa='mfeCtaMain#offer{i}#finalPrice']"
+                    price_text = offer_container.find_element(By.CSS_SELECTOR, price_sel).text
+                    current_price = int(re.sub(r'[^0-9]', '', price_text))
+
+                    if current_price == 0: continue # 0원은 보통 데모판일 확률 높음 -> 스킵 (무료게임 제외)
+                except: continue
+
+                # 정가 추출 (할인이 없으면 정가=판매가)
+                original_price = current_price
+                try:
+                    orig_sel = f"[data-qa='mfeCtaMain#offer{i}#originalPrice']"
+                    orig_text = offer_container.find_element(By.CSS_SELECTOR, orig_sel).text
+                    original_price = int(re.sub(r'[^0-9]', '', orig_text))
+                except:
+                    pass # 정가 태그가 없으면 할인 안 하는 것임
+
+                # PS Plus 여부 확인
+                is_plus_exclusive = False
+                try:
+                    if offer_container.find_elements(By.CSS_SELECTOR, ".psw-c-t-ps-plus"):
+                        is_plus_exclusive = True
+                except: pass
+
+                # 세일 종료일 확인
+                sale_end_date = None
+                try:
+                    desc_sel = f"[data-qa='mfeCtaMain#offer{i}#discountDescriptor']"
+                    desc_text = offer_container.find_element(By.CSS_SELECTOR, desc_sel).text
+                    # 정규식으로 날짜 추출 (YYYY.MM.DD 등)
+                    match = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', desc_text)
+                    if match:
+                        sale_end_date = f"{match.group(1)}-{match.group(2).zfill(2)}-{match.group(3).zfill(2)}"
+                except: pass
+
+                # 최저가 갱신 로직
+                if current_price < min_price:
+                    min_price = current_price
+                    discount_rate = 0
+                    if original_price > current_price:
+                        discount_rate = int(round(((original_price - current_price) / original_price) * 100))
+
+                    best_offer_data = {
+                        "originalPrice": original_price,
+                        "currentPrice": current_price,
+                        "discountRate": discount_rate,
+                        "saleEndDate": sale_end_date,
+                        "isPlusExclusive": is_plus_exclusive
+                    }
+
+            except Exception: continue
+
+        # 가격 정보를 못 찾았거나, 정보가 없으면
+        if not best_offer_data:
+            if is_in_catalog_global:
+                 logger.info(f"   ℹ️ Catalog Only (Price hidden): {title}")
             return None
 
-        # 0원 데이터 전송 방지 로직
-        if payload.get("currentPrice") == 0 and payload.get("originalPrice") == 0:
-            logger.info(f"   🚫 Skip (0 Won): {payload['title']}")
-            return None
+        # 6. 이미지 URL (메타태그 활용)
+        image_url = ""
+        try:
+            img_elem = driver.find_element(By.CSS_SELECTOR, "img[data-qa='gameBackgroundImage#heroImage#image']")
+            image_url = img_elem.get_attribute("src").split("?")[0]
+        except: pass
 
-        send_data_to_server(payload, payload["title"])
+        # 7. PS Store ID (URL에서 추출 - 중복 방지 핵심)
+        # https://store.playstation.com/ko-kr/product/UP0001-PPSA01234_00-GAMEID0000000000
+        try:
+            ps_store_id = target_url.split("product/")[1].split("?")[0].split("/")[0] # 안전하게 파싱
+        except:
+            ps_store_id = target_url.split("/")[-1] # fallback
+
+        # 최종 페이로드 구성
+        payload = {
+            "psStoreId": ps_store_id,
+            "title": title,
+            "englishTitle": english_title,
+            "publisher": "Unknown",
+            "imageUrl": image_url,
+            "description": "Full Data Crawler",
+            "genreIds": genre_ids,
+            "originalPrice": best_offer_data["originalPrice"],
+            "currentPrice": best_offer_data["currentPrice"],
+            "discountRate": best_offer_data["discountRate"],
+            "saleEndDate": best_offer_data["saleEndDate"],
+            "isPlusExclusive": best_offer_data["isPlusExclusive"],
+            "inCatalog": is_in_catalog_global,
+            "platforms": platforms
+        }
+
+        send_data_to_server(payload, title)
         return payload
 
     except Exception as e:
-        logger.error(f"   🔥 Error processing {target_url}: {e}")
+        logger.error(f"   🔥 DOM Crawling Error: {target_url} -> {e}")
         return None
 
 def fetch_update_targets():
@@ -366,9 +330,14 @@ def send_data_to_server(payload, title):
     try:
         res = session.post(JAVA_API_URL, json=payload, timeout=10)
         if res.status_code == 200:
-            price_txt = f"{payload['currentPrice']:,}원"
-            if payload.get("inCatalog"): price_txt += " [Catalog]"
-            logger.info(f"   📤 Sent: {title} ({price_txt})")
+            if payload.get("discountRate", 0) > 0:
+                price_txt += f" ({payload['discountRate']}%)"
+
+            # 📦 카탈로그 포함이면 로그에 이모지 추가
+            if payload.get("inCatalog"):
+                price_txt += " [📦Catalog]"
+
+            logger.info(f"   📤 Sent: {title} - {price_txt}")
         else:
             logger.error(f"   💥 Server Error {res.status_code}: {title}")
     except Exception as e:
@@ -383,9 +352,9 @@ def send_discord_summary(total_scanned, deals_list):
         sorted_deals = sorted(deals_list, key=lambda x: x.get('discountRate', 0), reverse=True)
         top_5 = sorted_deals[:5]
 
-        message = f"## 📢 [PS-Tracker] 일일 수집 리포트 ({CURRENT_MODE})\n"
-        message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
-        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지!\n"
+        message = f"## 📢 [PS-Tracker] 수집 리포트 ({CURRENT_MODE})\n"
+        message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+        message += f"**📊 결과:** `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 발견\n"
         message += "━━━━━━━━━━━━━━━━━━\n"
 
         for i, game in enumerate(top_5, 1):
@@ -394,11 +363,10 @@ def send_discord_summary(total_scanned, deals_list):
             message += f"　 💰 **₩{sale_price}**\n"
             if i < len(top_5): message += "───\n"
 
-        message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
         requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
-        logger.info("🔔 Discord Summary Report sent!")
+        logger.info("🔔 Discord Summary Sent")
     except Exception as e:
-        logger.error(f"❌ Failed to send Discord summary: {e}")
+        logger.error(f"❌ Discord Error: {e}")
 
 def run_batch_crawler_logic():
     global is_running
@@ -416,16 +384,16 @@ def run_batch_crawler_logic():
                 logger.info("✅ Driver started successfully.")
                 break
             except Exception as e:
-                logger.warning(f"⚠️ Failed to start driver (Attempt {try_cnt}/3): {e}")
-                time.sleep(10) # 10초 숨 고르기 후 재시도
+                logger.warning(f"⚠️ Start Fail ({try_cnt}/3): {e}")
+                time.sleep(10)
 
         if not driver:
-            logger.error("❌ Critical: Failed to start driver after 3 attempts.")
-            return # 완전 종료
+            return
+
         wait = WebDriverWait(driver, CONF['timeout'])
         visited_urls = set()
 
-        # --- [Phase 1: 기존 타겟 갱신] ---
+        # --- [Phase 1: 타겟 갱신] ---
         targets = fetch_update_targets()
         if targets:
             logger.info(f"Target Update: {len(targets)} games")
@@ -433,26 +401,11 @@ def run_batch_crawler_logic():
                 if not is_running: break
 
                 if i > 0 and i % CONF["restart_interval"] == 0:
-                    logger.info("♻️ [Phase 1] Restarting driver (Memory Cleanup)...")
+                    logger.info("♻️ Restarting driver (Memory Cleanup)...")
                     try: driver.quit()
                     except: pass
-                    time.sleep(3)
-
-                    # 재시작 실패 방지: 3번까지 재시도
-                    driver = None
-                    for try_cnt in range(1, 4):
-                        try:
-                            driver = get_driver()
-                            logger.info(f"   ✅ Driver restarted successfully (Phase 1, Try {try_cnt}).")
-                            break
-                        except Exception as e:
-                            logger.warning(f"   ⚠️ Failed to restart driver (Phase 1, Attempt {try_cnt}/3): {e}")
-                            time.sleep(10) # 10초 숨 고르기
-
-                    if not driver:
-                        logger.error("❌ Critical: Failed to restart driver in Phase 1. Skipping to next...")
-                        break # Phase 1 중단 (다음 단계로)
-
+                    time.sleep(5)
+                    driver = get_driver()
                     wait = WebDriverWait(driver, CONF['timeout'])
 
                 res = crawl_detail_and_send(driver, wait, url)
@@ -460,115 +413,59 @@ def run_batch_crawler_logic():
                     total_processed_count += 1
                     if res.get('discountRate', 0) > 0: collected_deals.append(res)
                 visited_urls.add(url)
-
                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
-        # --- [Phase 2: 신규 발굴 (Deep Discovery)] ---
+        # --- [Phase 2: 신규 발굴] ---
         if is_running:
-            logger.info(f"🔭 [Phase 2] Starting Deep Discovery...")
             base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
-
             current_page = 1
             max_pages = 15
 
             while current_page <= max_pages:
                 if not is_running: break
 
-                # [메모리 관리] 2페이지마다 브라우저 재시작
-                if current_page > 1 and current_page % 2 == 0:
-                    logger.info("♻️ [Phase 2] Restarting driver (Memory Cleanup)...")
-                    try: driver.quit()
-                    except: pass
-                    time.sleep(5)
-
-                    # 재시작 실패 방지: 3번까지 재시도
-                    driver = None
-                    for try_cnt in range(1, 4):
-                        try:
-                            driver = get_driver()
-                            logger.info(f"   ✅ Driver restarted successfully (Phase 2, Try {try_cnt}).")
-                            break
-                        except Exception as e:
-                            logger.warning(f"   ⚠️ Failed to restart driver (Phase 2, Attempt {try_cnt}/3): {e}")
-                            time.sleep(10)
-
-                    if not driver:
-                        logger.error("❌ Critical: Failed to restart driver in Phase 2. Stopping Phase 2.")
-                        break # Phase 2 중단
-
-                    wait = WebDriverWait(driver, CONF['timeout'])
-
-                target_list_url = f"{base_category_path}/{current_page}{search_params}"
+                target_list_url = f"{base_category_path}/{current_page}"
                 logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
 
-                raw_game_count = 0
-                page_candidates = []
-                page_load_success = False
+                try:
+                    driver.get(target_list_url)
+                    time.sleep(5) # 리스트 로딩 대기
 
-                # 리스트 페이지 로딩 (최대 3회 재시도)
-                for try_cnt in range(1, 4):
-                    try:
-                        driver.get(target_list_url)
+                    # 스크롤
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
+                    time.sleep(1)
+                    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
-                        # DOM 그리는 시간이 필요하므로 대기
-                        time.sleep(5)
-
-                        # 오라클 프리티어는 화면 렌더링이 느림 -> 강제 스크롤로 로딩 유발
-                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
-                        time.sleep(1)
-                        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-                        # 명시적 대기: 게임 링크가 뜰 때까지
-                        WebDriverWait(driver, 30).until(
-                            EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']"))
-                        )
-
-                        # 요소 추출 시도
-                        link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
-                        if len(link_elements) > 0:
-                            page_load_success = True
-
-                            for el in link_elements:
-                                url = el.get_attribute("href")
-                                if url and "/ko-kr/product/" in url and url not in visited_urls:
-                                    if url not in page_candidates: page_candidates.append(url)
-
-                            raw_game_count = len(link_elements)
-                            break # 성공했으니 재시도 루프 탈출
-                        else:
-                            raise Exception("Elements list is empty")
-
-                    except Exception as e:
-                        logger.warning(f"   ⚠️ List load failed (Attempt {try_cnt}/3). Retrying... Error: {str(e)[:50]}")
-                        # 실패 시 새로고침 대신 잠시 대기
-                        time.sleep(5)
-
-                # 3번 시도했는데도 실패했거나, 게임이 0개인 경우
-                if not page_load_success:
-                    logger.error(f"   ❌ Failed to load page {current_page} properly. Skipping...")
+                    WebDriverWait(driver, 30).until(
+                        EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/product/']"))
+                    )
+                except:
+                    logger.warning(f"   ⚠️ List load failed page {current_page}. Skip.")
                     current_page += 1
                     continue
 
-                # 로딩은 성공했는데 진짜 0개면 -> 이건 진짜 끝난 것
-                # 단, 혹시 모르니 "페이지 로딩 성공" 플래그가 있는데 0개인 경우만 종료
-                if raw_game_count == 0:
-                    logger.info(f"🛑 No games found on HTML. Assuming end of list at page {current_page}.")
+                page_candidates = []
+                link_elements = driver.find_elements(By.CSS_SELECTOR, "a[href*='/product/']")
+
+                for el in link_elements:
+                    url = el.get_attribute("href")
+                    # URL에서 불필요한 파라미터 제거하여 중복 방지
+                    if url and "/ko-kr/product/" in url:
+                        clean_url = url.split("?")[0]
+                        if clean_url not in visited_urls:
+                            if clean_url not in page_candidates: page_candidates.append(clean_url)
+
+                if not page_candidates:
+                    logger.info("🛑 No new games found.")
                     break
 
-                logger.info(f"      ✅ Found {len(page_candidates)} new items on page {current_page}.")
-
-                # 추출된 게임들 상세 크롤링 시작
                 for url in page_candidates:
                     if not is_running: break
-
-                    # 상세 페이지는 로직
                     res = crawl_detail_and_send(driver, wait, url)
                     if res:
                         total_processed_count += 1
                         if res.get('discountRate', 0) > 0: collected_deals.append(res)
                     visited_urls.add(url)
-
                     time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                 current_page += 1
