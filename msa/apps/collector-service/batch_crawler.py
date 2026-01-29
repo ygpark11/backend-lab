@@ -158,12 +158,18 @@ def crawl_detail_and_send(page, target_url):
 
         # 1. 제목 로딩 대기
         try:
-            page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=10000)
+            page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=30000)
         except PlaywrightTimeoutError:
             logger.warning(f"⏳ Title Load Timeout: {target_url}")
-            # 필요 시 스크린샷 활성화
-            # capture_error_snapshot(page, "Title Timeout")
-            return None
+            try:
+                page.reload(wait_until="commit")
+                # 2차 시도: 20초 추가 대기
+                page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=20000)
+                logger.info("   ♻️ Reloaded & Found title!")
+            except PlaywrightTimeoutError:
+                # 2번 다 실패하면 진짜 실패
+                logger.error(f"❌ Final Title Timeout: {target_url}")
+                return None
 
         # 2. 데이터 추출
         try:
@@ -425,9 +431,32 @@ def run_batch_crawler_logic():
                     # [메모리 관리 2] Phase 2 리프레시 로직
                     if current_page > 1 and current_page % CONF["page_restart_interval"] == 0:
                         logger.info(f"♻️ [Phase 2] Context Cleanup (Page {current_page})...")
-                        context.close()
-                        browser, context = create_browser_context(p)
-                        page = setup_page(context)
+                        try:
+                            context.close()
+                            # [안전장치] 브라우저가 죽었을 수도 있으니 확인 후 재생성
+                            if not browser.is_connected():
+                                logger.warning("   ⚠️ Browser disconnected. Relaunching...")
+                                browser.close()
+                                browser = p.chromium.launch(
+                                    headless=True,
+                                    args=[
+                                        "--no-sandbox",
+                                        "--disable-setuid-sandbox",
+                                        "--disable-dev-shm-usage",
+                                        "--disable-gpu",
+                                        "--disable-extensions",
+                                        "--disable-blink-features=AutomationControlled"
+                                    ]
+                                )
+                            browser, context = create_browser_context(p)
+                            page = setup_page(context)
+                        except Exception as e:
+                            logger.error(f"   🔥 Cleanup Error: {e}. Force Restarting Browser.")
+                            # 최악의 경우 브라우저 전체 재시작
+                            try: browser.close()
+                            except: pass
+                            browser, context = create_browser_context(p)
+                            page = setup_page(context)
 
                     target_list_url = f"{base_category_path}/{current_page}{search_params}"
                     logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
@@ -440,10 +469,9 @@ def run_batch_crawler_logic():
                             page.wait_for_selector("a[href*='/product/']", timeout=10000)
                         except:
                             logger.warning(f"   ⚠️ Page load timeout. Retrying...")
-                            page.reload()
-                            time.sleep(3)
-                            # 재시도 후 대기
-                            try: page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                            try:
+                                page.reload(timeout=CONF['timeout'], wait_until="commit")
+                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
                             except: pass
 
                         # 스크롤 (Lazy Loading 대응)
