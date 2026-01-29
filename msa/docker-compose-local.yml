@@ -18,20 +18,7 @@ services:
       - ps-network
     restart: unless-stopped
 
-  # 2. Selenium Grid
-  selenium-chrome:
-    image: selenium/standalone-chrome:latest
-    container_name: ps-tracker-browser
-    shm_size: "2g"
-    environment:
-      - TZ=Asia/Seoul
-    ports:
-      - "4444:4444"
-    networks:
-      - ps-network
-    restart: no
-
-  # 3. Java Backend (Brain)
+  # 2. Java Backend (Brain)
   catalog-service:
     build: ./apps/catalog-service/catalog-service
     container_name: ps-tracker-api
@@ -48,7 +35,7 @@ services:
       - ps-network
     restart: unless-stopped
 
-  # 4. Python Collector (Hand)
+  # 3. Python Collector (Hand)
   collector-service:
     build: ./apps/collector-service
     container_name: ps-tracker-collector
@@ -57,18 +44,18 @@ services:
     environment:
       - TZ=Asia/Seoul
       - API_BASE_URL=http://catalog-service:8080
-      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
       - CRAWLER_MODE=HIGH
+    shm_size: '1gb'
     depends_on:
       catalog-service:
         condition: service_started
-      selenium-chrome:
-        condition: service_started
+    volumes:
+      - ./apps/collector-service/logs:/app/logs
     networks:
       - ps-network
     restart: no
 
-  # 5. Frontend (Face)
+  # 4. Frontend (Face)
   frontend:
     build:
       context: ./apps/frontend
@@ -93,7 +80,7 @@ services:
       - ps-network
     restart: unless-stopped
 
-  # 6. DB 관리 도구
+  # 5. DB 관리 도구
   adminer:
     image: adminer
     container_name: ps-tracker-adminer

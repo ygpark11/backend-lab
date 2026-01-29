@@ -1,27 +1,6 @@
 version: '3.8'
 services:
-  # 1. Selenium Grid (원격 브라우저)
-  selenium-chrome:
-    image: selenium/standalone-chrome:latest
-    container_name: ps-tracker-browser
-    shm_size: "512m"
-    environment:
-      - TZ=Asia/Seoul
-    networks:
-      - ps-network
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:4444/wd/hub/status" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # 2. Python Collector (Hand)
+  # 1. Python Collector (Hand)
   collector-service:
     #build: ./apps/collector-service
     image: ygpark1334/ps-tracker-collector:latest
@@ -33,19 +12,16 @@ services:
     environment:
       - TZ=Asia/Seoul
       - API_BASE_URL=http://10.0.0.161:8080
-      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CRAWLER_MODE=LOW
-    depends_on:
-      selenium-chrome:
-        condition: service_healthy
+    shm_size: '1gb'
     networks:
       - ps-network
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
-      interval: 30s   # 30초마다 찔러봄
-      timeout: 10s    # 10초 동안 대답 없으면 경고
+      interval: 30s
+      timeout: 10s
       retries: 3
     logging:
       driver: "json-file"
