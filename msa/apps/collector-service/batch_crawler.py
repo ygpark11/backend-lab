@@ -282,7 +282,7 @@ def crawl_detail_and_send(page, target_url):
             "englishTitle": english_title,
             "publisher": "Batch Crawler",
             "imageUrl": image_url,
-            "description": "Full Data Crawler (PW)",
+            "description": "Full Data Crawler",
             "genreIds": genre_ids,
             "originalPrice": best_offer_data["originalPrice"],
             "currentPrice": best_offer_data["currentPrice"],
