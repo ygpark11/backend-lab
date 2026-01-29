@@ -29,6 +29,8 @@ logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
 
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+
 app = Flask(__name__)
 session = requests.Session()
 session.headers.update({'Connection': 'keep-alive'})
