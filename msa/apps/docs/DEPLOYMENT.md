@@ -50,7 +50,7 @@ GOOGLE_AI_KEY=your_gemini_api_key
 프로젝트 루트(msa/)에서 실행합니다.
 
 ```bash
-# 1. 통합 개발 환경 실행 (DB, API, Frontend, Selenium, Crawler, Adminer)
+# 1. 통합 개발 환경 실행 (DB, API, Frontend, Crawler, Adminer)
 docker compose -f docker-compose-local.yml up -d --build
 
 # 2. 로그 확인 (실시간)
@@ -59,12 +59,12 @@ docker compose logs -f docker-compose-local.yml
 
 ### 📡 접속 정보
 
-| 서비스 | URL | 설명 |
-| :--- | :--- | :--- |
-| **Frontend** | `http://localhost` | React 웹 애플리케이션 (Nginx) |
-| **Backend API** | `http://localhost:8080` | Spring Boot API 서버 |
-| **Selenium Grid** | `http://localhost:4444` | 크롤링 브라우저 상태 모니터링 |
-| **DB Admin** | `http://localhost:8090` | Adminer (MySQL GUI 도구) |
+| 서비스 | URL                                   | 설명 |
+| :--- |:--------------------------------------| :--- |
+| **Frontend** | `http://localhost`                    | React 웹 애플리케이션 (Nginx) |
+| **Backend API** | `http://localhost:8080`               | Spring Boot API 서버 |
+| **Crawler Logs** | `docker logs -f ps-tracker-collector` | Playwright는 Headless로 동작하므로 docker logs로 확인 |
+| **DB Admin** | `http://localhost:8090`               | Adminer (MySQL GUI 도구) |
 
 ---
 
@@ -73,7 +73,7 @@ docker compose logs -f docker-compose-local.yml
 
 ### 🏗️ 인프라 아키텍처 (Dual-Node)
 - Node 1 (Brain): 10.0.0.161 (Private IP) / API, DB, Frontend, Alloy
-- Node 2 (Hand): 10.0.0.61 (Private IP) / Python Crawler, Selenium
+- Node 2 (Hand): 10.0.0.61 (Private IP) / Python Crawler, Playwright (Headless)
 
 #### ① Node 1: Brain Server 배포
 ```bash

@@ -10,7 +10,7 @@
 ### 🏗️ Case 1. 저사양 환경에서의 메모리 부족(OOM) 및 프로세스 경합
 * **Problem:** 1GB RAM(Oracle Cloud Free Tier) 환경에서 API, DB, 크롤러를 동시에 실행 시 **OOM Killer**가 발생하여 MySQL이 강제 종료됨.
 * **Analysis:** Chrome 브라우저 실행 시 발생하는 메모리 스파이크가 JVM 및 DB의 메모리 영역을 침범.
-* **Solution:** 물리적 서버를 **API/DB 서버(Node 1)**와 **크롤링 전용 서버(Node 2)**로 분리하여 리소스 격리 구현.
+* **Solution:** 물리적 서버를 **API/DB 서버(Node 1)**와 **크롤링 전용 서버(Node 2)** 로 분리하여 리소스 격리 구현.
 
 ### 🔌 Case 2. Docker 컨테이너 간 통신 실패
 * **Problem:** 컨테이너 내부에서 `localhost` 호출 시 연결이 거부됨.
@@ -29,7 +29,7 @@
 
 ### 📄 Case 4. 렌더링 지연에 따른 데이터 누락 해결
 * **Problem:** 네트워크 지연으로 DOM 렌더링이 늦어질 경우, `find_element`가 텍스트를 찾지 못해 빈 값이 수집됨.
-* **Solution:** 화면 렌더링(View)을 기다리지 않고, 페이지 내 주입된 **JSON 데이터 객체(Hydration Data)**를 직접 파싱하는 방식으로 변경하여 정합성 확보.
+* **Solution:** 화면 렌더링(View)을 기다리지 않고, 페이지 내 주입된 **JSON 데이터 객체(Hydration Data)** 를 직접 파싱하는 방식으로 변경하여 정합성 확보.
 
 ### 🔄 Case 5. Selenium 프로세스 누적 및 메모리 관리
 * **Problem:** 장시간 크롤링 시 Chrome 프로세스가 종료되지 않고 누적되어 메모리 누수 발생.
@@ -55,6 +55,16 @@
 ### 🚫 Case 25. 설명 데이터 부재 시 UI 처리
 * **Problem:** 일부 게임의 상세 설명 텍스트가 없어 화면이 비어 보임.
 * **Solution:** 설명이 `null`일 경우 **[YouTube 검색]**, **[구글 검색]** 버튼을 동적으로 렌더링하여 대체 정보 제공.
+
+### ⚡ Case 26. Selenium의 구조적 한계와 Playwright 마이그레이션 (Final Evolution)
+* **Context:** 프로젝트 초기에는 `Selenium`으로 JSON 데이터를 파싱하여 정합성을 확보했으나, 데이터 양이 늘어날수록 **속도 저하**와 **리소스 부족** 문제가 심화됨.
+* **Problem:**
+  * 수집된 데이터에 누락되는 요소가 늘어나 데이터 품질 하락(이미지, 장르 등).
+  * 수집하지 못하고 넘어가는 데이터가 증가하여 전체 수집률 저하.
+* **Solution:** **수집 엔진 전면 교체 (Selenium → Playwright)**
+  * **Protocol Change:** HTTP 요청 방식(WebDriver)을 버리고, WebSocket 방식의 Playwright 도입으로 통신 딜레이 제거.
+  * **Resource Diet:** `page.route('**/*.{png,jpg,mp4}', route => route.abort())` 로직을 통해 미디어 리소스 원천 차단.
+  * **Stability:** `Context Cleanup` 로직을 개선하여, 브라우저 프로세스가 응답 없음(Zombie) 상태일 경우 강제로 재실행하는 **Self-Healing** 구조 구현.
 
 ---
 
