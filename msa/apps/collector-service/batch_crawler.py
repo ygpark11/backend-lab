@@ -522,8 +522,14 @@ def run_batch_crawler_logic():
         logger.error(f"Critical Error: {e}")
         logger.error(traceback.format_exc())
     finally:
-        if context: context.close()
-        if browser: browser.close()
+        try:
+            if context: context.close()
+        except: pass
+
+        try:
+            if browser: browser.close()
+        except: pass
+
         with lock: is_running = False
         logger.info("🏁 Crawler finished.")
 
