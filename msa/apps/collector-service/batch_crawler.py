@@ -48,7 +48,7 @@ is_running = False
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 CONFIG = {
     "LOW": {
-        "restart_interval": 50,
+        "restart_interval": 20,
         "page_restart_interval": 5,
         "timeout": 60000,
         "sleep_min": 2.0,
