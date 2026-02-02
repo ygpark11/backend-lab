@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     curl \
     vim \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. 의존성 설치
