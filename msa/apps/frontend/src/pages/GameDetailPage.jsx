@@ -30,11 +30,16 @@ import {
     Trophy,
     Users,
     X,
-    Youtube
+    Youtube,
+    Trash2,
+    AlertTriangle
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
+
+import { adminApi } from '../api/adminApi';
+import { useCurrentUser } from '../hooks/useCurrentUser';
 
 const renderVerdictIcon = (verdict) => {
     // 공통 버튼 스타일 (유리 질감 + 둥근 테두리 + 흰색 테마)
@@ -77,6 +82,8 @@ export default function GameDetailPage() {
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
 
+    const { isAdmin } = useCurrentUser();
+
     useEffect(() => {
         const fetchDetail = async () => {
             try {
@@ -93,6 +100,48 @@ export default function GameDetailPage() {
         };
         fetchDetail();
     }, [id, navigate]);
+
+    const handleDeleteGame = () => {
+        // 커스텀 컨펌 UI (Toast)
+        toast((t) => (
+            <div className="flex flex-col gap-3 min-w-[250px] bg-[#1a1a1a] text-white p-2 border border-white/10 rounded-xl">
+                <div className="flex items-center gap-3">
+                    <div className="bg-red-500/20 p-2 rounded-lg">
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-sm text-red-400">관리자 삭제 모드</h4>
+                        <p className="text-xs text-gray-400">정말 이 게임을 영구 삭제하시겠습니까?</p>
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            const loadId = toast.loading("데이터 파쇄 중...");
+                            try {
+                                await adminApi.deleteGame(id);
+                                toast.success("삭제 완료! 목록으로 이동합니다.", { id: loadId });
+                                navigate('/games', { replace: true });
+                            } catch (err) {
+                                console.error(err);
+                                toast.error("삭제 실패: 권한을 확인하세요.", { id: loadId });
+                            }
+                        }}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-bold transition-colors"
+                    >
+                        네, 삭제합니다
+                    </button>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-lg text-xs font-bold transition-colors"
+                    >
+                        취소
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000, style: { background: 'transparent', boxShadow: 'none' } });
+    };
 
     // 찜 기능
     const handleLike = async () => {
@@ -338,6 +387,18 @@ export default function GameDetailPage() {
                                 >
                                     <Link className="w-5 h-5 group-hover:rotate-45 transition-transform" />
                                 </button>
+
+                                {/* 관리자 전용 삭제 버튼 */}
+                                {isAdmin && (
+                                    <button
+                                        onClick={handleDeleteGame}
+                                        className="px-6 py-4 rounded-full border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-600 hover:border-red-600 hover:text-white transition-all font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-red-600/30 backdrop-blur-md group"
+                                        title="관리자 권한으로 게임 삭제"
+                                    >
+                                        <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        <span className="hidden sm:inline">삭제</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

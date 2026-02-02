@@ -30,7 +30,7 @@ public class Member {
     @Column(nullable = false)
     private Role role;
 
-    // 가입일 (기존 엔티티들처럼 명시적으로 관리)
+    // 가입일
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -57,5 +57,9 @@ public class Member {
 
     public String getRoleKey() {
         return this.role.getKey();
+    }
+
+    public boolean isAdmin() {
+        return Role.ADMIN.equals(this.role);
     }
 }

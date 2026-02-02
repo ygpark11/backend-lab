@@ -60,6 +60,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'com.h2database:h2'
 }
 
 // QueryDSL QClass가 생성될 경로를 지정합니다. (빌드 시 자동 생성됨)

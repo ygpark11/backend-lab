@@ -1,0 +1,24 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  datasource:
+    url: jdbc:h2:mem:pstracker_test;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: dGVzdF9zZWNyZXRfa2V5X2Zvcl9qc190cmFja2VyX21pbmltdW1fMzJfYnl0ZXM=
+  expiration:
+    access: 3600000
+    refresh: 1209600000

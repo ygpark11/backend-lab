@@ -60,6 +60,7 @@ public class SecurityConfig {
 
                 // 4. 요청별 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",

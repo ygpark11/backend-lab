@@ -342,4 +342,16 @@ public class CatalogService {
 
         return gameRepository.findRelatedGames(genreIds, game.getId(), RECOMMEND_GAME_COUNT);
     }
+
+    /**
+     * 게임 삭제 (관리자 전용)
+     * @param gameId 삭제할 게임 ID
+     */
+    @Transactional
+    public void deleteGame(Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게임을 찾을 수 없습니다. id=" + gameId));
+
+        gameRepository.delete(game);
+    }
 }
