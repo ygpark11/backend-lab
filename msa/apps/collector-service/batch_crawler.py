@@ -403,6 +403,10 @@ def run_batch_crawler_logic():
                     if i > 0 and i % CONF["restart_interval"] == 0:
                         logger.info("♻️ [Phase 1] Context Cleanup...")
                         context.close()
+
+                        # OS가 기존 프로세스를 정리할 시간 부여
+                        time.sleep(5)
+
                         browser, context = create_browser_context(p)
                         page = setup_page(context)
 
@@ -433,6 +437,9 @@ def run_batch_crawler_logic():
                         logger.info(f"♻️ [Phase 2] Context Cleanup (Page {current_page})...")
                         try:
                             context.close()
+
+                            time.sleep(5)
+
                             # [안전장치] 브라우저가 죽었을 수도 있으니 확인 후 재생성
                             if not browser.is_connected():
                                 logger.warning("   ⚠️ Browser disconnected. Relaunching...")
