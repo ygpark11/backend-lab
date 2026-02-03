@@ -47,8 +47,8 @@ jobs:
             
             # 3. 호스트에 남아있는 좀비 크롬 프로세스 사살 🔫
             # (이전 실행에서 안 죽고 남아있는 크롬들이 메모리 먹는 것을 방지)
-            sudo pkill -f chrome || true
-            sudo pkill -f playwright || true
+            sudo pkill -f "[c]hrome" || true
+            sudo pkill -f "[p]laywright" || true
             
             # 4. 메모리 캐시 비우기 (OS 레벨 청소)
             # (배포 직전에 램을 최대한 확보)
