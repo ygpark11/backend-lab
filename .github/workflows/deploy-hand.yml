@@ -45,7 +45,7 @@ jobs:
             # 2. 기존 컨테이너 강제 종료 및 삭제
             docker compose -f docker-compose-hand.yml down
             
-            # 3. 호스트에 남아있는 좀비 크롬 프로세스 사살 🔫
+            # 3. 호스트에 남아있는 좀비 크롬 프로세스 제거
             # (이전 실행에서 안 죽고 남아있는 크롬들이 메모리 먹는 것을 방지)
             sudo pkill -f "[c]hrome" || true
             sudo pkill -f "[p]laywright" || true

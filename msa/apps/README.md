@@ -24,13 +24,13 @@
 ### 🚀 자동화 및 아키텍처 (Automation & Architecture)
 * **이원화된 노드 아키텍처:** 메모리 부족(OOM) 문제를 해결하기 위해 **API 서버(Brain)** 와 **수집 서버(Hand)** 를 물리적으로 분리하고, 사설망(Private Network)을 통해 통신하도록 설계하여 안정성 확보.
 * **스마트 수집 파이프라인:** 무조건적인 `INSERT`를 지양하고, 기존 데이터와 비교하여 **'유의미한 변동(가격, 할인 조건)'이 있을 때만 DB에 저장**하는 로직(Smart Upsert)을 구현하여 데이터 낭비 방지.
-* **Zero-Touch 배포:** GitHub Actions를 활용하여 코드 푸시부터 배포까지 전 과정을 자동화.
+* **CD 파이프라인 자동화 (Automated CD Pipeline):** GitHub Actions를 활용하여 코드 푸시부터 배포까지 전 과정을 자동화.
 
 ### 💎 데이터 처리 및 성능 (Data & Performance)
-* **WebSocket 기반 초고속 수집:** 기존 HTTP 기반(Selenium) 통신 방식을 **WebSocket 기반(Playwright)** 으로 전면 교체하여, 통신 오버헤드를 제거하고 수집 속도를 개선 (3분 → 30~50초).
+* **수집 성능 개선 (Performance Improvement):** 기존 HTTP 기반(Selenium) 통신 방식을 **WebSocket 기반(Playwright)** 으로 전면 교체하여, 통신 오버헤드를 제거하고 수집 속도를 개선 (3분 → 30~50초).
 * **네트워크 레벨 리소스 제어:** Playwright의 `Route API`를 활용하여 이미지/폰트 등 불필요한 리소스 요청을 네트워크 단에서 원천 차단(Abort), 1GB RAM 환경에서도 메모리 누수 없는 안정성 확보.
 * **동적 쿼리 엔진 (QueryDSL):** 복잡한 필터링(가격, 메타스코어, 할인율 등)과 스냅샷 조회(Latest Price)를 위해 Type-Safe한 QueryDSL을 도입, 런타임 에러 방지 및 조회 성능 최적화.
-* **초경량 모니터링:** 1GB RAM 환경에서도 부담 없는 **Grafana Alloy** 에이전트를 도입하여 리소스 점유율을 최소화하면서도 PLG(Prometheus, Loki, Grafana) 스택을 구축.
+* **경량 에이전트 도입 (Lightweight Agent):** 1GB RAM 환경에서도 부담 없는 **Grafana Alloy** 에이전트를 도입하여 리소스 점유율을 최소화하면서도 PLG(Prometheus, Loki, Grafana) 스택을 구축.
 
 ### 🛡️ 보안 및 사용자 경험 (Security & UX)
 * **보안 중심 인증 (Secure Auth):** XSS 공격 방지를 위해 JWT를 `LocalStorage`가 아닌 **HttpOnly Cookie**에 저장하고, CSRF 방어를 위해 `SameSite=Lax` 전략 적용.
@@ -192,6 +192,13 @@ graph TD
 **2. 탐지 회피 (Manual Stealth Strategy)**
 * **Technique:** 무거운 서드파티 라이브러리(`undetected-chromedriver`) 대신, `navigator.webdriver` 속성을 제거하는 경량화된 스크립트 주입(Script Injection) 방식을 적용하여 봇 탐지 솔루션을 효율적으로 우회.
 
+**3. 메모리 수명 주기 관리 (Resource Lifecycle Management)**
+* **Challenge:** 1GB RAM 환경에서 Headless Chrome을 장시간 유지할 경우, 메모리 누적과 스레드 부족으로 인해 `RuntimeError: can't start new thread` 발생 및 프로세스 중단.
+* **Solution:** **'Periodic Context Refresh'** 전략을 적용하여 브라우저 리소스를 주기적으로 초기화.
+  * **Implementation:** 수집 10건(Batch Size)마다 브라우저 컨텍스트를 닫고(`close`) 변수를 초기화(`None`)한 뒤, `gc.collect()`를 호출하여 점유 메모리를 즉시 반환.
+  * **Phase 2 (탐색):** 한 페이지(24개) 내에서도 10개 단위로 끊어서 리소스를 정리함으로써, 일시적인 메모리 스파이크로 인한 강제 종료 방지.
+* **Result:** 1GB 메모리 한계 내에서 스왑(Swap) 사용을 최소화하고, 수집 프로세스가 에러 없이 끝까지 완료되도록 **운영 안정성(Stability)** 확보.
+
 ---
 
 ## 5. 트러블 슈팅 (Troubleshooting & Lessons)
@@ -201,7 +208,7 @@ graph TD
 ### 🔥 Case 1. 저사양 환경에서의 리소스 충돌과 OOM (Architecture)
 * **Problem:** 1GB RAM(Oracle Cloud Free Tier) 환경에서 Spring Boot(API), MySQL(DB), Selenium(Chrome)을 단일 컨테이너 환경으로 실행하자, 크롤링 시작 직후 메모리 부족으로 인한 **OOM Killer**가 발생하여 DB 프로세스가 강제 종료됨.
 * **Analysis:** Chrome 브라우저 인스턴스가 실행될 때 순간적으로 메모리 스파이크가 발생하며, 힙 메모리를 점유하고 있던 JVM 및 MySQL과 경합(Contention) 발생.
-* **Solution (The Great Split):** 물리적 서버를 **'Main Node(API/DB)'** 와 **'Worker Node(Crawler)'** 로 분리하는 이원화 아키텍처 도입.
+* **Solution (Architecture Separation):** 물리적 서버를 **'Main Node(API/DB)'** 와 **'Worker Node(Crawler)'** 로 분리하는 이원화 아키텍처 도입.
   * **Node 1:** 메모리 사용량이 일정한 API와 DB를 배치하여 안정성 확보.
   * **Node 2:** 리소스 변동 폭이 큰 크롤러를 별도 서버로 격리하여, 수집 장애가 메인 서비스에 영향을 주지 않도록 차단.
   * **Result:** 시스템 가용성(Uptime) 확보 및 메모리 사용률 안정화.
@@ -211,7 +218,7 @@ graph TD
 * **Analysis:**
   1. **통신 오버헤드:** Selenium은 명령마다 HTTP 요청을 보내야 하므로 네트워크 비용이 높음.
   2. **리소스 제어 불가:** 불필요한 이미지/폰트 로딩을 완벽하게 차단하기 어려워 메모리 낭비가 심함.
-* **Solution (Evolution):** 브라우저와 **WebSocket(CDP)**으로 직접 통신하는 **Playwright**로 엔진을 전면 교체.
+* **Solution (Engine Migration):** 브라우저와 **WebSocket(CDP)**으로 직접 통신하는 **Playwright**로 엔진을 전면 교체.
   * **Network Interception:** `Route API`를 사용하여 이미지와 미디어 요청을 브라우저 도달 전 **0ms에 차단(Abort)**.
   * **Wait Strategy:** `wait_until='commit'` 전략을 적용하여 불필요한 렌더링 대기 시간을 제거.
 * **Result:** 수집 속도 (3분 → 30~50초) 및 메모리 사용량 50% 절감 달성.
@@ -298,10 +305,10 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
 ---
 
 ## 9. 향후 계획 (Future Roadmap)
-단순 기능 구현을 넘어, **서비스의 지속 가능성(Sustainability)**과 **품질(Quality)**을 높이는 데 집중하고 있습니다.
+단순 기능 구현을 넘어, **서비스의 지속 가능성(Sustainability)** 과 **품질(Quality)** 을 높이는 데 집중하고 있습니다.
 
 ### ✅ Phase 1. 서비스 안정화 (Completed)
-- [x] 이원화 아키텍처(Brain/Hand) 구축을 통한 리소스 격리 (Lv.43)
+- [x] 이원화 아키텍처(Brain/Hand) 구축을 통한 리소스 격리
 - [x] Google Gemini API 연동을 통한 게임 설명 요약 (Daily Batch)
 - [x] Github Actions & Docker 기반 CI/CD 파이프라인 구축
 

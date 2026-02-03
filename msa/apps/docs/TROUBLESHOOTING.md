@@ -56,7 +56,7 @@
 * **Problem:** 일부 게임의 상세 설명 텍스트가 없어 화면이 비어 보임.
 * **Solution:** 설명이 `null`일 경우 **[YouTube 검색]**, **[구글 검색]** 버튼을 동적으로 렌더링하여 대체 정보 제공.
 
-### ⚡ Case 26. Selenium의 구조적 한계와 Playwright 마이그레이션 (Final Evolution)
+### ⚡ Case 26. Selenium의 구조적 한계와 Playwright 마이그레이션 (Optimization)
 * **Context:** 프로젝트 초기에는 `Selenium`으로 JSON 데이터를 파싱하여 정합성을 확보했으나, 데이터 양이 늘어날수록 **속도 저하**와 **리소스 부족** 문제가 심화됨.
 * **Problem:**
   * 수집된 데이터에 누락되는 요소가 늘어나 데이터 품질 하락(이미지, 장르 등).
