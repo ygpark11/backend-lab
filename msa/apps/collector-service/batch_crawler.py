@@ -49,8 +49,7 @@ is_running = False
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 CONFIG = {
     "LOW": {
-        "restart_interval": 20,
-        "page_restart_interval": 5,
+        "restart_interval": 10,
         "timeout": 60000,
         "sleep_min": 2.0,
         "sleep_max": 4.0,
@@ -58,7 +57,6 @@ CONFIG = {
     },
     "HIGH": {
         "restart_interval": 200,
-        "page_restart_interval": 20,
         "timeout": 30000,
         "sleep_min": 1.0,
         "sleep_max": 3.0,
@@ -448,6 +446,8 @@ def run_batch_crawler_logic():
             current_page = 1
             max_pages = 10
 
+            BATCH_SIZE = CONF["restart_interval"]
+
             while current_page <= max_pages:
                 if not is_running: break
 
@@ -497,15 +497,45 @@ def run_batch_crawler_logic():
                             logger.info(f"🛑 No new games found on page {current_page}. Finishing Phase 2.")
                             break # Phase 2 종료
 
-                        logger.info(f"      Found {len(page_candidates)} new candidates.")
+                        logger.info(f"      Found {len(page_candidates)} new candidates. (Batch Size: {BATCH_SIZE})")
+
+                        items_processed_in_page = 0
 
                         for url in page_candidates:
                             if not is_running: break
+
+                            # BATCH_SIZE(10개)마다 브라우저 리셋
+                            if items_processed_in_page > 0 and items_processed_in_page % BATCH_SIZE == 0:
+                                logger.info(f"   💤 Refreshing Browser ({items_processed_in_page}/{len(page_candidates)} done)...")
+                                try:
+                                    try: context.close()
+                                    except: pass
+                                    try: browser.close()
+                                    except: pass
+
+                                    page = None
+                                    context = None
+                                    browser = None
+
+                                    # 메모리 청소
+                                    gc.collect()
+                                    time.sleep(3)
+
+                                    # 브라우저만 다시 켭니다 (p는 유지)
+                                    browser, context = create_browser_context(p)
+                                    page = setup_page(context)
+                                    logger.info(f"   ▶️ Resumed.")
+                                except Exception as e:
+                                    logger.error(f"   ⚠️ Restart failed: {e}")
+                                    break
+
                             res = crawl_detail_and_send(page, url)
                             if res:
                                 total_processed_count += 1
                                 if res.get('discountRate', 0) > 0: collected_deals.append(res)
                             visited_urls.add(url)
+
+                            items_processed_in_page += 1
                             time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         # 페이지 처리 완료 후 정리

@@ -39,14 +39,26 @@ jobs:
           script: |
             cd ~/backend-lab/msa
             
-            # 최신 설정 파일 받기
+            # 1. 최신 설정 받기
             git pull origin master
 
-            # 1. 최신 이미지 당겨오기
+            # 2. 기존 컨테이너 강제 종료 및 삭제
+            docker compose -f docker-compose-hand.yml down
+            
+            # 3. 호스트에 남아있는 좀비 크롬 프로세스 사살 🔫
+            # (이전 실행에서 안 죽고 남아있는 크롬들이 메모리 먹는 것을 방지)
+            sudo pkill -f chrome || true
+            sudo pkill -f playwright || true
+            
+            # 4. 메모리 캐시 비우기 (OS 레벨 청소)
+            # (배포 직전에 램을 최대한 확보)
+            sudo sync && sudo sysctl -w vm.drop_caches=3 || true
+
+            # 5. 최신 이미지 당겨오기
             docker compose -f docker-compose-hand.yml pull collector-service
             
-            # 2. 컨테이너 재시작
+            # 6. 컨테이너 깨끗하게 새로 시작
             docker compose -f docker-compose-hand.yml up -d collector-service
             
-            # 3. 청소
+            # 7. 도커 찌꺼기 이미지 정리
             docker image prune -f
