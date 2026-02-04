@@ -200,6 +200,11 @@ RUN npm run build
 - Server .env: CD 단계(런타임)에서 필요한 DB 비밀번호, Discord URL 등은 운영 서버 내부의 `.env` 파일로 격리하여 관리.
 - Hybrid Loading: FirebaseConfig 등 핵심 설정 클래스는 "환경변수가 있으면 그것을(Prod), 없으면 내부 파일을(Local)" 읽도록 설계하여 코드 수정 없이 환경 대응.
 
+### 🛡️ 신뢰성 중심 배포 (Reliability-First Deployment)
+기존에는 빌드 속도를 위해 테스트를 생략(`-x test`)했으나, 안정성 확보를 위해 **배포 전 테스트 수행을 의무화**했습니다.
+- Docker 빌드 시 `./gradlew test`가 자동으로 수행됩니다.
+- 테스트 실패 시(Red) 빌드가 즉시 중단되어, 결함 있는 코드가 운영 서버에 배포되는 것을 원천 차단합니다.
+
 ---
 
 ## 5. SSL 인증서 설정 (Nginx & Certbot)

@@ -238,9 +238,9 @@ graph TD
 
 | 구분 | 기술 스택                                                              |
 | :--- |:-------------------------------------------------------------------|
-| **Backend** | Java 17, Spring Boot 3.2, Spring Security, JPA/QueryDSL, Gradle    |
+| **Backend** | Java 17, Spring Boot 3.2, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito  |
 | **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios                    |
-| **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)                |
+| **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)             |
 | **Database** | MySQL 8.0 (Prod/Local 분리)                                          |
 | **Infra & DevOps** | Oracle Cloud (ARM/AMD), Docker & Compose, Nginx, GitHub Actions    |
 | **Monitoring** | Grafana Alloy, Grafana Cloud (Dashboard)                           |
@@ -302,6 +302,12 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
 - Method: POST
 - Header: Authorization: Bearer {ADMIN_ACCESS_TOKEN}
 
+### 🧪 테스트 실행 (Run Tests)
+작성된 단위/통합 테스트를 수행하여 로직의 건전성을 검증합니다.
+```bash
+./gradlew test
+```
+
 ---
 
 ## 9. 향후 계획 (Future Roadmap)
@@ -316,9 +322,10 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
 
 단순한 기능 추가보다, 서비스의 내실을 다지고 트래픽 증가에 대비한 확장성 확보에 집중하고 있습니다.
 
-* [ ] **코드 신뢰성 확보 (Test Coverage):**
-  * JUnit 5 & Mockito를 도입하여 핵심 비즈니스 로직(가격 변동 감지, 알림 발송 조건)에 대한 단위 테스트 작성.
-  * 배포 전 회귀 버그(Regression Bug)를 방지하는 안전장치 마련.
+* [x] **코드 신뢰성 확보 (Test Coverage):**
+  * **Core Logic:** JUnit 5 & Mockito를 도입하여 `CatalogService`의 핵심 로직(Smart Upsert, 가격 변동 감지, 0원 방어) 검증 완료.
+  * **Event Listener:** `GamePriceChangedListener`의 알림 발송 및 예외 처리 로직에 대한 단위 테스트 작성.
+  * **CI Integration:** Docker 빌드 파이프라인에 테스트 단계를 강제하여 배포 전 회귀 버그(Regression Bug) 차단.
 
 * [ ] **전략적 캐싱 레이어 구축 (Performance vs Scalability):**
   * **Target:** DB I/O가 빈번하게 발생하는 '게임 상세 정보' 및 '장르별 목록' 조회 성능 최적화.
