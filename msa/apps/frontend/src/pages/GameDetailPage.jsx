@@ -121,8 +121,8 @@ export default function GameDetailPage() {
                             const loadId = toast.loading("데이터 파쇄 중...");
                             try {
                                 await adminApi.deleteGame(id);
-                                toast.success("삭제 완료! 목록으로 이동합니다.", { id: loadId });
-                                navigate('/games', { replace: true });
+                                toast.success("삭제 완료!", { id: loadId });
+                                navigate(-1);
                             } catch (err) {
                                 console.error(err);
                                 toast.error("삭제 실패: 권한을 확인하세요.", { id: loadId });

@@ -67,8 +67,17 @@ const GameListPage = () => {
     const [showFilter, setShowFilter] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-
     const [isSortOpen, setIsSortOpen] = useState(false);
+
+    useEffect(() => {
+        // 로딩이 끝났는데(loading === false)
+        // 데이터가 하나도 없고(games.length === 0)
+        // 1페이지가 아니라면(page > 0) -> (API는 0부터 시작하므로 0이 1페이지임)
+        if (!loading && games.length === 0 && page > 0) {
+            console.log("⚠️ 현재 페이지에 데이터가 없어 앞 페이지로 이동합니다.");
+            setPage(prev => Math.max(0, prev - 1));
+        }
+    }, [games, loading, page]);
 
     // filter나 page 상태가 바뀔 때마다 URL에 반영
     useEffect(() => {
