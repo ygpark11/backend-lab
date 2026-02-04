@@ -15,7 +15,7 @@ RUN ./gradlew dependencies --no-daemon
 
 # 소스 복사 및 빌드
 COPY src src
-RUN ./gradlew clean build -x test --no-daemon
+RUN ./gradlew clean build --no-daemon
 
 # 2단계: 실행 환경 (Runner)
 FROM eclipse-temurin:17-jre-jammy

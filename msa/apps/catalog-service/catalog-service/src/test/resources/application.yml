@@ -17,8 +17,27 @@ spring:
       hibernate:
         format_sql: true
 
+  ai:
+    openai:
+      api-key: "sk-test-dummy-key-do-not-use-real-one"
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "test-client-id"
+            client-secret: "test-client-secret"
+            scope:
+              - email
+              - profile
 jwt:
   secret: dGVzdF9zZWNyZXRfa2V5X2Zvcl9qc190cmFja2VyX21pbmltdW1fMzJfYnl0ZXM=
   expiration:
     access: 3600000
     refresh: 1209600000
+
+app:
+  auth:
+    redirect-uri: "http://localhost:3000/oauth2/redirect"
+    cookie-secure: false

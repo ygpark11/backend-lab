@@ -52,6 +52,13 @@ public class CatalogService {
      */
     @Transactional
     public void upsertGameData(CollectRequestDto request) {
+
+        // 가격 정보가 없거나 0원이면 아예 로직을 시작하지 않음
+        if (request.getCurrentPrice() == null || request.getCurrentPrice() == 0) {
+            log.warn("⚠️ Invalid price data (0 or null). Skipping upsert for: {}", request.getTitle());
+            return;
+        }
+
         // 1. 장르 데이터 준비 (String -> Entity Set)
         Set<Genre> genreEntities = resolveGenres(request.getGenreIds());
 
