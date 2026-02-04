@@ -41,3 +41,9 @@ app:
   auth:
     redirect-uri: "http://localhost:3000/oauth2/redirect"
     cookie-secure: false
+
+igdb:
+  client-id: "client-id-xyz123"
+  client-secret: "client-secret-abc789"
+  auth-url: "https://id.twitch.tv/oauth2/token"
+  api-url: "https://api.igdb.com/v4"
