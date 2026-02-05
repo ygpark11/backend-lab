@@ -3,12 +3,13 @@ package com.pstracker.catalog_service.catalog.dto;
 import com.querydsl.core.annotations.QueryProjection;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-public class GameSearchResultDto {
+public class GameSearchResultDto implements Serializable {
     private Long id;
     private String name;
     private String imageUrl;

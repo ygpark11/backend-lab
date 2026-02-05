@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.application;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
+import com.pstracker.catalog_service.catalog.service.GameReadService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,9 @@ public class CatalogServiceTest {
 
     @InjectMocks
     private CatalogService catalogService;
+
+    @Mock
+    private GameReadService gameReadService;
 
     @Mock
     private GameRepository gameRepository;

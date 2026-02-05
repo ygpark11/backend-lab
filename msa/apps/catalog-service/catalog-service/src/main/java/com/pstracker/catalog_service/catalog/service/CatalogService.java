@@ -15,11 +15,8 @@ import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryReposito
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GenreRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
-import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,8 +37,6 @@ import java.util.Set;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    private static final Integer RECOMMEND_GAME_COUNT = 4;
-
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final WishlistRepository wishlistRepository;
@@ -49,7 +44,7 @@ public class CatalogService {
     private final ApplicationEventPublisher eventPublisher;
     private final IgdbApiClient igdbApiClient;
 
-    private final CacheManager cacheManager;
+    private final GameReadService gameReadService;
 
     /**
      * 게임 데이터 수집 및 저장 (Upsert)
@@ -84,7 +79,7 @@ public class CatalogService {
 
         // 7. 모든 변경이 끝난 후 마지막에 캐시 삭제!
         // 다음 조회 시 최신 데이터로 다시 캐싱됨
-        evictGameDetailCache(game.getId());
+        gameReadService.evictGameDetailCache(game.getId());
     }
 
     /**
@@ -285,20 +280,6 @@ public class CatalogService {
     }
 
     /**
-     * 게임 상세 캐시 삭제
-     * @param gameId 게임 ID
-     */
-    private void evictGameDetailCache(Long gameId) {
-        if (gameId != null) {
-            var cache = cacheManager.getCache(GlobalCacheConfig.GAME_DETAIL_CACHE);
-            if (cache != null) {
-                cache.evict(gameId);
-                log.debug("🧹 Cache Evicted for Game ID: {}", gameId);
-            }
-        }
-    }
-
-    /**
      * 게임 검색
      * @param condition 검색 조건
      * @param pageable 페이징 정보
@@ -315,22 +296,6 @@ public class CatalogService {
     }
 
     /**
-     * 검색 결과에 찜 여부 표시
-     * @param games 게임 검색 결과 리스트
-     * @param memberId 회원 ID
-     */
-    private void markLikedGames(List<GameSearchResultDto> games, Long memberId) {
-        List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
-        Set<Long> myLikedGameIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
-
-        games.forEach(dto -> {
-            if (myLikedGameIds.contains(dto.getId())) {
-                dto.setLiked(true);
-            }
-        });
-    }
-
-    /**
      * 게임 상세 정보 조회 (찜 여부 포함)
      * @param gameId 게임 ID
      * @param memberId 회원 ID (찜여부 확인용)
@@ -338,53 +303,13 @@ public class CatalogService {
      */
     public GameDetailResponse getGameDetail(Long gameId, Long memberId) {
         // 1. 순수 게임 정보 가져오기 (캐시 적용됨)
-        GameDetailResponse baseResponse = getBaseGameDetail(gameId);
+        GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
         // 2. 찜 여부는 사용자마다 다르므로 실시간 조회
         boolean isLiked = (memberId != null) && wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
 
         // 3. 캐시된 객체의 내용을 재사용하되, liked 상태만 변경해서 반환
         return baseResponse.withLiked(isLiked);
-    }
-
-    /**
-     * 게임 상세 정보 조회
-     * @param gameId 게임 ID
-     * @return 게임 상세 응답 DTO
-     */
-    @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
-    public GameDetailResponse getBaseGameDetail(Long gameId) {
-        Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
-
-        // 가격 이력 조회
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
-        GamePriceHistory currentInfo = histories.isEmpty() ? null : histories.get(histories.size() - 1);
-        Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);
-
-        // DTO 변환
-        List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
-                .map(h -> new GameDetailResponse.PriceHistoryDto(h.getRecordedAt().toLocalDate(), h.getPrice()))
-                .toList();
-
-        // 연관 게임 추천
-        List<GameSearchResultDto> relatedGames = getRelatedGames(game);
-
-        return GameDetailResponse.from(game, currentInfo, lowestPrice, historyDtos, false, relatedGames);
-    }
-
-    /** 연관 게임 추천 로직
-     * @param game 기준 게임 엔티티
-     * @return 추천 게임 리스트
-     */
-    private List<GameSearchResultDto> getRelatedGames(Game game) {
-        List<Long> genreIds = game.getGameGenres().stream()
-                .map(gg -> gg.getGenre().getId())
-                .toList();
-
-        if (genreIds.isEmpty()) return List.of();
-
-        return gameRepository.findRelatedGames(genreIds, game.getId(), RECOMMEND_GAME_COUNT);
     }
 
     /**
@@ -399,6 +324,22 @@ public class CatalogService {
         gameRepository.delete(game);
 
         // 삭제 후 캐시도 제거
-        evictGameDetailCache(gameId);
+        gameReadService.evictGameDetailCache(gameId);
+    }
+
+    /**
+     * 검색 결과에 찜 여부 표시
+     * @param games 게임 검색 결과 리스트
+     * @param memberId 회원 ID
+     */
+    private void markLikedGames(List<GameSearchResultDto> games, Long memberId) {
+        List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
+        Set<Long> myLikedGameIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
+
+        games.forEach(dto -> {
+            if (myLikedGameIds.contains(dto.getId())) {
+                dto.setLiked(true);
+            }
+        });
     }
 }
