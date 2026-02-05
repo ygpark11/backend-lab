@@ -9,6 +9,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 
 import java.util.Optional;
 
@@ -23,6 +24,9 @@ public class CatalogServiceTest {
 
     @Mock
     private GameRepository gameRepository;
+
+    @Mock
+    private CacheManager cacheManager;
 
     @Test
     @DisplayName("게임 삭제 성공: 존재하는 ID 요청 시 삭제 메서드가 호출된다")
