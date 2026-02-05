@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 
+import java.io.Serializable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -43,7 +44,45 @@ public record GameDetailResponse(
 
         // [추천 게임 리스트]
         List<GameSearchResultDto> relatedGames
-) {
+) implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * [캐시 최적화용 메서드]
+     * 이미 캐싱된 무거운 객체(this)의 데이터는 캐시에서 재사용하면서,
+     * 'liked' 필드만 변경된 새로운 객체를 생성하여 반환합니다.
+     * 찜은 실시간성이 중요하므로 별도 관리
+     */
+    public GameDetailResponse withLiked(boolean isLiked) {
+        return new GameDetailResponse(
+                this.id,
+                this.title,
+                this.originalTitle,
+                this.publisher,
+                this.imageUrl,
+                this.description,
+                this.psStoreId,
+                this.currentPrice,
+                this.originalPrice,
+                this.lowestPrice,
+                this.discountRate,
+                this.isPlusExclusive,
+                this.saleEndDate,
+                this.metaScore,
+                this.userScore,
+                isLiked,
+                this.createdAt,
+                this.priceVerdict,
+                this.verdictMessage,
+                this.priceHistory,
+                this.platforms,
+                this.genres,
+                this.inCatalog,
+                this.relatedGames
+        );
+    }
+
     public static GameDetailResponse from(
             Game game,
             GamePriceHistory currentInfo,
@@ -53,13 +92,13 @@ public record GameDetailResponse(
             List<GameSearchResultDto> relatedGames
     ){
 
-        // 1. 가격 정보 추출 (누락된 변수들 정의 추가 완료)
+        // 1. 가격 정보 추출
         Integer currentPrice = (currentInfo != null) ? currentInfo.getPrice() : 0;
         Integer originalPrice = (currentInfo != null) ? currentInfo.getOriginalPrice() : 0;
         Integer discountRate = (currentInfo != null) ? currentInfo.getDiscountRate() : 0;
         boolean isPlus = (currentInfo != null) && currentInfo.isPlusExclusive();
         LocalDate endDate = (currentInfo != null) ? currentInfo.getSaleEndDate() : null;
-        boolean isInCatalog = (currentInfo != null) ? currentInfo.isInCatalog() : null;
+        boolean isInCatalog = (currentInfo != null) ? currentInfo.isInCatalog() : Boolean.FALSE;
 
         PriceVerdict verdict;
         String verdictMsg;
@@ -140,5 +179,5 @@ public record GameDetailResponse(
     public record PriceHistoryDto(
             LocalDate date,
             Integer price
-    ) {}
+    )implements Serializable {}
 }

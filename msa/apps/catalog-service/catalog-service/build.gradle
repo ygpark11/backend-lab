@@ -49,6 +49,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'com.google.firebase:firebase-admin:9.2.0'
 
+    // Caffeine Cache
+    // 캐시 추상화 및 CaffeineCacheManager 지원
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    // Caffeine 캐시 구현체
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
     // DB Driver
     runtimeOnly 'com.mysql:mysql-connector-j'
 
