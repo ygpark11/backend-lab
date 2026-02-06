@@ -236,15 +236,16 @@ graph TD
 
 ## 6. 기술 스택 (Tech Stack)
 
-| 구분 | 기술 스택                                                              |
-| :--- |:-------------------------------------------------------------------|
-| **Backend** | Java 17, Spring Boot 3.2, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito  |
-| **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios                    |
-| **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)             |
-| **Database** | MySQL 8.0 (Prod/Local 분리)                                          |
-| **Infra & DevOps** | Oracle Cloud (ARM/AMD), Docker & Compose, Nginx, GitHub Actions    |
-| **Monitoring** | Grafana Alloy, Grafana Cloud (Dashboard)                           |
-| **External API** | Google Gemini 2.5 Flash, IGDB API, Discord Webhook, Firebase (FCM) |
+| 구분 | 기술 스택                                                                             |
+| :--- |:----------------------------------------------------------------------------------|
+| **Backend** | Java 17, Spring Boot 3.5, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito |
+| **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios                                   |
+| **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)                            |
+| **Database** | MySQL 8.0 (Prod/Local 분리)                                                         |
+| **Infra & DevOps** | Oracle Cloud (ARM/AMD), Docker & Compose, Nginx, GitHub Actions                   |
+| **Monitoring** | Grafana Alloy, Grafana Cloud (Dashboard)                                          |
+| **External API** | Google Gemini 2.5 Flash, IGDB API, Discord Webhook, Firebase (FCM)                |
+| **Cache** | Caffeine (Local Cache for 1GB RAM Environment)                                    |
 
 ## 7. 실행 방법 (Getting Started)
 
@@ -327,8 +328,8 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
   * **Event Listener:** `GamePriceChangedListener`의 알림 발송 및 예외 처리 로직에 대한 단위 테스트 작성.
   * **CI Integration:** Docker 빌드 파이프라인에 테스트 단계를 강제하여 배포 전 회귀 버그(Regression Bug) 차단.
 
-* [ ] **전략적 캐싱 레이어 구축 (Performance vs Scalability):**
+* [X] **전략적 캐싱 레이어 구축 (Performance vs Scalability):**
   * **Target:** DB I/O가 빈번하게 발생하는 '게임 상세 정보' 및 '장르별 목록' 조회 성능 최적화.
   * **Abstraction First:** Spring Cache 추상화(`@Cacheable`)를 적용하여 비즈니스 로직과 캐시 구현체(Store) 간의 의존성 분리.
-  * **Local-First Strategy:** 현재의 단일 인스턴스 및 1GB RAM 제약을 고려하여, 네트워크 비용(Network I/O)이 없는 **Caffeine(Local Cache)**을 우선 적용해 응답 속도 극대화.
+  * **Local-First Strategy:** 현재의 단일 인스턴스 및 1GB RAM 제약을 고려하여, 네트워크 비용(Network I/O)이 없는 **Caffeine(Local Cache)** 을 우선 적용해 응답 속도 극대화.
   * **Redis-Ready:** 추후 다중 인스턴스 확장(Scale-out) 시, 코드 수정 없이 설정 변경만으로 **Redis(Global Cache)**로 전환 가능한 유연한 아키텍처 검증.
