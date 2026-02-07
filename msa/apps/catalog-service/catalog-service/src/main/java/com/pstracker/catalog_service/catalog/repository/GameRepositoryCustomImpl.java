@@ -32,18 +32,10 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        // 1. 엔티티 자체를 먼저 조회 (DTO 프로젝션 대신 엔티티로 가져와서 변환)
+        // 1. 엔티티 조회 (조인 없이 Game 테이블만 조회!)
         List<Game> games = queryFactory
                 .selectFrom(game)
-                .leftJoin(game.priceHistories, gamePriceHistory)
                 .where(
-                        // 최신 가격 이력 매칭
-                        gamePriceHistory.recordedAt.eq(
-                                JPAExpressions
-                                        .select(gamePriceHistory.recordedAt.max())
-                                        .from(gamePriceHistory)
-                                        .where(gamePriceHistory.game.eq(game))
-                        ),
                         nameContains(condition.getKeyword()),
                         priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
                         discountRateGoe(condition.getMinDiscountRate()),
@@ -59,22 +51,14 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .fetch();
 
-        // 2. 엔티티 -> DTO 변환 (여기서 장르 리스트 채움)
+        // 2. DTO 변환
         List<GameSearchResultDto> content = convertToDtos(games);
 
-        // 3. 카운트 쿼리
+        // 3. 카운트 쿼리 (역시 조인 제거)
         JPAQuery<Long> countQuery = queryFactory
                 .select(game.count())
                 .from(game)
-                .leftJoin(game.priceHistories, gamePriceHistory)
                 .where(
-                        // 카운트 쿼리에서도 동일한 최신 가격 조건 적용
-                        gamePriceHistory.recordedAt.eq(
-                                JPAExpressions
-                                        .select(gamePriceHistory.recordedAt.max())
-                                        .from(gamePriceHistory)
-                                        .where(gamePriceHistory.game.eq(game))
-                        ),
                         nameContains(condition.getKeyword()),
                         priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
                         discountRateGoe(condition.getMinDiscountRate()),
@@ -98,27 +82,14 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         // 1. 쿼리 실행
         List<Game> games = queryFactory
                 .selectFrom(game)
-                .leftJoin(game.priceHistories, gamePriceHistory)
                 .where(
-                        // 자기 자신 제외
                         game.id.ne(excludeGameId),
-
-                        // 장르 일치 (주어진 장르 ID 중 하나라도 포함되면 OK)
                         game.gameGenres.any().genre.id.in(genreIds),
-
-                        // 가장 최근 가격만 가져오기
-                        gamePriceHistory.recordedAt.eq(
-                                JPAExpressions
-                                        .select(gamePriceHistory.recordedAt.max())
-                                        .from(gamePriceHistory)
-                                        .where(gamePriceHistory.game.eq(game))
-                        ),
-
                         // 메타스코어 75점 이상이거나, 평점이 없는 신작
                         game.metaScore.goe(75).or(game.metaScore.isNull())
                 )
                 .orderBy(
-                        gamePriceHistory.discountRate.desc(),
+                        game.discountRate.desc(),
                         game.metaScore.desc().nullsLast(),
                         game.lastUpdated.desc()
                 )
@@ -136,18 +107,15 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
      */
     private List<GameSearchResultDto> convertToDtos(List<Game> games) {
         return games.stream().map(g -> {
-            var latestPrice = g.getPriceHistories().stream()
-                    .max(Comparator.comparing(GamePriceHistory::getRecordedAt))
-                    .orElse(null);
 
             GameSearchResultDto dto = new GameSearchResultDto(
                     g.getId(), g.getName(), g.getImageUrl(),
-                    latestPrice != null ? latestPrice.getOriginalPrice() : 0,
-                    latestPrice != null ? latestPrice.getPrice() : 0,
-                    latestPrice != null ? latestPrice.getDiscountRate() : 0,
-                    latestPrice != null && latestPrice.isPlusExclusive(),
-                    latestPrice != null ? latestPrice.getSaleEndDate() : null,
-                    g.getMetaScore(), g.getUserScore(), latestPrice.isInCatalog(), g.getCreatedAt()
+                    g.getOriginalPrice() != null ? g.getOriginalPrice() : 0,
+                    g.getCurrentPrice() != null ? g.getCurrentPrice() : 0,
+                    g.getDiscountRate() != null ? g.getDiscountRate() : 0,
+                    g.isPlusExclusive(),
+                    g.getSaleEndDate(),
+                    g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt()
             );
 
             // 장르 이름 매핑
@@ -164,18 +132,14 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression priceBetween(Integer minPrice, Integer maxPrice) {
-        if (minPrice != null && maxPrice != null) {
-            return gamePriceHistory.price.between(minPrice, maxPrice);
-        } else if (minPrice != null) {
-            return gamePriceHistory.price.goe(minPrice);
-        } else if (maxPrice != null) {
-            return gamePriceHistory.price.loe(maxPrice);
-        }
+        if (minPrice != null && maxPrice != null) return game.currentPrice.between(minPrice, maxPrice);
+        else if (minPrice != null) return game.currentPrice.goe(minPrice);
+        else if (maxPrice != null) return game.currentPrice.loe(maxPrice);
         return null;
     }
 
     private BooleanExpression discountRateGoe(Integer minDiscountRate) {
-        return minDiscountRate != null ? gamePriceHistory.discountRate.goe(minDiscountRate) : null;
+        return minDiscountRate != null ? game.discountRate.goe(minDiscountRate) : null;
     }
 
     private BooleanExpression metaScoreGoe(Integer minMetaScore) {
@@ -191,7 +155,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression plusExclusiveEq(Boolean isPlusExclusive) {
-        return Boolean.TRUE.equals(isPlusExclusive) ? gamePriceHistory.isPlusExclusive.isTrue() : null;
+        return Boolean.TRUE.equals(isPlusExclusive) ? game.isPlusExclusive.isTrue() : null;
     }
 
     private BooleanExpression genreEq(String genreName) {
@@ -200,21 +164,19 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression inCatalogEq(Boolean inCatalog) {
-        return Boolean.TRUE.equals(inCatalog) ? gamePriceHistory.inCatalog.isTrue() : null;
+        return Boolean.TRUE.equals(inCatalog) ? game.inCatalog.isTrue() : null;
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
         List<OrderSpecifier<?>> orders = new ArrayList<>();
-
         for (Sort.Order order : sort) {
             Order direction = order.isAscending() ? Order.ASC : Order.DESC;
-
             switch (order.getProperty()) {
                 case "price":
-                    orders.add(new OrderSpecifier<>(direction, gamePriceHistory.price));
+                    orders.add(new OrderSpecifier<>(direction, game.currentPrice));
                     break;
                 case "discountRate":
-                    orders.add(new OrderSpecifier<>(direction, gamePriceHistory.discountRate));
+                    orders.add(new OrderSpecifier<>(direction, game.discountRate));
                     break;
                 case "metaScore":
                     orders.add(new OrderSpecifier<>(direction, game.metaScore));
@@ -225,7 +187,6 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                     break;
             }
         }
-
         return orders.toArray(new OrderSpecifier[0]);
     }
 }

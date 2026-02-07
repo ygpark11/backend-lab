@@ -5,6 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -15,7 +16,13 @@ import java.util.stream.Collectors;
 import static org.springframework.util.StringUtils.hasText;
 
 @Entity
-@Table(name = "games")
+@Table(name = "games", indexes = {
+        @Index(name = "idx_game_name", columnList = "name"),
+        @Index(name = "idx_game_price", columnList = "current_price"),
+        @Index(name = "idx_game_discount", columnList = "discount_rate"),
+        @Index(name = "idx_game_meta", columnList = "metacritic_score"),
+        @Index(name = "idx_game_updated", columnList = "last_updated_at")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game {
@@ -55,6 +62,24 @@ public class Game {
     @Column(name = "last_updated_at")
     private LocalDateTime lastUpdated;
 
+    @Column(name = "current_price")
+    private Integer currentPrice;
+
+    @Column(name = "original_price")
+    private Integer originalPrice;
+
+    @Column(name = "discount_rate")
+    private Integer discountRate;
+
+    @Column(name = "is_plus_exclusive")
+    private boolean isPlusExclusive;
+
+    @Column(name = "sale_end_date")
+    private LocalDate saleEndDate;
+
+    @Column(name = "in_catalog")
+    private boolean inCatalog;
+
     // 양방향 매핑 (게임 삭제 시 가격 이력도 같이 삭제)
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
@@ -88,7 +113,6 @@ public class Game {
     }
 
     // --- [비즈니스 로직: 정보 업데이트 통합] ---
-    // 크롤링 할 때마다 변할 수 있는 정보들을 한 번에 갱신합니다.
     public void updateInfo(String name, String englishName, String publisher,
                            String imageUrl, String description, Set<Genre> newGenres) {
 
@@ -179,5 +203,15 @@ public class Game {
      */
     public void updateDescription(String summary) {
         this.description = summary;
+    }
+
+    public void updatePriceSearchInfo(Integer originalPrice, Integer currentPrice, Integer discountRate,
+                                      boolean isPlusExclusive, LocalDate saleEndDate, boolean inCatalog) {
+        this.originalPrice = originalPrice;
+        this.currentPrice = currentPrice;
+        this.discountRate = discountRate;
+        this.isPlusExclusive = isPlusExclusive;
+        this.saleEndDate = saleEndDate;
+        this.inCatalog = inCatalog;
     }
 }

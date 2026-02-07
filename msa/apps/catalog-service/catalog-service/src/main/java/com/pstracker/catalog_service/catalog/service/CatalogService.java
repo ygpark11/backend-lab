@@ -71,6 +71,16 @@ public class CatalogService {
         // 4. 외부 API(IGDB)를 통한 평점 정보 보정
         updateGameRatingsFromIgdb(game, request);
 
+        // 역정규화된 가격 검색용 정보 업데이트
+        game.updatePriceSearchInfo(
+                request.getOriginalPrice(),
+                request.getCurrentPrice(),
+                request.getDiscountRate(),
+                request.isPlusExclusive(),
+                request.getSaleEndDate(),
+                request.isInCatalog()
+        );
+
         // 5. 게임 정보 저장
         gameRepository.save(game);
 
