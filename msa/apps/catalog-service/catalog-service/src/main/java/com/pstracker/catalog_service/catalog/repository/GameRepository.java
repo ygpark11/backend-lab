@@ -26,12 +26,7 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
      * - 즉, '정가 판매 중(NULL)'이거나 '세일이 막 종료된' 게임만 조회하여 갱신합니다.
      */
     @Query("SELECT g FROM Game g WHERE g.lastUpdated < :threshold " +
-            "AND NOT EXISTS (" +
-            "    SELECT 1 FROM GamePriceHistory ph " +
-            "    WHERE ph.game = g " +
-            "    AND ph.recordedAt = (SELECT MAX(sub.recordedAt) FROM GamePriceHistory sub WHERE sub.game = g) " +
-            "    AND ph.saleEndDate >= :today " +
-            ") " +
+            "AND (g.saleEndDate IS NULL OR g.saleEndDate < :today) " + // 세일 중이 아닌 것(세일 끝났거나, 원래 없거나)
             "ORDER BY g.lastUpdated ASC")
     List<Game> findGamesToUpdate(
             @Param("threshold") LocalDateTime threshold,

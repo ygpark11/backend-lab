@@ -85,26 +85,25 @@ public record GameDetailResponse(
 
     public static GameDetailResponse from(
             Game game,
-            GamePriceHistory currentInfo,
             Integer lowestPrice,
             List<PriceHistoryDto> history,
             boolean liked,
             List<GameSearchResultDto> relatedGames
     ){
 
-        // 1. 가격 정보 추출
-        Integer currentPrice = (currentInfo != null) ? currentInfo.getPrice() : 0;
-        Integer originalPrice = (currentInfo != null) ? currentInfo.getOriginalPrice() : 0;
-        Integer discountRate = (currentInfo != null) ? currentInfo.getDiscountRate() : 0;
-        boolean isPlus = (currentInfo != null) && currentInfo.isPlusExclusive();
-        LocalDate endDate = (currentInfo != null) ? currentInfo.getSaleEndDate() : null;
-        boolean isInCatalog = (currentInfo != null) ? currentInfo.isInCatalog() : Boolean.FALSE;
+        // 1. 가격 정보 추출 (역정규화된 Game 필드 사용)
+        Integer currentPrice = (game.getCurrentPrice() != null) ? game.getCurrentPrice() : 0;
+        Integer originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
+        Integer discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
+        boolean isPlus = game.isPlusExclusive();
+        LocalDate endDate = game.getSaleEndDate();
+        boolean isInCatalog = game.isInCatalog();
 
         PriceVerdict verdict;
         String verdictMsg;
 
         // 1. 데이터 존재 여부 확인
-        if (currentInfo == null || history.isEmpty()) {
+        if (game.getCurrentPrice() == null || history.isEmpty()) {
             verdict = PriceVerdict.TRACKING;
             verdictMsg = "가격 정보를 수집하는 중입니다. 🕵️";
         }

@@ -54,7 +54,8 @@ public class GameReadService {
 
         // 가격 이력 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
-        GamePriceHistory currentInfo = histories.isEmpty() ? null : histories.get(histories.size() - 1);
+
+        // 게임의 역대 최저가 조회
         Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);
 
         // DTO 변환
@@ -66,7 +67,7 @@ public class GameReadService {
         List<GameSearchResultDto> relatedGames = getRelatedGames(game);
 
         // liked = false로 고정 저장
-        return GameDetailResponse.from(game, currentInfo, lowestPrice, historyDtos, false, relatedGames);
+        return GameDetailResponse.from(game, lowestPrice, historyDtos, false, relatedGames);
     }
 
     /**
