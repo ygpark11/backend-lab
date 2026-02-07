@@ -33,7 +33,7 @@ public class WishlistResponse {
 
     private boolean inCatalog;
 
-    public WishlistResponse(Wishlist wishlist, GamePriceHistory latestPrice) {
+    public WishlistResponse(Wishlist wishlist) {
         Game game = wishlist.getGame();
 
         this.gameId = game.getId();
@@ -47,17 +47,11 @@ public class WishlistResponse {
                 .map(gg -> gg.getGenre().getName())
                 .toList();
 
-        if (latestPrice != null) {
-            this.currentPrice = latestPrice.getPrice();
-            this.originalPrice = latestPrice.getOriginalPrice();
-            this.discountRate = latestPrice.getDiscountRate();
-            this.isOnSale = discountRate > 0;
-            this.saleEndDate = latestPrice.getSaleEndDate();
-            this.inCatalog = latestPrice.isInCatalog();
-        } else {
-            this.currentPrice = 0;
-            this.isOnSale = false;
-            this.inCatalog = false;
-        }
+        this.currentPrice = (game.getCurrentPrice() != null) ? game.getCurrentPrice() : 0;
+        this.originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
+        this.discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
+        this.isOnSale = this.discountRate > 0;
+        this.saleEndDate = game.getSaleEndDate();
+        this.inCatalog = game.isInCatalog();
     }
 }

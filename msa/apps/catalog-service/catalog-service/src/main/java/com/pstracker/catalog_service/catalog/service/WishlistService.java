@@ -43,7 +43,7 @@ public class WishlistService {
                     Game gameRef = gameRepository.getReferenceById(gameId);
 
                     wishlistRepository.save(Wishlist.create(memberRef, gameRef));
-                    return true; // 저장됨 (찜 추가)
+                    return true;
                 });
     }
 
@@ -56,15 +56,6 @@ public class WishlistService {
     public Page<WishlistResponse> getMyWishlist(Long memberId, Pageable pageable) {
         Page<Wishlist> wishlistPage = wishlistRepository.findAllByMemberId(memberId, pageable);
 
-        return wishlistPage.map(wishlist -> {
-            // 게임의 가격 이력 중 가장 최신 것 1개를 조회
-            // (데이터가 많지 않다면 스트림으로 처리해도 무방
-            //  대용량일 경우엔 QueryDSL 단계에서 처리해야 하지만, 게임별 가격변동은 100건 미만이므로 우선 스트림으로 처리)
-            GamePriceHistory latestPrice = wishlist.getGame().getPriceHistories().stream()
-                    .max(Comparator.comparing(GamePriceHistory::getRecordedAt))
-                    .orElse(null);
-
-            return new WishlistResponse(wishlist, latestPrice);
-        });
+        return wishlistPage.map(WishlistResponse::new);
     }
 }
