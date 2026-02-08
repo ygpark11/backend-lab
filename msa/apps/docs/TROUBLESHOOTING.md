@@ -98,6 +98,15 @@
 * **Problem:** 동일한 Service 클래스 내부에서 `@Cacheable`이 선언된 메서드를 호출(`this.method`)할 경우, 프록시를 거치지 않아 캐싱이 무시됨.
 * **Solution:** 캐시 읽기 로직을 **`GameReadService`로 분리**하여, `CatalogService`(Facade)가 외부 빈을 호출하는 구조로 변경함으로써 AOP 프록시가 정상 작동하도록 구조 개선.
 
+### ⚡ Case 29. 검색 성능 최적화를 위한 역정규화 (Denormalization)
+* **Context:** 게임 목록 조회 시, `Game`(메타 정보)과 `GamePriceHistory`(가격 이력) 테이블을 조인하여 '현재 가격'과 '할인율'을 계산해야 함.
+* **Problem:** * 정규화된 DB 구조로 인해 목록 조회 시마다 **N+1 서브쿼리(Latest Price 조회)** 와 대량의 **Join 연산**이 발생.
+  * 1GB RAM 환경에서 동시 접속 시 CPU 점유율이 급증하고, 검색 필터(예: 할인 중인 게임만 조회) 적용 시 인덱스를 타지 못해 Full Scan 발생.
+* **Solution:** **읽기 성능(Read)을 위해 쓰기 성능(Write)을 일부 희생하는 역정규화 감행.**
+  * **Schema Change:** `current_price`, `discount_rate`, `sale_end_date` 등 검색에 필수적인 필드를 `Game` 테이블에 중복 컬럼으로 추가.
+  * **Synchronization:** 데이터 수집(Upsert) 시점에 트랜잭션 내에서 두 테이블의 데이터를 동기화하여 정합성 보장.
+  * **Query Tuning:** 무거운 조인(Join)을 제거하고 **단일 테이블 조회(Single Table Scan)** 로 변경하여, 쿼리 복잡도를 낮추고 검색 성능 개선.
+  
 ---
 
 ## 4. DevOps & Infrastructure (데옵스 및 인프라)
