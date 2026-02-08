@@ -12,7 +12,7 @@ from datetime import datetime
 # [Playwright Imports]
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import requests
 
 # --- [1. 설정 및 로깅 초기화] ---
@@ -51,8 +51,8 @@ CONFIG = {
     "LOW": {
         "restart_interval": 10,
         "timeout": 60000,
-        "sleep_min": 2.0,
-        "sleep_max": 4.0,
+        "sleep_min": 4.0,
+        "sleep_max": 8.0,
         "block_fonts": True,
     },
     "HIGH": {
@@ -142,7 +142,7 @@ def mine_english_title(html_content):
     except: return None
     return None
 
-def crawl_detail_and_send(page, target_url):
+def crawl_detail_and_send(page, target_url, verbose=False):
     try:
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
 
@@ -290,6 +290,15 @@ def crawl_detail_and_send(page, target_url):
             "inCatalog": is_in_catalog_global,
             "platforms": platforms
         }
+
+        if verbose:
+            logger.info(f"   🧐 [Parsed Data Check] {title}")
+            logger.info(f"      📸 ImageURL : {payload['imageUrl'][:60]}..." if payload['imageUrl'] else "      📸 ImageURL : None")
+            logger.info(f"      🏷️ Genres   : {payload['genreIds']}")
+            logger.info(f"      🏢 Publisher: {payload['publisher']}")
+            logger.info(f"      💰 Discount : {payload['discountRate']}% (PlusOnly: {payload['isPlusExclusive']})")
+            logger.info(f"      📚 Catalog  : {payload['inCatalog']}")
+            logger.info(f"      --------------------------------------------------")
 
         send_data_to_server(payload, title)
         return payload
@@ -566,6 +575,44 @@ def run_batch_crawler_logic():
     finally:
         with lock: is_running = False
         logger.info("🏁 Crawler finished.")
+
+# ==========================================
+# 단건 수집 API
+# ==========================================
+@app.route('/crawl/single', methods=['POST'])
+def crawl_single_url():
+    target_url = request.json.get('url')
+    if not target_url:
+        return jsonify({"error": "URL is required"}), 400
+
+    logger.info(f"🎯 Single Crawl Request: {target_url}")
+
+    result = None
+    try:
+        # 단건 처리를 위해 Playwright 인스턴스를 잠깐 실행
+        with sync_playwright() as p:
+            browser, context = create_browser_context(p)
+            page = setup_page(context)
+
+            result = crawl_detail_and_send(page, target_url, verbose=True)
+
+            # 정리
+            try: context.close()
+            except: pass
+            try: browser.close()
+            except: pass
+
+            # 메모리 정리
+            gc.collect()
+
+        if result:
+            return jsonify({"status": "success", "data": result}), 200
+        else:
+            return jsonify({"status": "failed", "message": "Failed to parse data"}), 500
+
+    except Exception as e:
+        logger.error(f"🔥 Single Crawl Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/run', methods=['POST'])
 def trigger_crawl():
