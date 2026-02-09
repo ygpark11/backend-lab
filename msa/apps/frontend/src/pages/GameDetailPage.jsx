@@ -32,7 +32,8 @@ import {
     X,
     Youtube,
     Trash2,
-    AlertTriangle
+    AlertTriangle,
+    RefreshCw
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -179,6 +180,26 @@ export default function GameDetailPage() {
         }
     };
 
+    // 관리자 전용: 최신 정보 수집 요청
+    const handleRefresh = async () => {
+        const loadId = toast.loading("최신 정보를 수집 요청 중...");
+
+        try {
+            // ✅ [수정] adminApi 사용
+            await adminApi.refreshGame(id);
+
+            toast.success("수집 요청 완료! 잠시 후 새로고침 됩니다.", { id: loadId });
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 4000);
+
+        } catch (err) {
+            console.error(err);
+            toast.error("수집 요청 실패: 관리자 권한을 확인하세요.", { id: loadId });
+        }
+    };
+
     const handleGenreClick = (genre) => {
         const cleanGenre = genre.trim();
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`);
@@ -283,7 +304,32 @@ export default function GameDetailPage() {
                                 ))}
                             </div>
 
-                            <h1 className="text-4xl md:text-5xl font-black mb-2 leading-tight text-white drop-shadow-lg">{game.title}</h1>
+                            <div className="flex justify-between items-start gap-4 mb-2">
+                                <h1 className="text-4xl md:text-5xl font-black leading-tight text-white drop-shadow-lg flex-1">
+                                    {game.title}
+                                </h1>
+
+                                {/* 🔧 관리자 컨트롤 (제목 우측으로 이동) */}
+                                {isAdmin && (
+                                    <div className="flex gap-2 shrink-0 pt-1">
+                                        <button
+                                            onClick={handleRefresh}
+                                            className="p-3 rounded-full bg-blue-500/10 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 transition-all shadow-lg backdrop-blur-md group"
+                                            title="정보 갱신"
+                                        >
+                                            <RefreshCw className="w-5 h-5 group-hover:rotate-180 transition-transform duration-700" />
+                                        </button>
+                                        <button
+                                            onClick={handleDeleteGame}
+                                            className="p-3 rounded-full bg-red-500/10 text-red-500 hover:bg-red-600 hover:text-white border border-red-500/30 transition-all shadow-lg backdrop-blur-md group"
+                                            title="게임 삭제"
+                                        >
+                                            <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             <p className="text-gray-300 text-sm mb-6 font-medium">{game.publisher}</p>
 
                             <div className={`p-6 rounded-xl border mb-6 backdrop-blur-sm shadow-xl transition-colors duration-300 ${traffic.color} bg-opacity-90 border-white/20`}>
@@ -387,18 +433,6 @@ export default function GameDetailPage() {
                                 >
                                     <Link className="w-5 h-5 group-hover:rotate-45 transition-transform" />
                                 </button>
-
-                                {/* 관리자 전용 삭제 버튼 */}
-                                {isAdmin && (
-                                    <button
-                                        onClick={handleDeleteGame}
-                                        className="px-6 py-4 rounded-full border border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-600 hover:border-red-600 hover:text-white transition-all font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-red-600/30 backdrop-blur-md group"
-                                        title="관리자 권한으로 게임 삭제"
-                                    >
-                                        <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                        <span className="hidden sm:inline">삭제</span>
-                                    </button>
-                                )}
                             </div>
                         </div>
                     </div>

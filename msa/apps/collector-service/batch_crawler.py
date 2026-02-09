@@ -267,10 +267,22 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         # 5. 이미지 URL (차단했지만 속성은 존재할 수 있음)
         image_url = ""
         try:
-            img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
-            if img_loc.count() > 0:
-                image_url = img_loc.get_attribute("src").split("?")[0]
-        except: pass
+            #  정규식으로 HTML 소스 전체에서 URL 패턴 찾기
+            html_content = page.content()
+            match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_content)
+
+            if match:
+                image_url = match.group(1).split("?")[0]
+
+            # 정규식 실패 시, DOM 방식 시도
+            if not image_url:
+                img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
+                if img_loc.count() > 0:
+                    src = img_loc.first.get_attribute("src")
+                    if src: image_url = src.split("?")[0]
+
+        except Exception as e:
+            logger.warning(f"   ⚠️ Image Extraction Failed: {e}")
 
         ps_store_id = target_url.split("/")[-1].split("?")[0]
 
@@ -293,7 +305,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         if verbose:
             logger.info(f"   🧐 [Parsed Data Check] {title}")
-            logger.info(f"      📸 ImageURL : {payload['imageUrl'][:60]}..." if payload['imageUrl'] else "      📸 ImageURL : None")
+            logger.info(f"      📸 ImageURL : {payload['imageUrl']}" if payload['imageUrl'] else "      📸 ImageURL : None")
             logger.info(f"      🏷️ Genres   : {payload['genreIds']}")
             logger.info(f"      🏢 Publisher: {payload['publisher']}")
             logger.info(f"      💰 Discount : {payload['discountRate']}% (PlusOnly: {payload['isPlusExclusive']})")

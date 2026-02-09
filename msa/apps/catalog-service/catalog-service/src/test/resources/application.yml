@@ -42,6 +42,10 @@ app:
     redirect-uri: "http://localhost:3000/oauth2/redirect"
     cookie-secure: false
 
+crawler:
+  url: http://collector-service:5000/run
+  single-url: http://collector-service:5000/crawl/single
+
 igdb:
   client-id: "client-id-xyz123"
   client-secret: "client-secret-abc789"

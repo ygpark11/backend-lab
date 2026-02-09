@@ -17,12 +17,14 @@ import com.pstracker.catalog_service.catalog.repository.GenreRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -36,6 +38,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CatalogService {
+
+    @Value("${crawler.single-url}")
+    private String CRAWLER_URL;
 
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
@@ -351,5 +356,33 @@ public class CatalogService {
                 dto.setLiked(true);
             }
         });
+    }
+
+    /**
+     * 단일 게임에 대해 수동으로 크롤러 트리거
+     * @param gameId 게임 ID
+     */
+    public void triggerSingleGameRefresh(Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        String targetUrl = "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId();
+
+        log.info("🚀 Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
+
+        RestClient restClient = RestClient.create();
+        try {
+            String response = restClient.post()
+                    .uri(CRAWLER_URL)
+                    .header("Content-Type", "application/json")
+                    .body("{\"url\": \"" + targetUrl + "\"}")
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("✅ Crawler Response: {}", response);
+        } catch (Exception e) {
+            log.error("❌ Crawler Trigger Failed: {}", e.getMessage());
+            throw new RuntimeException("크롤러 서버 연결 실패: " + e.getMessage());
+        }
     }
 }

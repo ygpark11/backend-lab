@@ -61,7 +61,7 @@ public class CatalogController {
     @GetMapping("/{gameId}")
     public ResponseEntity<GameDetailResponse> getGameDetail(
             @PathVariable Long gameId,
-            @AuthenticationPrincipal MemberPrincipal principal // [New] 사용자 정보 주입
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Long memberId = (principal != null) ? principal.getMemberId() : null;
 

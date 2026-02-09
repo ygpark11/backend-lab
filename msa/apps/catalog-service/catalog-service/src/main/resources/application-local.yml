@@ -18,6 +18,7 @@ spring:
 # 로컬 Python 수집기 주소
 crawler:
   url: http://localhost:5000/run
+  single-url: http://localhost:5000/crawl/single
 
 app:
   auth:

@@ -19,6 +19,7 @@ spring:
 # 도커 내부망 파이썬 주소
 crawler:
   url: http://collector-service:5000/run
+  single-url: http://collector-service:5000/crawl/single
 
 app:
   auth:

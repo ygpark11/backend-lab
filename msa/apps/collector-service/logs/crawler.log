@@ -1,0 +1,30 @@
+2026-02-09 13:57:38 [INFO] 🔧 Crawler Config: HIGH | Engine: Playwright (Manual Stealth)
+2026-02-09 14:13:10 [INFO] 🎯 Single Crawl Request: https://store.playstation.com/ko-kr/product/HP5846-PPSA17173_00-YS10DDX000000000
+2026-02-09 14:13:15 [INFO]    🧐 [Parsed Data Check] 이스 X -노딕스- 무삭제판 디지털 디럭스 버전 (PS4 & PS5) (한국어)
+2026-02-09 14:13:15 [INFO]       📸 ImageURL : None
+2026-02-09 14:13:15 [INFO]       🏷️ Genres   : 롤플레잉 게임
+2026-02-09 14:13:15 [INFO]       🏢 Publisher: Batch Crawler
+2026-02-09 14:13:15 [INFO]       💰 Discount : 0% (PlusOnly: False)
+2026-02-09 14:13:15 [INFO]       📚 Catalog  : False
+2026-02-09 14:13:15 [INFO]       --------------------------------------------------
+2026-02-09 14:13:16 [INFO]    📤 Sent: 이스 X -노딕스- 무삭제판 디지털 디럭스 버전 (PS4 & PS5) (한국어) (114000 KRW)
+2026-02-09 14:15:12 [INFO] 🎯 Single Crawl Request: https://store.playstation.com/ko-kr/product/JP0101-PPSA21159_00-MAINGAME00000000
+2026-02-09 14:15:22 [INFO] 🎯 Single Crawl Request: https://store.playstation.com/ko-kr/product/JP0101-PPSA21159_00-MAINGAME00000000
+2026-02-09 14:15:24 [INFO]    🧐 [Parsed Data Check] SILENT HILL f (중국어(간체자), 한국어, 영어, 일본어, 중국어(번체자))
+2026-02-09 14:15:24 [INFO]       📸 ImageURL : None
+2026-02-09 14:15:24 [INFO]       🏷️ Genres   : 공포
+2026-02-09 14:15:24 [INFO]       🏢 Publisher: Batch Crawler
+2026-02-09 14:15:24 [INFO]       💰 Discount : 40% (PlusOnly: False)
+2026-02-09 14:15:24 [INFO]       📚 Catalog  : False
+2026-02-09 14:15:24 [INFO]       --------------------------------------------------
+2026-02-09 14:15:24 [INFO]    📤 Sent: SILENT HILL f (중국어(간체자), 한국어, 영어, 일본어, 중국어(번체자)) (55980 KRW)
+2026-02-09 14:27:39 [INFO] 🔧 Crawler Config: HIGH | Engine: Playwright (Manual Stealth)
+2026-02-09 14:27:51 [INFO] 🎯 Single Crawl Request: https://store.playstation.com/ko-kr/product/JP0101-PPSA21159_00-MAINGAME00000000
+2026-02-09 14:27:54 [INFO]    🧐 [Parsed Data Check] SILENT HILL f (중국어(간체자), 한국어, 영어, 일본어, 중국어(번체자))
+2026-02-09 14:27:54 [INFO]       📸 ImageURL : https://image.api.playstation.com/vulcan/ap/rnd/202505/0704/...
+2026-02-09 14:27:54 [INFO]       🏷️ Genres   : 공포
+2026-02-09 14:27:54 [INFO]       🏢 Publisher: Batch Crawler
+2026-02-09 14:27:54 [INFO]       💰 Discount : 40% (PlusOnly: False)
+2026-02-09 14:27:54 [INFO]       📚 Catalog  : False
+2026-02-09 14:27:54 [INFO]       --------------------------------------------------
+2026-02-09 14:27:54 [INFO]    📤 Sent: SILENT HILL f (중국어(간체자), 한국어, 영어, 일본어, 중국어(번체자)) (55980 KRW)
