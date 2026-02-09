@@ -5,6 +5,8 @@ services:
     #build: ./apps/collector-service
     image: ygpark1334/ps-tracker-collector:latest
     container_name: ps-tracker-collector
+    init: true
+
     env_file:
       - .env
     ports:
