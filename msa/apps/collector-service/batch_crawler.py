@@ -172,6 +172,14 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         english_title = mine_english_title(page.content())
 
+        # 3. 가격 정보나 구매 버튼 영역 대기 (최대 5초)
+        try:
+            # 가격 정보나 구매 버튼 영역이 뜰 때까지 최대 5초 대기
+            page.wait_for_selector("[data-qa^='mfeCtaMain#offer']", timeout=5000)
+        except:
+            # 5초 기다려도 안 뜨면, 진짜 없는 거거나 무료 게임일 수 있으니 그냥 진행
+            pass
+
         # 플랫폼
         platform_set = set()
         try:
