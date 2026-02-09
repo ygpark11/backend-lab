@@ -36,6 +36,7 @@ services:
       - SPRING_PROFILES_ACTIVE=prod
       - "JAVA_OPTS=-Xms128M -Xmx256M"
       - CRAWLER_URL=http://10.0.0.61:5000/run
+      - CRAWLER_SINGLE_URL=http://10.0.0.61:5000/crawl/single
     volumes:
       - ./firebase-service-account.json:/app/firebase-service-account.json
       - ./logs/backend:/var/log/pstracker
