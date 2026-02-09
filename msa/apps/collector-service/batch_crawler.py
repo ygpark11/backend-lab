@@ -73,9 +73,11 @@ def create_browser_context(p):
 
     # User-Agent 리스트
     DESKTOP_USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
     ]
     user_agent = random.choice(DESKTOP_USER_AGENTS)
 
@@ -164,7 +166,9 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         # 2. 데이터 추출
         try:
             title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
-        except: return None
+        except Exception as e:
+            logger.error(f"❌ Found selector but failed to extract title text: {e}")
+            return None
 
         english_title = mine_english_title(page.content())
 
@@ -261,7 +265,9 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         if not best_offer_data:
             if is_in_catalog_global:
-                 logger.info(f"   ℹ️ Catalog Only: {title}")
+                logger.info(f"   ℹ️ Catalog Only: {title}")
+            else:
+                logger.warning(f"   ⚠️ No price offer found for: {title} (Page loaded but parsing failed)")
             return None
 
         # 5. 이미지 URL (차단했지만 속성은 존재할 수 있음)
