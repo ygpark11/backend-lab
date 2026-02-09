@@ -608,52 +608,45 @@ def crawl_single_url():
 
     logger.info(f"🎯 Single Crawl Request: {target_url}")
 
-    p = None
-    browser = None
-    context = None
     result = None
 
     try:
-        # Playwright 시작
-        p = sync_playwright().start()
+        # ✅ with 문을 사용하여 Playwright 엔진 생명주기 관리
+        with sync_playwright() as p:
+            browser = None
+            context = None
 
-        # 브라우저 생성
-        browser, context = create_browser_context(p)
-        page = setup_page(context)
+            try:
+                # 브라우저 생성
+                browser, context = create_browser_context(p)
+                page = setup_page(context)
 
-        # 크롤링 수행
-        result = crawl_detail_and_send(page, target_url, verbose=True)
+                # 크롤링 수행
+                result = crawl_detail_and_send(page, target_url, verbose=True)
+
+            finally:
+                # 🧹 브라우저부터 끄고 나서 -> p가 꺼지도록 순서 보장
+                logger.info("   🧹 Cleaning up resources...")
+                try: context.close() if context else None
+                except: pass
+
+                try: browser.close() if browser else None
+                except: pass
+
+                # 메모리 정리
+                page = None
+                context = None
+                browser = None
+                gc.collect()
+
+        if result:
+            return jsonify({"status": "success", "data": result}), 200
+        else:
+            return jsonify({"status": "failed", "message": "Failed to parse data"}), 500
 
     except Exception as e:
         logger.error(f"🔥 Single Crawl Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
-    finally:
-        # [중요] 무조건 정리 (순서: Context -> Browser -> Playwright)
-        logger.info("   🧹 Cleaning up resources...")
-        try:
-            if context: context.close()
-        except: pass
-
-        try:
-            if browser: browser.close()
-        except: pass
-
-        try:
-            if p: p.stop()
-        except: pass
-
-        # 메모리 강제 수거
-        p = None
-        browser = None
-        context = None
-        gc.collect()
-
-    # 결과 반환
-    if result:
-        return jsonify({"status": "success", "data": result}), 200
-    else:
-        return jsonify({"status": "failed", "message": "Failed to parse data"}), 500
 
 @app.route('/run', methods=['POST'])
 def trigger_crawl():
