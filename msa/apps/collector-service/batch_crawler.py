@@ -51,8 +51,8 @@ CONFIG = {
     "LOW": {
         "restart_interval": 10,
         "timeout": 60000,
-        "sleep_min": 4.0,
-        "sleep_max": 8.0,
+        "sleep_min": 3.0,
+        "sleep_max": 6.0,
         "block_fonts": True,
     },
     "HIGH": {
@@ -397,171 +397,147 @@ def send_discord_summary(total_scanned, deals_list):
 # --- [4. 메인 실행 로직] ---
 def run_batch_crawler_logic():
     global is_running
-    logger.info(f"🚀 [Crawler] Started. Mode: {CURRENT_MODE} (Playwright Engine Reused)")
+    logger.info(f"🚀 [Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
 
     total_processed_count = 0
     collected_deals = []
 
     try:
-        with sync_playwright() as p:
+        visited_urls = set()
 
-            visited_urls = set()
+        # 1. 타겟 가져오기
+        targets = fetch_update_targets()
+        if not targets: targets = []
 
-            # 1. 타겟 가져오기
-            targets = fetch_update_targets()
-            if not targets: targets = []
+        # ------------------------------------------------------------------
+        # [Phase 1] 기존 타겟 갱신
+        # ------------------------------------------------------------------
+        if targets:
+            logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
 
-            # ------------------------------------------------------------------
-            # [Phase 1] 기존 타겟 갱신 (엔진 재사용)
-            # ------------------------------------------------------------------
-            if targets:
-                logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
+            BATCH_SIZE = CONF["restart_interval"]
+            target_chunks = [targets[i:i + BATCH_SIZE] for i in range(0, len(targets), BATCH_SIZE)]
 
-                BATCH_SIZE = CONF["restart_interval"]
-                target_chunks = [targets[i:i + BATCH_SIZE] for i in range(0, len(targets), BATCH_SIZE)]
+            for chunk_idx, chunk in enumerate(target_chunks):
+                if not is_running: break
 
-                for chunk_idx, chunk in enumerate(target_chunks):
-                    if not is_running: break
+                logger.info(f"♻️ [Phase 1] Starting Batch {chunk_idx + 1}/{len(target_chunks)}")
 
-                    logger.info(f"♻️ [Phase 1] Starting Batch {chunk_idx + 1}/{len(target_chunks)}")
-
-                    # 브라우저 컨텍스트 생성
-                    browser = None
-                    context = None
-                    try:
-                        browser, context = create_browser_context(p)
-                        page = setup_page(context)
-
-                        for url in chunk:
-                            if not is_running: break
-
-                            res = crawl_detail_and_send(page, url)
-                            if res:
-                                total_processed_count += 1
-                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                            visited_urls.add(url)
-
-                            time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
-                    except Exception as e:
-                        logger.error(f"   ⚠️ Batch Error: {e}")
-                    finally:
-                        try: context.close() if context else None
-                        except: pass
-                        try: browser.close() if browser else None
-                        except: pass
-
-                    # 메모리 정리
-                    gc.collect()
-                    time.sleep(2) # 숨 고르기
-
-            # ------------------------------------------------------------------
-            # [Phase 2] 신규 게임 탐색 (엔진 재사용)
-            # ------------------------------------------------------------------
-            if is_running:
-                logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
-                base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-                search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
-
-                current_page = 1
-                max_pages = 10
-                BATCH_SIZE = CONF["restart_interval"]
-
-                while current_page <= max_pages:
-                    if not is_running: break
-
-                    browser = None
-                    context = None
-                    try:
-                        browser, context = create_browser_context(p)
-                        page = setup_page(context)
-
-                        target_list_url = f"{base_category_path}/{current_page}{search_params}"
-                        logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
-
-                        # ... (페이지 로딩 및 리스트 수집 로직) ...
+                # 배치마다 엔진(p)을 새로 만들고 끔
+                try:
+                    with sync_playwright() as p:
+                        browser = None
+                        context = None
                         try:
-                            page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
+                            browser, context = create_browser_context(p)
+                            page = setup_page(context)
+
+                            for url in chunk:
+                                if not is_running: break
+
+                                res = crawl_detail_and_send(page, url)
+                                if res:
+                                    total_processed_count += 1
+                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                visited_urls.add(url)
+
+                                time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+
+                        finally:
+                            # 브라우저 종료
+                            try: context.close() if context else None
+                            except: pass
+                            try: browser.close() if browser else None
+                            except: pass
+
+                except Exception as e:
+                    logger.error(f"   ⚠️ Batch Error: {e}")
+
+                # 배치 종료 후 강제 메모리 정리
+                p = None
+                gc.collect()
+                time.sleep(3) # OS가 숨 돌릴 시간 부여
+
+        # ------------------------------------------------------------------
+        # [Phase 2] 신규 게임 탐색
+        # ------------------------------------------------------------------
+        if is_running:
+            logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
+            base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
+            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+
+            current_page = 1
+            max_pages = 10
+            BATCH_SIZE = CONF["restart_interval"]
+
+            while current_page <= max_pages:
+                if not is_running: break
+
+                # Phase 2도 페이지 단위로 엔진을 새로 켬
+                try:
+                    with sync_playwright() as p:
+                        browser = None
+                        context = None
+                        try:
+                            browser, context = create_browser_context(p)
+                            page = setup_page(context)
+
+                            target_list_url = f"{base_category_path}/{current_page}{search_params}"
+                            logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
+
                             try:
-                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                            except:
-                                logger.warning(f"   ⚠️ Page load timeout. Retrying...")
-                                page.reload(timeout=CONF['timeout'], wait_until="commit")
-                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                            # 스크롤
-                            page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
-                            time.sleep(random.uniform(0.5, 1.0))
-                            page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
-                            time.sleep(random.uniform(1.0, 2.0))
-                        except Exception as e:
-                            logger.warning(f"   ⚠️ List load failed page {current_page}. Skip. ({e})")
-                            current_page += 1
-                            continue
-
-                        page_candidates = []
-                        try:
-                            links = page.locator("a[href*='/product/']").all()
-                            for el in links:
-                                url = el.get_attribute("href")
-                                if url:
-                                    full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
-                                    if "/ko-kr/product/" in full_url and full_url not in visited_urls:
-                                        if full_url not in page_candidates:
-                                            page_candidates.append(full_url)
-                        except: pass
-
-                        if not page_candidates:
-                            logger.info(f"🛑 No new games found on page {current_page}. Finishing Phase 2.")
-                            break
-
-                        logger.info(f"      Found {len(page_candidates)} new candidates.")
-
-                        items_processed_in_page = 0
-                        for url in page_candidates:
-                            if not is_running: break
-
-                            # 중간 브라우저 리셋
-                            if items_processed_in_page > 0 and items_processed_in_page % BATCH_SIZE == 0:
-                                logger.info(f"   💤 Refreshing Browser ({items_processed_in_page} done)...")
+                                page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
                                 try:
-                                    try: context.close()
-                                    except: pass
-                                    try: browser.close()
-                                    except: pass
-                                    gc.collect()
-                                    time.sleep(2)
+                                    page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                                except:
+                                    page.reload(timeout=CONF['timeout'], wait_until="commit")
+                                    page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                                page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
+                                time.sleep(random.uniform(0.5, 1.0))
+                                page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
+                                time.sleep(random.uniform(1.0, 2.0))
+                            except Exception as e:
+                                logger.warning(f"   ⚠️ List load failed. Skip. ({e})")
+                                current_page += 1
+                                continue
 
-                                    # 새 브라우저 생성
-                                    browser, context = create_browser_context(p)
-                                    page = setup_page(context)
-                                except Exception as e:
-                                    logger.error(f"   ⚠️ Restart failed: {e}")
-                                    break
+                            page_candidates = []
+                            try:
+                                links = page.locator("a[href*='/product/']").all()
+                                for el in links:
+                                    url = el.get_attribute("href")
+                                    if url:
+                                        full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
+                                        if "/ko-kr/product/" in full_url and full_url not in visited_urls:
+                                            if full_url not in page_candidates: page_candidates.append(full_url)
+                            except: pass
 
-                            res = crawl_detail_and_send(page, url)
-                            if res:
-                                total_processed_count += 1
-                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                            visited_urls.add(url)
-                            items_processed_in_page += 1
-                            time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+                            if not page_candidates: break
+                            logger.info(f"      Found {len(page_candidates)} new candidates.")
 
-                    except Exception as e:
-                        logger.error(f"   🔥 Phase 2 Page Error: {e}")
-                    finally:
-                        # 브라우저만 닫기
-                        try: context.close() if context else None
-                        except: pass
-                        try: browser.close() if browser else None
-                        except: pass
-                        gc.collect()
-                        time.sleep(2)
+                            # 상세 크롤링
+                            for url in page_candidates:
+                                if not is_running: break
+                                res = crawl_detail_and_send(page, url)
+                                if res:
+                                    total_processed_count += 1
+                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                visited_urls.add(url)
+                                time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
-                    current_page += 1
+                        finally:
+                            try: context.close() if context else None
+                            except: pass
+                            try: browser.close() if browser else None
+                            except: pass
 
-        logger.info("🛑 Playwright Engine Stopped.")
+                except Exception as e:
+                    logger.error(f"   🔥 Phase 2 Error: {e}")
 
-        # 리포트 전송
+                gc.collect()
+                time.sleep(3)
+                current_page += 1
+
         send_discord_summary(total_processed_count, collected_deals)
 
     except Exception as e:

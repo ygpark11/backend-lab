@@ -66,15 +66,18 @@
   * **Resource Diet:** `page.route('**/*.{png,jpg,mp4}', route => route.abort())` 로직을 통해 미디어 리소스 원천 차단.
   * **Stability:** `Context Cleanup` 로직을 개선하여, 브라우저 프로세스가 응답 없음(Zombie) 상태일 경우 강제로 재실행하는 **Self-Healing** 구조 구현.
 
-### 🧟‍♂️ Case 30. Docker 환경의 좀비 프로세스(Zombie Process)와 메모리 누수
-* **Context:** 1GB RAM의 저사양 환경에서 Playwright 크롤러를 운영하던 중, 시간이 지날수록 가용 메모리가 줄어들고 `chrome-headless <defunct>` 프로세스가 증가하는 현상 발견.
-* **Problem:** 크롤링 로직이 정상 종료되었음에도 불구하고, 실제 OS 상에서는 Chrome 프로세스가 죽지 않고 좀비 상태로 남아 리소스를 점유.
-* **Cause:** 1. **Docker PID 1 문제:** 컨테이너 내에서 PID 1로 실행된 Python 애플리케이션이 자식 프로세스(Chrome)의 종료 시그널(SIGCHLD)을 제대로 처리(Reap)하지 못함.
-  2. **구조적 오버헤드:** 배치 작업(Batch) 단위마다 Playwright 엔진(`node`)을 반복적으로 생성/종료하는 과정에서 프로세스 정리 타이밍 이슈(Race Condition) 발생.
+### 🧟‍♂️ Case 30. Docker 환경의 좀비 프로세스(Zombie Process)와 메모리 스왑(Swap)
+* **Context:** 1GB RAM의 저사양 환경에서 Playwright 크롤러를 운영하던 중, 시간이 지날수록 **Block I/O가 폭증하며 서버가 멈추는(Freezing) 현상** 발생.
+* **Problem:** 1. Playwright 엔진을 장시간 유지(Singleton)할 경우, 메모리 파편화로 인해 OS가 스왑(Swap) 영역을 과도하게 사용.
+  2. 반대로 엔진을 자주 재시작하면, Docker PID 1 문제로 인해 좀비 프로세스(`chrome-headless <defunct>`)가 누적됨.
+* **Cause:** * **Low Memory Constraint:** 1GB 램 환경에서는 브라우저 컨텍스트를 아무리 잘 닫아도, 엔진 프로세스 자체가 오래 떠 있는 것만으로도 리소스 부담이 됨.
+  * **PID 1 Issue:** 파이썬 애플리케이션이 자식 프로세스의 종료 시그널(SIGCHLD)을 완벽하게 처리하지 못함.
 * **Solution:**
-  1. **Infrastructure:** Docker Compose에 `init: true` 옵션을 적용하여 경량 Init 프로세스인 **Tini**를 주입, 좀비 프로세스를 커널 레벨에서 즉시 수거하도록 조치.
-  2. **Code Refactoring:** Playwright 엔진 인스턴스를 애플리케이션 실행 시 **1회만 생성(Singleton)** 하고, 브라우저 컨텍스트만 교체하는 방식으로 구조를 변경하여 프로세스 생성 비용과 좀비 발생 가능성을 차단.
-  
+  1. **Infrastructure (Zombie Defense):** Docker Compose에 `init: true` 옵션을 적용하여 경량 Init 프로세스인 **Tini**를 주입. 애플리케이션이 놓친 좀비 프로세스를 커널 레벨에서 즉시 수거하도록 안전장치 마련.
+  2. **Code Strategy (Memory Lifecycle):** **'배치 단위 프로세스 격리'** 전략 도입.
+    * 엔진 인스턴스를 계속 재사용하는 대신, 10건(Batch) 단위로 엔진을 **완전히 종료(Stop)하고 재생성**하여 메모리를 강제로 초기화함.
+    * 이때 발생하는 프로세스 생성/종료 비용은 감수하되, `init: true`와의 조합으로 좀비 누적을 막고 메모리 스왑 현상을 원천 차단.
+
 ---
 
 ## 3. Backend & Database (백엔드 및 DB)
