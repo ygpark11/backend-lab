@@ -89,17 +89,21 @@ const LoginPage = () => {
             </div>
 
             {/* Footer Links */}
-            <div className="absolute bottom-6 text-center z-10">
-                <div className="flex gap-4 text-xs text-gray-500 justify-center">
-                    <a href="#" onClick={(e) => handleOpenLegal(e, 'terms')} className="hover:text-white transition-colors">이용약관</a>
+            <div className="absolute bottom-6 text-center z-10 w-full px-4">
+                <div className="flex gap-4 text-xs text-gray-500 justify-center mb-2">
+                    <button onClick={(e) => handleOpenLegal(e, 'terms')} className="hover:text-white transition-colors">이용약관</button>
                     <span className="text-gray-700">|</span>
-                    <a href="#" onClick={(e) => handleOpenLegal(e, 'privacy')} className="hover:text-white transition-colors">개인정보처리방침</a>
+                    <button onClick={(e) => handleOpenLegal(e, 'privacy')} className="hover:text-white transition-colors">개인정보처리방침</button>
                     <span className="text-gray-700">|</span>
-                    <a href="#" onClick={handleContact} className="hover:text-white transition-colors">문의하기</a>
+                    <button onClick={handleContact} className="hover:text-white transition-colors">문의하기</button>
                 </div>
-                <p className="text-[10px] text-gray-700 mt-2">
-                    © 2026 PS Tracker. Not affiliated with Sony Interactive Entertainment.
-                </p>
+                <div className="text-[10px] text-gray-600 leading-relaxed">
+                    <p>© 2026 PS Tracker. All rights reserved.</p>
+                    <p className="mt-1 opacity-80">
+                        Not affiliated with Sony Interactive Entertainment Inc.<br/>
+                        Game titles, images, and trademarks are property of their respective owners.
+                    </p>
+                </div>
             </div>
 
             <LegalModal
