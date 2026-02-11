@@ -91,7 +91,28 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
                             </section>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2">제5조 (서비스 중단)</h3>
+                                <h3 className="text-white font-bold mb-2 text-red-400">제5조 (이용 제한 및 금지행위)</h3>
+                                <p className="text-gray-400 mb-2">사용자는 본 서비스 이용 시 다음 각 호의 행위를 하여서는 안 됩니다.</p>
+                                <ul className="list-disc pl-4 space-y-1 text-gray-400">
+                                    <li><strong>데이터 스크래핑:</strong> 운영자의 사전 동의 없이 로봇, 스파이더, 스크래퍼 등 자동화된 도구를 사용하여 데이터를 수집하는 행위</li>
+                                    <li><strong>서버 공격:</strong> 비정상적으로 과도한 트래픽을 유발하여 서비스의 안정적인 운영을 방해하는 행위 (DDoS 등)</li>
+                                    <li><strong>역공학:</strong> 서비스의 소스 코드를 복제, 분해, 모방하거나 변형하는 행위</li>
+                                </ul>
+                                <p className="text-gray-400 mt-2 text-xs">
+                                    ※ 위반 행위 적발 시 IP 차단 및 법적 조치가 취해질 수 있습니다.
+                                </p>
+                            </section>
+
+                            <section>
+                                <h3 className="text-white font-bold mb-2">제6조 (데이터 권리 및 재사용)</h3>
+                                <ul className="list-disc pl-4 space-y-1 text-gray-400">
+                                    <li>본 서비스가 가공한 데이터(가격 변동 그래프, 할인율 분석 등)의 무단 전재 및 재배포를 금지합니다.</li>
+                                    <li>단, 원저작권자(SIE)가 소유한 원천 데이터(게임 이미지, 타이틀 등)는 본 조항의 적용을 받지 않습니다.</li>
+                                </ul>
+                            </section>
+
+                            <section>
+                                <h3 className="text-white font-bold mb-2">제7조 (서비스 중단)</h3>
                                 <p className="text-gray-400">
                                     운영자의 사정으로 인해 사전 고지 없이 서비스가 변경되거나 종료될 수 있습니다.
                                 </p>
