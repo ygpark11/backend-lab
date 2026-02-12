@@ -136,17 +136,19 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
                             <section>
                                 <h3 className="text-white font-bold mb-2 text-green-400">2. 개인정보의 보유 및 파기</h3>
                                 <p className="text-gray-400">
-                                    개인정보는 <strong>서비스 종료 시까지</strong> 안전하게 보관됩니다.
-                                    사용자가 삭제를 원할 경우, <strong>관리자 이메일로 요청 시 지체 없이 파기</strong>합니다.
+                                    수집된 개인정보는 <strong>서비스 종료 시까지</strong> 안전하게 보관됩니다.
+                                    서비스가 종료되는 경우, 수집된 정보는 재생이 불가능한 방법으로 <strong>지체 없이 파기</strong>합니다.
                                 </p>
                             </section>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2 text-green-400">3. 토큰(JWT) 및 쿠키 사용</h3>
+                                <h3 className="text-white font-bold mb-2 text-green-400">3. 로그인 상태 유지 및 쿠키(Cookie) 활용</h3>
                                 <ul className="list-disc pl-4 space-y-1 text-gray-400">
-                                    <li><strong>로그인 유지:</strong> 보안을 위해 인증 정보(JWT)를 <strong>HttpOnly Cookie</strong>에 저장하여 관리합니다.</li>
-                                    <li><strong>세션 미사용:</strong> 서버에 별도의 세션 정보를 저장하지 않는 Stateless 방식을 사용합니다.</li>
-                                    <li><strong>제3자 쿠키:</strong> 향후 광고 서비스(Google AdSense 등) 이용 시 맞춤형 광고를 위해 제3자 쿠키가 사용될 수 있습니다.</li>
+                                    <li><strong>쿠키(Cookie)란?</strong> 사용자가 사이트에 방문했을 때 브라우저에 저장되는 작은 정보 조각으로, 로그인 상태를 기억하는 역할을 합니다.</li>
+                                    <li><strong>로그인 상태 관리:</strong> 본 서비스는 사용자의 로그인 상태를 유지하고 원활한 서비스를 제공하기 위해 브라우저의 <strong>쿠키 기술</strong>을 활용합니다.</li>
+                                    <li><strong>보안 관리:</strong> 인증 정보는 외부의 비정상적인 접근으로부터 보호하기 위해 <strong>보안이 강화된 방식</strong>으로 안전하게 저장 및 관리됩니다.</li>
+                                    <li><strong>쿠키 설정:</strong> 사용자는 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 이 경우 <strong>로그인 및 일부 서비스 이용에 제한</strong>이 있을 수 있습니다.</li>
+                                    <li><strong>제3자 쿠키:</strong> 향후 서비스 최적화 및 광고 제공을 위해 제3자 쿠키가 사용될 수 있습니다.</li>
                                 </ul>
                             </section>
                         </div>
