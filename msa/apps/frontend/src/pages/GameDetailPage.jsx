@@ -41,6 +41,7 @@ import SEO from '../components/common/SEO';
 
 import { adminApi } from '../api/adminApi';
 import { useCurrentUser } from '../hooks/useCurrentUser';
+import DonationModal from '../components/DonationModal';
 
 const renderVerdictIcon = (verdict) => {
     // 공통 버튼 스타일 (유리 질감 + 둥근 테두리 + 흰색 테마)
@@ -82,6 +83,8 @@ export default function GameDetailPage() {
     const [game, setGame] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
+
+    const [isDonationOpen, setIsDonationOpen] = useState(false);
 
     const { isAdmin } = useCurrentUser();
 
@@ -368,14 +371,49 @@ export default function GameDetailPage() {
                             </div>
 
                             <div className="flex items-end gap-4 mb-4 border-b border-white/10 pb-8">
-                                <div><span className="text-6xl font-black text-white tracking-tighter drop-shadow-xl">{game.currentPrice.toLocaleString()}<span className="text-2xl font-medium text-gray-400 ml-1">원</span></span></div>
+                                <div>
+                                    {game.plusExclusive && (
+                                        <div className="flex items-center gap-1 mb-1 animate-pulse">
+                                            <span className="bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded">PLUS</span>
+                                            <span className="text-yellow-400 text-xs font-bold">회원 특별 할인가</span>
+                                        </div>
+                                    )}
+
+                                    {/* 2. 가격 텍스트 색상 변경 (Plus 할인이면 노란색, 아니면 흰색) */}
+                                    <span className={`text-6xl font-black tracking-tighter drop-shadow-xl ${game.plusExclusive ? 'text-yellow-400' : 'text-white'}`}>
+                                        {game.currentPrice.toLocaleString()}
+                                        <span className="text-2xl font-medium text-gray-400 ml-1">원</span>
+                                    </span>
+                                </div>
+
                                 {game.discountRate > 0 && (
                                     <div className="flex flex-col mb-2 animate-bounce-slow">
-                                        <span className="text-gray-400 line-through text-lg font-medium">{game.originalPrice.toLocaleString()}원</span>
-                                        <span className="bg-ps-blue text-white px-3 py-1 rounded-lg font-black text-lg text-center shadow-lg transform -rotate-2">-{game.discountRate}%</span>
+                                        <span className="text-gray-400 line-through text-lg font-medium">
+                                            {game.originalPrice.toLocaleString()}원
+                                        </span>
+                                                                    <span className={`px-3 py-1 rounded-lg font-black text-lg text-center shadow-lg transform -rotate-2 
+                                            ${game.plusExclusive ? 'bg-yellow-400 text-black' : 'bg-ps-blue text-white'}`}>
+                                            -{game.discountRate}%
+                                        </span>
                                     </div>
                                 )}
                             </div>
+
+                            {game.inCatalog && (
+                                <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-yellow-900/40 to-black border border-yellow-500/30 flex items-center gap-4 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                                    <div className="bg-yellow-500/20 p-2 rounded-lg border border-yellow-500/30">
+                                        <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-yellow-400 font-bold text-sm">
+                                            PS Plus 스페셜 / 디럭스 카탈로그 포함
+                                        </h4>
+                                        <p className="text-gray-400 text-xs mt-0.5">
+                                            구독 회원은 추가 비용 없이 플레이 가능합니다.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mb-8 mt-6 p-4 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-500/30 flex items-center justify-between group hover:border-blue-500/60 transition-colors cursor-pointer shadow-lg"
                                  onClick={() => window.open('https://search.shopping.naver.com/search/all?query=PSN+기프트카드', '_blank')}
@@ -512,7 +550,7 @@ export default function GameDetailPage() {
                                 <h4 className="font-bold text-white mb-2 text-lg">개발자에게 커피 쏘기 ☕</h4>
                                 <p className="text-xs text-gray-400 mb-6 leading-relaxed">이 서비스가 마음에 드셨나요?<br/>작은 후원이 서버 유지와<br/>새로운 기능 개발에 큰 힘이 됩니다!</p>
                                 <button
-                                    onClick={() => window.open('https://www.buymeacoffee.com/pstracker', '_blank')}
+                                    onClick={() => setIsDonationOpen(true)}
                                     className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2"
                                 >
                                     커피 한 잔 사주기 (후원) <ExternalLink className="w-4 h-4"/>
@@ -539,6 +577,12 @@ export default function GameDetailPage() {
                     )}
                 </div>
             </div>
+
+            <DonationModal
+                isOpen={isDonationOpen}
+                onClose={() => setIsDonationOpen(false)}
+            />
+
         </div>
     );
 }

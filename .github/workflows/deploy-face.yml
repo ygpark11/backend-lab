@@ -43,6 +43,9 @@ jobs:
             VITE_FIREBASE_MEASUREMENT_ID=${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
             VITE_FIREBASE_VAPID_KEY=${{ secrets.VITE_FIREBASE_VAPID_KEY }}
             VITE_GA_MEASUREMENT_ID=${{ secrets.VITE_GA_MEASUREMENT_ID }}
+            VITE_BANK_NAME=${{ secrets.VITE_BANK_NAME }}
+            VITE_BANK_ACCOUNT=${{ secrets.VITE_BANK_ACCOUNT }}
+            VITE_BANK_HOLDER=${{ secrets.VITE_BANK_HOLDER }}
 
       # 4. 서버 배포 (SSH)
       - name: Deploy to Server via SSH

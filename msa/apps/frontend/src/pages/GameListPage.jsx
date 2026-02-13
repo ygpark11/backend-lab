@@ -410,7 +410,16 @@ const GameListPage = () => {
                                         </button>
 
                                         {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
-                                        {game.isPlusExclusive && <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10">PLUS</span>}
+
+                                        {game.inCatalog ? (
+                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(250,204,21,0.6)] z-10 flex items-center gap-1 animate-pulse-slow">
+                                                <Gamepad2 className="w-3 h-3 fill-black" /> EXTRA
+                                            </span>
+                                        ) : game.isPlusExclusive ? (
+                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">
+                                                PLUS
+                                            </span>
+                                        ) : null}
                                     </div>
 
                                     <div className="p-4">
