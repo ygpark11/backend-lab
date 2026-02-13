@@ -237,7 +237,7 @@ const Navbar = () => {
                             onClick={() => navigate('/wishlist')}
                             className="relative group bg-gradient-to-r from-pink-600/10 to-purple-600/10 hover:from-pink-600 hover:to-purple-600 border border-pink-500/30 hover:border-pink-400 text-pink-400 hover:text-white px-3 md:px-5 py-2 rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_10px_rgba(236,72,153,0.1)] hover:shadow-[0_0_20px_rgba(236,72,153,0.6)]"
                         >
-                            <Heart className={`w-4 h-4 md:w-5 md:h-5 ${totalWishlistCount > 0 ? 'fill-current animate-pulse' : ''}`} />
+                            <Heart className="w-4 h-4 md:w-5 md:h-5" />
                             <span className="hidden md:inline font-bold text-sm">My Wishlist</span>
                         </button>
                     </div>
