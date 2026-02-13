@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 
 import java.io.Serializable;
@@ -22,6 +22,7 @@ public record GameDetailResponse(
         Integer originalPrice,
         Integer lowestPrice,
         Integer discountRate,
+        @JsonProperty("isPlusExclusive")
         boolean isPlusExclusive,
         LocalDate saleEndDate,
 
@@ -40,6 +41,7 @@ public record GameDetailResponse(
         // [기타]
         List<String> platforms,
         List<String> genres,
+        @JsonProperty("inCatalog")
         boolean inCatalog,
 
         // [추천 게임 리스트]

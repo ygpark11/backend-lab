@@ -17,6 +17,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/games")
 @RequiredArgsConstructor
@@ -34,7 +36,7 @@ public class CatalogController {
 
     // 업데이트 대상 게임 조회 API
     @GetMapping("/targets")
-    public ResponseEntity<java.util.List<String>> getUpdateTargets() {
+    public ResponseEntity<List<String>> getUpdateTargets() {
         return ResponseEntity.ok(catalogService.getGamesToUpdate());
     }
 

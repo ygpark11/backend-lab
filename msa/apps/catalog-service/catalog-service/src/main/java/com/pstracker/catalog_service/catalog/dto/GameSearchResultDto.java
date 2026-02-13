@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.querydsl.core.annotations.QueryProjection;
 import lombok.Data;
 
@@ -18,6 +19,7 @@ public class GameSearchResultDto implements Serializable {
     private Integer originalPrice;
     private Integer price;
     private Integer discountRate;
+    @JsonProperty("isPlusExclusive")
     private boolean isPlusExclusive;
     private LocalDate saleEndDate;
 
@@ -25,6 +27,7 @@ public class GameSearchResultDto implements Serializable {
     private Integer metaScore;
     private Double userScore;
 
+    @JsonProperty("inCatalog")
     private boolean inCatalog;
 
     private LocalDateTime createdAt;

@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,6 +31,10 @@ public class WishlistResponse {
 
     private Integer metaScore;
 
+    @JsonProperty("isPlusExclusive")
+    boolean isPlusExclusive;
+
+    @JsonProperty("inCatalog")
     private boolean inCatalog;
 
     public WishlistResponse(Wishlist wishlist) {
@@ -52,6 +56,7 @@ public class WishlistResponse {
         this.discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
         this.isOnSale = this.discountRate > 0;
         this.saleEndDate = game.getSaleEndDate();
+        this.isPlusExclusive = game.isPlusExclusive();
         this.inCatalog = game.isInCatalog();
     }
 }
