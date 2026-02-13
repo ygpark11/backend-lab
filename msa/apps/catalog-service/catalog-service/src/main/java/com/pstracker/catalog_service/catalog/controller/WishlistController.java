@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -23,9 +24,12 @@ public class WishlistController {
             @PathVariable Long gameId,
             @AuthenticationPrincipal MemberPrincipal principal // Security Context에서 ID 바로 획득
     ) {
-        boolean isAdded = wishlistService.toggleWishlist(principal.getMemberId(), gameId);
-
-        return ResponseEntity.ok(isAdded ? "찜 목록에 추가되었습니다." : "찜 목록에서 삭제되었습니다.");
+        try {
+            boolean isAdded = wishlistService.toggleWishlist(principal.getMemberId(), gameId);
+            return ResponseEntity.ok(isAdded ? "찜 목록에 추가되었습니다." : "찜 목록에서 삭제되었습니다.");
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     @GetMapping

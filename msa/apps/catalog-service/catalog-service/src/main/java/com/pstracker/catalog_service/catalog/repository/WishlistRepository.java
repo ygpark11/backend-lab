@@ -21,4 +21,6 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
     // 특정 게임을 찜한 모든 회원 조회 (알림 발송용)
     @Query("SELECT w.member FROM Wishlist w WHERE w.game.psStoreId = :psStoreId")
     List<Member> findMembersByGamePsStoreId(@Param("psStoreId") String psStoreId);
+
+    long countByMemberId(Long memberId);
 }

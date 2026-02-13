@@ -163,7 +163,11 @@ export default function GameDetailPage() {
                     : <Heart className="w-5 h-5 text-gray-400" /> // 찜 해제 시: 회색 빈 하트
             });
         } catch (error) {
-            toast.error("요청 실패", { id: toastId });
+            if (error.response && error.response.data) {
+                toast.error(error.response.data, { id: toastId });
+            } else {
+                toast.error("요청 실패", { id: toastId });
+            }
         }
     };
 

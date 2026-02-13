@@ -214,7 +214,11 @@ const GameListPage = () => {
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 toast.error("로그인이 필요합니다.", { id: toastId });
-            } else {
+            }
+            else if (error.response && error.response.data) {
+                toast.error(error.response.data, { id: toastId });
+            }
+            else {
                 toast.error("요청 실패", { id: toastId });
             }
         }

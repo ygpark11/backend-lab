@@ -21,6 +21,8 @@ import java.util.Comparator;
 @Transactional(readOnly = true)
 public class WishlistService {
 
+    private static final int MAX_WISHLIST_LIMIT = 50;
+
     private final WishlistRepository wishlistRepository;
     private final GameRepository gameRepository;
     private final MemberRepository memberRepository; // Proxy 조회용
@@ -35,9 +37,15 @@ public class WishlistService {
         return wishlistRepository.findByMemberIdAndGameId(memberId, gameId)
                 .map(wishlist -> {
                     wishlistRepository.delete(wishlist);
-                    return false; // 삭제됨 (찜 해제)
+                    return false;
                 })
                 .orElseGet(() -> {
+                    long currentCount = wishlistRepository.countByMemberId(memberId);
+
+                    if (currentCount >= MAX_WISHLIST_LIMIT) {
+                        throw new IllegalStateException("찜 목록은 최대 " + MAX_WISHLIST_LIMIT + "개까지만 저장할 수 있습니다.");
+                    }
+
                     // 프록시 객체 활용 (DB Select 최소화)
                     Member memberRef = memberRepository.getReferenceById(memberId);
                     Game gameRef = gameRepository.getReferenceById(gameId);
