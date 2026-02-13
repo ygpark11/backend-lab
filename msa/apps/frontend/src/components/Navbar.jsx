@@ -20,13 +20,10 @@ const Navbar = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
 
-    const [totalWishlistCount, setTotalWishlistCount] = useState(0);
-
     // 처음 로딩 + 이동 시
     useEffect(() => {
         setIsNotiOpen(false);
         fetchUnreadCount();
-        fetchWishlistCount();
 
         const handleRealtimeMessage = () => {
             fetchUnreadCount();
@@ -66,18 +63,6 @@ const Navbar = () => {
             setUnreadCount(response.data);
         } catch (err) {
             console.error("알림 카운트 조회 실패", err);
-        }
-    };
-
-    // API: 찜 개수 조회
-    const fetchWishlistCount = async () => {
-        try {
-            const response = await client.get('/api/v1/wishlists');
-            if (Array.isArray(response.data)) {
-                setTotalWishlistCount(response.data.length);
-            }
-        } catch (err) {
-            console.error("찜 개수 조회 실패(무시해도 됨):", err);
         }
     };
 
@@ -254,14 +239,6 @@ const Navbar = () => {
                         >
                             <Heart className={`w-4 h-4 md:w-5 md:h-5 ${totalWishlistCount > 0 ? 'fill-current animate-pulse' : ''}`} />
                             <span className="hidden md:inline font-bold text-sm">My Wishlist</span>
-                            {totalWishlistCount > 0 && (
-                                <span className="absolute -top-1 -right-1 flex h-4 w-4 md:h-5 md:w-5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-4 w-4 md:h-5 md:w-5 bg-red-500 text-white text-[10px] md:text-xs font-bold items-center justify-center">
-                                        {totalWishlistCount > 9 ? '9+' : totalWishlistCount}
-                                    </span>
-                                </span>
-                            )}
                         </button>
                     </div>
                 </div>
