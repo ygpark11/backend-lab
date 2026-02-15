@@ -18,7 +18,8 @@ import {
     TrendingUp,
     Trophy,
     Waves,
-    X
+    X,
+    Check
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -45,6 +46,7 @@ const GameListPage = () => {
         minMetaScore: searchParams.get('minMetaScore') || '',
         platform: searchParams.get('platform') || '',
         isPlusExclusive: searchParams.get('isPlusExclusive') === 'true',
+        inCatalog: searchParams.get('inCatalog') === 'true',
         sort: searchParams.get('sort') || 'lastUpdated,desc'
     }));
 
@@ -91,6 +93,7 @@ const GameListPage = () => {
         if (filter.minMetaScore) params.minMetaScore = filter.minMetaScore;
         if (filter.platform) params.platform = filter.platform;
         if (filter.isPlusExclusive) params.isPlusExclusive = 'true';
+        if (filter.inCatalog) params.inCatalog = 'true';
         if (filter.sort !== 'lastUpdated,desc') params.sort = filter.sort;
 
         setSearchParams(params, { replace: true });
@@ -171,7 +174,8 @@ const GameListPage = () => {
         filter.minDiscountRate,
         filter.minMetaScore,
         filter.platform,
-        filter.isPlusExclusive
+        filter.isPlusExclusive,
+        filter.inCatalog
     ]);
 
     const fetchGames = async (pageNumber) => {
@@ -187,6 +191,7 @@ const GameListPage = () => {
                 ...(filter.minMetaScore && { minMetaScore: filter.minMetaScore }),
                 ...(filter.platform && { platform: filter.platform }),
                 ...(filter.isPlusExclusive && { isPlusExclusive: true }),
+                ...(filter.inCatalog && { inCatalog: true }),
             };
             const response = await client.get('/api/v1/games/search', { params });
             setGames(response.data.content);
@@ -364,10 +369,36 @@ const GameListPage = () => {
                                     <option value="PS4">PS4</option>
                                 </select>
                             </div>
-                            <div className="flex items-end pb-2">
-                                <label className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-white/5 w-full transition-colors">
-                                    <input type="checkbox" name="isPlusExclusive" checked={filter.isPlusExclusive} onChange={handleFilterChange} className="w-4 h-4 rounded bg-gray-700 text-yellow-500 focus:ring-0 border-transparent" />
-                                    <span className="text-sm text-yellow-400 font-bold">PS Plus 전용만 보기</span>
+                            <div className="flex flex-col justify-end gap-2 pb-0.5 h-full">
+                                <label className="flex items-center gap-2 cursor-pointer group p-1.5 rounded-lg hover:bg-white/5 transition-all -ml-1 border border-transparent hover:border-white/5">
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            name="isPlusExclusive"
+                                            checked={filter.isPlusExclusive}
+                                            onChange={handleFilterChange}
+                                            className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer"
+                                        />
+                                        <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400 group-hover:text-yellow-400 transition-colors">
+                                        <span className="text-yellow-500 font-black">PLUS</span> 회원 전용 할인
+                                    </span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer group p-1.5 rounded-lg hover:bg-white/5 transition-all -ml-1 border border-transparent hover:border-white/5">
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            name="inCatalog"
+                                            checked={filter.inCatalog}
+                                            onChange={handleFilterChange}
+                                            className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer"
+                                        />
+                                        <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-400 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5">
+                                        <Gamepad2 className="w-3.5 h-3.5 text-yellow-500" /> 스페셜(무료) 포함
+                                    </span>
                                 </label>
                             </div>
                         </div>

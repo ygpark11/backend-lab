@@ -24,6 +24,7 @@ import java.util.List;
 
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
 import static com.pstracker.catalog_service.catalog.domain.QGamePriceHistory.gamePriceHistory;
+import static org.springframework.util.StringUtils.*;
 
 @RequiredArgsConstructor
 public class GameRepositoryCustomImpl implements GameRepositoryCustom {
@@ -127,7 +128,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         }).toList();
     }
     private BooleanExpression nameContains(String keyword) {
-        return StringUtils.hasText(keyword) ? game.name.containsIgnoreCase(keyword)
+        return hasText(keyword) ? game.name.containsIgnoreCase(keyword)
                 .or(game.englishName.containsIgnoreCase(keyword)) : null;
     }
 
@@ -159,7 +160,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression genreEq(String genreName) {
-        if (!StringUtils.hasText(genreName)) return null;
+        if (!hasText(genreName)) return null;
         return game.gameGenres.any().genre.name.eq(genreName);
     }
 
