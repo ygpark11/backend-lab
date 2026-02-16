@@ -315,7 +315,7 @@ const GameListPage = () => {
 
                         {/* 스크롤바를 숨기고 쾌적한 간격을 유지하는 컨테이너 */}
                         <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth overflow-y-hidden">
-                            {recentGames.slice(0, 8).map((rg) => (
+                            {recentGames.slice(0, 7).map((rg) => (
                                 <div
                                     key={rg.id}
                                     className="flex-shrink-0 w-28 md:w-36 group cursor-pointer relative"
