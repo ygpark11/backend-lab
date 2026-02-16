@@ -103,7 +103,7 @@ export default function GameDetailPage() {
                         imageUrl: res.data.imageUrl
                     },
                     ...recentGames.filter(item => item.id !== res.data.id)
-                ].slice(0, 7);
+                ].slice(0, 6);
 
                 localStorage.setItem('recentGames', JSON.stringify(updatedGames));
 
