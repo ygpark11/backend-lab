@@ -30,6 +30,19 @@ const GameListPage = () => {
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
 
+    const [recentGames, setRecentGames] = useState([]);
+
+    useEffect(() => {
+        const updateRecent = () => {
+            const data = JSON.parse(localStorage.getItem('recentGames') || '[]');
+            setRecentGames(data);
+        };
+
+        updateRecent(); // 마운트 시 실행
+        window.addEventListener('focus', updateRecent); // 브라우저 탭 복귀/뒤로가기 시 실행
+        return () => window.removeEventListener('focus', updateRecent);
+    }, []);
+
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -277,6 +290,71 @@ const GameListPage = () => {
                             >
                                 <X className="w-4 h-4" /> 필터 해제
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Recently Viewed 섹션 - PS5 대시보드 인터랙션 버전 */}
+                {recentGames.length > 0 && (
+                    <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
+                        <div className="flex items-center justify-between mb-4 px-1">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-ps-blue" />
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Recently Viewed</h3>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    localStorage.removeItem('recentGames');
+                                    setRecentGames([]);
+                                }}
+                                className="text-[10px] text-gray-600 hover:text-white transition-colors font-bold uppercase tracking-widest"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+
+                        {/* 스크롤바를 숨기고 쾌적한 간격을 유지하는 컨테이너 */}
+                        <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth overflow-y-hidden">
+                            {recentGames.slice(0, 8).map((rg) => (
+                                <div
+                                    key={rg.id}
+                                    className="flex-shrink-0 w-28 md:w-36 group cursor-pointer relative"
+                                >
+                                    {/* 개별 삭제 버튼: 호버 시에만 강조되어 노출 */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const updated = recentGames.filter(item => item.id !== rg.id);
+                                            localStorage.setItem('recentGames', JSON.stringify(updated));
+                                            setRecentGames(updated);
+                                        }}
+                                        className="absolute top-2 right-2 z-30 p-1.5 rounded-full bg-black/80 text-white/40 opacity-0 group-hover:opacity-100 hover:text-white hover:bg-red-600 transition-all duration-200 shadow-xl"
+                                    >
+                                        <X className="w-3 h-3" strokeWidth={3} />
+                                    </button>
+
+                                    <div
+                                        onClick={() => navigate(`/games/${rg.id}`)}
+                                        className="aspect-[3/4] rounded-xl overflow-hidden border border-white/5 group-hover:border-ps-blue/50 transition-all duration-300 shadow-xl bg-ps-card relative"
+                                    >
+                                        <PSGameImage
+                                            src={rg.imageUrl}
+                                            alt={rg.title}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100"
+                                        />
+
+                                        {/* 평소에는 숨겨져 있다가 마우스를 올리면 제목이 위로 솟아오름 */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-3 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-20">
+                                            <p className="text-[10px] md:text-[11px] font-black text-white leading-tight line-clamp-2 drop-shadow-md">
+                                                {rg.title}
+                                            </p>
+                                        </div>
+
+                                        {/* 호버 시 전체적으로 푸른 광택 효과 */}
+                                        <div className="absolute inset-0 bg-ps-blue/0 group-hover:bg-ps-blue/10 transition-colors pointer-events-none z-10" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

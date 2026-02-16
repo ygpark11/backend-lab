@@ -94,6 +94,19 @@ export default function GameDetailPage() {
                 const res = await client.get(`/api/v1/games/${id}`);
                 setGame(res.data);
                 if (res.data.liked !== undefined) setIsLiked(res.data.liked);
+
+                const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
+                const updatedGames = [
+                    {
+                        id: res.data.id,
+                        title: res.data.title,
+                        imageUrl: res.data.imageUrl
+                    },
+                    ...recentGames.filter(item => item.id !== res.data.id)
+                ].slice(0, 8);
+
+                localStorage.setItem('recentGames', JSON.stringify(updatedGames));
+
             } catch (err) {
                 console.error(err);
                 toast.error("정보 로딩 실패");
@@ -125,6 +138,11 @@ export default function GameDetailPage() {
                             const loadId = toast.loading("데이터 파쇄 중...");
                             try {
                                 await adminApi.deleteGame(id);
+
+                                const recentGames = JSON.parse(localStorage.getItem('recentGames') || '[]');
+                                const updatedRecent = recentGames.filter(game => game.id !== Number(id));
+                                localStorage.setItem('recentGames', JSON.stringify(updatedRecent));
+
                                 toast.success("삭제 완료!", { id: loadId });
                                 navigate(-1);
                             } catch (err) {
