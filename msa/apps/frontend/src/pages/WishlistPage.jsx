@@ -184,7 +184,7 @@ const WishlistPage = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h3 className="text-sm font-bold text-gray-100 line-clamp-2 min-h-[2.5rem] overflow-hidden mb-2 group-hover:text-ps-blue transition-colors">
+                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors">
                                             {game.name}
                                         </h3>
                                         <div className="flex flex-col gap-0.5">
