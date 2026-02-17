@@ -184,7 +184,9 @@ const WishlistPage = () => {
                                                 </span>
                                             )}
                                         </div>
-                                        <h3 className="text-sm font-bold text-gray-100 line-clamp-2 min-h-[2.5rem] mb-2 group-hover:text-ps-blue transition-colors">{game.name}</h3>
+                                        <h3 className="text-sm font-bold text-gray-100 line-clamp-2 min-h-[2.5rem] overflow-hidden mb-2 group-hover:text-ps-blue transition-colors">
+                                            {game.name}
+                                        </h3>
                                         <div className="flex flex-col gap-0.5">
                                             {game.discountRate > 0 && <span className="text-xs text-gray-500 line-through">{game.originalPrice?.toLocaleString()}원</span>}
                                             <div className="flex justify-between items-end mt-1">
