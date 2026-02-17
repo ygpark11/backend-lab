@@ -223,9 +223,46 @@ const WishlistPage = () => {
                 </div>
                 {!loading && totalPages > 1 && (
                     <div className="flex justify-center items-center gap-2">
-                        <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="px-4 py-2 rounded-lg bg-ps-card text-white text-sm font-bold hover:bg-ps-hover disabled:opacity-50">Prev</button>
-                        <span className="text-ps-muted text-sm px-4">Page {page + 1}</span>
-                        <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1} className="px-4 py-2 rounded-lg bg-ps-card text-white text-sm font-bold hover:bg-ps-hover disabled:opacity-50">Next</button>
+                        {/* First 버튼 추가 */}
+                        <button
+                            onClick={() => setPage(0)}
+                            disabled={page === 0}
+                            className="px-3 py-2 rounded-lg bg-ps-card text-white text-xs font-bold hover:bg-ps-hover disabled:opacity-30 disabled:cursor-not-allowed transition"
+                        >
+                            &lt;&lt; First
+                        </button>
+
+                        {/* Prev 버튼 */}
+                        <button
+                            onClick={() => setPage(p => Math.max(0, p - 1))}
+                            disabled={page === 0}
+                            className="px-4 py-2 rounded-lg bg-ps-card text-white text-sm font-bold hover:bg-ps-hover disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            Prev
+                        </button>
+
+                        {/* 페이지 정보 표시 (스타일 통일) */}
+                        <span className="text-ps-muted text-sm px-4">
+                            Page <span className="text-white font-bold">{page + 1}</span> of {totalPages}
+                        </span>
+
+                        {/* Next 버튼 */}
+                        <button
+                            onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                            disabled={page === totalPages - 1}
+                            className="px-4 py-2 rounded-lg bg-ps-card text-white text-sm font-bold hover:bg-ps-hover disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                            Next
+                        </button>
+
+                        {/* Last 버튼 추가 */}
+                        <button
+                            onClick={() => setPage(totalPages - 1)}
+                            disabled={page === totalPages - 1}
+                            className="px-3 py-2 rounded-lg bg-ps-card text-white text-xs font-bold hover:bg-ps-hover disabled:opacity-30 disabled:cursor-not-allowed transition"
+                        >
+                            Last &gt;&gt;
+                        </button>
                     </div>
                 )}
             </div>
