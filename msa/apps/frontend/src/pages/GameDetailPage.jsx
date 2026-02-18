@@ -33,7 +33,8 @@ import {
     Youtube,
     Trash2,
     AlertTriangle,
-    RefreshCw
+    RefreshCw,
+    Building2
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -210,7 +211,7 @@ export default function GameDetailPage() {
         const loadId = toast.loading("최신 정보를 수집 요청 중...");
 
         try {
-            // ✅ [수정] adminApi 사용
+            // ✅ adminApi 사용
             await adminApi.refreshGame(id);
 
             toast.success("수집 요청 완료! 잠시 후 새로고침 됩니다.", { id: loadId });
@@ -243,6 +244,16 @@ export default function GameDetailPage() {
 
     // 상세 설명 데이터 유무 확인 (Full Data Crawler 문자열 제외)
     const hasDescription = game.description && game.description !== "Full Data Crawler";
+
+    const getGlowStyles = (verdict) => {
+        switch (verdict) {
+            case 'BUY_NOW': return 'border-green-500/60 shadow-[0_0_25px_rgba(34,197,94,0.15)] bg-black/60';
+            case 'GOOD_OFFER': return 'border-yellow-500/60 shadow-[0_0_25px_rgba(234,179,8,0.15)] bg-black/60';
+            case 'WAIT': return 'border-red-500/60 shadow-[0_0_25px_rgba(239,68,68,0.15)] bg-black/60';
+            default: return 'border-blue-500/60 shadow-[0_0_25px_rgba(59,130,246,0.15)] bg-black/60';
+        }
+    };
+    const glowStyle = getGlowStyles(game.priceVerdict);
 
     return (
         <div className="min-h-screen bg-ps-black text-white relative overflow-hidden">
@@ -330,11 +341,12 @@ export default function GameDetailPage() {
                             </div>
 
                             <div className="flex justify-between items-start gap-4 mb-2">
-                                <h1 className="text-4xl md:text-5xl font-black leading-tight text-white drop-shadow-lg flex-1">
+                                {/* 제목 */}
+                                <h1 className="text-3xl md:text-4xl font-black leading-tight text-white drop-shadow-2xl flex-1 break-keep">
                                     {game.title}
                                 </h1>
 
-                                {/* 🔧 관리자 컨트롤 (제목 우측으로 이동) */}
+                                {/* 🔧 관리자 컨트롤 */}
                                 {isAdmin && (
                                     <div className="flex gap-2 shrink-0 pt-1">
                                         <button
@@ -355,31 +367,41 @@ export default function GameDetailPage() {
                                 )}
                             </div>
 
-                            <p className="text-gray-300 text-sm mb-6 font-medium">{game.publisher}</p>
+                            {/* 퍼블리셔 영역 */}
+                            <div className="flex items-center gap-2 mb-6">
+                                <Building2 className="w-4 h-4 text-gray-500" />
+                                <span className="text-gray-400 text-sm font-bold tracking-wide">
+                                    {game.publisher}
+                                </span>
+                            </div>
 
-                            <div className={`p-6 rounded-xl border mb-6 backdrop-blur-sm shadow-xl transition-colors duration-300 ${traffic.color} bg-opacity-90 border-white/20`}>
-                                <div className="flex items-start gap-4">
-                                    <div className="shrink-0 p-3 bg-white/20 rounded-full backdrop-blur-md shadow-inner">
+                            {/* 판정 박스 */}
+                            <div className={`p-6 rounded-xl border-2 backdrop-blur-md mb-8 transition-all duration-300 relative overflow-hidden group ${glowStyle}`}>
+                                {/* 배경 그라데이션 */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent z-0"></div>
+
+                                <div className="relative z-10 flex items-start gap-5">
+                                    {/* 판정 아이콘 */}
+                                    <div className="shrink-0 scale-105 drop-shadow-[0_0_8px_rgba(255,255,255,0.2)]">
                                         {renderVerdictIcon(game.priceVerdict)}
                                     </div>
 
                                     <div className="flex-1">
-                                        {/* 제목*/}
-                                        <h3 className="text-xl font-black mb-1 text-white drop-shadow-md">
+                                        {/* 텍스트: 흰색으로 가독성 확보 */}
+                                        <h3 className="text-xl font-black mb-1.5 text-white drop-shadow-md flex items-center gap-2">
                                             {traffic.text}
                                         </h3>
 
-                                        {/* 설명*/}
-                                        <p className="text-sm text-white/95 font-medium leading-relaxed">
+                                        <p className="text-sm text-gray-200 font-medium leading-relaxed opacity-90">
                                             {traffic.desc}
                                         </p>
 
-                                        {/* 역대 최저가 정보 */}
+                                        {/* 역대 최저가 뱃지 */}
                                         {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
-                                            <div className="mt-4 pt-3 border-t border-white/20 flex items-center gap-2 text-sm text-white">
-                                                <TrendingUp className="w-4 h-4 text-white" />
-                                                <span className="font-bold opacity-90">역대 최저가:</span>
-                                                <span className="font-black bg-white/20 px-2 py-0.5 rounded text-base shadow-sm border border-white/10">
+                                            <div className="mt-3 inline-flex items-center gap-2 text-xs bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 shadow-sm backdrop-blur-md">
+                                                <TrendingUp className="w-3.5 h-3.5 text-green-400" />
+                                                <span className="text-gray-300 font-bold">History Low:</span>
+                                                <span className="font-black text-white text-sm">
                                                     {game.lowestPrice.toLocaleString()}원
                                                 </span>
                                             </div>
@@ -397,7 +419,7 @@ export default function GameDetailPage() {
                                         </div>
                                     )}
 
-                                    {/* 2. 가격 텍스트 색상 변경 (Plus 할인이면 노란색, 아니면 흰색) */}
+                                    {/* 가격 텍스트 색상 변경 (Plus 할인이면 노란색, 아니면 흰색) */}
                                     <span className={`text-6xl font-black tracking-tighter drop-shadow-xl ${game.plusExclusive ? 'text-yellow-400' : 'text-white'}`}>
                                         {game.currentPrice.toLocaleString()}
                                         <span className="text-2xl font-medium text-gray-400 ml-1">원</span>
@@ -409,7 +431,7 @@ export default function GameDetailPage() {
                                         <span className="text-gray-400 line-through text-lg font-medium">
                                             {game.originalPrice.toLocaleString()}원
                                         </span>
-                                                                    <span className={`px-3 py-1 rounded-lg font-black text-lg text-center shadow-lg transform -rotate-2 
+                                        <span className={`px-3 py-1 rounded-lg font-black text-lg text-center shadow-lg transform -rotate-2 
                                             ${game.plusExclusive ? 'bg-yellow-400 text-black' : 'bg-ps-blue text-white'}`}>
                                             -{game.discountRate}%
                                         </span>
