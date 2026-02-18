@@ -172,6 +172,17 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         english_title = mine_english_title(page.content())
 
+        publisher = "Batch Crawler"
+        try:
+            publisher_loc = page.locator("[data-qa='mfe-game-title#publisher']")
+
+            # 요소가 있으면 텍스트 추출
+            if publisher_loc.count() > 0:
+                publisher = publisher_loc.first.inner_text().strip()
+
+        except Exception as e:
+            logger.warning(f"   ⚠️ Publisher extraction failed: {e}")
+
         # 3. 가격 정보나 구매 버튼 영역 대기 (최대 5초)
         try:
             # 가격 정보나 구매 버튼 영역이 뜰 때까지 최대 5초 대기
@@ -304,7 +315,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "psStoreId": ps_store_id,
             "title": title,
             "englishTitle": english_title,
-            "publisher": "Batch Crawler",
+            "publisher": publisher,
             "imageUrl": image_url,
             "description": "Full Data Crawler",
             "genreIds": genre_ids,
