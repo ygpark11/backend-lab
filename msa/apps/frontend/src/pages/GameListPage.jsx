@@ -43,6 +43,19 @@ const GameListPage = () => {
         return () => window.removeEventListener('focus', updateRecent);
     }, []);
 
+    const handleClearRecent = () => {
+        localStorage.removeItem('recentGames');
+        setRecentGames([]);
+        toast.success('최근 본 목록이 비워졌습니다.');
+    };
+
+    const removeRecentGame = (e, gameId) => {
+        e.stopPropagation(); // 상세 페이지 이동 방지
+        const updated = recentGames.filter(g => g.id !== gameId);
+        localStorage.setItem('recentGames', JSON.stringify(updated));
+        setRecentGames(updated);
+    };
+
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -295,7 +308,7 @@ const GameListPage = () => {
                 )}
 
                 {/* Recently Viewed 섹션 - PS5 대시보드 인터랙션 버전 */}
-                {recentGames.length > 0 && !filter.keyword && !filter.genre && ( // ✅ 검색 중엔 숨김
+                {recentGames.length > 0 && !filter.keyword && !filter.genre && (
                     <div className="mb-8 md:mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
                         <div className="flex items-center justify-between mb-4 px-1">
                             <div className="flex items-center gap-2">
@@ -303,20 +316,27 @@ const GameListPage = () => {
                                 <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Recently Viewed</h3>
                             </div>
                             <button
-                                onClick={() => setRecentGames([])}
-                                className="text-[9px] md:text-[10px] text-gray-600 hover:text-white font-bold uppercase"
+                                onClick={handleClearRecent} // ✅ Clear 작동 복구
+                                className="text-[9px] md:text-[10px] text-gray-600 hover:text-red-400 font-bold uppercase transition-colors"
                             >
-                                Clear
+                                Clear All
                             </button>
                         </div>
 
                         <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
-                            {/* 모바일은 4개, PC는 6개까지 노출 */}
-                            {recentGames.slice(0, window.innerWidth < 768 ? 4 : 6).map((rg) => (
+                            {recentGames.slice(0, window.innerWidth < 768 ? 4 : 7).map((rg) => (
                                 <div
                                     key={rg.id}
-                                    className="flex-shrink-0 w-24 md:w-36 group cursor-pointer relative" // ✅ 모바일 폭 축소
+                                    className="flex-shrink-0 w-24 md:w-36 group cursor-pointer relative"
                                 >
+                                    {/* 🚀 개별 삭제 버튼 복구 */}
+                                    <button
+                                        onClick={(e) => removeRecentGame(e, rg.id)}
+                                        className="absolute -top-1 -right-1 z-30 bg-black/80 text-white p-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                                    >
+                                        <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                    </button>
+
                                     <div
                                         onClick={() => navigate(`/games/${rg.id}`)}
                                         className="aspect-[3/4] rounded-lg overflow-hidden border border-white/5 group-hover:border-ps-blue/50 transition-all shadow-xl bg-ps-card relative"
@@ -324,7 +344,7 @@ const GameListPage = () => {
                                         <PSGameImage
                                             src={rg.imageUrl}
                                             alt={rg.title}
-                                            className="w-full h-full object-cover opacity-90"
+                                            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                                         />
                                         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/90 to-transparent flex items-end p-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                                             <p className="text-[9px] md:text-[11px] font-bold text-white line-clamp-1">
