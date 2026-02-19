@@ -4,7 +4,7 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
-import {useNavigate, useSearchParams, useLocation} from 'react-router-dom'; // useLocation 추가
+import {useNavigate, useSearchParams, useLocation} from 'react-router-dom';
 import {
     Banknote,
     ChevronDown,
@@ -19,7 +19,8 @@ import {
     Trophy,
     Waves,
     X,
-    Check
+    Check,
+    Trash2
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -43,12 +44,14 @@ const GameListPage = () => {
         return () => window.removeEventListener('focus', updateRecent);
     }, []);
 
+    // 최근 본 목록 전체 삭제
     const handleClearRecent = () => {
         localStorage.removeItem('recentGames');
         setRecentGames([]);
         toast.success('최근 본 목록이 비워졌습니다.');
     };
 
+    // 최근 본 목록에서 개별 게임 삭제
     const removeRecentGame = (e, gameId) => {
         e.stopPropagation(); // 상세 페이지 이동 방지
         const updated = recentGames.filter(g => g.id !== gameId);
@@ -316,29 +319,22 @@ const GameListPage = () => {
                                 <h3 className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Recently Viewed</h3>
                             </div>
                             <button
-                                onClick={handleClearRecent} // ✅ Clear 작동 복구
-                                className="text-[9px] md:text-[10px] text-gray-600 hover:text-red-400 font-bold uppercase transition-colors"
+                                onClick={handleClearRecent}
+                                className="group flex items-center gap-1.5 text-[9px] md:text-[10px] text-gray-400 hover:text-white font-bold uppercase transition-all bg-white/5 hover:bg-ps-blue/20 px-2.5 py-1.5 rounded-full border border-transparent hover:border-ps-blue/30"
                             >
-                                Clear All
+                                <Trash2 className="w-3 h-3 group-hover:text-ps-blue transition-colors" />
+                                <span>Clear All</span>
                             </button>
                         </div>
 
-                        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth">
+                        <div className="flex gap-3 md:gap-4 overflow-x-auto pb-2 no-scrollbar scroll-smooth p-1">
                             {recentGames.slice(0, window.innerWidth < 768 ? 4 : 7).map((rg) => (
                                 <div
                                     key={rg.id}
                                     className="flex-shrink-0 w-24 md:w-36 group cursor-pointer relative"
+                                    onClick={() => navigate(`/games/${rg.id}`)}
                                 >
-                                    {/* 🚀 개별 삭제 버튼 복구 */}
-                                    <button
-                                        onClick={(e) => removeRecentGame(e, rg.id)}
-                                        className="absolute -top-1 -right-1 z-30 bg-black/80 text-white p-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
-                                    >
-                                        <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                    </button>
-
                                     <div
-                                        onClick={() => navigate(`/games/${rg.id}`)}
                                         className="aspect-[3/4] rounded-lg overflow-hidden border border-white/5 group-hover:border-ps-blue/50 transition-all shadow-xl bg-ps-card relative"
                                     >
                                         <PSGameImage
@@ -351,6 +347,13 @@ const GameListPage = () => {
                                                 {rg.title}
                                             </p>
                                         </div>
+
+                                        <button
+                                            onClick={(e) => removeRecentGame(e, rg.id)}
+                                            className="absolute top-2 right-2 z-30 p-1.5 rounded-full bg-black/60 text-gray-300 border border-white/10 opacity-0 group-hover:opacity-100 transition-all hover:bg-red-600 hover:text-white hover:border-red-500/50 shadow-sm backdrop-blur-sm"
+                                        >
+                                            <X className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
