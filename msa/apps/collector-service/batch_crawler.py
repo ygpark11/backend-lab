@@ -148,6 +148,11 @@ def crawl_detail_and_send(page, target_url, verbose=False):
     try:
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
 
+        # 리다이렉트 URL로 단종 의심 게임 감지
+        if "/error" in page.url:
+            logger.warning(f"🚨 단종 의심 (URL 리다이렉트): {target_url}")
+            return {"is_delisted": True, "ps_store_id": target_url.split("/")[-1].split("?")[0]}
+
         # 1. 제목 로딩 대기
         try:
             page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=30000)
@@ -367,35 +372,50 @@ def fetch_update_targets():
         logger.error(f"❌ Connection Error: {e}")
     return []
 
-def send_discord_summary(total_scanned, deals_list):
+def send_discord_summary(total_scanned, deals_list, delisted_games):
     if not DISCORD_WEBHOOK_URL: return
     try:
         total_deals = len(deals_list)
-        if total_deals == 0:
-            logger.info("📭 No deals found today. Skipping Discord report.")
-            return
+        total_delisted = len(delisted_games)
 
-        sorted_deals = sorted(deals_list, key=lambda x: x['discountRate'], reverse=True)
-        top_5 = sorted_deals[:5]
+        if total_deals == 0 and total_delisted == 0:
+            logger.info("📭 No deals or delisted games found today. Skipping Discord report.")
+            return
 
         message = f"## 📢 [PS-Tracker] 일일 수집 리포트 ({CURRENT_MODE})\n"
         message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
         message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지! 🔥\n"
         message += "━━━━━━━━━━━━━━━━━━"
 
-        message += "**🏆 오늘의 Top 5 할인**\n"
-        for i, game in enumerate(top_5, 1):
-            sale_price = "{:,}".format(game['currentPrice'])
-            plat_list = game.get('platforms', [])
-            plat_str = f" | `{'/'.join(plat_list)}`" if plat_list else ""
-            message += f"{i}️⃣ **[{game['discountRate']}%] {game['title']}**\n"
-            message += f"　 💰 **₩{sale_price}**{plat_str}\n"
-            message += f"　 ⏳ ~{game['saleEndDate'] or '상시 종료'}\n"
-            if i < len(top_5): message += "───\n"
+        if total_delisted > 0:
+            message += "🚨 **[주의] 단종 의심 게임 (수동 삭제 필요)** 🚨\n"
+            for g in delisted_games:
+                # ps_store_id를 출력하여 관리자 페이지에서 쉽게 검색/삭제할 수 있게 제공
+                message += f"• ID: `{g['ps_store_id']}`\n"
+            message += "━━━━━━━━━━━━━━━━━━\n"
 
-        message += "━━━━━━━━━━━━━━━━━━\n"
-        if total_deals > 5:
-            message += f"외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
+        if total_deals > 0:
+            message += "**🏆 오늘의 Top 5 할인**\n"
+            sorted_deals = sorted(deals_list, key=lambda x: x['discountRate'], reverse=True)
+            top_5 = sorted_deals[:5]
+
+            for i, game in enumerate(top_5, 1):
+                sale_price = "{:,}".format(game['currentPrice'])
+                plat_list = game.get('platforms', [])
+                plat_str = f" | `{'/'.join(plat_list)}`" if plat_list else ""
+                message += f"{i}️⃣ **[{game['discountRate']}%] {game['title']}**\n"
+                message += f"　 💰 **₩{sale_price}**{plat_str}\n"
+                message += f"　 ⏳ ~{game['saleEndDate'] or '상시 종료'}\n"
+                if i < len(top_5): message += "───\n"
+
+            message += "━━━━━━━━━━━━━━━━━━\n"
+            if total_deals > 5:
+                message += f"외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
+
+        else:
+            message += "📭 오늘은 새로운 할인이 없습니다.\n"
+            message += "━━━━━━━━━━━━━━━━━━\n"
+
         message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
 
         requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
@@ -412,6 +432,7 @@ def run_batch_crawler_logic():
 
     total_processed_count = 0
     collected_deals = []
+    delisted_games = []
 
     try:
         visited_urls = set()
@@ -448,8 +469,11 @@ def run_batch_crawler_logic():
 
                                 res = crawl_detail_and_send(page, url)
                                 if res:
-                                    total_processed_count += 1
-                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                    if res.get("is_delisted"):
+                                        delisted_games.append(res)
+                                    else:
+                                        total_processed_count += 1
+                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
                                 visited_urls.add(url)
 
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
@@ -531,8 +555,11 @@ def run_batch_crawler_logic():
                                 if not is_running: break
                                 res = crawl_detail_and_send(page, url)
                                 if res:
-                                    total_processed_count += 1
-                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                    if res.get("is_delisted"):
+                                        delisted_games.append(res)
+                                    else:
+                                        total_processed_count += 1
+                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
                                 visited_urls.add(url)
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
@@ -549,7 +576,7 @@ def run_batch_crawler_logic():
                 time.sleep(3)
                 current_page += 1
 
-        send_discord_summary(total_processed_count, collected_deals)
+        send_discord_summary(total_processed_count, collected_deals, delisted_games)
 
     except Exception as e:
         logger.error(f"Critical Error: {e}")
@@ -601,6 +628,8 @@ def crawl_single_url():
                 gc.collect()
 
         if result:
+            if result.get("is_delisted"):
+                return jsonify({"status": "error", "message": "단종된 게임입니다."}), 404
             return jsonify({"status": "success", "data": result}), 200
         else:
             return jsonify({"status": "failed", "message": "Failed to parse data"}), 500
