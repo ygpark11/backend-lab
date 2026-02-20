@@ -214,6 +214,17 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             genre_ids = page.locator("[data-qa='gameInfo#releaseInformation#genre-value']").inner_text()
         except: pass
 
+        # 출시일 로직
+        release_date = None
+        try:
+            release_loc = page.locator("[data-qa='gameInfo#releaseInformation#releaseDate-value']")
+            if release_loc.count() > 0:
+                raw_date = release_loc.first.inner_text().strip()
+                # Java LocalDate 파싱을 위해 '2023/10/20' 형식을 '2023-10-20' 으로 변경
+                release_date = raw_date.replace("/", "-")
+        except Exception as e:
+            logger.warning(f"   ⚠️ Release Date extraction failed: {e}")
+
         # 4. 가격 로직
         best_offer_data = None
         min_price = float('inf')
@@ -324,6 +335,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "imageUrl": image_url,
             "description": "Full Data Crawler",
             "genreIds": genre_ids,
+            "releaseDate": release_date,
             "originalPrice": best_offer_data["originalPrice"],
             "currentPrice": best_offer_data["currentPrice"],
             "discountRate": best_offer_data["discountRate"],
@@ -338,6 +350,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             logger.info(f"      📸 ImageURL : {payload['imageUrl']}" if payload['imageUrl'] else "      📸 ImageURL : None")
             logger.info(f"      🏷️ Genres   : {payload['genreIds']}")
             logger.info(f"      🏢 Publisher: {payload['publisher']}")
+            logger.info(f"      📅 Release  : {payload['releaseDate']}")
             logger.info(f"      💰 Discount : {payload['discountRate']}% (PlusOnly: {payload['isPlusExclusive']})")
             logger.info(f"      📚 Catalog  : {payload['inCatalog']}")
             logger.info(f"      --------------------------------------------------")
