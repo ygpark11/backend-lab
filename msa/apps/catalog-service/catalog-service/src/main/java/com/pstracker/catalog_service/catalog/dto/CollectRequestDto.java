@@ -29,6 +29,7 @@ public class CollectRequestDto {
     private LocalDate saleEndDate;
 
     private String genreIds;       // "Action, RPG" 형태의 문자열
+    private LocalDate releaseDate;
 
     @JsonProperty("isPlusExclusive")
     private boolean isPlusExclusive; // PS Plus 전용 할인 여부

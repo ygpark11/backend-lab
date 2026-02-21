@@ -182,6 +182,7 @@ public class CatalogServiceTest {
                 discount,          // discountRate
                 saleEnd,           // saleEndDate
                 "Action,RPG",       // genreIds
+                LocalDate.of(2026,1,1), // releaseDate
                 false,              // isPlusExclusive
                 false,               // inCatalog
                 List.of("PS5")     // platforms

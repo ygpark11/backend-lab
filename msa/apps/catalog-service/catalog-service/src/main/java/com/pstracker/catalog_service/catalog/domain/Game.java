@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.cglib.core.Local;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -77,6 +78,9 @@ public class Game {
     @Column(name = "sale_end_date")
     private LocalDate saleEndDate;
 
+    @Column(name = "release_date")
+    private LocalDate releaseDate;
+
     @Column(name = "in_catalog")
     private boolean inCatalog;
 
@@ -97,7 +101,9 @@ public class Game {
     private Set<GameGenre> gameGenres = new HashSet<>();
 
     // --- [생성 메서드] ---
-    public static Game create(String psStoreId, String name, String englishName, String publisher, String imageUrl, String description) {
+    public static Game create(String psStoreId, String name, String englishName,
+                              String publisher, String imageUrl, String description,
+                              LocalDate releaseDate) {
         LocalDateTime now = LocalDateTime.now();
 
         Game game = new Game();
@@ -107,6 +113,7 @@ public class Game {
         game.publisher = publisher;
         game.imageUrl = imageUrl;
         game.description = description;
+        game.releaseDate = releaseDate;
         game.createdAt = now;
         game.lastUpdated = now;
         return game;
@@ -114,7 +121,7 @@ public class Game {
 
     // --- [비즈니스 로직: 정보 업데이트 통합] ---
     public void updateInfo(String name, String englishName, String publisher,
-                           String imageUrl, String description, Set<Genre> newGenres) {
+                           String imageUrl, String description, LocalDate releaseDate, Set<Genre> newGenres) {
 
         if (hasText(name) && !name.equals(this.name)) {
             this.name = name;
@@ -139,6 +146,10 @@ public class Game {
 
         if (hasText(description) && !"Full Data Crawler".equals(description)) {
             this.description = description;
+        }
+
+        if(releaseDate != null && !releaseDate.equals(this.releaseDate)) {
+            this.releaseDate = releaseDate;
         }
 
         if (newGenres != null && !newGenres.isEmpty()) {

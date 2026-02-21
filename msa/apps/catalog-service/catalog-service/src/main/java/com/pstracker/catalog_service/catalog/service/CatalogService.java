@@ -134,7 +134,8 @@ public class CatalogService {
                         request.getEnglishTitle(),
                         request.getPublisher(),
                         request.getImageUrl(),
-                        request.getDescription()
+                        request.getDescription(),
+                        request.getReleaseDate()
                 ));
     }
 
@@ -151,6 +152,7 @@ public class CatalogService {
                 request.getPublisher(),
                 request.getImageUrl(),
                 request.getDescription(),
+                request.getReleaseDate(),
                 genres
         );
 
