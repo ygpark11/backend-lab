@@ -220,8 +220,17 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             release_loc = page.locator("[data-qa='gameInfo#releaseInformation#releaseDate-value']")
             if release_loc.count() > 0:
                 raw_date = release_loc.first.inner_text().strip()
-                # Java LocalDate 파싱을 위해 '2023/10/20' 형식을 '2023-10-20' 으로 변경
-                release_date = raw_date.replace("/", "-")
+
+                # '2025/10/9' 같은 포맷을 '2025-10-09' (yyyy-MM-dd)로 변환
+                parts = raw_date.split("/")
+                if len(parts) == 3:
+                    year = parts[0]
+                    month = parts[1].zfill(2) # '10' -> '10', '5' -> '05'
+                    day = parts[2].zfill(2)   # '9' -> '09', '20' -> '20'
+                    release_date = f"{year}-{month}-{day}"
+                else:
+                    # 혹시 / 형태가 아닌 다른 예외적인 날짜가 들어올 경우를 대비한 안전망
+                    release_date = raw_date.replace("/", "-")
         except Exception as e:
             logger.warning(f"   ⚠️ Release Date extraction failed: {e}")
 
