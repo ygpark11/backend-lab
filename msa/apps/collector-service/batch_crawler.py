@@ -569,21 +569,23 @@ def run_batch_crawler_logic():
                                             if full_url not in page_candidates: page_candidates.append(full_url)
                             except: pass
 
-                            if not page_candidates: break
-                            logger.info(f"      Found {len(page_candidates)} new candidates.")
+                            if not page_candidates:
+                                logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
+                            else:
+                                logger.info(f"      Found {len(page_candidates)} new candidates.")
 
-                            # 상세 크롤링
-                            for url in page_candidates:
-                                if not is_running: break
-                                res = crawl_detail_and_send(page, url)
-                                if res:
-                                    if res.get("is_delisted"):
-                                        delisted_games.append(res)
-                                    else:
-                                        total_processed_count += 1
-                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                visited_urls.add(url)
-                                time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+                                # 상세 크롤링
+                                for url in page_candidates:
+                                    if not is_running: break
+                                    res = crawl_detail_and_send(page, url)
+                                    if res:
+                                        if res.get("is_delisted"):
+                                            delisted_games.append(res)
+                                        else:
+                                            total_processed_count += 1
+                                            if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                    visited_urls.add(url)
+                                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
                             try: context.close() if context else None
