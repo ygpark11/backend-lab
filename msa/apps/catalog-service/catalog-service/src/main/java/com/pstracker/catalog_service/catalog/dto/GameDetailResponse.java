@@ -24,7 +24,10 @@ public record GameDetailResponse(
         Integer discountRate,
         @JsonProperty("isPlusExclusive")
         boolean isPlusExclusive,
+
+        // [일자 정보]
         LocalDate saleEndDate,
+        LocalDate releaseDate,
 
         // [평점 정보]
         Integer metaScore,
@@ -71,6 +74,7 @@ public record GameDetailResponse(
                 this.discountRate,
                 this.isPlusExclusive,
                 this.saleEndDate,
+                this.releaseDate,
                 this.metaScore,
                 this.userScore,
                 isLiked,
@@ -99,6 +103,7 @@ public record GameDetailResponse(
         Integer discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
         boolean isPlus = game.isPlusExclusive();
         LocalDate endDate = game.getSaleEndDate();
+        LocalDate releaseDate = game.getReleaseDate();
         boolean isInCatalog = game.isInCatalog();
 
         PriceVerdict verdict;
@@ -163,6 +168,7 @@ public record GameDetailResponse(
                 discountRate,
                 isPlus,
                 endDate,
+                releaseDate,
                 game.getMetaScore(),
                 game.getUserScore(),
                 liked,

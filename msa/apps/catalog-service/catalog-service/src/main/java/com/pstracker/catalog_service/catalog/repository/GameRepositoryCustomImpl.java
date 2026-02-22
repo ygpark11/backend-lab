@@ -173,19 +173,12 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         for (Sort.Order order : sort) {
             Order direction = order.isAscending() ? Order.ASC : Order.DESC;
             switch (order.getProperty()) {
-                case "price":
-                    orders.add(new OrderSpecifier<>(direction, game.currentPrice));
-                    break;
-                case "discountRate":
-                    orders.add(new OrderSpecifier<>(direction, game.discountRate));
-                    break;
-                case "metaScore":
-                    orders.add(new OrderSpecifier<>(direction, game.metaScore));
-                    break;
-                case "lastUpdated":
-                default:
-                    orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
-                    break;
+                case "price" -> orders.add(new OrderSpecifier<>(direction, game.currentPrice));
+                case "discountRate" -> orders.add(new OrderSpecifier<>(direction, game.discountRate));
+                case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.metaScore));
+                case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate));
+                case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, game.releaseDate));
+                default ->orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
             }
         }
         return orders.toArray(new OrderSpecifier[0]);
