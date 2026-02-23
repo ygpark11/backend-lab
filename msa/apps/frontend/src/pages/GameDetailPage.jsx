@@ -34,7 +34,8 @@ import {
     Trash2,
     AlertTriangle,
     RefreshCw,
-    Building2
+    Building2,
+    Calendar
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -367,12 +368,32 @@ export default function GameDetailPage() {
                                 )}
                             </div>
 
-                            {/* 퍼블리셔 영역 */}
-                            <div className="flex items-center gap-2 mb-6">
-                                <Building2 className="w-4 h-4 text-gray-500" />
-                                <span className="text-gray-400 text-sm font-bold tracking-wide">
-                                    {game.publisher}
-                                </span>
+                            {/* 퍼블리셔 & 출시일 메타데이터 영역 */}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
+                                {/* 퍼블리셔 칩 */}
+                                <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-sm shadow-sm hover:bg-white/10 transition-colors cursor-default">
+                                    <Building2 className="w-4 h-4 text-gray-400" />
+                                    <span className="text-gray-300 text-xs font-bold tracking-wide">
+                                        {game.publisher}
+                                    </span>
+                                </div>
+
+                                {/* 출시일 칩 */}
+                                {game.releaseDate && (
+                                    <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-sm shadow-sm hover:bg-white/10 transition-colors cursor-default">
+                                        <Calendar className="w-4 h-4 text-gray-400" />
+                                        <span className="text-gray-300 text-xs font-bold tracking-wide">
+                                            {game.releaseDate.replace(/-/g, '. ')} 출시
+                                        </span>
+
+                                        {/* 🔥 출시 6개월(180일) 이내인 경우 자동으로 'NEW' 배지 부착 */}
+                                        {differenceInCalendarDays(new Date(), parseISO(game.releaseDate)) <= 180 && (
+                                            <span className="ml-1.5 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black shadow-sm animate-pulse">
+                                                NEW
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* 판정 박스 */}
