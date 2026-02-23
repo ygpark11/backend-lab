@@ -379,7 +379,7 @@ const GameListPage = () => {
                             >
                                 <span className="flex items-center gap-2">
                                     {filter.sort === 'lastUpdated,desc' && <><Clock className="w-4 h-4 text-blue-400" /> 최근 업데이트순</>}
-                                    {filter.sort === 'releaseDate,desc' && <><CalendarDays className="w-4 h-4 text-purple-400" /> 최신 발매작순</>}
+                                    {filter.sort === 'releaseDate,desc' && <><CalendarDays className="w-4 h-4 text-purple-400" /> 최신 발매순</>}
                                     {filter.sort === 'saleEndDate,asc' && <><Timer className="w-4 h-4 text-orange-400" /> 마감 임박순</>}
                                     {filter.sort === 'price,asc' && <><Banknote className="w-4 h-4 text-green-400" /> 낮은 가격순</>}
                                     {filter.sort === 'discountRate,desc' && <><TrendingUp className="w-4 h-4 text-red-400" /> 높은 할인율순</>}
@@ -393,7 +393,7 @@ const GameListPage = () => {
                                     <div className="py-1">
                                         {[
                                             { value: 'lastUpdated,desc', label: '최근 업데이트순', icon: Clock, color: 'text-blue-400' },
-                                            { value: 'releaseDate,desc', label: '최신 발매작순', icon: CalendarDays, color: 'text-purple-400' },
+                                            { value: 'releaseDate,desc', label: '최신 발매순', icon: CalendarDays, color: 'text-purple-400' },
                                             { value: 'saleEndDate,asc', label: '마감 임박순', icon: Timer, color: 'text-orange-400' },
                                             { value: 'price,asc', label: '낮은 가격순', icon: Banknote, color: 'text-green-400' },
                                             { value: 'discountRate,desc', label: '높은 할인율순', icon: TrendingUp, color: 'text-red-400' },
