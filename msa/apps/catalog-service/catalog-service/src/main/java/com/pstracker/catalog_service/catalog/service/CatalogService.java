@@ -4,17 +4,11 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.Genre;
 import com.pstracker.catalog_service.catalog.domain.Platform;
-import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
-import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
-import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
-import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
-import com.pstracker.catalog_service.catalog.repository.GameRepository;
-import com.pstracker.catalog_service.catalog.repository.GenreRepository;
-import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
+import com.pstracker.catalog_service.catalog.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,10 +22,8 @@ import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,6 +36,7 @@ public class CatalogService {
 
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
+    private final GameGenreRepository gameGenreRepository;
     private final WishlistRepository wishlistRepository;
     private final GenreRepository genreRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -307,6 +300,7 @@ public class CatalogService {
         Page<GameSearchResultDto> result = gameRepository.searchGames(condition, pageable);
 
         if (memberId != null && !result.isEmpty()) {
+            markGameGenre(result.getContent());
             markLikedGames(result.getContent(), memberId);
         }
         return result;
@@ -342,6 +336,24 @@ public class CatalogService {
 
         // 삭제 후 캐시도 제거
         gameReadService.evictGameDetailCache(gameId);
+    }
+
+    /**
+     * 검색 결과에 장르 정보 표시
+     * @param games 게임 검색 결과 리스트
+     */
+    private void markGameGenre(List<GameSearchResultDto> games) {
+        List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
+
+        List<GameGenreResultDto> gameGenres = gameGenreRepository.findGameGenres(gameIds);
+
+        Map<Long, List<String>> gameGenreMap = gameGenres.stream()
+                .collect(Collectors.groupingBy(
+                        GameGenreResultDto::getGameId, Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+
+        games.forEach(dto -> {
+            dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of()));
+        });
     }
 
     /**

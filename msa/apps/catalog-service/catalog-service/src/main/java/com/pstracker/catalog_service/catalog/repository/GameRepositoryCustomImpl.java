@@ -1,14 +1,13 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -16,15 +15,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
-import static com.pstracker.catalog_service.catalog.domain.QGamePriceHistory.gamePriceHistory;
-import static org.springframework.util.StringUtils.*;
+import static org.springframework.util.StringUtils.hasText;
 
 @RequiredArgsConstructor
 public class GameRepositoryCustomImpl implements GameRepositoryCustom {
@@ -33,9 +29,16 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        // 1. 엔티티 조회 (조인 없이 Game 테이블만 조회!)
-        List<Game> games = queryFactory
-                .selectFrom(game)
+        // 엔티티 조회 (조인 없이 Game 테이블만 조회!)
+        List<GameSearchResultDto> content = queryFactory
+                .select(new QGameSearchResultDto(
+                        game.id, game.name, game.imageUrl,
+                        game.originalPrice, game.currentPrice, game.discountRate,
+                        game.isPlusExclusive, game.saleEndDate,
+                        game.metaScore, game.userScore,
+                        game.inCatalog, game.createdAt
+                ))
+                .from(game)
                 .where(
                         nameContains(condition.getKeyword()),
                         priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
@@ -52,10 +55,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .fetch();
 
-        // 2. DTO 변환
-        List<GameSearchResultDto> content = convertToDtos(games);
-
-        // 3. 카운트 쿼리 (역시 조인 제거)
+        // 카운트 쿼리 (역시 조인 제거)
         JPAQuery<Long> countQuery = queryFactory
                 .select(game.count())
                 .from(game)
@@ -76,10 +76,6 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
-        if (genreIds == null || genreIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-
         // 1. 쿼리 실행
         List<Game> games = queryFactory
                 .selectFrom(game)
@@ -111,9 +107,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
             GameSearchResultDto dto = new GameSearchResultDto(
                     g.getId(), g.getName(), g.getImageUrl(),
-                    g.getOriginalPrice() != null ? g.getOriginalPrice() : 0,
-                    g.getCurrentPrice() != null ? g.getCurrentPrice() : 0,
-                    g.getDiscountRate() != null ? g.getDiscountRate() : 0,
+                    g.getOriginalPrice(),
+                    g.getCurrentPrice(),
+                    g.getDiscountRate(),
                     g.isPlusExclusive(),
                     g.getSaleEndDate(),
                     g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt()

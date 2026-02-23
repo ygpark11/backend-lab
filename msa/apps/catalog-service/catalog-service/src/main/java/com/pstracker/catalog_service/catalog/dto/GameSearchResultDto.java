@@ -45,9 +45,9 @@ public class GameSearchResultDto implements Serializable {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
-        this.originalPrice = originalPrice;
-        this.price = price;
-        this.discountRate = discountRate;
+        this.originalPrice = originalPrice != null ? originalPrice : 0;
+        this.price = price != null ? price : 0;
+        this.discountRate = discountRate != null ? discountRate : 0;
         this.isPlusExclusive = isPlusExclusive;
         this.saleEndDate = saleEndDate;
         this.metaScore = metaScore;
