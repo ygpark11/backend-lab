@@ -127,6 +127,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             return dto;
         }).toList();
     }
+
     private BooleanExpression nameContains(String keyword) {
         return hasText(keyword) ? game.name.containsIgnoreCase(keyword)
                 .or(game.englishName.containsIgnoreCase(keyword)) : null;

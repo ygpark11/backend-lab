@@ -56,7 +56,10 @@ public class GameReadService {
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
 
         // 게임의 역대 최저가 조회
-        Integer lowestPrice = priceHistoryRepository.findLowestPriceByGameId(gameId);
+        Integer lowestPrice = histories.stream()
+                .map(GamePriceHistory::getPrice)
+                .min(Integer::compareTo)
+                .orElse(null);
 
         // DTO 변환
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()

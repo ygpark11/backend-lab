@@ -19,14 +19,6 @@ public interface GamePriceHistoryRepository extends JpaRepository<GamePriceHisto
     Optional<GamePriceHistory> findTopByGameOrderByRecordedAtDesc(Game game);
 
     /**
-     * 특정 게임의 최저가 조회
-     * @param gameId 게임 ID
-     * @return 최저가 (없을 경우 null 반환)
-     */
-    @Query("SELECT MIN(h.price) FROM GamePriceHistory h WHERE h.game.id = :gameId")
-    Integer findLowestPriceByGameId(Long gameId);
-
-    /**
      * 특정 게임의 모든 가격 이력을 기록일자 오름차순으로 조회
      * @param gameId 게임 ID
      * @return 가격 이력 리스트
