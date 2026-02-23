@@ -177,7 +177,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 case "price" -> orders.add(new OrderSpecifier<>(direction, game.currentPrice));
                 case "discountRate" -> orders.add(new OrderSpecifier<>(direction, game.discountRate));
                 case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.metaScore));
-                case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate));
+                case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate, OrderSpecifier.NullHandling.NullsLast));
                 case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, game.releaseDate));
                 default ->orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
             }
