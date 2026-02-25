@@ -29,7 +29,6 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        // 엔티티 조회 (조인 없이 Game 테이블만 조회!)
         List<GameSearchResultDto> content = queryFactory
                 .select(new QGameSearchResultDto(
                         game.id, game.name, game.imageUrl,
@@ -50,12 +49,11 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         genreEq(condition.getGenre()),
                         inCatalogEq(condition.getInCatalog())
                 )
+                .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
-                .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .fetch();
 
-        // 카운트 쿼리 (역시 조인 제거)
         JPAQuery<Long> countQuery = queryFactory
                 .select(game.count())
                 .from(game)

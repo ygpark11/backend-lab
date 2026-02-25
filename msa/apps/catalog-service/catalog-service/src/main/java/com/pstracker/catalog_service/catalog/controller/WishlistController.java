@@ -1,6 +1,6 @@
 package com.pstracker.catalog_service.catalog.controller;
 
-import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
+import com.pstracker.catalog_service.catalog.dto.WishlistDto;
 import com.pstracker.catalog_service.catalog.service.WishlistService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -33,11 +33,11 @@ public class WishlistController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<WishlistResponse>> getMyWishlist(
+    public ResponseEntity<Page<WishlistDto>> getMyWishlist(
             @AuthenticationPrincipal MemberPrincipal principal,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        Page<WishlistResponse> response = wishlistService.getMyWishlist(principal.getMemberId(), pageable);
+        Page<WishlistDto> response = wishlistService.getMyWishlist(principal.getMemberId(), pageable);
         return ResponseEntity.ok(response);
     }
 }
