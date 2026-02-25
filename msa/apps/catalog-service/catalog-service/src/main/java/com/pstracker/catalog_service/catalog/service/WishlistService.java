@@ -79,8 +79,8 @@ public class WishlistService {
      * 게임 검색 결과에 장르 정보 매핑
      * - 게임 ID 리스트로 한 번에 조회하여 N+1 문제 방지
      */
-    private void markGameGenre(List<WishlistDto> games) {
-        List<Long> gameIds = games.stream().map(WishlistDto::getGameId).toList();
+    private void markGameGenre(List<WishlistDto> wishlist) {
+        List<Long> gameIds = wishlist.stream().map(WishlistDto::getGameId).toList();
 
         List<GameGenreResultDto> gameGenres = gameGenreRepository.findGameGenres(gameIds);
 
@@ -88,8 +88,8 @@ public class WishlistService {
                 .collect(Collectors.groupingBy(
                         GameGenreResultDto::getGameId, Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
 
-        games.forEach(dto -> {
-            dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of()));
+        wishlist.forEach(dto -> {
+            dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of()));
         });
     }
 }
