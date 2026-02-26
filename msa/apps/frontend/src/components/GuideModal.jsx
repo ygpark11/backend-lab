@@ -29,7 +29,7 @@ const GuideModal = ({ isOpen, onClose }) => {
                                 가성비 전투력 <Flame className="w-5 h-5 text-orange-500" />
                             </h3>
                             <p className="text-gray-400 text-sm leading-relaxed">
-                                <span className="text-orange-400 font-bold">메타스코어(재미)</span>와 <span className="text-green-400 font-bold">가격(저렴함)</span>을 조합해 계산한 수치입니다. 점수가 높을수록 "갓성비" 게임입니다!
+                                <span className="text-orange-400 font-bold">IGDB 평점(재미)</span>와 <span className="text-green-400 font-bold">가격(저렴함)</span>을 조합해 계산한 수치입니다. 점수가 높을수록 "갓성비" 게임입니다!
                             </p>
                         </div>
                     </div>

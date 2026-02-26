@@ -7,7 +7,7 @@ import PSGameImage from "./common/PSGameImage.jsx";
 export default function RelatedGameCard({ game }) {
     const navigate = useNavigate();
 
-    // 메타스코어 85점 이상 & 할인율 50% 이상이면 '플래티넘 딜' 효과
+    // IGDB스코어 85점 이상 & 할인율 50% 이상이면 '플래티넘 딜' 효과
     const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
 
     // 마감 임박 계산 (3일 이내)

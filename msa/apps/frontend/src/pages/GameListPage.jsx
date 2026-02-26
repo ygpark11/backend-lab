@@ -21,7 +21,8 @@ import {
     X,
     Check,
     Trash2,
-    CalendarDays
+    CalendarDays,
+    Star
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -383,7 +384,7 @@ const GameListPage = () => {
                                     {filter.sort === 'saleEndDate,asc' && <><Timer className="w-4 h-4 text-orange-400" /> 마감 임박순</>}
                                     {filter.sort === 'price,asc' && <><Banknote className="w-4 h-4 text-green-400" /> 낮은 가격순</>}
                                     {filter.sort === 'discountRate,desc' && <><TrendingUp className="w-4 h-4 text-red-400" /> 높은 할인율순</>}
-                                    {filter.sort === 'metaScore,desc' && <><Trophy className="w-4 h-4 text-yellow-400" /> 높은 평점순</>}
+                                    {filter.sort === 'metaScore,desc' && <><Star className="w-4 h-4 text-purple-400" /> 높은 평점순</>}
                                 </span>
                                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -397,7 +398,7 @@ const GameListPage = () => {
                                             { value: 'saleEndDate,asc', label: '마감 임박순', icon: Timer, color: 'text-orange-400' },
                                             { value: 'price,asc', label: '낮은 가격순', icon: Banknote, color: 'text-green-400' },
                                             { value: 'discountRate,desc', label: '높은 할인율순', icon: TrendingUp, color: 'text-red-400' },
-                                            { value: 'metaScore,desc', label: '높은 평점순', icon: Trophy, color: 'text-yellow-400' }
+                                            { value: 'metaScore,desc', label: '높은 평점순', icon: Star, color: 'text-purple-400' }
                                         ].map((option) => (
                                             <button
                                                 key={option.value}
@@ -438,7 +439,7 @@ const GameListPage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs text-gray-400 mb-2 font-bold">메타스코어</label>
+                                <label className="block text-xs text-gray-400 mb-2 font-bold">IGDB스코어</label>
                                 <select name="minMetaScore" value={filter.minMetaScore} onChange={handleFilterChange} className="w-full bg-black/30 border border-white/10 rounded px-3 py-2 text-sm text-white focus:border-ps-blue outline-none">
                                     <option value="">전체</option>
                                     <option value="75">75점 이상 (Good)</option>

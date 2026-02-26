@@ -29,7 +29,7 @@
 ### 💎 데이터 처리 및 성능 (Data & Performance)
 * **수집 성능 개선 :** 기존 HTTP 기반(Selenium) 통신 방식을 **WebSocket 기반(Playwright)** 으로 전면 교체하여, 통신 오버헤드를 제거하고 수집 속도를 개선 (3분 → 30~50초).
 * **네트워크 레벨 리소스 제어:** Playwright의 `Route API`를 활용하여 이미지/폰트 등 불필요한 리소스 요청을 네트워크 단에서 원천 차단(Abort), 1GB RAM 환경에서도 메모리 누수 없는 안정성 확보.
-* **동적 쿼리 엔진 (QueryDSL):** 복잡한 필터링(가격, 메타스코어, 할인율 등)과 스냅샷 조회(Latest Price)를 위해 Type-Safe한 QueryDSL을 도입, 런타임 에러 방지 및 조회 성능 최적화.
+* **동적 쿼리 엔진 (QueryDSL):** 복잡한 필터링(가격, IGDB스코어, 할인율 등)과 스냅샷 조회(Latest Price)를 위해 Type-Safe한 QueryDSL을 도입, 런타임 에러 방지 및 조회 성능 최적화.
 * **경량 에이전트 도입 :** 1GB RAM 환경에서도 부담 없는 **Grafana Alloy** 에이전트를 도입하여 리소스 점유율을 최소화하면서도 PLG(Prometheus, Loki, Grafana) 스택을 구축.
 * **역정규화 패턴 :** 1:N 관계의 가격 이력 테이블 조인으로 인한 조회 성능 저하를 해결하기 위해, 검색용 필드(현재가, 할인율 등)를 메인 테이블로 역정규화하여 **조인 비용(Join Cost)을 제거**하고 검색 속도를 개선.
 * **OS 레벨 프로세스 제어 :** Docker 컨테이너 환경의 `PID 1` 좀비 프로세스(`defunct`) 문제를 해결하기 위해 Tini(`init: true`) 프로세스를 도입하고, 1GB RAM 한계를 극복하기 위해 엔진 생명주기를 배치 단위로 엄격하게 관리하여 메모리 누수 및 스왑 현상 방지.
@@ -155,7 +155,7 @@ graph TD
 * **Benefit:** 가격 저장 로직(Core)과 알림 전송 로직(Side Effect)을 분리하여, 알림 전송 중 예외가 발생하더라도 데이터 저장에는 영향을 주지 않도록 **관심사를 분리(Separation of Concerns)**.
 
 **3. Type-Safe 동적 쿼리 엔진 (QueryDSL)**
-* **Complex Search:** 가격 범위, 메타스코어, 장르 등 N개의 복합 필터링 조건을 처리하기 위해 `BooleanBuilder` 기반의 동적 쿼리 구현.
+* **Complex Search:** 가격 범위, IGDB스코어, 장르 등 N개의 복합 필터링 조건을 처리하기 위해 `BooleanBuilder` 기반의 동적 쿼리 구현.
 * **Snapshot Optimization:** 1:N 관계인 가격 히스토리 테이블에서 **'각 게임별 가장 최근 가격'**만을 조회해야 하는 문제(Greatest-N-per-Group)를 해결하기 위해, `JPAExpressions` 서브쿼리를 활용한 최적화된 조인 로직 적용.
 
 ---

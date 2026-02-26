@@ -262,7 +262,7 @@ export default function GameDetailPage() {
             {/* SEO 컴포넌트 */}
             <SEO
                 title={game.title}
-                description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원 (${game.discountRate}% 할인). 메타스코어: ${game.metaScore}점.`}
+                description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원 (${game.discountRate}% 할인). IGDB스코어: ${game.metaScore}점.`}
                 image={game.imageUrl}
                 url={`https://ps-signal.com/games/${id}`}
             />
@@ -580,13 +580,17 @@ export default function GameDetailPage() {
                         <div className="space-y-6">
                             <div className="bg-ps-card/80 backdrop-blur-md p-6 rounded-xl border border-white/5 shadow-xl">
                                 <h3 className="text-lg font-bold text-white mb-6">Scores</h3>
-                                {/* Metascore: 트로피 아이콘 */}
+                                {/* IGDB Score */}
                                 {game.metaScore > 0 && (
                                     <div className="flex items-center justify-between mb-4">
                                         <span className="font-bold text-gray-300 flex items-center gap-2">
-                                            <Trophy className="w-5 h-5 text-yellow-500" /> Metascore
+                                            <Star className="w-5 h-5 text-purple-400 fill-purple-400/20" /> IGDB Score
                                         </span>
-                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.metaScore >= 80 ? 'bg-green-900 text-green-400 border border-green-500/30' : 'bg-yellow-900 text-yellow-400 border border-yellow-500/30'}`}>
+                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg shadow-inner ${
+                                            game.metaScore >= 80
+                                                ? 'bg-green-900/80 text-green-400 border border-green-500/50'
+                                                : 'bg-yellow-900/80 text-yellow-400 border border-yellow-500/50'
+                                        }`}>
                                             {game.metaScore}
                                         </span>
                                     </div>
@@ -598,7 +602,11 @@ export default function GameDetailPage() {
                                         <span className="font-bold text-gray-300 flex items-center gap-2">
                                             <Users className="w-5 h-5 text-blue-400" /> User Score
                                         </span>
-                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg ${game.userScore >= 7.0 ? 'bg-blue-900 text-blue-400 border border-blue-500/30' : 'bg-gray-800 text-gray-400 border border-gray-600/30'}`}>
+                                        <span className={`px-4 py-1.5 rounded-lg font-black text-lg shadow-inner ${
+                                            game.userScore >= 7.0
+                                                ? 'bg-blue-900/80 text-blue-400 border border-blue-500/50'
+                                                : 'bg-gray-800 text-gray-400 border border-gray-600/50'
+                                        }`}>
                                             {Number(game.userScore).toFixed(1)}
                                         </span>
                                     </div>

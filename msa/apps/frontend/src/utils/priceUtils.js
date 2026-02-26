@@ -1,7 +1,7 @@
 /**
  * 💰 가성비 전투력 측정기 (Combat Power)
- * 메타스코어가 높고, 가격이 저렴할수록 전투력이 높게 나옵니다.
- * * 공식: (메타스코어 / 가격) * 보정계수
+ * IGDB스코어가 높고, 가격이 저렴할수록 전투력이 높게 나옵니다.
+ * * 공식: (IGDB스코어 / 가격) * 보정계수
  */
 export const calculateCombatPower = (metaScore, currentPrice) => {
     // 데이터가 없거나 무료 게임인 경우 처리
