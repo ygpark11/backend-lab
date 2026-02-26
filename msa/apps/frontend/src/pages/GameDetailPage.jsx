@@ -35,7 +35,8 @@ import {
     AlertTriangle,
     RefreshCw,
     Building2,
-    Calendar
+    Calendar,
+    Star
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
