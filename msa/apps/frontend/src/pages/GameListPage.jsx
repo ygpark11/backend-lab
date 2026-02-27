@@ -318,7 +318,7 @@ const GameListPage = () => {
     if (loading) return <div className="min-h-screen pt-20"><PSLoader /></div>;
 
     return (
-        <div className="min-h-screen bg-ps-black text-white">
+        <div key="game-list-page-root" className="min-h-screen bg-ps-black text-white">
             <SEO
                 title="게임 목록"
                 description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보"
