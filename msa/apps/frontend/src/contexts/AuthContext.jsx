@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import client from '../api/client';
 import { requestFcmToken, onForegroundMessage } from '../utils/fcm';
-import LoginModal from '../components/LoginModal';
 
 const AuthContext = createContext(null);
 
@@ -44,9 +43,16 @@ export const AuthProvider = ({ children }) => {
     const closeLoginModal = () => setIsLoginModalOpen(false);
 
     return (
-        <AuthContext.Provider value={{ user, isAuthenticated, login, logout, openLoginModal, closeLoginModal }}>
+        <AuthContext.Provider value={{
+            user,
+            isAuthenticated,
+            login,
+            logout,
+            openLoginModal,
+            closeLoginModal,
+            isLoginModalOpen
+        }}>
             {children}
-            <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />
         </AuthContext.Provider>
     );
 };
