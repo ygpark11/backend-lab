@@ -83,10 +83,10 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
                             </section>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2 text-yellow-500">제4조 (광고 및 제휴 링크)</h3>
+                                <h3 className="text-white font-bold mb-2 text-yellow-500">제4조 (광고 및 외부 링크)</h3>
                                 <ul className="list-disc pl-4 space-y-1 text-gray-400">
-                                    <li>본 서비스는 서버 운영 및 유지 보수를 위해 <strong>광고(Google AdSense 등)</strong>를 게재하거나, 제휴 마케팅 링크(Affiliate)를 포함할 수 있습니다.</li>
-                                    <li>제휴 링크를 통해 상품을 구매할 경우, 서비스 운영자에게 소정의 수수료가 지급될 수 있으나 사용자에게 추가 비용은 발생하지 않습니다.</li>
+                                    <li>본 서비스는 안정적인 서버 운영 및 유지 보수를 위해 <strong>화면 일부에 광고(Google AdSense 등)를 게재할 수 있습니다.</strong></li>
+                                    <li>본 서비스는 편의를 위해 PS Store 등 외부 사이트로 연결되는 링크를 제공합니다. 외부 사이트에서의 활동이나 결제 등은 해당 사이트의 정책이 적용되오니 이용에 참고해 주시기 바랍니다.</li>
                                 </ul>
                             </section>
 
@@ -121,34 +121,49 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
                     ) : (
                         <div className="space-y-6">
                             <div className="bg-white/5 p-4 rounded-lg border border-white/5 text-xs text-gray-400">
-                                PS Tracker는 사용자의 개인정보를 보호하며, Google 계정을 연동한 로그인 방식만을 사용합니다.
+                                PS Tracker는 사용자의 개인정보를 소중히 보호하며, 서비스 제공에 꼭 필요한 최소한의 정보만 수집합니다.
                             </div>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2 text-green-400">1. 수집하는 개인정보 항목</h3>
-                                <p className="mb-2">Google OAuth 연동을 통해 아래 정보를 자동으로 제공받아 이용합니다.</p>
-                                <ul className="list-disc pl-4 space-y-1 text-gray-400 bg-black/20 p-3 rounded border border-white/5">
-                                    <li><strong>필수 항목:</strong> 이메일 주소, 이름(Google 프로필 이름), 프로필 이미지 URL</li>
-                                    <li><strong>수집 방법:</strong> Google 로그인 시 자동 수집</li>
+                                <h3 className="text-white font-bold mb-2 text-green-400">1. 개인정보의 수집 항목 및 이용 목적</h3>
+                                <p className="mb-2 text-gray-300">
+                                    Google OAuth 연동 시 필수 정보 수집에 동의하지 않으실 수 있으나, 이 경우 로그인이 필요한 서비스(찜하기, 알림 수신 등) 이용이 제한됩니다.
+                                </p>
+                                <ul className="list-disc pl-4 space-y-2 text-gray-400 bg-black/20 p-3 rounded border border-white/5">
+                                    <li><strong>수집 항목:</strong> 이메일 주소, 이름(Google 프로필 이름), 프로필 이미지 URL</li>
+                                    <li><strong>이용 목적:</strong> 사용자 식별, 맞춤형 기능(찜 목록 관리, 가격 알림 등) 제공, 서비스 부정이용 방지</li>
+                                    <li><strong>수집 방법:</strong> 최초 Google 로그인 시 자동 수집</li>
                                 </ul>
                             </section>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2 text-green-400">2. 개인정보의 보유 및 파기</h3>
-                                <p className="text-gray-400">
-                                    수집된 개인정보는 <strong>서비스 종료 시까지</strong> 안전하게 보관됩니다.
-                                    서비스가 종료되는 경우, 수집된 정보는 재생이 불가능한 방법으로 <strong>지체 없이 파기</strong>합니다.
-                                </p>
+                                <h3 className="text-white font-bold mb-2 text-green-400">2. 서비스 이용 과정에서 수집되는 정보</h3>
+                                <ul className="list-disc pl-4 space-y-1 text-gray-400">
+                                    <li><strong>서비스 분석(GA4):</strong> 사용자 환경 최적화 및 통계 분석을 위해 Google Analytics를 사용하며, 이 과정에서 익명화된 기기 정보, 방문 기록 등이 수집될 수 있습니다.</li>
+                                    <li><strong>푸시 알림:</strong> 찜한 게임의 할인 알림 서비스 제공을 위해, 알림 수신에 동의한 사용자에 한하여 <strong>브라우저 알림 토큰(FCM)</strong>이 수집됩니다.</li>
+                                </ul>
                             </section>
 
                             <section>
-                                <h3 className="text-white font-bold mb-2 text-green-400">3. 로그인 상태 유지 및 쿠키(Cookie) 활용</h3>
+                                <h3 className="text-white font-bold mb-2 text-green-400">3. 개인정보의 보유 및 파기</h3>
+                                <p className="text-gray-400 mb-2">
+                                    수집된 개인정보는 <strong>서비스 종료 시 또는 사용자의 개인정보 파기 요청 시까지</strong> 안전하게 보관되며, 목적 달성 시 복구할 수 없는 방법으로 지체 없이 파기됩니다.
+                                </p>
+                                {/* 🚀 서비스 이메일 적용 완료! */}
+                                <div className="bg-red-500/10 border border-red-500/20 rounded p-3 text-xs text-gray-400">
+                                    ※ 현재 서비스 내에 자동 회원탈퇴 기능이 제공되지 않습니다. 계정 삭제 및 개인정보 파기를 원하시는 경우, 아래 이메일로 요청해 주시면 지체 없이 처리해 드립니다.<br/>
+                                    <strong className="text-gray-300 mt-2 inline-block">
+                                        📧 문의 및 탈퇴 요청: pstracker.help@gmail.com
+                                    </strong>
+                                </div>
+                            </section>
+
+                            <section>
+                                <h3 className="text-white font-bold mb-2 text-green-400">4. 로그인 상태 유지 및 쿠키(Cookie) 활용</h3>
                                 <ul className="list-disc pl-4 space-y-1 text-gray-400">
-                                    <li><strong>쿠키(Cookie)란?</strong> 사용자가 사이트에 방문했을 때 브라우저에 저장되는 작은 정보 조각으로, 로그인 상태를 기억하는 역할을 합니다.</li>
-                                    <li><strong>로그인 상태 관리:</strong> 본 서비스는 사용자의 로그인 상태를 유지하고 원활한 서비스를 제공하기 위해 브라우저의 <strong>쿠키 기술</strong>을 활용합니다.</li>
-                                    <li><strong>보안 관리:</strong> 인증 정보는 외부의 비정상적인 접근으로부터 보호하기 위해 <strong>보안이 강화된 방식</strong>으로 안전하게 저장 및 관리됩니다.</li>
-                                    <li><strong>쿠키 설정:</strong> 사용자는 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 이 경우 <strong>로그인 및 일부 서비스 이용에 제한</strong>이 있을 수 있습니다.</li>
-                                    <li><strong>제3자 쿠키:</strong> 향후 서비스 최적화 및 광고 제공을 위해 제3자 쿠키가 사용될 수 있습니다.</li>
+                                    <li>본 서비스는 사용자의 로그인 상태를 안전하게 유지하기 위해 브라우저의 <strong>쿠키(Cookie) 기술</strong>을 활용합니다.</li>
+                                    <li>인증 정보는 외부의 비정상적인 접근으로부터 보호하기 위해 암호화 및 <strong>보안이 강화된 방식(HttpOnly 등)</strong>으로 관리됩니다.</li>
+                                    <li>사용자는 브라우저 설정을 통해 쿠키 저장을 거부할 수 있으나, 이 경우 로그인 및 개인화 서비스 이용에 제한이 있을 수 있습니다.</li>
                                 </ul>
                             </section>
                         </div>

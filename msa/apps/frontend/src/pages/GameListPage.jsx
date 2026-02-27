@@ -27,11 +27,14 @@ import {
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
+import { useAuth } from '../contexts/AuthContext';
 
 const GameListPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
+
+    const { openLoginModal } = useAuth();
 
     const [recentGames, setRecentGames] = useState([]);
 
@@ -249,7 +252,43 @@ const GameListPage = () => {
             toast.success(message, { id: toastId, icon: isAdded ? '❤️' : '💔' });
         } catch (error) {
             if (error.response && error.response.status === 401) {
-                toast.error("로그인이 필요합니다.", { id: toastId });
+                toast.dismiss(toastId); // 로딩 토스트 끄기
+                toast((t) => (
+                    <div className="flex flex-col gap-2">
+                        <span className="font-bold text-sm text-gray-900">
+                            로그인이 필요한 기능입니다 🔒
+                        </span>
+                        <span className="text-xs text-gray-500 mb-1">
+                            로그인하고 찜한 게임의 할인 알림을 받아보세요!
+                        </span>
+                        <div className="flex gap-2 mt-1">
+                            <button
+                                onClick={() => {
+                                    toast.dismiss(t.id);
+                                    openLoginModal();
+                                }}
+                                className="bg-ps-blue text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors shadow-md flex-1"
+                            >
+                                로그인 하러 가기
+                            </button>
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors flex-1"
+                            >
+                                닫기
+                            </button>
+                        </div>
+                    </div>
+                ), {
+                    duration: 5000,
+                    position: 'top-center',
+                    style: {
+                        background: '#ffffff',
+                        padding: '16px',
+                        borderRadius: '16px',
+                        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+                    }
+                });
             }
             else if (error.response && error.response.data) {
                 toast.error(error.response.data, { id: toastId });

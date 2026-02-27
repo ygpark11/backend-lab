@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# 프론트엔드 비공개 라우트 차단
+Disallow: /wishlist
+
+# 백엔드 인증/유저 액션/개인정보/관리자 API 핀셋 차단
+Disallow: /oauth2/
+Disallow: /api/v1/auth/
+Disallow: /api/v1/members/
+Disallow: /api/v1/wishlists/
+Disallow: /api/v1/admin/
+
+# 우리 사이트맵 위치 안내
+Sitemap: https://ps-signal.com/sitemap.xml

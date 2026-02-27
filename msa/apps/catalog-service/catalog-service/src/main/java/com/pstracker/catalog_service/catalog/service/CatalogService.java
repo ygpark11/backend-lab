@@ -299,10 +299,14 @@ public class CatalogService {
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         Page<GameSearchResultDto> result = gameRepository.searchGames(condition, pageable);
 
-        if (memberId != null && !result.isEmpty()) {
+        if(!result.isEmpty()) {
             markGameGenre(result.getContent());
-            markLikedGames(result.getContent(), memberId);
+
+            if (memberId != null) {
+                markLikedGames(result.getContent(), memberId);
+            }
         }
+
         return result;
     }
 

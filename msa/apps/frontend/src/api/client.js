@@ -96,10 +96,12 @@ client.interceptors.response.use(
                 // 재발급 실패 시 대기열 비우기 (메모리 누수 방지)
                 refreshSubscribers = [];
 
-                if (window.location.pathname !== '/') {
+                // 비로그인 개방형으로 변경하기 위해 주석
+                /*if (window.location.pathname !== '/') {
                     window.location.href = '/';
-                }
+                }*/
 
+                //그냥 에러만 반환해서 컴포넌트 단에서 잡도록 위임
                 return Promise.reject(reissueError);
             } finally {
                 // 성공하든 실패하든 플래그 초기화
