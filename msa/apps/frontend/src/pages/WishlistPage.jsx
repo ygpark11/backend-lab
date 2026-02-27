@@ -24,6 +24,11 @@ const WishlistPage = () => {
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
+
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, [page]);
+
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const navigate = useNavigate();

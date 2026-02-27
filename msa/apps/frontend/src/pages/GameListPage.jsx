@@ -74,6 +74,10 @@ const GameListPage = () => {
         return pageParam ? parseInt(pageParam) : 0;
     });
 
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, [page]);
+
     const [filter, setFilter] = useState(() => ({
         keyword: searchParams.get('keyword') || '',
         genre: searchParams.get('genre') || '',
