@@ -1,8 +1,8 @@
-import {initializeApp} from "firebase/app";
-import {getMessaging, getToken, onMessage} from "firebase/messaging";
+import { initializeApp } from "firebase/app";
+import { getMessaging, getToken, onMessage, isSupported } from "firebase/messaging";
 import client from "../api/client";
+import * as Sentry from "@sentry/react"; // Sentry 활용을 위해 추가
 
-// 1. .env에서 설정값 가져오기
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,51 +13,48 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// 2. 앱 초기화
 const app = initializeApp(firebaseConfig);
-const messaging = getMessaging(app);
-
-// 3. VAPID Key (.env에서 가져오기)
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
-/**
- * 🚀 권한 요청 및 토큰 발급 -> 백엔드 전송
- */
 export const requestFcmToken = async () => {
     try {
-        // 1) 알림 권한 요청
-        const permission = await Notification.requestPermission();
-        if (permission !== "granted") {
-            console.warn("[FCM] 알림 권한이 거부되었습니다.");
+        const supported = await isSupported();
+        if (!supported) {
+            // console.warn("[FCM] 미지원 브라우저"); // 불필요한 경고 주석 처리
             return;
         }
 
-        // 2) FCM 토큰 발급
-        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
-        if (!token) {
-            console.error("[FCM] 토큰을 가져올 수 없습니다.");
-            return;
+        const messaging = getMessaging(app);
+
+        if (typeof window !== "undefined" && "Notification" in window) {
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") return; // 거부된 경우 조용히 종료
+
+            const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+            if (!token) return;
+
+            // 성공 로그는 개발 중에만 필요하므로 주석 처리
+            // console.log("[FCM] Token 발급 성공:", token);
+
+            await client.post("/api/notifications/token", { token });
         }
-
-        console.log("[FCM] Token 발급 성공:", token);
-
-        // 3) 백엔드 서버에 등록 (client.js가 자동으로 헤더에 JWT를 붙여줌)
-        // DTO가 { token: "..." } 형태이므로 객체로 감싸서 보냄
-        await client.post("/api/notifications/token", { token });
-        console.log("[FCM] 서버에 토큰 등록 완료!");
-
     } catch (error) {
-        console.error("[FCM] 설정 중 오류 발생:", error);
+        Sentry.captureException(error);
+        console.error("[FCM] 설정 중 오류 발생");
     }
 };
 
-/**
- * 🔔 포그라운드 메시지 수신 (앱을 켜놓고 있을 때)
- */
-export const onForegroundMessage = () => {
-    onMessage(messaging, (payload) => {
-        console.log("[FCM] 포그라운드 알림 도착:", payload);
-        // 여기서 필요한 경우 커스텀 UI(Toast 등)를 띄울 수 있음
-        // 예: alert(payload.notification.title);
-    });
+export const onForegroundMessage = async () => {
+    try {
+        const supported = await isSupported();
+        if (!supported) return;
+
+        const messaging = getMessaging(app);
+        onMessage(messaging, (payload) => {
+            // 포그라운드 메시지 도착 시 로직 (필요할 때만 로그 출력)
+            // console.log("[FCM] 알림 도착:", payload);
+        });
+    } catch (error) {
+        Sentry.captureException(error);
+    }
 };
