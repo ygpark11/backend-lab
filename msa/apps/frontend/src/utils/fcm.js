@@ -3,6 +3,8 @@ import { getMessaging, getToken, onMessage, isSupported } from "firebase/messagi
 import client from "../api/client";
 import * as Sentry from "@sentry/react"; // Sentry 활용을 위해 추가
 
+export { isSupported };
+
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
