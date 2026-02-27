@@ -12,13 +12,13 @@ import { format, isValid, parseISO } from 'date-fns';
 
 // 커스텀 툴팁
 const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
+    if (active && payload && payload.length > 0 && payload[0] && payload[0].value !== undefined && payload[0].value !== null) {
         return (
             <div className="bg-black/80 backdrop-blur-md border border-blue-500/30 p-4 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.2)] animate-fadeIn">
                 <p className="text-gray-400 text-xs font-bold mb-1">{label}</p>
                 <p className="text-white text-lg font-black flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_5px_#3b82f6]"></span>
-                    {payload[0].value.toLocaleString()}원
+                    {Number(payload[0].value).toLocaleString()}원 {/* Number()로 감싸서 한 번 더 방어 */}
                 </p>
             </div>
         );
