@@ -248,13 +248,18 @@ const Navbar = () => {
                                 </button>
                             </>
                         ) : (
-                            /* 비로그인 시: PS 감성(블루 네온) & 유리 질감 로그인 버튼 */
+                            /* 비로그인 시: 모바일에서는 아이콘만, PC에서는 텍스트까지! */
                             <button
                                 onClick={openLoginModal}
-                                className="relative group bg-gradient-to-r from-blue-600/10 to-indigo-600/10 hover:from-blue-600 hover:to-indigo-600 border border-blue-500/30 hover:border-blue-400 text-blue-400 hover:text-white px-4 md:px-5 py-2 rounded-full transition-all duration-300 flex items-center gap-2 shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] ml-2"
+                                // 모바일: p-2 (원형) / PC: px-5 py-2 (타원형)
+                                className="relative group bg-gradient-to-r from-blue-600/10 to-indigo-600/10 hover:from-blue-600 hover:to-indigo-600 border border-blue-500/30 hover:border-blue-400 text-blue-400 hover:text-white p-2 md:px-5 md:py-2 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] ml-1 md:ml-2"
+                                aria-label="로그인"
                             >
-                                <UserCircle className="w-4 h-4 md:w-5 md:h-5 group-hover:animate-pulse" />
-                                <span className="text-sm font-bold tracking-wide">로그인 / 시작하기</span>
+                                <UserCircle className="w-5 h-5 group-hover:animate-pulse" />
+                                {/* hidden md:block 으로 모바일에서 글자를 숨기기 */}
+                                <span className="hidden md:block text-sm font-bold tracking-wide">
+                                    로그인 / 시작하기
+                                </span>
                             </button>
                         )}
                     </div>
