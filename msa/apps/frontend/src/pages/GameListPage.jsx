@@ -28,6 +28,7 @@ import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import { useAuth } from '../contexts/AuthContext';
+import { requestFcmToken, isSupported } from '../utils/fcm';
 
 const GameListPage = () => {
     const navigate = useNavigate();
@@ -134,55 +135,65 @@ const GameListPage = () => {
 
     }, [filter, page, setSearchParams]);
 
-    // 알림 권한 요청
+    // 알림 권한 요청 로직
     useEffect(() => {
-        if (!('Notification' in window)) return;
-        if (Notification.permission === 'default') {
-            toast((t) => (
-                <div className="flex flex-col gap-3 min-w-[250px]">
-                    <div className="flex flex-col">
-                        <span className="font-bold text-sm text-gray-900">
-                            🔥 찜한 게임 할인 알림 받기
-                        </span>
-                        <span className="text-xs text-gray-500 mt-1">
-                            가격이 떨어지면 가장 먼저 알려드릴까요?
-                        </span>
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-600 transition flex-1 shadow-md"
-                            onClick={() => {
-                                toast.dismiss(t.id);
-                                Notification.requestPermission().then((permission) => {
-                                    if (permission === 'granted') {
+        const initNotificationToast = async () => {
+            // 브라우저가 FCM을 지원하는지 먼저 체크 (isSupported)
+            const supported = await isSupported();
+            if (!supported || !('Notification' in window)) return;
+
+            // 이미 권한이 결정된 상태라면 띄우지 않음
+            if (Notification.permission === 'default') {
+                toast((t) => (
+                    <div className="flex flex-col gap-3 min-w-[250px]">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm text-gray-900">
+                                🔥 찜한 게임 할인 알림 받기
+                            </span>
+                            <span className="text-xs text-gray-500 mt-1">
+                                가격이 떨어지면 가장 먼저 알려드릴까요?
+                            </span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-600 transition flex-1 shadow-md"
+                                onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    // 직접 호출 대신 fcm.js의 공통 함수 사용!
+                                    await requestFcmToken();
+
+                                    // 권한 상태에 따른 후속 처리
+                                    if (Notification.permission === 'granted') {
                                         toast.success('알림이 설정되었습니다! 🎉');
-                                    } else if (permission === 'denied') {
+                                    } else if (Notification.permission === 'denied') {
                                         toast.error('알림이 차단되었습니다 😭');
                                     }
-                                });
-                            }}
-                        >
-                            네, 받을래요! 🔔
-                        </button>
-                        <button
-                            className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-300 transition"
-                            onClick={() => toast.dismiss(t.id)}
-                        >
-                            나중에
-                        </button>
+                                }}
+                            >
+                                네, 받을래요! 🔔
+                            </button>
+                            <button
+                                className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold hover:bg-gray-300 transition"
+                                onClick={() => toast.dismiss(t.id)}
+                            >
+                                나중에
+                            </button>
+                        </div>
                     </div>
-                </div>
-            ), {
-                duration: 10000,
-                position: 'top-center',
-                style: {
-                    background: '#fff',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    padding: '16px',
-                }
-            });
-        }
+                ), {
+                    duration: 10000,
+                    position: 'top-center',
+                    style: {
+                        background: '#fff',
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        padding: '16px',
+                    }
+                });
+            }
+        };
+
+        initNotificationToast();
     }, []);
 
     const handleFilterChange = (e) => {
