@@ -122,16 +122,26 @@ const GameListPage = () => {
         const initNotificationToast = async () => {
             const supported = await isSupported();
             if (!supported || !('Notification' in window)) return;
-            if (Notification.permission === 'default') {
+
+            const hasSkipped = sessionStorage.getItem('skipNotification');
+
+            if (Notification.permission === 'default' && !hasSkipped) {
                 toast((t) => (
                     <div className="flex flex-col gap-3 min-w-[250px]">
-                        <div className="flex flex-col"><span className="font-bold text-sm text-gray-900">🔥 찜한 게임 할인 알림 받기</span><span className="text-xs text-gray-500 mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span></div>
+                        <div className="flex flex-col"><span className="font-bold text-sm text-gray-900">찜한 게임 할인 알림 받기</span><span className="text-xs text-gray-500 mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span></div>
                         <div className="flex gap-2">
-                            <button className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold shadow-md flex-1" onClick={async () => { toast.dismiss(t.id); await requestFcmToken(); if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨'); }}>네, 받을래요! 🔔</button>
-                            <button className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold flex-1" onClick={() => toast.dismiss(t.id)}>나중에</button>
+                            <button className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold shadow-md flex-1" onClick={async () => { toast.dismiss(t.id); await requestFcmToken(); if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨'); }}>네, 받을래요!</button>
+                            <button className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold flex-1" onClick={() => {
+                                toast.dismiss(t.id);
+                                sessionStorage.setItem('skipNotification', 'true');
+                            }}>나중에</button>
                         </div>
                     </div>
-                ), { duration: 10000, style: { background: '#fff', padding: '16px', borderRadius: '12px' } });
+                ), {
+                    id: 'fcm-permission-toast',
+                    duration: 10000,
+                    style: { background: '#fff', padding: '16px', borderRadius: '12px' }
+                });
             }
         };
         initNotificationToast();
