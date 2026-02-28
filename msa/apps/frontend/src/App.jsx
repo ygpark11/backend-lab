@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import RouteChangeTracker from "./components/common/RouteChangeTracker";
 import { Toaster } from 'react-hot-toast';
 import PSLoader from './components/PSLoader';
@@ -13,6 +13,12 @@ import LoginModal from './components/LoginModal';
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
 
+    // 🚀 1. 현재 주소(location) 추적
+    const location = useLocation();
+
+    // 🚀 2. 마법의 핵심: 이전 화면(배경)을 기억하는 state가 있는지 확인
+    const background = location.state && location.state.background;
+
     // 로딩 중 처리
     if (isAuthenticated === null) {
         return (
@@ -23,31 +29,38 @@ function AppRoutes() {
     }
 
     return (
-        <Routes>
-            <Route path="/" element={<Navigate to="/games" replace />} />
-            <Route path="/login" element={<Navigate to="/games" replace />} />
+        <>
+            {/* 🚀 3. 메인 라우터: 모달이 뜰 때는 'background(목록)'를 렌더링하고, 평소엔 현재 주소를 렌더링합니다. */}
+            <Routes location={background || location}>
+                <Route path="/" element={<Navigate to="/games" replace />} />
+                <Route path="/login" element={<Navigate to="/games" replace />} />
 
-            <Route element={<Layout />}>
-                <Route path="/games" element={<GameListPage />} />
-                <Route path="/games/:id" element={<GameDetailPage />} />
-                <Route
-                    path="/wishlist"
-                    element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}
-                />
-            </Route>
-        </Routes>
+                <Route element={<Layout />}>
+                    <Route path="/games" element={<GameListPage />} />
+
+                    {/* 🚀 4. 누군가 URL 주소창에 직접 주소를 치고 들어왔을 때(background 없음) 보여줄 전체화면 상세 페이지 */}
+                    <Route path="/games/:id" element={<GameDetailPage />} />
+
+                    <Route
+                        path="/wishlist"
+                        element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}
+                    />
+                </Route>
+            </Routes>
+
+            {/* 5. 모달 라우터: 가짜 모달 대신 방금 만든 진짜 GameDetailPage를 넣습니다! */}
+            {background && (
+                <Routes>
+                    <Route path="/games/:id" element={<GameDetailPage />} />
+                </Routes>
+            )}
+        </>
     );
 }
 
 const LoginModalWrapper = () => {
     const { isLoginModalOpen, closeLoginModal } = useAuth();
-
-    return (
-        <LoginModal
-            isOpen={isLoginModalOpen}
-            onClose={closeLoginModal}
-        />
-    );
+    return <LoginModal isOpen={isLoginModalOpen} onClose={closeLoginModal} />;
 };
 
 function App() {

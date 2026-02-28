@@ -23,11 +23,33 @@ const Navbar = () => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [notifications, setNotifications] = useState([]);
 
+    // 🚀 스마트 헤더(스크롤 감지) 관련 상태
+    const [isNavVisible, setIsNavVisible] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
+
+    // 🚀 스크롤 이벤트 리스너 추가 (당근마켓 스타일)
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            // 스크롤을 50px 이상 내렸을 때만 네브바를 위로 숨김
+            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                setIsNavVisible(false);
+                setIsNotiOpen(false); // 💡 스크롤 내리면 열려있던 알림창도 닫아주는 센스!
+            } else {
+                setIsNavVisible(true); // 스크롤을 조금이라도 올리면 다시 표시
+            }
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
+
     // 처음 로딩 + 이동 시
     useEffect(() => {
         setIsNotiOpen(false);
 
-        // 🚀 3. 로그인된 유저만 알림 카운트 조회하도록 방어
+        // 로그인된 유저만 알림 카운트 조회하도록 방어
         if (isAuthenticated) {
             fetchUnreadCount();
         }
@@ -42,7 +64,7 @@ const Navbar = () => {
             window.removeEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
         };
 
-    }, [location.key, isAuthenticated]); // 의존성 배열에 isAuthenticated 추가
+    }, [location.key, isAuthenticated]);
 
     useEffect(() => {
         if (!isNotiOpen) return;
@@ -97,7 +119,8 @@ const Navbar = () => {
             ));
             setIsNotiOpen(false);
             if (gameId) {
-                navigate(`/games/${gameId}`);
+                // 💡 네브바에서 알림 클릭 시 모달이 뜰 수 있도록 state 강제 초기화
+                navigate(`/games/${gameId}`, { state: null });
             }
         } catch (err) {
             console.error("알림 읽음 처리 실패", err);
@@ -157,7 +180,8 @@ const Navbar = () => {
 
     return (
         <>
-            <nav className="sticky top-0 z-50 bg-ps-black/80 backdrop-blur-md border-b border-white/10 h-16">
+            {/* 🚀 CSS 변경: sticky -> fixed 로 바꾸고 transform 적용 */}
+            <nav className={`fixed top-0 w-full z-50 bg-ps-black/80 backdrop-blur-md border-b border-white/10 h-16 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
                     {/* 1. 로고 영역 */}
                     <div className="flex items-center gap-2 cursor-pointer group" onClick={handleLogoClick}>
@@ -179,7 +203,7 @@ const Navbar = () => {
                             <HelpCircle className="w-5 h-5" />
                         </button>
 
-                        {/* 🚀 4. 로그인 상태에 따른 동적 UI 렌더링 */}
+                        {/* 4. 로그인 상태에 따른 동적 UI 렌더링 */}
                         {isAuthenticated ? (
                             <>
                                 {/* 로그인 시: 알림, 로그아웃, 찜목록 노출 */}
@@ -251,12 +275,10 @@ const Navbar = () => {
                             /* 비로그인 시: 모바일에서는 아이콘만, PC에서는 텍스트까지! */
                             <button
                                 onClick={openLoginModal}
-                                // 모바일: p-2 (원형) / PC: px-5 py-2 (타원형)
                                 className="relative group bg-gradient-to-r from-blue-600/10 to-indigo-600/10 hover:from-blue-600 hover:to-indigo-600 border border-blue-500/30 hover:border-blue-400 text-blue-400 hover:text-white p-2 md:px-5 md:py-2 rounded-full transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(59,130,246,0.1)] hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] ml-1 md:ml-2"
                                 aria-label="로그인"
                             >
                                 <UserCircle className="w-5 h-5 group-hover:animate-pulse" />
-                                {/* hidden md:block 으로 모바일에서 글자를 숨기기 */}
                                 <span className="hidden md:block text-sm font-bold tracking-wide">
                                     로그인 / 시작하기
                                 </span>
