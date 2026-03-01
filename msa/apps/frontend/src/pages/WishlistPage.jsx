@@ -26,18 +26,23 @@ const WishlistPage = () => {
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const lastScrollYRef = useRef(0);
 
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY && currentScrollY > 150) setIsFloatingVisible(false);
-            else setIsFloatingVisible(true);
-            setLastScrollY(currentScrollY);
+
+            if (currentScrollY > lastScrollYRef.current && currentScrollY > 150) {
+                setIsFloatingVisible(false);
+            } else {
+                setIsFloatingVisible(true);
+            }
+
+            lastScrollYRef.current = currentScrollY;
         };
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
+    }, []);
 
     // 🚀 인피니트 스크롤 Observer
     const observer = useRef();

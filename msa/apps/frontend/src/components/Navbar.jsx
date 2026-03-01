@@ -27,15 +27,16 @@ const Navbar = () => {
 
     // 스마트 헤더 상태
     const [isNavVisible, setIsNavVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const lastScrollYRef = useRef(0);
 
-    // 1. 공지사항 체크 로직
     const checkNewNotice = async () => {
         try {
-            const res = await client.get('/api/v1/notices?page=0&size=1');
-            if (res.data.content.length > 0) {
+            // 최신 공지 딱 1개만 가져와서 ID 확인
+            const res = await client.get('/api/v1/notices', { params: { page: 0, size: 1 } });
+            if (res.data.content && res.data.content.length > 0) {
                 const latestId = res.data.content[0].id;
                 const lastViewedId = localStorage.getItem('ps_last_notice_id');
+
                 if (!lastViewedId || latestId > parseInt(lastViewedId)) {
                     setHasNewNotice(true);
                 }
@@ -45,28 +46,28 @@ const Navbar = () => {
         }
     };
 
-    // 2. 초기 로딩 및 스크롤 이벤트
+    // 이제 아래의 useEffect가 정상적으로 이 함수를 인식합니다.
     useEffect(() => {
         checkNewNotice();
-        const timer = setInterval(checkNewNotice, 1000 * 60 * 5); // 5분 주기
+    }, []);
 
+    useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY && currentScrollY > 50) {
+
+            if (currentScrollY > lastScrollYRef.current && currentScrollY > 50) {
                 setIsNavVisible(false);
                 setIsNotiOpen(false);
             } else {
                 setIsNavVisible(true);
             }
-            setLastScrollY(currentScrollY);
+
+            lastScrollYRef.current = currentScrollY;
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => {
-            window.removeEventListener('scroll', handleScroll);
-            clearInterval(timer);
-        };
-    }, [lastScrollY]);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // 3. 인증 상태 변경 및 위치 변경 시 처리
     useEffect(() => {

@@ -223,7 +223,9 @@ const NoticeModal = ({ isOpen, onClose }) => {
                             })}
 
                             {/* 인피니트 스크롤 로딩 & 바닥(센서) 영역 */}
-                            <div ref={observerTarget} className="h-4 w-full" />
+                            {!isLoading && hasMore && notices.length > 0 && (
+                                <div ref={observerTarget} className="h-4 w-full" />
+                            )}
 
                             {isLoading && (
                                 <div className="flex justify-center py-6">

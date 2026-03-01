@@ -25,7 +25,7 @@ const GameListPage = () => {
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const lastScrollYRef = useRef(0);
 
     const [activeDropdown, setActiveDropdown] = useState(null);
 
@@ -35,16 +35,19 @@ const GameListPage = () => {
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            if (currentScrollY > lastScrollY && currentScrollY > 150) {
+
+            if (currentScrollY > lastScrollYRef.current && currentScrollY > 150) {
                 setIsFloatingVisible(false);
             } else {
                 setIsFloatingVisible(true);
             }
-            setLastScrollY(currentScrollY);
+
+            lastScrollYRef.current = currentScrollY;
         };
+
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
+    }, []);
 
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
