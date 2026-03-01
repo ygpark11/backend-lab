@@ -5,6 +5,7 @@ import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -61,6 +62,8 @@ public class SecurityConfig {
                 // 4. 요청별 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").permitAll()
+                        .requestMatchers("/api/v1/notices/**").hasRole("ADMIN")
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",

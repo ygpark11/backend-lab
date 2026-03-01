@@ -75,16 +75,21 @@ const NoticeModal = ({ isOpen, onClose }) => {
         setIsLoading(true);
         try {
             const res = await client.get('/api/v1/notices', {
-                params: { page: pageNumber, size: 10 } // 한 번에 10개씩 (테스트하기 좋게)
+                params: { page: pageNumber, size: 10 }
             });
 
             const { content, last } = res.data;
 
+            if (pageNumber === 0 && content.length > 0) {
+                const latestId = content[0].id;
+                localStorage.setItem('ps_last_notice_id', latestId.toString());
+            }
+
             setNotices(prev => pageNumber === 0 ? content : [...prev, ...content]);
-            setHasMore(!last); // 백엔드에서 last가 true로 오면 더 이상 부르지 않음!
+            setHasMore(!last);
 
         } catch (error) {
-            console.error('공지사항을 불러오는 중 오류가 발생했습니다:', error);
+            console.error('공지사항 로드 실패:', error.response?.status === 401 ? '인증 오류(Security 확인 필요)' : error);
         } finally {
             setIsLoading(false);
         }
