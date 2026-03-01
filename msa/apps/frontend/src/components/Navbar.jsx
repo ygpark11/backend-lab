@@ -1,10 +1,11 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
-import {AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle} from 'lucide-react';
+import {AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle, Megaphone} from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
 import LegalModal from './LegalModal';
+import NoticeModal from './NoticeModal';
 import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
@@ -17,6 +18,7 @@ const Navbar = () => {
     // 모달 상태
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [isLegalOpen, setIsLegalOpen] = useState(false);
+    const [isNoticeOpen, setIsNoticeOpen] = useState(false);
 
     // 알림 관련 상태
     const [isNotiOpen, setIsNotiOpen] = useState(false);
@@ -203,6 +205,13 @@ const Navbar = () => {
                             <HelpCircle className="w-5 h-5" />
                         </button>
 
+                        <button onClick={() => setIsNoticeOpen(true)} className="relative p-2 text-gray-300 hover:text-blue-400 transition-colors group" title="업데이트 소식">
+                            <Megaphone className="w-5 h-5 md:w-6 md:h-6 group-hover:scale-110 transition-transform" />
+
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+                        </button>
+
                         {/* 4. 로그인 상태에 따른 동적 UI 렌더링 */}
                         {isAuthenticated ? (
                             <>
@@ -290,6 +299,7 @@ const Navbar = () => {
 
             <GuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
             <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
+            <NoticeModal isOpen={isNoticeOpen} onClose={() => setIsNoticeOpen(false)} />
         </>
     );
 };
