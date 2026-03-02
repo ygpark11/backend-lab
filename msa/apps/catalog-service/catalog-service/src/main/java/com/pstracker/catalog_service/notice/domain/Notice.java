@@ -34,4 +34,18 @@ public class Notice {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public static Notice createNotice(NoticeType type, String title, String content) {
+        Notice notice = new Notice();
+        notice.type = type;
+        notice.title = title;
+        notice.content = content;
+        return notice;
+    }
+
+    public void update(NoticeType type, String title, String content) {
+        this.type = type;
+        this.title = title;
+        this.content = content;
+    }
 }

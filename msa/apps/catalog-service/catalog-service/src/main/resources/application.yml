@@ -2,12 +2,15 @@ spring:
   application:
     name: catalog-service
 
+  messages:
+    basename: errors
+
   cache:
     type: caffeine
 
   profiles:
-    active: local # 기본값은 로컬로 설정
-    include: secret # secret.yml도 같이 로드
+    active: local
+    include: secret
 
   jpa:
     open-in-view: false
