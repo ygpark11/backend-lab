@@ -304,7 +304,7 @@ const GameListPage = () => {
 
                         {/* 🚀 정렬 드롭다운 (Custom) */}
                         <div className="relative min-w-[180px]">
-                            <button onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')} onBlur={() => setTimeout(() => setActiveDropdown(null), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all">
+                            <button onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'sort' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all">
                                 <span className="flex items-center gap-2">
                                     {sortOptions.find(opt => opt.value === filter.sort)?.icon && React.createElement(sortOptions.find(opt => opt.value === filter.sort).icon, { className: `w-4 h-4 ${sortOptions.find(opt => opt.value === filter.sort).color}` })}
                                     {sortOptions.find(opt => opt.value === filter.sort)?.label.split(' ')[1] || '정렬'}
@@ -336,7 +336,7 @@ const GameListPage = () => {
                             {/* 할인율 드롭다운 */}
                             <div className="relative">
                                 <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><Percent className="w-3 h-3 text-red-400"/>최소 할인율</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'discount' ? null : 'discount')} onBlur={() => setTimeout(() => setActiveDropdown(null), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'discount' ? null : 'discount')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'discount' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
                                     <span className="truncate">{discountOptions.find(o => o.value === filter.minDiscountRate)?.label}</span>
                                     <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'discount' ? 'rotate-180' : ''}`} />
                                 </button>
@@ -356,7 +356,7 @@ const GameListPage = () => {
                             {/* IGDB 드롭다운 */}
                             <div className="relative">
                                 <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>IGDB스코어</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(null), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'metaScore' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
                                     <span className="truncate">{metaScoreOptions.find(o => o.value === filter.minMetaScore)?.label}</span>
                                     <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'metaScore' ? 'rotate-180' : ''}`} />
                                 </button>
@@ -376,7 +376,7 @@ const GameListPage = () => {
                             {/* 플랫폼 드롭다운 */}
                             <div className="relative">
                                 <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><MonitorPlay className="w-3 h-3 text-blue-300"/>플랫폼</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'platform' ? null : 'platform')} onBlur={() => setTimeout(() => setActiveDropdown(null), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'platform' ? null : 'platform')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'platform' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
                                     <span className="truncate">{platformOptions.find(o => o.value === filter.platform)?.label}</span>
                                     <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'platform' ? 'rotate-180' : ''}`} />
                                 </button>
