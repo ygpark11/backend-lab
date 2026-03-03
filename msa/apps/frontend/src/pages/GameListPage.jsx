@@ -410,7 +410,7 @@ const GameListPage = () => {
                                 </button>
 
                                 {activeDropdown === 'price' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full md:w-80 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn"
+                                    <div className="absolute top-full mt-2 right-0 md:right-auto md:left-0 w-[300px] md:w-80 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn origin-top-right md:origin-top-left"
                                          onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="flex items-center gap-2 mb-5">
