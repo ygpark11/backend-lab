@@ -6,7 +6,7 @@ import SkeletonCard from '../components/SkeletonCard';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
-    Banknote, ChevronDown, Clock, Filter, Gamepad2, Heart, Search, Sparkles,
+    Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, Search, Sparkles,
     Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Coffee, Triangle, Layers, MonitorPlay, Percent
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
@@ -22,14 +22,170 @@ const GameListPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { openLoginModal } = useAuth();
 
+    const lastScrollYRef = useRef(0);
+    const isFirstMount = useRef(true);
+    const observer = useRef();
+
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
-    const lastScrollYRef = useRef(0);
-
     const [activeDropdown, setActiveDropdown] = useState(null);
-
     const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const [games, setGames] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [showFilter, setShowFilter] = useState(false);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
+    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+
+    const [filter, setFilter] = useState(() => ({
+        keyword: searchParams.get('keyword') || '',
+        genre: searchParams.get('genre') || '',
+        minDiscountRate: searchParams.get('minDiscountRate') || '',
+        minMetaScore: searchParams.get('minMetaScore') || '',
+        platform: searchParams.get('platform') || '',
+        isPlusExclusive: searchParams.get('isPlusExclusive') === 'true',
+        inCatalog: searchParams.get('inCatalog') === 'true',
+        sort: searchParams.get('sort') || 'lastUpdated,desc',
+        minPrice: searchParams.get('minPrice') || '',
+        maxPrice: searchParams.get('maxPrice') || ''
+    }));
+
+    const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
+
+    const fetchGames = async (pageNumber, overrideFilter = null) => {
+        const currentFilter = overrideFilter || filter;
+        setLoading(true);
+        try {
+            const params = {
+                page: pageNumber, size: 20, sort: currentFilter.sort, keyword: currentFilter.keyword, genre: currentFilter.genre,
+                ...(currentFilter.minDiscountRate && { minDiscountRate: currentFilter.minDiscountRate }),
+                ...(currentFilter.minMetaScore && { minMetaScore: currentFilter.minMetaScore }),
+                ...(currentFilter.platform && { platform: currentFilter.platform }),
+                ...(currentFilter.isPlusExclusive && { isPlusExclusive: true }),
+                ...(currentFilter.inCatalog && { inCatalog: true }),
+                ...(currentFilter.minPrice && { minPrice: currentFilter.minPrice }),
+                ...(currentFilter.maxPrice && { maxPrice: currentFilter.maxPrice }),
+            };
+            const response = await client.get('/api/v1/games/search', { params });
+
+            if (pageNumber === 0) {
+                setGames(response.data.content);
+                setIsInitialLoad(false);
+            } else {
+                setGames(prev => {
+                    const existingIds = new Set(prev.map(g => g.id));
+                    const newGames = response.data.content.filter(g => !existingIds.has(g.id));
+                    return [...prev, ...newGames];
+                });
+            }
+            setTotalPages(response.data.totalPages);
+            setTotalElements(response.data.totalElements);
+        } catch (error) {
+            toast.error("데이터 로딩 실패");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handlePriceReset = () => {
+        setPriceRange({ min: '', max: '' });
+        setFilter(prev => ({ ...prev, minPrice: '', maxPrice: '' }));
+        setActiveDropdown(null);
+        setPage(0);
+    };
+
+    const handlePriceApply = () => {
+        const minVal = priceRange.min !== '' ? Number(priceRange.min) : '';
+        const maxVal = priceRange.max !== '' ? Number(priceRange.max) : '';
+
+        if (minVal !== '' && maxVal !== '' && minVal > maxVal) {
+            toast.error('최소 가격이 최대 가격보다 클 수 없습니다! 😅');
+            setPriceRange({ min: '', max: '' });
+            return;
+        }
+
+        // searchParams가 아닌 filter 상태를 직접 업데이트
+        setFilter(prev => ({ ...prev, minPrice: minVal, maxPrice: maxVal }));
+        setActiveDropdown(null);
+        setPage(0);
+    };
+
+    const executeSearch = () => {
+        const minVal = priceRange.min !== '' ? Number(priceRange.min) : '';
+        const maxVal = priceRange.max !== '' ? Number(priceRange.max) : '';
+
+        if (minVal !== '' && maxVal !== '' && minVal > maxVal) {
+            toast.error('최소 가격이 최대 가격보다 클 수 없습니다! 😅');
+            setPriceRange({ min: '', max: '' });
+            return;
+        }
+
+        setFilter(prev => ({ ...prev, minPrice: minVal, maxPrice: maxVal }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setPage(0);
+        fetchGames(0);
+        setIsQuickSearchOpen(false);
+    };
+
+    const handleKeyDown = (e) => { if (e.key === 'Enter') executeSearch(); };
+
+    const handleFilterChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFilter(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+        if (name !== 'keyword') setPage(0);
+    };
+
+    // 커스텀 드롭다운 핸들러 (메인 화면)
+    const handleCustomSelect = (name, value) => {
+        setFilter(prev => ({ ...prev, [name]: value }));
+        setActiveDropdown(null);
+        setPage(0);
+    };
+
+    // 퀵 서치 즉시 적용 핸들러 (바텀 시트용)
+    const handleQuickSelect = (name, value) => {
+        setFilter(prev => ({ ...prev, [name]: value }));
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // 최상단 이동
+        setPage(0);
+        setIsQuickSearchOpen(false); // 즉시 닫힘 (배경 선명해짐)
+    };
+
+    const handleLike = async (e, gameId) => {
+        e.stopPropagation();
+        const toastId = toast.loading('처리 중...');
+        try {
+            const response = await client.post(`/api/v1/wishlists/${gameId}`);
+            const isAdded = response.data.includes("추가");
+            setGames(prevGames => prevGames.map(game => game.id === gameId ? { ...game, liked: isAdded } : game));
+            toast.success(response.data, { id: toastId, icon: isAdded ? '❤️' : '💔' });
+        } catch (error) {
+            if (error.response?.status === 401) {
+                toast.dismiss(toastId);
+                openLoginModal();
+            } else {
+                toast.error("요청 실패", { id: toastId });
+            }
+        }
+    };
+
+    const clearGenreFilter = () => {
+        setFilter(prev => ({ ...prev, genre: '' }));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setPage(0);
+    };
+
+    const lastGameElementRef = useCallback(node => {
+        if (loading) return;
+        if (observer.current) observer.current.disconnect();
+        observer.current = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting && page < totalPages - 1) {
+                setPage(prevPage => prevPage + 1);
+            }
+        });
+        if (node) observer.current.observe(node);
+    }, [loading, page, totalPages]);
 
     // 스크롤 감지 (플로팅 바 숨김/표시)
     useEffect(() => {
@@ -49,43 +205,9 @@ const GameListPage = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const [games, setGames] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0);
-
-    const [filter, setFilter] = useState(() => ({
-        keyword: searchParams.get('keyword') || '',
-        genre: searchParams.get('genre') || '',
-        minDiscountRate: searchParams.get('minDiscountRate') || '',
-        minMetaScore: searchParams.get('minMetaScore') || '',
-        platform: searchParams.get('platform') || '',
-        isPlusExclusive: searchParams.get('isPlusExclusive') === 'true',
-        inCatalog: searchParams.get('inCatalog') === 'true',
-        sort: searchParams.get('sort') || 'lastUpdated,desc'
-    }));
-
-    const [showFilter, setShowFilter] = useState(false);
-    const [totalPages, setTotalPages] = useState(0);
-    const [totalElements, setTotalElements] = useState(0);
-
-    const isFirstMount = useRef(true);
-
-    // 인피니트 스크롤 Observer
-    const observer = useRef();
-    const lastGameElementRef = useCallback(node => {
-        if (loading) return;
-        if (observer.current) observer.current.disconnect();
-        observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && page < totalPages - 1) {
-                setPage(prevPage => prevPage + 1);
-            }
-        });
-        if (node) observer.current.observe(node);
-    }, [loading, page, totalPages]);
-
     useEffect(() => {
         if (!location.search) {
-            const defaultFilter = { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc' };
+            const defaultFilter = { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '' };
             setPage(0);
             setFilter(defaultFilter);
             setShowFilter(false);
@@ -108,7 +230,6 @@ const GameListPage = () => {
 
     useEffect(() => {
         const params = {};
-        // if (page > 0) params.page = page; <-- 삭제됨!
         if (filter.keyword) params.keyword = filter.keyword;
         if (filter.genre) params.genre = filter.genre;
         if (filter.minDiscountRate) params.minDiscountRate = filter.minDiscountRate;
@@ -117,9 +238,15 @@ const GameListPage = () => {
         if (filter.isPlusExclusive) params.isPlusExclusive = 'true';
         if (filter.inCatalog) params.inCatalog = 'true';
         if (filter.sort !== 'lastUpdated,desc') params.sort = filter.sort;
+        if (filter.minPrice) params.minPrice = filter.minPrice;
+        if (filter.maxPrice) params.maxPrice = filter.maxPrice;
 
         setSearchParams(params, { replace: true });
     }, [filter, setSearchParams]);
+
+    useEffect(() => {
+        fetchGames(page);
+    }, [page, filter.sort, filter.genre, filter.minDiscountRate, filter.minMetaScore, filter.platform, filter.isPlusExclusive, filter.inCatalog, filter.minPrice, filter.maxPrice]);
 
     useEffect(() => {
         const initNotificationToast = async () => {
@@ -149,98 +276,6 @@ const GameListPage = () => {
         };
         initNotificationToast();
     }, []);
-
-    // 공통 핸들러 (입력창용)
-    const handleFilterChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFilter(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-        if (name !== 'keyword') setPage(0);
-    };
-
-    // 커스텀 드롭다운 핸들러 (메인 화면)
-    const handleCustomSelect = (name, value) => {
-        setFilter(prev => ({ ...prev, [name]: value }));
-        setActiveDropdown(null);
-        setPage(0);
-    };
-
-    // 퀵 서치 즉시 적용 핸들러 (바텀 시트용)
-    const handleQuickSelect = (name, value) => {
-        setFilter(prev => ({ ...prev, [name]: value }));
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // 최상단 이동
-        setPage(0);
-        setIsQuickSearchOpen(false); // 즉시 닫힘 (배경 선명해짐)
-    };
-
-    const executeSearch = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setPage(0);
-        fetchGames(0);
-        setIsQuickSearchOpen(false);
-    };
-
-    const handleKeyDown = (e) => { if (e.key === 'Enter') executeSearch(); };
-
-    useEffect(() => {
-        fetchGames(page);
-    }, [page, filter.sort, filter.genre, filter.minDiscountRate, filter.minMetaScore, filter.platform, filter.isPlusExclusive, filter.inCatalog]);
-
-    const fetchGames = async (pageNumber, overrideFilter = null) => {
-        const currentFilter = overrideFilter || filter;
-        setLoading(true);
-        try {
-            const params = {
-                page: pageNumber, size: 20, sort: currentFilter.sort, keyword: currentFilter.keyword, genre: currentFilter.genre,
-                ...(currentFilter.minDiscountRate && { minDiscountRate: currentFilter.minDiscountRate }),
-                ...(currentFilter.minMetaScore && { minMetaScore: currentFilter.minMetaScore }),
-                ...(currentFilter.platform && { platform: currentFilter.platform }),
-                ...(currentFilter.isPlusExclusive && { isPlusExclusive: true }),
-                ...(currentFilter.inCatalog && { inCatalog: true }),
-            };
-            const response = await client.get('/api/v1/games/search', { params });
-
-            if (pageNumber === 0) {
-                setGames(response.data.content);
-                setIsInitialLoad(false);
-            } else {
-                setGames(prev => {
-                    const existingIds = new Set(prev.map(g => g.id));
-                    const newGames = response.data.content.filter(g => !existingIds.has(g.id));
-                    return [...prev, ...newGames];
-                });
-            }
-            setTotalPages(response.data.totalPages);
-            setTotalElements(response.data.totalElements);
-        } catch (error) {
-            toast.error("데이터 로딩 실패");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLike = async (e, gameId) => {
-        e.stopPropagation();
-        const toastId = toast.loading('처리 중...');
-        try {
-            const response = await client.post(`/api/v1/wishlists/${gameId}`);
-            const isAdded = response.data.includes("추가");
-            setGames(prevGames => prevGames.map(game => game.id === gameId ? { ...game, liked: isAdded } : game));
-            toast.success(response.data, { id: toastId, icon: isAdded ? '❤️' : '💔' });
-        } catch (error) {
-            if (error.response?.status === 401) {
-                toast.dismiss(toastId);
-                openLoginModal();
-            } else {
-                toast.error("요청 실패", { id: toastId });
-            }
-        }
-    };
-
-    const clearGenreFilter = () => {
-        setFilter(prev => ({ ...prev, genre: '' }));
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        setPage(0);
-    };
 
     // 드롭다운 및 칩에 사용될 옵션 데이터
     const sortOptions = [
@@ -353,6 +388,67 @@ const GameListPage = () => {
                                 )}
                             </div>
 
+                            {/* 🚀 가격대 필터 팝오버 (디자인 통일 완료) */}
+                            <div className="relative">
+                                <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1">
+                                    <CircleDollarSign className="w-3 h-3 text-green-400"/>가격 범위
+                                </label>
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'price' ? null : 'price')}
+                                    className={`w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left ${
+                                        isPriceFilterActive
+                                            ? 'bg-ps-blue/20 text-white font-bold border-ps-blue/50'
+                                            : 'text-white'
+                                    }`}
+                                >
+                                    <span className="truncate">
+                                        {isPriceFilterActive
+                                            ? `${filter.minPrice ? Number(filter.minPrice).toLocaleString() + '원' : '0원'} ~ ${filter.maxPrice ? Number(filter.maxPrice).toLocaleString() + '원' : '최대'}`
+                                            : '전체 범위'}
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'price' ? 'rotate-180' : ''}`} />
+                                </button>
+
+                                {activeDropdown === 'price' && (
+                                    <div className="absolute top-full mt-2 left-0 w-full md:w-80 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn"
+                                         onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="flex items-center gap-2 mb-5">
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="예: 10000"
+                                                    value={priceRange.min}
+                                                    onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
+                                                    onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-white text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">원</span>
+                                            </div>
+                                            <span className="text-gray-500 font-bold">~</span>
+                                            <div className="relative flex-1">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="예: 50000"
+                                                    value={priceRange.max}
+                                                    onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
+                                                    onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                                                    className="w-full bg-black/50 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-white text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">원</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button onClick={handlePriceReset} className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-bold transition-colors">초기화</button>
+                                            <button onClick={handlePriceApply} className="flex-1 px-4 py-2 bg-ps-blue hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors shadow-[0_0_15px_rgba(59,130,246,0.3)]">적용</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* IGDB 드롭다운 */}
                             <div className="relative">
                                 <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>IGDB스코어</label>
@@ -394,20 +490,21 @@ const GameListPage = () => {
                             </div>
 
                             {/* 체크박스 영역 */}
-                            <div className="flex flex-col justify-end gap-3 pb-1 h-full">
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-1.5 rounded-lg transition-colors -ml-1 border border-transparent">
+                            <div className="col-span-2 md:col-span-4 flex flex-row flex-wrap items-center gap-6 pt-2 h-full">
+                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-colors border border-transparent">
                                     <div className="relative flex items-center justify-center">
                                         <input type="checkbox" name="isPlusExclusive" checked={filter.isPlusExclusive} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer" />
                                         <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                                     </div>
-                                    <span className="text-xs font-bold text-gray-400 group-hover:text-yellow-400 transition-colors"><span className="text-yellow-500 font-black">PLUS</span> 전용 할인</span>
+                                    <span className="text-sm font-bold text-gray-400 group-hover:text-yellow-400 transition-colors"><span className="text-yellow-500 font-black">PLUS</span> 전용 할인</span>
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-1.5 rounded-lg transition-colors -ml-1 border border-transparent">
+
+                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-colors border border-transparent">
                                     <div className="relative flex items-center justify-center">
                                         <input type="checkbox" name="inCatalog" checked={filter.inCatalog} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer" />
                                         <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                                     </div>
-                                    <span className="text-xs font-bold text-gray-400 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Gamepad2 className="w-3.5 h-3.5 text-yellow-500" /> 스페셜(무료) 포함</span>
+                                    <span className="text-sm font-bold text-gray-400 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Gamepad2 className="w-4 h-4 text-yellow-500" /> 스페셜(무료) 포함</span>
                                 </label>
                             </div>
                         </div>
@@ -516,7 +613,7 @@ const GameListPage = () => {
                 </div>
 
                 <div className={`fixed inset-x-0 bottom-0 z-[60] transform transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                    <div className="bg-[#1a1a1a] border-t border-white/10 p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.8)] max-w-3xl mx-auto max-h-[85vh] overflow-y-auto custom-scrollbar">
+                    <div className="bg-[#1a1a1a] border-t border-white/10 p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.8)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         <div className="flex justify-between items-center mb-6 sticky top-0 bg-[#1a1a1a] pb-4 z-10 border-b border-white/5">
                             <h3 className="text-xl font-black text-white flex items-center gap-2"><Search className="w-5 h-5 text-ps-blue"/> 퀵 서치 & 필터</h3>
                             <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-white/5 hover:bg-red-500/80 rounded-full transition-colors"><X className="w-5 h-5 text-gray-300"/></button>
@@ -529,6 +626,37 @@ const GameListPage = () => {
                                 <div className="relative">
                                     <input type="text" name="keyword" value={filter.keyword} onChange={handleFilterChange} onKeyDown={handleKeyDown} className="w-full bg-black border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:border-ps-blue outline-none transition-all" />
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-400 mb-2">원하시는 가격대가 있나요?</label>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="예: 10000"
+                                            value={priceRange.min}
+                                            onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
+                                            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                                            className="w-full bg-black border border-white/10 rounded-xl py-4 pl-4 pr-10 text-white focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
+                                    </div>
+                                    <span className="text-gray-500 font-bold">~</span>
+                                    <div className="relative flex-1">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="예: 50000"
+                                            value={priceRange.max}
+                                            onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
+                                            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
+                                            className="w-full bg-black border border-white/10 rounded-xl py-4 pl-4 pr-10 text-white focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
+                                    </div>
                                 </div>
                             </div>
 

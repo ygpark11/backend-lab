@@ -77,7 +77,7 @@ const Navbar = () => {
         const handleRealtimeMessage = () => { if (isAuthenticated) fetchUnreadCount(); };
         window.addEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
         return () => window.removeEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
-    }, [location.key, isAuthenticated]);
+    }, [location.pathname, isAuthenticated]);
 
     // 4. 알림창 바깥 클릭 시 닫기
     useEffect(() => {
