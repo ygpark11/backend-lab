@@ -40,6 +40,7 @@ session.headers.update({'Connection': 'keep-alive'})
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
+INSIGHT_REFRESH_API_URL = f"{BASE_URL}/api/v1/games/batch-complete"
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 
@@ -453,10 +454,9 @@ def refresh_java_server_cache():
         return
 
     try:
-        webhook_url = f"{BASE_URL}/api/v1/games/batch-complete"
         headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
 
-        res = requests.post(webhook_url, headers=headers, timeout=10)
+        res = requests.post(INSIGHT_REFRESH_API_URL, headers=headers, timeout=10)
 
         if res.status_code == 200:
             logger.info("🧹 Java Server Insights Cache cleared successfully!")
