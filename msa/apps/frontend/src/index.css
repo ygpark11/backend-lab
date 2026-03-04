@@ -10,3 +10,24 @@ body {
     background-color: #121212;
     color: #eeeeee;
 }
+
+@layer utilities {
+    /* 🚀 PS 감성 다크 커스텀 스크롤바 */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px; /* 아주 슬림한 두께 */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent; /* 트랙은 투명하게 */
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: rgba(255, 255, 255, 0.1); /* 평소엔 아주 옅은 흰색 */
+        border-radius: 9999px; /* 둥근 모서리 */
+    }
+
+    /* 스크롤바에 마우스를 올렸을 때 PS Blue 색상으로 하이라이트 */
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: rgba(78, 108, 187, 0.5);
+    }
+}

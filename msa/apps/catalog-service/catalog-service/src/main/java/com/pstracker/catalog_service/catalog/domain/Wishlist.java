@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
         name = "wishlists",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_wishlist_member_game", // 한 유저가 같은 게임을 중복 찜 불가
+                        name = "uk_wishlist_member_game",
                         columnNames = {"member_id", "game_id"}
                 )
         }

@@ -24,4 +24,6 @@ public interface GameRepositoryCustom {
      * @return 추천 게임 리스트
      */
     List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
+
+    long countMustPlayGames();
 }

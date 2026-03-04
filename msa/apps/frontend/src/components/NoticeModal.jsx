@@ -230,7 +230,7 @@ const NoticeModal = ({ isOpen, onClose }) => {
                                 {isAdmin && (
                                     <button
                                         onClick={() => {
-                                            setFormData({ type: 'INFO', title: '', content: '' }); // 잔여 데이터 초기화
+                                            setFormData({ type: 'INFO', title: '', content: '' });
                                             setIsEditing(true);
                                         }}
                                         className="flex items-center gap-1.5 px-3 py-1 bg-[#4E6CBB]/20 hover:bg-[#4E6CBB]/40 text-[#4E6CBB] hover:text-white border border-[#4E6CBB]/30 rounded-lg text-xs font-bold transition-colors"

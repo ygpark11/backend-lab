@@ -7,12 +7,16 @@ import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
+import com.pstracker.catalog_service.insights.service.InsightsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,10 +26,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/games")
 @RequiredArgsConstructor
+@Slf4j
 public class CatalogController {
+
+    @Value("${crawler.secret-key}")
+    private String internalSecretKey;
 
     private final CatalogService catalogService;
     private final CrawlerScheduler scheduler;
+    private final InsightsService insightsService;
 
     // 데이터 적재 API
     @PostMapping("/collect")
@@ -70,4 +79,19 @@ public class CatalogController {
         GameDetailResponse response = catalogService.getGameDetail(gameId, memberId);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/batch-complete")
+    public ResponseEntity<String> onCrawlerBatchCompleted(
+            @RequestHeader(value = "X-Internal-Secret", required = false) String secretHeader) {
+
+        if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
+            log.warn("누군가 잘못된 시크릿 키로 캐시 초기화를 시도!");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied");
+        }
+
+        log.info("Insights 통계 캐시를 갱신");
+        insightsService.refreshInsightsCache();
+        return ResponseEntity.ok("Cache cleared successfully");
+    }
+
 }

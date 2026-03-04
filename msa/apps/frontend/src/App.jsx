@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
 import GameDetailPage from './pages/GameDetailPage';
+import InsightsPage from "./pages/InsightsPage.jsx";
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -37,10 +38,8 @@ function AppRoutes() {
 
                 <Route element={<Layout />}>
                     <Route path="/games" element={<GameListPage />} />
-
-                    {/* 🚀 4. 누군가 URL 주소창에 직접 주소를 치고 들어왔을 때(background 없음) 보여줄 전체화면 상세 페이지 */}
+                    <Route path="/insights" element={<InsightsPage />} />
                     <Route path="/games/:id" element={<GameDetailPage />} />
-
                     <Route
                         path="/wishlist"
                         element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}

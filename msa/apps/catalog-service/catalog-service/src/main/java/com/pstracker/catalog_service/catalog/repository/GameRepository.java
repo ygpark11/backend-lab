@@ -35,4 +35,26 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     // 설명이 'Full Data Crawler'인 게임 20개 조회 (최신순)
     List<Game> findTop20ByDescriptionOrderByIdDesc(String description);
+
+    @Query(value = """
+        SELECT COUNT(g.id)
+        FROM games g
+        INNER JOIN (
+            SELECT game_id, MIN(price) as min_price
+            FROM game_price_history
+            GROUP BY game_id
+        ) h ON g.id = h.game_id
+        WHERE g.discount_rate > 0 
+          AND g.current_price <= h.min_price
+    """, nativeQuery = true)
+    long countAllTimeLowGamesFast();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0")
+    long countTotalDiscountedGames();
+
+    @Query("SELECT SUM(g.originalPrice - g.currentPrice) FROM Game g WHERE g.saleEndDate IS NOT NULL AND g.saleEndDate >= CURRENT_DATE")
+    Long sumTotalDiscountAmount();
+
+    @Query("SELECT MAX(g.lastUpdated) FROM Game g")
+    LocalDateTime findLatestUpdateDateTime();
 }

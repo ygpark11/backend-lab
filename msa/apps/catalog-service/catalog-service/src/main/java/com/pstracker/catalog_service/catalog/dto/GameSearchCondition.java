@@ -30,4 +30,6 @@ public class GameSearchCondition {
 
     // PS 카탈로그 포함 여부
     private Boolean inCatalog;
+
+    private Boolean isAllTimeLow;
 }

@@ -23,4 +23,6 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
     List<Member> findMembersByGamePsStoreId(@Param("psStoreId") String psStoreId);
 
     long countByMemberId(Long memberId);
+
+    long count();
 }

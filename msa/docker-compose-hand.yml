@@ -16,6 +16,7 @@ services:
       - API_BASE_URL=http://10.0.0.161:8080
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CRAWLER_MODE=LOW
+      - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
     shm_size: '1gb'
     networks:
       - ps-network

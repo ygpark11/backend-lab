@@ -6,8 +6,9 @@ import SkeletonCard from '../components/SkeletonCard';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
-    Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, Search, Sparkles,
-    Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Coffee, Triangle, Layers, MonitorPlay, Percent
+    Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
+    Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Coffee, Triangle, Layers, MonitorPlay, Percent,
+    Flame, ChevronRight
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -23,7 +24,6 @@ const GameListPage = () => {
     const { openLoginModal } = useAuth();
 
     const lastScrollYRef = useRef(0);
-    const isFirstMount = useRef(true);
     const observer = useRef();
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
@@ -38,6 +38,7 @@ const GameListPage = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+    const [searchInput, setSearchInput] = useState(searchParams.get('keyword') || '');
 
     const [filter, setFilter] = useState(() => ({
         keyword: searchParams.get('keyword') || '',
@@ -49,7 +50,8 @@ const GameListPage = () => {
         inCatalog: searchParams.get('inCatalog') === 'true',
         sort: searchParams.get('sort') || 'lastUpdated,desc',
         minPrice: searchParams.get('minPrice') || '',
-        maxPrice: searchParams.get('maxPrice') || ''
+        maxPrice: searchParams.get('maxPrice') || '',
+        isAllTimeLow: searchParams.get('isAllTimeLow') === 'true'
     }));
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
@@ -67,6 +69,7 @@ const GameListPage = () => {
                 ...(currentFilter.inCatalog && { inCatalog: true }),
                 ...(currentFilter.minPrice && { minPrice: currentFilter.minPrice }),
                 ...(currentFilter.maxPrice && { maxPrice: currentFilter.maxPrice }),
+                ...(currentFilter.isAllTimeLow && { isAllTimeLow: true }),
             };
             const response = await client.get('/api/v1/games/search', { params });
 
@@ -122,10 +125,9 @@ const GameListPage = () => {
             return;
         }
 
-        setFilter(prev => ({ ...prev, minPrice: minVal, maxPrice: maxVal }));
+        setFilter(prev => ({ ...prev, keyword: searchInput, minPrice: minVal, maxPrice: maxVal }));
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setPage(0);
-        fetchGames(0);
         setIsQuickSearchOpen(false);
     };
 
@@ -207,25 +209,24 @@ const GameListPage = () => {
 
     useEffect(() => {
         if (!location.search) {
-            const defaultFilter = { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '' };
+            const defaultFilter = { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '', isAllTimeLow: false };
             setPage(0);
             setFilter(defaultFilter);
+            setSearchInput('');
             setShowFilter(false);
-
-            if (!isFirstMount.current) {
-                fetchGames(0, defaultFilter);
-            }
+            setPriceRange({ min: '', max: '' });
         } else {
             const urlGenre = searchParams.get('genre') || '';
+            const urlIsAllTimeLow = searchParams.get('isAllTimeLow') === 'true';
+
             setFilter(prev => {
-                if (prev.genre !== urlGenre) {
+                if (prev.genre !== urlGenre || prev.isAllTimeLow !== urlIsAllTimeLow) {
                     setPage(0);
-                    return { ...prev, genre: urlGenre };
+                    return { ...prev, genre: urlGenre, isAllTimeLow: urlIsAllTimeLow };
                 }
                 return prev;
             });
         }
-        isFirstMount.current = false;
     }, [location.search, searchParams]);
 
     useEffect(() => {
@@ -240,13 +241,27 @@ const GameListPage = () => {
         if (filter.sort !== 'lastUpdated,desc') params.sort = filter.sort;
         if (filter.minPrice) params.minPrice = filter.minPrice;
         if (filter.maxPrice) params.maxPrice = filter.maxPrice;
+        if (filter.isAllTimeLow) params.isAllTimeLow = 'true';
 
         setSearchParams(params, { replace: true });
     }, [filter, setSearchParams]);
 
     useEffect(() => {
         fetchGames(page);
-    }, [page, filter.sort, filter.genre, filter.minDiscountRate, filter.minMetaScore, filter.platform, filter.isPlusExclusive, filter.inCatalog, filter.minPrice, filter.maxPrice]);
+    }, [
+        page,
+        filter.sort,
+        filter.genre,
+        filter.minDiscountRate,
+        filter.minMetaScore,
+        filter.platform,
+        filter.isPlusExclusive,
+        filter.inCatalog,
+        filter.minPrice,
+        filter.maxPrice,
+        filter.isAllTimeLow,
+        filter.keyword
+    ]);
 
     useEffect(() => {
         const initNotificationToast = async () => {
@@ -288,6 +303,7 @@ const GameListPage = () => {
     ];
     const discountOptions = [
         { value: '', label: '전체 비율' },
+        { value: '1', label: '할인 전체' },
         { value: '30', label: '30% 이상' },
         { value: '50', label: '50% 이상' },
         { value: '70', label: '70% 이상 (대박할인)' }
@@ -296,7 +312,8 @@ const GameListPage = () => {
         { value: '', label: '전체 점수' },
         { value: '75', label: '75점 이상 (Good)' },
         { value: '80', label: '80점 이상 (Great)' },
-        { value: '90', label: '90점 이상 (Must Play)' }
+        { value: '85', label: '85점 이상 (Must Play)' },
+        { value: '90', label: '90점 이상 (Masterpiece)' }
     ];
     const platformOptions = [
         { value: '', label: '전체 플랫폼' },
@@ -328,12 +345,130 @@ const GameListPage = () => {
                     </div>
                 )}
 
+                {/* 다이내믹 인사이트 배너 */}
+                {filter.isAllTimeLow ? (
+                    /* 🔴 상태 1: 역대 최저가 파도타기 중 */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/50 via-red-950 to-black border border-red-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+                        <div className="absolute top-0 left-0 w-48 h-full bg-red-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/40 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                                <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+                            </div>
+                            <div>
+                                <div className="text-red-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
+                                    <Waves className="w-3 h-3"/> WIDGET SURFING
+                                </div>
+                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">역대 최저가</span>' 게임만 모아보는 중!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isAllTimeLow: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+
+                ) : (filter.minMetaScore === '85' && filter.minDiscountRate === '50') ? (
+                    /* 🟣 상태 2: 명작 갓겜 파도타기 중 */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-900/50 via-indigo-950 to-black border border-purple-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(168,85,247,0.2)]">
+                        <div className="absolute top-0 left-0 w-48 h-full bg-purple-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/40 animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+                                <Star className="w-6 h-6 text-purple-400 animate-pulse" />
+                            </div>
+                            <div>
+                                <div className="text-purple-300 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
+                                    <Waves className="w-3 h-3"/> WIDGET SURFING
+                                </div>
+                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">인증된 명작 갓겜</span>' 모아보는 중!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, minMetaScore: '', minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+
+                ) : (filter.minDiscountRate === '1' && filter.minMetaScore === '') ? (
+                    /* 🟢 상태 3: 진행 중인 총 할인 파도타기 중 (새로 추가됨!) */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-green-900/40 via-green-950 to-black border border-green-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(34,197,94,0.2)]">
+                        <div className="absolute top-0 left-0 w-48 h-full bg-green-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/40 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.5)]">
+                                <TrendingDown className="w-6 h-6 text-green-400 animate-pulse" />
+                            </div>
+                            <div>
+                                <div className="text-green-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
+                                    <Waves className="w-3 h-3"/> WIDGET SURFING
+                                </div>
+                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">진행 중인 모든 할인</span>' 모아보는 중!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+
+                ) : (
+                    /* ⚪ 상태 4: 아무 필터도 없을 때 (기존 듀얼 액션 배너) */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/30 via-black to-black border border-red-500/20 flex flex-col sm:flex-row group transition-all hover:border-red-500/50 hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+                        {/* 좌측 메인 영역: 클릭 시 '역대 최저가 파도타기'*/}
+                        <div
+                            onClick={() => {
+                                setFilter(prev => ({...prev, isAllTimeLow: true}));
+                                setPage(0);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                            className="flex-1 p-4 sm:p-5 cursor-pointer relative overflow-hidden flex items-center justify-between"
+                        >
+                            <div className="absolute top-0 left-0 w-48 h-full bg-red-500/10 blur-3xl transform -skew-x-12 group-hover:bg-red-500/20 transition-colors"></div>
+                            <div className="flex items-center gap-4 relative z-10">
+                                <div className="hidden sm:flex w-12 h-12 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20 group-hover:scale-110 transition-transform">
+                                    <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+                                </div>
+                                <div>
+                                    <div className="text-red-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider">TODAY'S HOT DEAL</div>
+                                    <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                        지금 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">수많은 게임</span>이 역대 최저가 갱신 중!
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="text-red-400/80 font-bold text-xs sm:text-sm flex items-center gap-1 group-hover:text-red-400 transition-colors pr-2">
+                                <span className="hidden sm:inline">모아보기</span>
+                                <ChevronRight className="w-4 h-4" />
+                            </div>
+                        </div>
+
+                        {/* 우측 분리 영역: '인사이트 페이지'로 가는 전용 버튼 */}
+                        <div
+                            onClick={() => navigate('/insights')}
+                            className="sm:w-48 border-t sm:border-t-0 sm:border-l border-white/10 bg-white/5 hover:bg-white/10 cursor-pointer flex items-center justify-center p-3 sm:p-0 transition-colors group/insight"
+                        >
+                            <div className="flex items-center gap-2 text-gray-300 font-bold text-xs sm:text-sm group-hover/insight:text-white">
+                                <Activity className="w-4 h-4 text-ps-blue" />
+                                <span>통계 대시보드</span>
+                                <ChevronRight className="w-4 h-4 opacity-50 group-hover/insight:translate-x-1 group-hover/insight:opacity-100 transition-all" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* 메인 검색/필터 UI */}
                 <div className="bg-ps-card p-6 rounded-xl border border-white/10 shadow-lg mb-8">
                     <div className="flex flex-col md:flex-row gap-4">
                         {/* 검색창 */}
                         <div className="relative flex-1">
-                            <input type="text" name="keyword" placeholder="게임 제목 검색..." value={filter.keyword} onChange={handleFilterChange} onKeyDown={handleKeyDown} className="w-full bg-black/50 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all" />
+                            <input
+                                type="text"
+                                name="keyword"
+                                placeholder="게임 제목 검색..."
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                className="w-full bg-black/50 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all" />
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
                         </div>
 
@@ -624,7 +759,13 @@ const GameListPage = () => {
                             <div>
                                 <label className="block text-sm font-bold text-gray-400 mb-2">어떤 게임을 찾으시나요?</label>
                                 <div className="relative">
-                                    <input type="text" name="keyword" value={filter.keyword} onChange={handleFilterChange} onKeyDown={handleKeyDown} className="w-full bg-black border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:border-ps-blue outline-none transition-all" />
+                                    <input
+                                        type="text"
+                                        name="keyword"
+                                        value={searchInput}
+                                        onChange={(e) => setSearchInput(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        className="w-full bg-black border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:border-ps-blue outline-none transition-all" />
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
                                 </div>
                             </div>

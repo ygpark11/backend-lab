@@ -7,6 +7,7 @@ import com.pstracker.catalog_service.global.security.CustomAccessDeniedHandler;
 import com.pstracker.catalog_service.global.security.JwtAuthenticationEntryPoint;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
 import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccessHandler;
+import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +35,9 @@ public class AdminControllerTest {
 
     @MockitoBean
     private CatalogService catalogService;
+
+    @MockitoBean
+    private InsightsService insightsService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;

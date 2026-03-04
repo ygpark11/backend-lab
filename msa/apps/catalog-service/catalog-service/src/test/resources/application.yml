@@ -45,6 +45,7 @@ app:
 crawler:
   url: http://collector-service:5000/run
   single-url: http://collector-service:5000/crawl/single
+  secret-key: "test-crawler-secret-key"
 
 igdb:
   client-id: "client-id-xyz123"

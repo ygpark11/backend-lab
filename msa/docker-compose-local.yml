@@ -36,24 +36,25 @@ services:
     restart: unless-stopped
 
   # 3. Python Collector (Hand)
-  collector-service:
-    build: ./apps/collector-service
-    container_name: ps-tracker-collector
-    env_file:
-      - .env
-    environment:
-      - TZ=Asia/Seoul
-      - API_BASE_URL=http://catalog-service:8080
-      - CRAWLER_MODE=HIGH
-    shm_size: '1gb'
-    depends_on:
-      catalog-service:
-        condition: service_started
-    volumes:
-      - ./apps/collector-service/logs:/app/logs
-    networks:
-      - ps-network
-    restart: no
+#  collector-service:
+#    build: ./apps/collector-service
+#    container_name: ps-tracker-collector
+#    env_file:
+#      - .env
+#    environment:
+#      - TZ=Asia/Seoul
+#      - API_BASE_URL=http://catalog-service:8080
+#      - CRAWLER_MODE=HIGH
+#      - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
+#    shm_size: '1gb'
+#    depends_on:
+#      catalog-service:
+#        condition: service_started
+#    volumes:
+#      - ./apps/collector-service/logs:/app/logs
+#    networks:
+#      - ps-network
+#    restart: no
 
   # 4. Frontend (Face)
   frontend:

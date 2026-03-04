@@ -41,6 +41,7 @@ BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 
 lock = threading.Lock()
 is_running = False
@@ -446,6 +447,24 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
     except Exception as e:
         logger.error(f"❌ Failed to send Discord summary: {e}")
 
+def refresh_java_server_cache():
+    if not CRAWLER_SECRET_KEY:
+        logger.warning("⚠️ CRAWLER_SECRET_KEY가 설정되지 않아 서버 캐시 초기화를 건너뜁니다.")
+        return
+
+    try:
+        webhook_url = f"{BASE_URL}/api/v1/games/batch-complete"
+        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+
+        res = requests.post(webhook_url, headers=headers, timeout=10)
+
+        if res.status_code == 200:
+            logger.info("🧹 Java Server Insights Cache cleared successfully!")
+        else:
+            logger.warning(f"⚠️ Failed to clear cache on Java server: {res.status_code} - {res.text}")
+
+    except Exception as e:
+        logger.error(f"❌ Network Error while clearing cache: {e}")
 
 # --- [4. 메인 실행 로직] ---
 def run_batch_crawler_logic():
@@ -484,19 +503,25 @@ def run_batch_crawler_logic():
                         context = None
                         try:
                             browser, context = create_browser_context(p)
-                            page = setup_page(context)
+                            # page = setup_page(context)
 
                             for url in chunk:
                                 if not is_running: break
 
-                                res = crawl_detail_and_send(page, url)
-                                if res:
-                                    if res.get("is_delisted"):
-                                        delisted_games.append(res)
-                                    else:
-                                        total_processed_count += 1
-                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                visited_urls.add(url)
+                                page = setup_page(context)
+
+                                try:
+                                    res = crawl_detail_and_send(page, url)
+                                    if res:
+                                        if res.get("is_delisted"):
+                                            delisted_games.append(res)
+                                        else:
+                                            total_processed_count += 1
+                                            if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                    visited_urls.add(url)
+                                finally:
+                                    # 🚀 이 줄이 핵심입니다! Phase 1에서도 작업 끝난 탭을 반드시 닫아줍니다.
+                                    page.close()
 
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
@@ -577,14 +602,21 @@ def run_batch_crawler_logic():
                                 # 상세 크롤링
                                 for url in page_candidates:
                                     if not is_running: break
-                                    res = crawl_detail_and_send(page, url)
-                                    if res:
-                                        if res.get("is_delisted"):
-                                            delisted_games.append(res)
-                                        else:
-                                            total_processed_count += 1
-                                            if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                    visited_urls.add(url)
+
+                                    detail_page = setup_page(context)
+
+                                    try:
+                                        res = crawl_detail_and_send(detail_page, url)
+                                        if res:
+                                            if res.get("is_delisted"):
+                                                delisted_games.append(res)
+                                            else:
+                                                total_processed_count += 1
+                                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                        visited_urls.add(url)
+                                    finally:
+                                        detail_page.close()
+
                                     time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
@@ -602,12 +634,14 @@ def run_batch_crawler_logic():
 
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
 
+        refresh_java_server_cache()
+
     except Exception as e:
         logger.error(f"Critical Error: {e}")
         logger.error(traceback.format_exc())
     finally:
         with lock: is_running = False
-        logger.info("🏁 Crawler finished.")
+        logger.info("Crawler finished.")
 
 # ==========================================
 # 단건 수집 API

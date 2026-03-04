@@ -45,6 +45,9 @@ jwt:
     access: 3600000
     refresh: 1209600000
 
+crawler:
+  secret-key: ${CRAWLER_SECRET_KEY}
+
 management:
   endpoints:
     web:

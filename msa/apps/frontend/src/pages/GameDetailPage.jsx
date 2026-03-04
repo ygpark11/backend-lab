@@ -10,7 +10,7 @@ import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Coffee, CreditCard,
     ExternalLink, Flame, Gamepad2, Heart, HelpCircle, Link, Search, Sparkles,
-    Square, Timer, TrendingUp, Triangle, Trophy, Users, X, Youtube, Trash2,
+    Square, Timer, TrendingUp, Triangle, Users, X, Youtube, Trash2,
     AlertTriangle, RefreshCw, Building2, Calendar, Star
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
@@ -185,7 +185,9 @@ export default function GameDetailPage() {
     const traffic = getTrafficLight(game.priceVerdict);
     const combatPower = calculateCombatPower(game.metaScore, game.currentPrice);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
-    const isClosingSoon = game.saleEndDate && differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) <= 3;
+    const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
+    // 0일(오늘) ~ 3일 사이일 때만 마감 임박! (음수 방어)
+    const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
     const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
     const hasDescription = game.description && game.description !== "Full Data Crawler";
     const glowStyle = {
@@ -312,11 +314,13 @@ export default function GameDetailPage() {
                         {game.saleEndDate && game.discountRate > 0 && (
                             <div className="flex items-center gap-2 mb-8 text-sm bg-black/40 w-fit px-4 py-2 rounded-lg backdrop-blur-sm border border-white/5">
                                 <CalendarDays className="w-4 h-4 text-gray-400" /><span className="text-gray-400">할인 종료:</span><span className="text-white font-bold">{game.saleEndDate.replace(/-/g, '.')}</span>
-                                {(() => {
-                                    const daysLeft = differenceInCalendarDays(parseISO(game.saleEndDate), new Date());
-                                    if (daysLeft <= 1 && daysLeft >= 0) return <span className="text-orange-400 font-bold ml-1">({daysLeft}일 남음 - 막차!)</span>;
-                                    return <span className="text-gray-400 ml-1">({daysLeft}일 남음)</span>;
-                                })()}
+                                {daysLeft !== null && daysLeft >= 0 ? (
+                                    daysLeft <= 1 ?
+                                        <span className="text-orange-400 font-bold ml-1">({daysLeft}일 남음 - 막차!)</span> :
+                                        <span className="text-gray-400 ml-1">({daysLeft}일 남음)</span>
+                                ) : (
+                                    <span className="text-gray-500 ml-1">(할인 종료)</span>
+                                )}
                             </div>
                         )}
 

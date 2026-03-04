@@ -2,12 +2,14 @@ package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Platform;
+import com.pstracker.catalog_service.catalog.domain.QGamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +49,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
                         genreEq(condition.getGenre()),
-                        inCatalogEq(condition.getInCatalog())
+                        inCatalogEq(condition.getInCatalog()),
+                        isAllTimeLow(condition.getIsAllTimeLow())
                 )
                 .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .offset(pageable.getOffset())
@@ -66,7 +69,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         platformEq(condition.getPlatform()),
                         plusExclusiveEq(condition.getIsPlusExclusive()),
                         genreEq(condition.getGenre()),
-                        inCatalogEq(condition.getInCatalog())
+                        inCatalogEq(condition.getInCatalog()),
+                        isAllTimeLow(condition.getIsAllTimeLow())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -163,6 +167,24 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         return Boolean.TRUE.equals(inCatalog) ? game.inCatalog.isTrue() : null;
     }
 
+    private BooleanExpression isAllTimeLow(Boolean isAllTimeLow) {
+        if (isAllTimeLow == null || !isAllTimeLow) {
+            return null;
+        }
+
+        QGamePriceHistory history = QGamePriceHistory.gamePriceHistory;
+
+        // 조건: 현재 할인 중(discountRate > 0) 이면서,
+        // 현재 가격(currentPrice)이 (해당 게임의 히스토리 테이블 최저가)와 같거나 작을 때
+        return game.discountRate.gt(0).and(
+                game.currentPrice.loe(
+                        JPAExpressions.select(history.price.min())
+                                .from(history)
+                                .where(history.game.id.eq(game.id)) // TODO 역정규화 이후 수정
+                )
+        );
+    }
+
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
         List<OrderSpecifier<?>> orders = new ArrayList<>();
         for (Sort.Order order : sort) {
@@ -177,5 +199,18 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             }
         }
         return orders.toArray(new OrderSpecifier[0]);
+    }
+
+    @Override
+    public long countMustPlayGames() {
+        Long count = queryFactory
+                .select(game.count())
+                .from(game)
+                .where(
+                        game.metaScore.goe(85), // IGDB 85 이상
+                        game.discountRate.goe(50) // 50% 이상 할인
+                )
+                .fetchOne();
+        return count != null ? count : 0L;
     }
 }
