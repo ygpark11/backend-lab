@@ -85,7 +85,7 @@ public class CatalogController {
             @RequestHeader(value = "X-Internal-Secret", required = false) String secretHeader) {
 
         if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
-            log.warn("누군가 잘못된 시크릿 키로 캐시 초기화를 시도!");
+            log.warn("잘못된 시크릿 키로 캐시 초기화를 시도!");
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied");
         }
 
