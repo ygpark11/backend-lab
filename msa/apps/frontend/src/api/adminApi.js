@@ -7,5 +7,9 @@ export const adminApi = {
 
     refreshGame: async (gameId) => {
         return await client.post(`/api/v1/admin/games/${gameId}/refresh`);
+    },
+
+    clearInsightsCache: async () => {
+        return await client.post('/api/v1/admin/insights/refresh');
     }
 };

@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Star, TrendingDown, Activity, Database, Clock, ChevronRight, Heart, CircleDollarSign } from 'lucide-react';
+import {
+    Flame, Star, TrendingDown, Activity, Database, Clock,
+    ChevronRight, Heart, CircleDollarSign, RefreshCw,
+    AlertTriangle
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
 import toast from 'react-hot-toast';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+import { adminApi } from '../api/adminApi';
 
 const formatCurrency = (amount) => {
     if (!amount) return '0';
@@ -26,8 +32,57 @@ const formatDate = (dateString) => {
 
 const InsightsPage = () => {
     const navigate = useNavigate();
+    const { isAdmin } = useCurrentUser();
+
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const handleRefreshCache = (e) => {
+        e.stopPropagation();
+
+        toast((t) => (
+            <div className="flex flex-col gap-3 min-w-[250px] bg-[#1a1a1a] text-white p-2 border border-white/10 rounded-xl shadow-2xl">
+                <div className="flex items-center gap-3">
+                    <div className="bg-red-500/20 p-2 rounded-lg">
+                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-sm text-red-400">캐시 강제 초기화</h4>
+                        <p className="text-xs text-gray-400">인사이트 통계를 즉시 갱신할까요?</p>
+                    </div>
+                </div>
+                <div className="flex gap-2 mt-2">
+                    <button onClick={async () => {
+                        toast.dismiss(t.id);
+                        setIsRefreshing(true);
+                        const loadId = toast.loading('기존 캐시 삭제 및 데이터 재수집 중...');
+
+                        try {
+                            // 🚀 adminApi 사용
+                            await adminApi.clearInsightsCache();
+
+                            // 최신 데이터 다시 불러오기
+                            const response = await client.get('/api/v1/insights/summary');
+                            setStats(response.data);
+
+                            toast.success('최신 데이터로 갱신되었습니다!', { id: loadId });
+                        } catch (error) {
+                            console.error('Cache clear failed:', error);
+                            toast.error('캐시 초기화에 실패했습니다. 관리자 권한을 확인하세요.', { id: loadId });
+                        } finally {
+                            setIsRefreshing(false);
+                        }
+                    }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-bold transition-colors">
+                        네, 갱신합니다
+                    </button>
+                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 bg-white/5 hover:bg-white/10 text-gray-300 py-2 rounded-lg text-xs font-bold transition-colors">
+                        취소
+                    </button>
+                </div>
+            </div>
+        ), { duration: 5000, style: { background: 'transparent', boxShadow: 'none', padding: 0 } });
+    };
 
     useEffect(() => {
         const fetchInsights = async () => {
@@ -178,9 +233,23 @@ const InsightsPage = () => {
                         </div>
                         <div>
                             <p className="text-gray-500 text-xs mb-1">LAST SYNC</p>
-                            <p className="text-green-400 font-bold text-lg flex items-center gap-2">
-                                <Clock className="w-4 h-4" /> {formatDate(stats.lastSyncTime)}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-green-400 font-bold text-lg flex items-center gap-2">
+                                    <Clock className="w-4 h-4" /> {formatDate(stats.lastSyncTime)}
+                                </p>
+
+                                {/* 관리자 전용 인사이트 캐시 리프레시 버튼 */}
+                                {isAdmin && (
+                                    <button
+                                        onClick={handleRefreshCache}
+                                        disabled={isRefreshing}
+                                        title="관리자 전용: 캐시 강제 갱신"
+                                        className="ml-2 p-1.5 rounded-full bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors border border-green-500/30"
+                                    >
+                                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
