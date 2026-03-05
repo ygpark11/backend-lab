@@ -55,22 +55,15 @@ public class GameReadService {
         // 가격 이력 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
 
-        // 게임의 역대 최저가 조회
-        Integer lowestPrice = histories.stream()
-                .map(GamePriceHistory::getPrice)
-                .min(Integer::compareTo)
-                .orElse(null);
-
         // DTO 변환
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
-                .map(h -> new GameDetailResponse.PriceHistoryDto(h.getRecordedAt().toLocalDate(), h.getPrice()))
+                .map(h -> new GameDetailResponse.PriceHistoryDto(h.getRecordedAt().toLocalDate(), h.getPrice(), h.getDiscountRate()))
                 .toList();
 
         // 연관 게임 추천
         List<GameSearchResultDto> relatedGames = getRelatedGames(game);
 
-        // liked = false로 고정 저장
-        return GameDetailResponse.from(game, lowestPrice, historyDtos, false, relatedGames);
+        return GameDetailResponse.from(game, historyDtos, false, relatedGames);
     }
 
     /**

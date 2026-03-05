@@ -91,7 +91,6 @@ public record GameDetailResponse(
 
     public static GameDetailResponse from(
             Game game,
-            Integer lowestPrice,
             List<PriceHistoryDto> history,
             boolean liked,
             List<GameSearchResultDto> relatedGames
@@ -101,6 +100,8 @@ public record GameDetailResponse(
         Integer currentPrice = (game.getCurrentPrice() != null) ? game.getCurrentPrice() : 0;
         Integer originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
         Integer discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
+        Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
+
         boolean isPlus = game.isPlusExclusive();
         LocalDate endDate = game.getSaleEndDate();
         LocalDate releaseDate = game.getReleaseDate();
@@ -128,7 +129,7 @@ public record GameDetailResponse(
         }
         // 3. 데이터가 충분함 (변동 이력이 2개 이상) -> 본격 판정
         else {
-            int safeLowest = (lowestPrice == null || lowestPrice == 0) ? currentPrice : lowestPrice;
+            int safeLowest = (lowestPrice == 0) ? currentPrice : lowestPrice;
 
             if (currentPrice > 0 && currentPrice <= safeLowest) {
                 verdict = PriceVerdict.BUY_NOW;
@@ -185,6 +186,7 @@ public record GameDetailResponse(
 
     public record PriceHistoryDto(
             LocalDate date,
-            Integer price
+            Integer price,
+            Integer discountRate
     )implements Serializable {}
 }

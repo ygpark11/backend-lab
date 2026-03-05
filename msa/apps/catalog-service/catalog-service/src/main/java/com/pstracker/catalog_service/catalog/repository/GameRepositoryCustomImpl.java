@@ -172,17 +172,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             return null;
         }
 
-        QGamePriceHistory history = QGamePriceHistory.gamePriceHistory;
-
-        // 조건: 현재 할인 중(discountRate > 0) 이면서,
-        // 현재 가격(currentPrice)이 (해당 게임의 히스토리 테이블 최저가)와 같거나 작을 때
-        return game.discountRate.gt(0).and(
-                game.currentPrice.loe(
-                        JPAExpressions.select(history.price.min())
-                                .from(history)
-                                .where(history.game.id.eq(game.id)) // TODO 역정규화 이후 수정
-                )
-        );
+        return game.discountRate.gt(0).and(game.currentPrice.loe(game.allTimeLowPrice));
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {

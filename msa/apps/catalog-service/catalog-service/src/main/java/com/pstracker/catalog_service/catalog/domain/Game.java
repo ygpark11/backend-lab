@@ -84,6 +84,18 @@ public class Game {
     @Column(name = "in_catalog")
     private boolean inCatalog;
 
+    @Column(name = "all_time_low_price")
+    private Integer allTimeLowPrice;
+
+    @Column(name = "chosung_name")
+    private String chosungName;
+
+    @Column(name = "like_count", nullable = false)
+    private Integer likeCount = 0;
+
+    @Column(name = "dislike_count", nullable = false)
+    private Integer dislikeCount = 0;
+
     // 양방향 매핑 (게임 삭제 시 가격 이력도 같이 삭제)
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
@@ -224,5 +236,11 @@ public class Game {
         this.isPlusExclusive = isPlusExclusive;
         this.saleEndDate = saleEndDate;
         this.inCatalog = inCatalog;
+
+        if (currentPrice != null && currentPrice > 0) {
+            if (this.allTimeLowPrice == null || this.allTimeLowPrice == 0 || currentPrice < this.allTimeLowPrice) {
+                this.allTimeLowPrice = currentPrice;
+            }
+        }
     }
 }
