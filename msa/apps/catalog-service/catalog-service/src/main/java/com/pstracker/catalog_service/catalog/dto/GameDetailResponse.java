@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
+import com.pstracker.catalog_service.catalog.domain.VoteType;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -33,6 +34,11 @@ public record GameDetailResponse(
         Integer metaScore,
         Double userScore,
 
+        // [투표 정보]
+        Integer likeCount,
+        Integer dislikeCount,
+        VoteType userVote,
+
         boolean liked,
         LocalDateTime createdAt,
 
@@ -53,39 +59,19 @@ public record GameDetailResponse(
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * [캐시 최적화용 메서드]
-     * 이미 캐싱된 무거운 객체(this)의 데이터는 캐시에서 재사용하면서,
-     * 'liked' 필드만 변경된 새로운 객체를 생성하여 반환합니다.
-     * 찜은 실시간성이 중요하므로 별도 관리
-     */
-    public GameDetailResponse withLiked(boolean isLiked) {
+    public GameDetailResponse withDynamicData(boolean isLiked, VoteType userVote) {
         return new GameDetailResponse(
-                this.id,
-                this.title,
-                this.originalTitle,
-                this.publisher,
-                this.imageUrl,
-                this.description,
-                this.psStoreId,
-                this.currentPrice,
-                this.originalPrice,
-                this.lowestPrice,
-                this.discountRate,
-                this.isPlusExclusive,
-                this.saleEndDate,
-                this.releaseDate,
-                this.metaScore,
-                this.userScore,
-                isLiked,
-                this.createdAt,
-                this.priceVerdict,
-                this.verdictMessage,
-                this.priceHistory,
-                this.platforms,
-                this.genres,
-                this.inCatalog,
-                this.relatedGames
+                this.id, this.title, this.originalTitle, this.publisher,
+                this.imageUrl, this.description, this.psStoreId,
+                this.currentPrice, this.originalPrice, this.lowestPrice,
+                this.discountRate, this.isPlusExclusive, this.saleEndDate,
+                this.releaseDate, this.metaScore, this.userScore,
+
+                this.likeCount, this.dislikeCount, userVote,
+
+                isLiked, this.createdAt, this.priceVerdict,
+                this.verdictMessage, this.priceHistory, this.platforms,
+                this.genres, this.inCatalog, this.relatedGames
         );
     }
 
@@ -156,31 +142,16 @@ public record GameDetailResponse(
                 .toList();
 
         return new GameDetailResponse(
-                game.getId(),
-                game.getName(),
-                game.getEnglishName(),
-                game.getPublisher(),
-                game.getImageUrl(),
-                game.getDescription(),
-                game.getPsStoreId(),
-                currentPrice,
-                originalPrice,
-                lowestPrice,
-                discountRate,
-                isPlus,
-                endDate,
-                releaseDate,
-                game.getMetaScore(),
-                game.getUserScore(),
-                liked,
-                game.getCreatedAt(),
-                verdict,
-                verdictMsg,
-                history,
+                game.getId(), game.getName(), game.getEnglishName(), game.getPublisher(),
+                game.getImageUrl(), game.getDescription(), game.getPsStoreId(),
+                currentPrice, originalPrice, lowestPrice, discountRate, isPlus,
+                endDate, releaseDate, game.getMetaScore(), game.getUserScore(),
+
+                game.getLikeCount(), game.getDislikeCount(), null,
+
+                liked, game.getCreatedAt(), verdict, verdictMsg, history,
                 game.getPlatforms().stream().map(Enum::name).toList(),
-                genreList,
-                isInCatalog,
-                relatedGames
+                genreList, isInCatalog, relatedGames
         );
     }
 

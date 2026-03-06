@@ -1,11 +1,9 @@
 package com.pstracker.catalog_service.catalog.controller;
 
-import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
-import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
-import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
+import com.pstracker.catalog_service.catalog.service.GameVoteService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import jakarta.validation.Valid;
@@ -35,6 +33,7 @@ public class CatalogController {
     private final CatalogService catalogService;
     private final CrawlerScheduler scheduler;
     private final InsightsService insightsService;
+    private final GameVoteService gameVoteService;
 
     // 데이터 적재 API
     @PostMapping("/collect")
@@ -92,6 +91,19 @@ public class CatalogController {
         log.info("Insights 통계 캐시를 갱신");
         insightsService.refreshInsightsCache();
         return ResponseEntity.ok("Cache cleared successfully");
+    }
+
+    @PostMapping("/{gameId}/vote")
+    public ResponseEntity<GameVoteResponseDto> vote(
+            @PathVariable Long gameId,
+            @RequestBody GameVoteRequestDto requestDto,
+            @AuthenticationPrincipal MemberPrincipal principal
+    ) {
+        Long memberId = (principal != null) ? principal.getMemberId() : null;
+
+        GameVoteResponseDto response = gameVoteService.toggleVote(gameId, memberId, requestDto.getVoteType());
+
+        return ResponseEntity.ok(response);
     }
 
 }

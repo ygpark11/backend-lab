@@ -96,7 +96,6 @@ public class Game {
     @Column(name = "dislike_count", nullable = false)
     private Integer dislikeCount = 0;
 
-    // 양방향 매핑 (게임 삭제 시 가격 이력도 같이 삭제)
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
 
@@ -242,5 +241,21 @@ public class Game {
                 this.allTimeLowPrice = currentPrice;
             }
         }
+    }
+
+    public void addLike() {
+        this.likeCount++;
+    }
+
+    public void removeLike() {
+        if (this.likeCount > 0) this.likeCount--;
+    }
+
+    public void addDislike() {
+        this.dislikeCount++;
+    }
+
+    public void removeDislike() {
+        if (this.dislikeCount > 0) this.dislikeCount--;
     }
 }

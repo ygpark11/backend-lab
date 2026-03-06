@@ -53,6 +53,9 @@ export default function GameDetailPage() {
     const { isAdmin } = useCurrentUser();
     const { openLoginModal } = useAuth();
 
+    const [voteCounts, setVoteCounts] = useState({ likes: 0, dislikes: 0 });
+    const [userVote, setUserVote] = useState(null);
+
     // 🚀 모달 렌더링 시 뒤쪽 배경 스크롤 잠금
     useEffect(() => {
         if (isModal) {
@@ -75,6 +78,12 @@ export default function GameDetailPage() {
                 const res = await client.get(`/api/v1/games/${id}`);
                 setGame(res.data);
                 if (res.data.liked !== undefined) setIsLiked(res.data.liked);
+
+                setVoteCounts({
+                    likes: res.data.likeCount || 0,
+                    dislikes: res.data.dislikeCount || 0
+                });
+                setUserVote(res.data.userVote || null);
 
             } catch (err) {
                 console.error(err);
@@ -147,6 +156,48 @@ export default function GameDetailPage() {
                 ), { duration: 5000, position: 'top-center', style: { background: '#ffffff', padding: '16px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' } });
             } else {
                 toast.error(error.response?.data || "요청 실패", { id: toastId });
+            }
+        }
+    };
+
+    const handleVote = async (type) => {
+        const toastId = toast.loading('투표 기록 중...');
+        try {
+            const response = await client.post(`/api/v1/games/${id}/vote`, { voteType: type });
+
+            setVoteCounts({
+                likes: response.data.likeCount,
+                dislikes: response.data.dislikeCount
+            });
+
+            const finalUserVote = response.data.userVote;
+            setUserVote(finalUserVote);
+
+            let toastMessage = '';
+            if (finalUserVote === 'LIKE') {
+                toastMessage = '추천했습니다!';
+            } else if (finalUserVote === 'DISLIKE') {
+                toastMessage = '비추천했습니다.';
+            } else {
+                toastMessage = '평가를 취소했습니다.';
+            }
+
+            toast.success(toastMessage, { id: toastId });
+        } catch (error) {
+            if (error.response?.status === 401) {
+                toast.dismiss(toastId);
+                toast((t) => (
+                    <div className="flex flex-col gap-2">
+                        <span className="font-bold text-sm text-gray-900">로그인이 필요한 기능입니다 🔒</span>
+                        <span className="text-xs text-gray-500 mb-1">로그인하고 커뮤니티 평가에 참여해보세요!</span>
+                        <div className="flex gap-2 mt-1">
+                            <button onClick={() => { toast.dismiss(t.id); openLoginModal(); }} className="bg-ps-blue text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors shadow-md flex-1">로그인 하러 가기</button>
+                            <button onClick={() => toast.dismiss(t.id)} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors flex-1">닫기</button>
+                        </div>
+                    </div>
+                ), { duration: 5000, position: 'top-center', style: { background: '#ffffff', padding: '16px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' } });
+            } else {
+                toast.error(error.response?.data || "투표에 실패했습니다.", { id: toastId });
             }
         }
     };
@@ -394,6 +445,101 @@ export default function GameDetailPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* 커뮤니티 투표 위젯 추가 */}
+                        <div className="bg-gradient-to-br from-gray-900/80 to-black border border-white/10 p-6 rounded-2xl backdrop-blur-xl shadow-2xl relative overflow-hidden group/verdict">
+                            {/* 배경 은은한 광원 효과 */}
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-2 bg-gradient-to-r from-transparent via-white/20 to-transparent blur-sm"></div>
+
+                            <h4 className="text-gray-400 text-xs font-bold mb-5 flex items-center justify-between">
+                                <span className="flex items-center gap-1.5 uppercase tracking-widest"><Users className="w-3.5 h-3.5"/> Community Verdict</span>
+                                <span className="text-white bg-white/10 px-2.5 py-1 rounded-full text-[10px] shadow-inner border border-white/5">
+                                    Total {(voteCounts.likes + voteCounts.dislikes).toLocaleString()}
+                                </span>
+                            </h4>
+
+                            <div className="flex gap-4 mb-5">
+                                {/* 🟢 추천 버튼 (O 버튼 - Green Neon) */}
+                                <button
+                                    onClick={() => handleVote('LIKE')}
+                                    className={`relative flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-300 overflow-hidden group ${
+                                        userVote === 'LIKE'
+                                            ? 'bg-green-500/20 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                                            : 'bg-white/5 border-white/10 hover:bg-green-500/10 hover:border-green-500/40'
+                                    }`}
+                                >
+                                    {/* 클릭 시 배경 파동 효과 */}
+                                    {userVote === 'LIKE' && <div className="absolute inset-0 bg-gradient-to-t from-green-500/20 to-transparent"></div>}
+
+                                    {/* PS 'O' 도형 */}
+                                    <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-active:scale-90 ${
+                                        userVote === 'LIKE' ? 'bg-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-transparent'
+                                    }`}>
+                                        <Circle className={`w-7 h-7 stroke-[3.5px] transition-colors ${
+                                            userVote === 'LIKE' ? 'text-green-400 fill-green-400/30 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'text-gray-500 group-hover:text-green-400'
+                                        }`} />
+                                    </div>
+                                    <span className={`relative z-10 font-black text-xl leading-none tracking-tight ${
+                                        userVote === 'LIKE' ? 'text-green-400 drop-shadow-md' : 'text-gray-300'
+                                    }`}>{voteCounts.likes}</span>
+                                </button>
+
+                                {/* 🔴 비추천 버튼 (X 버튼) */}
+                                <button
+                                    onClick={() => handleVote('DISLIKE')}
+                                    className={`relative flex-1 flex flex-col items-center justify-center p-4 rounded-xl border transition-all duration-300 overflow-hidden group ${
+                                        userVote === 'DISLIKE'
+                                            ? 'bg-[#FF3E3E]/20 border-[#FF3E3E]/50 shadow-[0_0_20px_rgba(255,62,62,0.2)]'
+                                            : 'bg-white/5 border-white/10 hover:bg-[#FF3E3E]/10 hover:border-[#FF3E3E]/40'
+                                    }`}
+                                >
+                                    {/* 클릭 시 배경 파동 효과 */}
+                                    {userVote === 'DISLIKE' && <div className="absolute inset-0 bg-gradient-to-t from-[#FF3E3E]/20 to-transparent"></div>}
+
+                                    {/* PS 'X' 도형 */}
+                                    <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-active:scale-90 ${
+                                        userVote === 'DISLIKE' ? 'bg-[#FF3E3E]/20 shadow-[0_0_15px_rgba(255,62,62,0.5)]' : 'bg-transparent'
+                                    }`}>
+                                        <X className={`w-8 h-8 stroke-[4px] transition-colors ${
+                                            userVote === 'DISLIKE' ? 'text-[#FF3E3E] drop-shadow-[0_0_8px_rgba(255,62,62,0.8)]' : 'text-gray-500 group-hover:text-[#FF3E3E]'
+                                        }`} />
+                                    </div>
+                                    <span className={`relative z-10 font-black text-xl leading-none tracking-tight ${
+                                        userVote === 'DISLIKE' ? 'text-[#FF3E3E] drop-shadow-md' : 'text-gray-300'
+                                    }`}>{voteCounts.dislikes}</span>
+                                </button>
+                            </div>
+
+                            {/* 📊 비율 게이지 바 (Progress Bar) */}
+                            <div className="relative h-2 w-full bg-black/50 rounded-full overflow-hidden border border-white/5 shadow-inner">
+                                {(voteCounts.likes > 0 || voteCounts.dislikes > 0) ? (
+                                    <div className="absolute inset-0 flex">
+                                        <div
+                                            // 🚀 파란색에서 초록색 그라데이션으로 변경
+                                            className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-1000 ease-out relative"
+                                            style={{ width: `${(voteCounts.likes / (voteCounts.likes + voteCounts.dislikes)) * 100}%` }}
+                                        >
+                                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
+                                        </div>
+                                        <div
+                                            // 🔴 빨간색 그라데이션
+                                            className="h-full bg-gradient-to-l from-[#FF3E3E] to-red-400 transition-all duration-1000 ease-out relative"
+                                            style={{ width: `${(voteCounts.dislikes / (voteCounts.likes + voteCounts.dislikes)) * 100}%` }}
+                                        >
+                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* 데이터 없을 때 */
+                                    <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(255,255,255,0.05)_10px,rgba(255,255,255,0.05)_20px)] animate-[progress_2s_linear_infinite]"></div>
+                                )}
+                            </div>
+
+                            {/* 데이터가 없을 때 안내 문구 */}
+                            {(voteCounts.likes === 0 && voteCounts.dislikes === 0) && (
+                                <p className="text-center text-[10px] text-gray-500 mt-2 font-bold animate-pulse">첫 번째 평가를 남겨주세요!</p>
+                            )}
+                        </div>
 
                         <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl border border-white/10 text-center shadow-2xl relative overflow-hidden group">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500"></div><Coffee className="w-10 h-10 text-yellow-400 mx-auto mb-3 group-hover:scale-110 transition-transform" /><h4 className="font-bold text-white mb-2 text-lg">개발자에게 커피 쏘기 ☕</h4><p className="text-xs text-gray-400 mb-6 leading-relaxed">이 서비스가 마음에 드셨나요?<br/>작은 후원이 서버 유지와<br/>새로운 기능 개발에 큰 힘이 됩니다!</p>

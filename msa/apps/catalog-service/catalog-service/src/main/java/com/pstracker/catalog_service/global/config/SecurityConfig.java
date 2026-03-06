@@ -67,6 +67,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/insights/**").permitAll()
 
                         .requestMatchers("/api/v1/notices/**").hasRole("ADMIN")
+
+                        .requestMatchers(HttpMethod.POST, "/api/v1/games/*/vote").authenticated()
+
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",

@@ -30,4 +30,13 @@ body {
     .custom-scrollbar:hover::-webkit-scrollbar-thumb {
         background-color: rgba(78, 108, 187, 0.5);
     }
+
+    @keyframes progress {
+        0% {
+            background-position: 0 0;
+        }
+        100% {
+            background-position: 40px 0; /* 빗살무늬 패턴(20px)의 배수로 부드럽게 무한 스크롤 */
+        }
+    }
 }

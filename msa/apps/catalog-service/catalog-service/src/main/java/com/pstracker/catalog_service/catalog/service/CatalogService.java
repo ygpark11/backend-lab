@@ -1,9 +1,6 @@
 package com.pstracker.catalog_service.catalog.service;
 
-import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
-import com.pstracker.catalog_service.catalog.domain.Genre;
-import com.pstracker.catalog_service.catalog.domain.Platform;
+import com.pstracker.catalog_service.catalog.domain.*;
 import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
@@ -39,6 +36,7 @@ public class CatalogService {
     private final GameGenreRepository gameGenreRepository;
     private final WishlistRepository wishlistRepository;
     private final GenreRepository genreRepository;
+    private final GameVoteRepository gameVoteRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final IgdbApiClient igdbApiClient;
 
@@ -320,11 +318,21 @@ public class CatalogService {
         // 1. 순수 게임 정보 가져오기 (캐시 적용됨)
         GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
-        // 2. 찜 여부는 사용자마다 다르므로 실시간 조회
-        boolean isLiked = (memberId != null) && wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
+        boolean isLiked = false;
+        VoteType userVote = null;
+
+        // 2. 유저별 동적 데이터(찜 여부, 투표 상태)는 실시간 DB 조회 (비로그인이면 Pass)
+        if (memberId != null) {
+            isLiked = wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
+
+            // 🚀 로그인한 유저의 투표 상태 확인
+            userVote = gameVoteRepository.findByMemberIdAndGameId(memberId, gameId)
+                    .map(GameVote::getVoteType)
+                    .orElse(null);
+        }
 
         // 3. 캐시된 객체의 내용을 재사용하되, liked 상태만 변경해서 반환
-        return baseResponse.withLiked(isLiked);
+        return baseResponse.withDynamicData(isLiked, userVote);
     }
 
     /**
