@@ -21,7 +21,7 @@ const GameListPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { openLoginModal } = useAuth();
+    const { isAuthenticated, openLoginModal } = useAuth();
 
     const lastScrollYRef = useRef(0);
     const observer = useRef();
@@ -209,9 +209,21 @@ const GameListPage = () => {
 
     useEffect(() => {
         if (!location.search) {
-            const defaultFilter = { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '', isAllTimeLow: false };
+            setFilter(prev => {
+                const isAlreadyDefault =
+                    prev.keyword === '' && prev.genre === '' &&
+                    prev.minDiscountRate === '' && prev.minMetaScore === '' &&
+                    prev.platform === '' && prev.isPlusExclusive === false &&
+                    prev.inCatalog === false && prev.sort === 'lastUpdated,desc' &&
+                    prev.minPrice === '' && prev.maxPrice === '' &&
+                    prev.isAllTimeLow === false;
+
+                if (isAlreadyDefault) return prev;
+
+                return { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '', isAllTimeLow: false };
+            });
+
             setPage(0);
-            setFilter(defaultFilter);
             setSearchInput('');
             setShowFilter(false);
             setPriceRange({ min: '', max: '' });
@@ -227,7 +239,7 @@ const GameListPage = () => {
                 return prev;
             });
         }
-    }, [location.search, searchParams]);
+    }, [location.search]);
 
     useEffect(() => {
         const params = {};
@@ -264,6 +276,9 @@ const GameListPage = () => {
     ]);
 
     useEffect(() => {
+
+        if (!isAuthenticated) return;
+
         const initNotificationToast = async () => {
             const supported = await isSupported();
             if (!supported || !('Notification' in window)) return;
@@ -290,7 +305,7 @@ const GameListPage = () => {
             }
         };
         initNotificationToast();
-    }, []);
+    }, [isAuthenticated]);
 
     // 드롭다운 및 칩에 사용될 옵션 데이터
     const sortOptions = [

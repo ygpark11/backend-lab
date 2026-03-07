@@ -155,7 +155,11 @@ export default function GameDetailPage() {
                     </div>
                 ), { duration: 5000, position: 'top-center', style: { background: '#ffffff', padding: '16px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' } });
             } else {
-                toast.error(error.response?.data || "요청 실패", { id: toastId });
+                const errorMessage = typeof error.response?.data === 'string'
+                    ? error.response.data
+                    : "찜하기 요청에 실패했습니다.";
+
+                toast.error(errorMessage, { id: toastId });
             }
         }
     };
@@ -197,7 +201,11 @@ export default function GameDetailPage() {
                     </div>
                 ), { duration: 5000, position: 'top-center', style: { background: '#ffffff', padding: '16px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' } });
             } else {
-                toast.error(error.response?.data || "투표에 실패했습니다.", { id: toastId });
+                const errorMessage = typeof error.response?.data === 'string'
+                    ? error.response.data
+                    : (error.response?.data?.message || "투표에 실패했습니다.");
+
+                toast.error(errorMessage, { id: toastId });
             }
         }
     };
