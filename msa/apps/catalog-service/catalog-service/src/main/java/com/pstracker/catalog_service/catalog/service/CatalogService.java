@@ -411,4 +411,17 @@ public class CatalogService {
             throw new RuntimeException("크롤러 서버 연결 실패: " + e.getMessage());
         }
     }
+
+    @Transactional
+    public void syncAllGameChosung() {
+        List<Game> games = gameRepository.findAll();
+        int count = 0;
+        for (Game game : games) {
+            if (!StringUtils.hasText(game.getChosungName())) {
+                game.syncChosung();
+                count++;
+            }
+        }
+        log.info("🚀 초성 마이그레이션 완료: 총 {}개 게임의 초성이 업데이트되었습니다.", count);
+    }
 }

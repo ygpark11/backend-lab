@@ -127,8 +127,13 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression nameContains(String keyword) {
-        return hasText(keyword) ? game.name.containsIgnoreCase(keyword)
-                .or(game.englishName.containsIgnoreCase(keyword)) : null;
+        if (!hasText(keyword)) return null;
+
+        String strippedKeyword = keyword.replaceAll("\\s+", "");
+
+        return game.name.containsIgnoreCase(keyword)
+                .or(game.englishName.containsIgnoreCase(keyword))
+                .or(game.chosungName.containsIgnoreCase(strippedKeyword));
     }
 
     private BooleanExpression priceBetween(Integer minPrice, Integer maxPrice) {

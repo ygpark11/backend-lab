@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.catalog.domain;
 
+import com.pstracker.catalog_service.global.util.ChosungUtils;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -127,6 +128,7 @@ public class Game {
         game.releaseDate = releaseDate;
         game.createdAt = now;
         game.lastUpdated = now;
+        game.chosungName = ChosungUtils.extract(name);
         return game;
     }
 
@@ -136,6 +138,7 @@ public class Game {
 
         if (hasText(name) && !name.equals(this.name)) {
             this.name = name;
+            this.chosungName = ChosungUtils.extract(name);
         }
 
         if (hasText(englishName)) {
@@ -257,5 +260,11 @@ public class Game {
 
     public void removeDislike() {
         if (this.dislikeCount > 0) this.dislikeCount--;
+    }
+
+    public void syncChosung() {
+        if (this.name != null) {
+            this.chosungName = ChosungUtils.extract(this.name);
+        }
     }
 }
