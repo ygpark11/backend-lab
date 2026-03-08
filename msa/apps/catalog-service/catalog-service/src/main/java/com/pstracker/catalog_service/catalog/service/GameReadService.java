@@ -55,9 +55,18 @@ public class GameReadService {
         // 가격 이력 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
 
+        Integer originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
+        Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
+        int historySize = histories.size();
+
         // DTO 변환
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
-                .map(h -> new GameDetailResponse.PriceHistoryDto(h.getRecordedAt().toLocalDate(), h.getPrice(), h.getDiscountRate()))
+                .map(h -> new GameDetailResponse.PriceHistoryDto(
+                        h.getRecordedAt().toLocalDate(),
+                        h.getPrice(),
+                        h.getDiscountRate(),
+                        GameDetailResponse.calculateVerdict(h.getPrice(), originalPrice, lowestPrice, historySize)
+                ))
                 .toList();
 
         // 연관 게임 추천
