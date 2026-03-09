@@ -109,8 +109,11 @@ const GameListPage = () => {
             return;
         }
 
-        // searchParams가 아닌 filter 상태를 직접 업데이트
-        setFilter(prev => ({ ...prev, minPrice: minVal, maxPrice: maxVal }));
+        setFilter(prev => ({
+            ...prev,
+            minPrice: minVal !== '' ? String(minVal) : '',
+            maxPrice: maxVal !== '' ? String(maxVal) : ''
+        }));
         setActiveDropdown(null);
         setPage(0);
     };
@@ -125,7 +128,12 @@ const GameListPage = () => {
             return;
         }
 
-        setFilter(prev => ({ ...prev, keyword: searchInput, minPrice: minVal, maxPrice: maxVal }));
+        setFilter(prev => ({
+            ...prev,
+            keyword: searchInput,
+            minPrice: minVal !== '' ? String(minVal) : '',
+            maxPrice: maxVal !== '' ? String(maxVal) : ''
+        }));
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setPage(0);
         setIsQuickSearchOpen(false);
@@ -213,30 +221,61 @@ const GameListPage = () => {
                 const isAlreadyDefault =
                     prev.keyword === '' && prev.genre === '' &&
                     prev.minDiscountRate === '' && prev.minMetaScore === '' &&
-                    prev.platform === '' && prev.isPlusExclusive === false &&
-                    prev.inCatalog === false && prev.sort === 'lastUpdated,desc' &&
-                    prev.minPrice === '' && prev.maxPrice === '' &&
-                    prev.isAllTimeLow === false;
+                    prev.platform === '' && !prev.isPlusExclusive &&
+                    !prev.inCatalog && prev.sort === 'lastUpdated,desc' &&
+                    prev.minPrice === '' && prev.maxPrice === '' && !prev.isAllTimeLow;
 
                 if (isAlreadyDefault) return prev;
 
-                return { keyword: '', genre: '', minDiscountRate: '', minMetaScore: '', platform: '', isPlusExclusive: false, inCatalog: false, sort: 'lastUpdated,desc', minPrice: '', maxPrice: '', isAllTimeLow: false };
+                setPage(0);
+                setSearchInput('');
+                setPriceRange({ min: '', max: '' }); // 가격 UI도 초기화
+                return {
+                    keyword: '', genre: '', minDiscountRate: '', minMetaScore: '',
+                    platform: '', isPlusExclusive: false, inCatalog: false,
+                    sort: 'lastUpdated,desc', minPrice: '', maxPrice: '', isAllTimeLow: false
+                };
             });
-
-            setPage(0);
-            setSearchInput('');
-            setShowFilter(false);
-            setPriceRange({ min: '', max: '' });
         } else {
+            const urlKeyword = searchParams.get('keyword') || '';
             const urlGenre = searchParams.get('genre') || '';
+            const urlMinDiscountRate = searchParams.get('minDiscountRate') || '';
+            const urlMinMetaScore = searchParams.get('minMetaScore') || '';
+            const urlPlatform = searchParams.get('platform') || '';
+            const urlIsPlusExclusive = searchParams.get('isPlusExclusive') === 'true';
+            const urlInCatalog = searchParams.get('inCatalog') === 'true';
+            const urlSort = searchParams.get('sort') || 'lastUpdated,desc';
+            const urlMinPrice = searchParams.get('minPrice') || '';
+            const urlMaxPrice = searchParams.get('maxPrice') || '';
             const urlIsAllTimeLow = searchParams.get('isAllTimeLow') === 'true';
 
             setFilter(prev => {
-                if (prev.genre !== urlGenre || prev.isAllTimeLow !== urlIsAllTimeLow) {
-                    setPage(0);
-                    return { ...prev, genre: urlGenre, isAllTimeLow: urlIsAllTimeLow };
+                if (
+                    prev.keyword === urlKeyword &&
+                    prev.genre === urlGenre &&
+                    prev.minDiscountRate === urlMinDiscountRate &&
+                    prev.minMetaScore === urlMinMetaScore &&
+                    prev.platform === urlPlatform &&
+                    prev.isPlusExclusive === urlIsPlusExclusive &&
+                    prev.inCatalog === urlInCatalog &&
+                    prev.sort === urlSort &&
+                    prev.minPrice === urlMinPrice &&
+                    prev.maxPrice === urlMaxPrice &&
+                    prev.isAllTimeLow === urlIsAllTimeLow
+                ) {
+                    return prev;
                 }
-                return prev;
+
+                setPage(0);
+                setSearchInput(urlKeyword); // 검색창 UI 동기화
+                setPriceRange({ min: urlMinPrice, max: urlMaxPrice });
+
+                return {
+                    keyword: urlKeyword, genre: urlGenre, minDiscountRate: urlMinDiscountRate,
+                    minMetaScore: urlMinMetaScore, platform: urlPlatform, isPlusExclusive: urlIsPlusExclusive,
+                    inCatalog: urlInCatalog, sort: urlSort, minPrice: urlMinPrice,
+                    maxPrice: urlMaxPrice, isAllTimeLow: urlIsAllTimeLow
+                };
             });
         }
     }, [location.search]);
@@ -255,8 +294,13 @@ const GameListPage = () => {
         if (filter.maxPrice) params.maxPrice = filter.maxPrice;
         if (filter.isAllTimeLow) params.isAllTimeLow = 'true';
 
-        setSearchParams(params, { replace: true });
-    }, [filter, setSearchParams]);
+        const currentParamsStr = searchParams.toString();
+        const newParamsStr = new URLSearchParams(params).toString();
+
+        if (currentParamsStr !== newParamsStr) {
+            setSearchParams(params, { replace: true });
+        }
+    }, [filter]);
 
     useEffect(() => {
         fetchGames(page);
