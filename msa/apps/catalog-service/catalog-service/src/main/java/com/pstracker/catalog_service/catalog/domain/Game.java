@@ -23,7 +23,8 @@ import static org.springframework.util.StringUtils.hasText;
         @Index(name = "idx_game_price", columnList = "current_price"),
         @Index(name = "idx_game_discount", columnList = "discount_rate"),
         @Index(name = "idx_game_meta", columnList = "metacritic_score"),
-        @Index(name = "idx_game_updated", columnList = "last_updated_at")
+        @Index(name = "idx_game_updated", columnList = "last_updated_at"),
+        @Index(name = "idx_game_family", columnList = "family_id")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -97,6 +98,9 @@ public class Game {
     @Column(name = "dislike_count", nullable = false)
     private Integer dislikeCount = 0;
 
+    @Column(name = "family_id", length = 50)
+    private String familyId;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
 
@@ -112,6 +116,15 @@ public class Game {
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<GameGenre> gameGenres = new HashSet<>();
 
+    public static String extractFamilyId(String psStoreId) {
+        if (!hasText(psStoreId)) return null;
+        String[] parts = psStoreId.split("-");
+        if (parts.length >= 2) {
+            return parts[1]; // 예: HP0700-PPSA10593_00-TEKKEN -> PPSA10593_00 추출
+        }
+        return psStoreId; // 규칙에 안 맞으면 원본 유지
+    }
+
     // --- [생성 메서드] ---
     public static Game create(String psStoreId, String name, String englishName,
                               String publisher, String imageUrl, String description,
@@ -120,6 +133,7 @@ public class Game {
 
         Game game = new Game();
         game.psStoreId = psStoreId;
+        game.familyId = extractFamilyId(psStoreId);
         game.name = name;
         game.englishName = englishName;
         game.publisher = publisher;
@@ -146,7 +160,6 @@ public class Game {
         }
 
         // 기존 데이터가 없거나 "Unknown"일 때만 -> 새 데이터로 덮어씌움
-        // 만약 기존에 "Square Enix"가 있는데 크롤러가 "Unknown"을 보내면? -> 무시함(기존 유지)
         boolean isNewValid = hasText(publisher) && !"Unknown".equals(publisher);
         boolean isCurrentInvalid = !hasText(this.publisher) || "Unknown".equals(this.publisher);
 
@@ -168,6 +181,10 @@ public class Game {
 
         if (newGenres != null && !newGenres.isEmpty()) {
             syncGenres(newGenres);
+        }
+
+        if (this.familyId == null && hasText(this.psStoreId)) {
+            this.familyId = extractFamilyId(this.psStoreId);
         }
 
         this.lastUpdated = LocalDateTime.now();
@@ -260,11 +277,5 @@ public class Game {
 
     public void removeDislike() {
         if (this.dislikeCount > 0) this.dislikeCount--;
-    }
-
-    public void syncChosung() {
-        if (this.name != null) {
-            this.chosungName = ChosungUtils.extract(this.name);
-        }
     }
 }

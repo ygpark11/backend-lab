@@ -52,6 +52,7 @@ public record GameDetailResponse(
         List<String> genres,
         @JsonProperty("inCatalog")
         boolean inCatalog,
+        List<FamilyGameDto> familyGames,
 
         // [추천 게임 리스트]
         List<GameSearchResultDto> relatedGames
@@ -69,7 +70,7 @@ public record GameDetailResponse(
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, this.createdAt, this.priceVerdict,
                 this.verdictMessage, this.priceHistory, this.platforms,
-                this.genres, this.inCatalog, this.relatedGames
+                this.genres, this.inCatalog, this.familyGames, this.relatedGames
         );
     }
 
@@ -94,6 +95,7 @@ public record GameDetailResponse(
             Game game,
             List<PriceHistoryDto> history,
             boolean liked,
+            List<FamilyGameDto> familyGames,
             List<GameSearchResultDto> relatedGames
     ){
 
@@ -134,9 +136,19 @@ public record GameDetailResponse(
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, game.getCreatedAt(), verdict, verdictMsg, history,
                 game.getPlatforms().stream().map(Enum::name).toList(),
-                genreList, game.isInCatalog(), relatedGames
+                genreList, game.isInCatalog(), familyGames, relatedGames
         );
     }
+
+    public record FamilyGameDto(
+            Long id,
+            String name,
+            Integer originalPrice,
+            Integer currentPrice,
+            Integer discountRate,
+            @JsonProperty("isPlusExclusive") boolean isPlusExclusive,
+            PriceVerdict priceVerdict
+    ) implements Serializable {}
 
     public record PriceHistoryDto(
             LocalDate date,

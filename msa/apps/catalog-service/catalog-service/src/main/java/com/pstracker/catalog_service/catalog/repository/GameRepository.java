@@ -47,4 +47,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     @Query("SELECT MAX(g.lastUpdated) FROM Game g")
     LocalDateTime findLatestUpdateDateTime();
+
+    List<Game> findByFamilyIdOrderByOriginalPriceAsc(String familyId);
 }

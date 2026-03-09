@@ -26,12 +26,6 @@ public class AdminController {
         return ResponseEntity.ok("재수집 요청이 완료되었습니다. (로그를 확인하세요)");
     }
 
-    @PostMapping("/games/sync-chosung")
-    public ResponseEntity<String> syncChosung() {
-        catalogService.syncAllGameChosung();
-        return ResponseEntity.ok("기존 게임들의 초성 데이터 마이그레이션이 완료되었습니다.");
-    }
-
     @PostMapping("/insights/refresh")
     public ResponseEntity<String> refreshInsightsCache() {
         insightsService.refreshInsightsCache();

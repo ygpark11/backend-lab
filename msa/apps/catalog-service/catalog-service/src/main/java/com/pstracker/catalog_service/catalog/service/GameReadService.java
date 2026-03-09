@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
+import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
@@ -59,6 +60,22 @@ public class GameReadService {
         Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
         int historySize = histories.size();
 
+        List<GameDetailResponse.FamilyGameDto> familyGames =
+                gameRepository.findByFamilyIdOrderByOriginalPriceAsc(game.getFamilyId())
+                        .stream()
+                        .map(g -> {
+                            int approxHistorySize = (g.getAllTimeLowPrice() != null && g.getAllTimeLowPrice() > 0) ? 2 : 1;
+                            PriceVerdict verdict = GameDetailResponse.calculateVerdict(
+                                    g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(), approxHistorySize
+                            );
+
+                            return new GameDetailResponse.FamilyGameDto(
+                                    g.getId(), g.getName(), g.getOriginalPrice(),
+                                    g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
+                                    verdict
+                            );
+                        }).toList();
+
         // DTO 변환
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
                 .map(h -> new GameDetailResponse.PriceHistoryDto(
@@ -72,7 +89,7 @@ public class GameReadService {
         // 연관 게임 추천
         List<GameSearchResultDto> relatedGames = getRelatedGames(game);
 
-        return GameDetailResponse.from(game, historyDtos, false, relatedGames);
+        return GameDetailResponse.from(game, historyDtos, false, familyGames, relatedGames);
     }
 
     /**
