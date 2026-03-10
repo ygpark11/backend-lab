@@ -53,8 +53,8 @@ export const onForegroundMessage = async () => {
 
         const messaging = getMessaging(app);
         onMessage(messaging, (payload) => {
-            // 포그라운드 메시지 도착 시 로직 (필요할 때만 로그 출력)
-            // console.log("[FCM] 알림 도착:", payload);
+            const event = new CustomEvent('PS_NOTIFICATION_RECEIVED', { detail: payload });
+            window.dispatchEvent(event);
         });
     } catch (error) {
         Sentry.captureException(error);

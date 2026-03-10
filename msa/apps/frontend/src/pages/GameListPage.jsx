@@ -7,7 +7,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
-    Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Coffee, Triangle, Layers, MonitorPlay, Percent,
+    Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
     Flame, ChevronRight
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
@@ -792,17 +792,27 @@ const GameListPage = () => {
 
                 {/* 스마트 플로팅 바 */}
                 <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
-                    <div className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 px-4 py-3 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
-                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all border border-white/5 bg-white/5" title="빠른 검색">
-                            <Search className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" />
-                        </button>
-                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+                    <div className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 p-2 pl-4 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+
+                        {/* 빠른 검색 & 위로 가기 */}
+                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all border border-white/5 bg-white/5" title="빠른 검색"><Search className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" /></button>
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all" title="맨 위로">
-                            <Triangle className="w-5 h-5 text-green-400 fill-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" />
+                            <Triangle className="w-5 h-5 text-green-400 fill-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)] group-hover:-translate-y-1 transition-transform" />
                         </button>
-                        <button onClick={() => setIsDonationOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20" title="커피 후원">
-                            <Coffee className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] group-hover:scale-110 transition-transform" />
+
+                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+
+                        <button
+                            onClick={() => setIsDonationOpen(true)}
+                            className="group flex items-center gap-2 px-4 py-2.5 rounded-full transition-all border border-yellow-500/40 bg-yellow-500/15 hover:bg-yellow-500/25 relative overflow-hidden"
+                            title="감자 서버 밥 주기"
+                        >
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+
+                            <Server className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] group-hover:scale-110 group-hover:-rotate-12 transition-transform" />
+                            <span className="text-xs sm:text-sm font-black text-yellow-500 whitespace-nowrap drop-shadow-md">감자 서버 밥 주기</span>
                         </button>
+
                     </div>
                 </div>
 

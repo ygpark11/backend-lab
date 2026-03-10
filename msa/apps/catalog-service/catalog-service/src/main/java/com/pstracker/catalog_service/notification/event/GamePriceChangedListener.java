@@ -10,10 +10,12 @@ import com.pstracker.catalog_service.notification.repository.NotificationReposit
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -31,73 +33,58 @@ public class GamePriceChangedListener {
      * 가격 하락 이벤트 수신 -> 찜한 유저들에게 알림 발송
      */
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handlePriceChange(GamePriceChangedEvent event) {
-        log.info("🔔 Event Received: Price Drop for '{}' ({} -> {})",
+        log.debug("🔔 Event Received: Price Drop for '{}' ({} -> {})",
                 event.getGameName(), event.getOldPrice(), event.getNewPrice());
 
-        // 1. 수신자 조회 (이 게임을 찜한 사람들)
         List<Member> subscribers = wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId());
 
         if (subscribers.isEmpty()) {
-            log.info("📭 No subscribers for '{}'. Skipping notification.", event.getGameName());
+            log.debug("📭 No subscribers for '{}'. Skipping notification.", event.getGameName());
             return;
         }
 
-        // 2. 이벤트 객체에서 게임 ID 추출
         Long gameId = event.getGameId();
+        String rawGameName = event.getGameName();
 
-        // 3. 알림 메시지 생성
-        String title = "📉 [가격 하락] " + event.getGameName();
-        String message = String.format("가격이 %d원으로 내려갔어요! (%d%% 할인)",
+        String shortGameName = rawGameName.length() > 20
+                ? rawGameName.substring(0, 20) + "..."
+                : rawGameName;
+
+        String dbTitle = "[가격 하락] " + rawGameName;     // 인앱 알림용
+        String pushTitle = "[가격 하락] " + shortGameName; // 모바일 푸시용
+
+        String message = String.format("가격이 %,d원으로 내려갔어요! (%d%% 할인)",
                 event.getNewPrice(), event.getDiscountRate());
 
-        // 2. [In-App] DB 알림 저장 (기존 로직)
         List<Notification> notifications = subscribers.stream()
-                .map(member -> Notification.create(member, title, message, gameId))
+                .map(member -> Notification.create(member, dbTitle, message, gameId))
                 .toList();
         notificationRepository.saveAll(notifications);
-        log.info("💾 Saved {} in-app notifications to DB.", notifications.size());
+        log.debug("Saved {} in-app notifications to DB.", notifications.size());
 
-        // 3. [Push] FCM 토큰 조회 및 발송
-        sendFcmNotifications(subscribers, title, message);
+        // [Push] FCM 발송 로직 호출
+        sendFcmNotifications(subscribers, pushTitle, message);
     }
 
-    /**
-     * FCM 알림 발송
-     * @param subscribers
-     * @param title
-     * @param body
-     */
     private void sendFcmNotifications(List<Member> subscribers, String title, String body) {
         try {
-            // 3-1. 구독자들의 ID 추출
-            List<Long> memberIds = subscribers.stream()
-                    .map(Member::getId)
-                    .toList();
-
-            // 3-2. 해당 멤버들의 토큰 일괄 조회 (Bulk Select)
+            List<Long> memberIds = subscribers.stream().map(Member::getId).toList();
             List<FcmToken> tokens = fcmTokenRepository.findAllByMemberIdIn(memberIds);
 
             if (tokens.isEmpty()) {
-                log.info("📭 Subscribers exist, but no FCM tokens found. Skipping push.");
+                log.debug("Subscribers exist, but no FCM tokens found. Skipping push.");
                 return;
             }
 
-            // 3-3. 알림 발송 (Loop)
-            // Tip: 실제 운영에선 FCM의 'MulticastMessage' 기능을 쓰면 더 효율적입니다.
-            // 일단 현재 구현된 fcmService.sendMessage는 단건 발송이므로 루프를 돌립니다.
-            int successCount = 0;
-            for (FcmToken fcmToken : tokens) {
-                fcmService.sendMessage(fcmToken.getToken(), title, body);
-                successCount++;
-            }
+            fcmService.sendMulticastMessage(tokens, title, body);
 
-            log.info("🚀 Sent FCM Push to {} devices (Target Members: {})", successCount, subscribers.size());
+            log.info("🚀 Triggered FCM Multicast for {} devices (Target Members: {}, Title: {})",
+                    tokens.size(), subscribers.size(), title);
 
         } catch (Exception e) {
-            // FCM 발송 실패가 DB 저장(In-App 알림)까지 롤백시키지 않도록 로그만 찍고 넘어감
             log.error("❌ Failed to send FCM notifications: {}", e.getMessage());
         }
     }

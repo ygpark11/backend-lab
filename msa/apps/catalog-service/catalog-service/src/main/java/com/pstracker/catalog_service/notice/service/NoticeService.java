@@ -3,8 +3,10 @@ package com.pstracker.catalog_service.notice.service;
 import com.pstracker.catalog_service.notice.domain.Notice;
 import com.pstracker.catalog_service.notice.dto.NoticeReq;
 import com.pstracker.catalog_service.notice.dto.NoticeRes;
+import com.pstracker.catalog_service.notice.event.NoticeCreatedEvent;
 import com.pstracker.catalog_service.notice.repository.NoticeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 공지사항 목록 페이징 조회 (최신순)
@@ -37,6 +40,9 @@ public class NoticeService {
         );
 
         Notice savedNotice = noticeRepository.save(notice);
+
+        eventPublisher.publishEvent(new NoticeCreatedEvent(savedNotice.getTitle(), savedNotice.getContent()));
+
         return new NoticeRes(savedNotice);
     }
 

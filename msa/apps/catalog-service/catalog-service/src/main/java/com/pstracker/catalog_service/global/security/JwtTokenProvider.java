@@ -84,8 +84,6 @@ public class JwtTokenProvider {
 
     /**
      * [인증 정보 조회]
-     * 토큰을 복호화하여 Spring Security가 이해할 수 있는 Authentication 객체를 만들어냄
-     * (이 과정 덕분에 DB를 거치지 않고도 "로그인 상태"로 인정받음 -> Stateless)
      */
     public Authentication getAuthentication(String accessToken) {
         // 1. 토큰 복호화

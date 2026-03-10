@@ -8,7 +8,7 @@ import {getGenreBadgeStyle} from '../utils/uiUtils';
 import {calculateCombatPower, getTrafficLight} from '../utils/priceUtils';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
-    AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Coffee, ExternalLink,
+    AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Server, ExternalLink,
     Flame, Gamepad2, Heart, HelpCircle, Link, Search, Sparkles,
     Square, Timer, TrendingUp, Triangle, Users, X, Youtube, Trash2, Plus,
     AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight
@@ -606,8 +606,22 @@ export default function GameDetailPage() {
                         </div>
 
                         <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-5 sm:p-6 rounded-xl border border-white/10 text-center shadow-2xl relative overflow-hidden group mt-4">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500"></div><Coffee className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 mx-auto mb-3 group-hover:scale-110 transition-transform" /><h4 className="font-bold text-white mb-2 text-sm sm:text-base">개발자에게 커피 쏘기 ☕</h4><p className="text-[10px] sm:text-xs text-gray-400 mb-5 leading-relaxed">이 서비스가 마음에 드셨나요?<br/>작은 후원이 서버 유지와<br/>새로운 기능 개발에 큰 힘이 됩니다!</p>
-                            <button onClick={() => setIsDonationOpen(true)} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-2.5 sm:py-3 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2 text-sm">커피 한 잔 사주기 (후원) <ExternalLink className="w-4 h-4"/></button>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500"></div>
+
+                            <Server className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-400 mx-auto mb-3 group-hover:scale-110 transition-transform" />
+
+                            <h4 className="font-bold text-white mb-2 text-sm sm:text-base">감자 서버 밥 주기</h4>
+
+                            <p className="text-[10px] sm:text-xs text-gray-400 mb-5 leading-relaxed">
+                                PS Tracker로 게임값 아끼셨나요?<br/>
+                                작은 후원이 무럭무럭 자라나는<br/>
+                                감자 서버 유지에 큰 힘이 됩니다!
+                            </p>
+
+                            <button onClick={() => setIsDonationOpen(true)} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-2.5 sm:py-3 rounded-lg transition-all shadow-lg hover:shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2 text-sm">
+                                서버비 보태기 (후원) <ExternalLink className="w-4 h-4"/>
+                            </button>
+
                             <Sparkles className="absolute top-4 right-4 w-4 h-4 text-yellow-200 opacity-50 animate-pulse" />
                         </div>
                     </div>

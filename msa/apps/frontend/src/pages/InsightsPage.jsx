@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Flame, Star, TrendingDown, Activity, Database, Clock,
     ChevronRight, Heart, CircleDollarSign, RefreshCw,
-    AlertTriangle
+    AlertTriangle, Server
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
@@ -10,6 +10,7 @@ import PSLoader from '../components/PSLoader';
 import toast from 'react-hot-toast';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 import { adminApi } from '../api/adminApi';
+import DonationModal from '../components/DonationModal';
 
 const formatCurrency = (amount) => {
     if (!amount) return '0';
@@ -37,6 +38,8 @@ const InsightsPage = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    const [isDonationOpen, setIsDonationOpen] = useState(false);
 
     const handleRefreshCache = (e) => {
         e.stopPropagation();
@@ -191,62 +194,60 @@ const InsightsPage = () => {
                 </div>
 
                 {/* 5. 누적 찜 횟수 */}
-                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-gradient-to-r from-pink-900/20 via-[#1a1a1a] to-[#1a1a1a] border border-pink-500/20 p-6 flex items-center justify-between relative overflow-hidden group">
+                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-gradient-to-r from-pink-900/20 via-[#1a1a1a] to-[#1a1a1a] border border-pink-500/20 p-5 md:p-6 flex items-center justify-between relative overflow-hidden group">
                     <div className="absolute left-0 top-0 w-32 h-full bg-pink-500/10 blur-2xl group-hover:bg-pink-500/20 transition-colors"></div>
-                    <div className="flex items-center gap-4 relative z-10">
-                        <div className="w-12 h-12 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
-                            <Heart className="w-6 h-6 text-pink-500 fill-pink-500 animate-pulse" />
+                    <div className="flex items-center gap-3 md:gap-4 relative z-10 flex-1 min-w-0">
+                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                            <Heart className="w-5 h-5 md:w-6 md:h-6 text-pink-500 fill-pink-500 animate-pulse" />
                         </div>
-                        <div>
-                            <h2 className="text-pink-400 font-bold text-xs tracking-wider mb-1">USER ACTIVITY</h2>
-                            <h3 className="text-lg md:text-xl font-black text-white">
+                        <div className="min-w-0">
+                            <h2 className="text-pink-400 font-bold text-[10px] md:text-xs tracking-wider mb-0.5 md:mb-1 uppercase">USER ACTIVITY</h2>
+                            <h3 className="text-sm md:text-xl font-black text-white truncate leading-tight">
                                 우리 사이트에서 찜한 총 횟수
                             </h3>
                         </div>
                     </div>
-                    <div className="relative z-10 text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 drop-shadow-md">
-                        {stats.totalWishlistCount?.toLocaleString()} <span className="text-lg text-gray-400 font-bold">번</span>
+                    <div className="relative z-10 text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 drop-shadow-md shrink-0 ml-2">
+                        {stats.totalWishlistCount?.toLocaleString()} <span className="text-xs md:text-lg text-gray-500 font-bold uppercase">번</span>
                     </div>
                 </div>
 
                 {/* 6 & 7. 트래커 시스템 현황 (TRACKED TITLES & LAST SYNC) */}
-                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-black border border-green-500/20 p-6 flex flex-col md:flex-row items-start md:items-center justify-between font-mono relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,rgba(34,197,94,0.05)_50%,transparent_100%)] bg-[length:100%_4px] opacity-20"></div>
+                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-gradient-to-r from-emerald-900/20 via-[#1a1a1a] to-[#1a1a1a] border border-emerald-500/20 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group">
+                    <div className="absolute left-1/2 top-0 w-48 h-full bg-emerald-500/5 blur-3xl group-hover:bg-emerald-500/10 transition-colors"></div>
 
-                    <div className="flex items-center gap-4 z-10 mb-4 md:mb-0">
-                        <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center border border-green-500/30">
-                            <Database className="w-6 h-6 text-green-400" />
+                    <div className="flex items-center gap-3 md:gap-4 relative z-10 mb-4 md:mb-0 w-full md:w-auto">
+                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                            <Database className="w-5 h-5 md:w-6 md:h-6 text-emerald-400" />
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                <h2 className="text-green-500 font-bold text-xs">SYSTEM ONLINE</h2>
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5 md:mb-1">
+                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+                                <h2 className="text-emerald-400 font-bold text-[10px] md:text-xs tracking-wider uppercase">SYSTEM ONLINE</h2>
                             </div>
-                            <h3 className="text-gray-300 text-sm mt-1">PS Tracker Daemon v2.4.1</h3>
+                            <h3 className="text-gray-200 font-black text-xs md:text-base tracking-wide truncate">PS Tracker Daemon v2.4.1</h3>
                         </div>
                     </div>
 
-                    <div className="flex gap-8 z-10 w-full md:w-auto">
-                        <div>
-                            <p className="text-gray-500 text-xs mb-1">TRACKED TITLES</p>
-                            <p className="text-green-400 font-bold text-lg">{stats.totalTrackedCount?.toLocaleString()}</p>
+                    <div className="flex justify-between items-center gap-3 sm:gap-10 relative z-10 w-full md:w-auto bg-black/40 md:bg-transparent p-3.5 md:p-0 rounded-2xl md:rounded-none border md:border-0 border-white/5">
+                        <div className="flex-1 sm:flex-none">
+                            <p className="text-gray-500 text-[9px] md:text-xs font-bold tracking-wider mb-0.5 md:mb-1 uppercase">TRACKED TITLES</p>
+                            <p className="text-white font-black text-lg md:text-2xl drop-shadow-md">
+                                {stats.totalTrackedCount?.toLocaleString()}<span className="text-xs text-gray-500 ml-1 font-bold">개</span>
+                            </p>
                         </div>
-                        <div>
-                            <p className="text-gray-500 text-xs mb-1">LAST SYNC</p>
-                            <div className="flex items-center gap-2">
-                                <p className="text-green-400 font-bold text-lg flex items-center gap-2">
-                                    <Clock className="w-4 h-4" /> {formatDate(stats.lastSyncTime)}
-                                </p>
 
-                                {/* 관리자 전용 인사이트 캐시 리프레시 버튼 */}
+                        <div className="w-[1px] h-8 bg-white/10 hidden sm:block"></div>
+
+                        <div className="flex-1 sm:flex-none text-right sm:text-left">
+                            <p className="text-gray-500 text-[9px] md:text-xs font-bold tracking-wider mb-0.5 md:mb-1 uppercase">LAST SYNC</p>
+                            <div className="flex items-center justify-end sm:justify-start gap-1.5 md:gap-2">
+                                <p className="text-white font-black text-xs md:text-lg flex items-center gap-1 md:gap-1.5 drop-shadow-md">
+                                    <Clock className="w-3 h-3 md:w-4 md:h-4 text-emerald-400" /> {formatDate(stats.lastSyncTime)}
+                                </p>
                                 {isAdmin && (
-                                    <button
-                                        onClick={handleRefreshCache}
-                                        disabled={isRefreshing}
-                                        title="관리자 전용: 캐시 강제 갱신"
-                                        className="ml-2 p-1.5 rounded-full bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors border border-green-500/30"
-                                    >
-                                        <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                    <button onClick={handleRefreshCache} disabled={isRefreshing} className="p-1 md:p-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors border border-emerald-500/30 ml-1">
+                                        <RefreshCw className={`w-3 h-3 md:w-3.5 md:h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
                                     </button>
                                 )}
                             </div>
@@ -254,7 +255,33 @@ const InsightsPage = () => {
                     </div>
                 </div>
 
+                <div
+                    onClick={() => setIsDonationOpen(true)}
+                    className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-gradient-to-r from-yellow-900/20 via-[#1a1a1a] to-[#1a1a1a] border border-yellow-500/20 p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group cursor-pointer hover:border-yellow-500/50 transition-all duration-300 shadow-[0_0_0_rgba(250,204,21,0)] hover:shadow-[0_0_30px_rgba(250,204,21,0.15)]"
+                >
+                    <div className="absolute right-0 top-0 w-48 h-full bg-yellow-500/5 blur-3xl group-hover:bg-yellow-500/10 transition-colors"></div>
+
+                    <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full md:w-auto flex-1">
+                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 group-hover:-rotate-12 transition-transform">
+                            <Server className="w-5 h-5 md:w-6 md:h-6 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h2 className="text-yellow-500 font-bold text-[10px] md:text-xs tracking-wider mb-0.5 md:mb-1 uppercase">SUPPORT POTATO SERVER</h2>
+                            <h3 className="text-white font-black text-sm md:text-lg lg:text-xl leading-tight truncate md:whitespace-normal">
+                                PS Tracker로 게임값 아끼셨나요? <br className="hidden md:block" />
+                                <span className="text-yellow-400">열일하는 감자 서버에게 밥주기</span>
+                            </h3>
+                        </div>
+                    </div>
+
+                    <div className="flex w-full md:w-auto md:min-w-[140px] justify-between md:justify-center items-center gap-2 mt-4 md:mt-0 relative z-10 bg-black/40 md:bg-white/5 px-4 py-2.5 md:py-2.5 md:px-6 rounded-xl md:rounded-full border border-white/5 md:border-white/10 group-hover:bg-yellow-500/20 group-hover:border-yellow-500/50 transition-all shrink-0">
+                        <span className="text-xs font-bold text-gray-300 group-hover:text-yellow-100 whitespace-nowrap">밥 주기 (후원)</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-yellow-400 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </div>
             </div>
+
+            <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
         </div>
     );
 };
