@@ -49,14 +49,19 @@ export const requestFcmToken = async () => {
 export const onForegroundMessage = async () => {
     try {
         const supported = await isSupported();
-        if (!supported) return;
+        if (!supported) return null; // 빈 값 반환 추가
 
         const messaging = getMessaging(app);
-        onMessage(messaging, (payload) => {
+
+        const unsubscribe = onMessage(messaging, (payload) => {
             const event = new CustomEvent('PS_NOTIFICATION_RECEIVED', { detail: payload });
             window.dispatchEvent(event);
         });
+
+        return unsubscribe;
+
     } catch (error) {
         Sentry.captureException(error);
+        return null;
     }
 };

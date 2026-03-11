@@ -63,7 +63,17 @@ const LoginModalWrapper = () => {
 function App() {
 
     useEffect(() => {
-        onForegroundMessage();
+        let unsubscribeFCM = null;
+
+        onForegroundMessage().then((unsub) => {
+            unsubscribeFCM = unsub;
+        });
+
+        return () => {
+            if (unsubscribeFCM) {
+                unsubscribeFCM();
+            }
+        };
     }, []);
 
     return (
