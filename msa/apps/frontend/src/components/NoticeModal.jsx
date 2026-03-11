@@ -234,11 +234,23 @@ const NoticeModal = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
+            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
+            document.body.style.overflow = 'hidden';
+            document.body.style.paddingRight = `${scrollBarWidth}px`;
+
             setPage(0);
             setHasMore(true);
             setNotices([]);
             fetchNotices(0);
+        } else {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '0px';
         }
+
+        return () => {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '0px';
+        };
     }, [isOpen]);
 
     useEffect(() => {
@@ -267,8 +279,14 @@ const NoticeModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/90 md:bg-black/80 backdrop-blur-md animate-fadeIn">
-            <div className="bg-[#111] md:bg-ps-black/90 md:border md:border-white/10 md:rounded-2xl w-full h-full md:h-auto md:max-h-[85vh] max-w-3xl shadow-2xl relative overflow-hidden flex flex-col md:backdrop-blur-xl">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 bg-black/90 md:bg-black/80 backdrop-blur-md animate-fadeIn"
+            onClick={() => isEditing ? setIsEditing(false) : onClose()}
+        >
+            <div
+                className="bg-[#111] md:bg-ps-black/90 md:border md:border-white/10 md:rounded-2xl w-full h-full md:h-auto md:max-h-[85vh] max-w-3xl shadow-2xl relative overflow-hidden flex flex-col md:backdrop-blur-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* 헤더 */}
                 <div className="shrink-0 bg-gradient-to-r from-gray-900 to-black p-4 md:p-6 border-b border-white/10 flex justify-between items-center relative overflow-hidden">

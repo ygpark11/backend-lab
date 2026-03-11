@@ -59,20 +59,37 @@ const Navbar = () => {
             const payload = event.detail || {};
             const title = payload.notification?.title || payload.title || payload.data?.title || '새로운 알림';
             const body = payload.notification?.body || payload.body || payload.data?.body || '';
+            const pushGameId = payload.data?.gameId || payload.gameId;
+
+            const toastStyle = "w-[340px] sm:w-[380px] max-w-[90vw] mx-auto bg-[#1a1a1a] shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-2xl pointer-events-auto flex flex-col gap-2 p-4 transition-all hover:bg-[#222] cursor-pointer border";
 
             if (title.includes('[공지]')) {
                 setHasNewNotice(true);
                 toast.custom((t) => (
-                    <div className={`${t.visible ? 'animate-fadeIn' : 'animate-fadeOut'} max-w-sm w-full bg-[#1a1a1a] shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-2xl pointer-events-auto flex flex-col gap-2 border border-blue-500/50 p-4 mx-4 mt-2 transition-all hover:bg-[#222]`} onClick={() => { toast.dismiss(t.id); setIsNoticeOpen(true); setHasNewNotice(false); }}>
-                        <span className="font-black text-sm sm:text-base text-blue-400 flex items-center gap-2"><Megaphone className="w-5 h-5"/> {title}</span>
+                    <div className={`${toastStyle} border-blue-500/50 ${t.visible ? 'animate-fadeIn' : 'animate-fadeOut'}`}
+                         onClick={() => { toast.dismiss(t.id); setIsNoticeOpen(true); setHasNewNotice(false); }}>
+                <span className="font-black text-sm sm:text-base text-blue-400 flex items-center gap-2">
+                    <Megaphone className="w-5 h-5"/> {title}
+                </span>
                         <span className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed pl-7">{body}</span>
                     </div>
                 ), { duration: 5000, position: 'top-center' });
             } else {
                 if (isAuthenticated) fetchUnreadCount();
                 toast.custom((t) => (
-                    <div className={`${t.visible ? 'animate-fadeIn' : 'animate-fadeOut'} max-w-sm w-full bg-[#1a1a1a] shadow-[0_10px_40px_rgba(0,0,0,0.8)] rounded-2xl pointer-events-auto flex flex-col gap-2 border border-green-500/50 p-4 mx-4 mt-2 transition-all hover:bg-[#222]`} onClick={() => { toast.dismiss(t.id); toggleNotification(); }}>
-                        <span className="font-black text-sm sm:text-base text-green-400 flex items-center gap-2"><Bell className="w-5 h-5"/> {title}</span>
+                    <div className={`${toastStyle} border-green-500/50 ${t.visible ? 'animate-fadeIn' : 'animate-fadeOut'}`}
+                         onClick={() => {
+                             toast.dismiss(t.id);
+                             if (pushGameId) {
+                                 const currentBackground = location.state?.background || location;
+                                 navigate(`/games/${pushGameId}`, { state: { background: currentBackground } });
+                             } else {
+                                 toggleNotification();
+                             }
+                         }}>
+                <span className="font-black text-sm sm:text-base text-green-400 flex items-center gap-2">
+                    <Bell className="w-5 h-5"/> {title}
+                </span>
                         <span className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed pl-7">{body}</span>
                     </div>
                 ), { duration: 5000, position: 'top-center' });
@@ -81,7 +98,7 @@ const Navbar = () => {
 
         window.addEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
         return () => window.removeEventListener('PS_NOTIFICATION_RECEIVED', handleRealtimeMessage);
-    }, [location.pathname, isAuthenticated]);
+    }, [location.pathname, location.state, isAuthenticated]);
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -109,8 +126,15 @@ const Navbar = () => {
             setUnreadCount(prev => Math.max(0, prev - 1));
             setNotifications(prev => prev.map(n => n.id === notiId ? { ...n, isRead: true } : n));
             setIsNotiOpen(false);
-            if (gameId) navigate(`/games/${gameId}`, { state: null });
-        } catch (err) { console.error("알림 읽음 처리 실패", err); }
+
+            if (gameId) {
+                const currentBackground = location.state?.background || location;
+                navigate(`/games/${gameId}`, { state: { background: currentBackground } });
+            }
+        } catch (err) {
+            console.error("알림 읽음 처리 실패", err);
+            toast.error("알림 이동 처리 중 문제가 발생했습니다.");
+        }
     };
 
     const handleLogout = () => {
@@ -186,18 +210,28 @@ const Navbar = () => {
                                         )}
                                     </button>
                                     {isNotiOpen && (
-                                        <div className="absolute top-full right-0 mt-2 w-72 sm:w-80 md:w-96 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-50">
+                                        <div className="fixed sm:absolute top-[72px] sm:top-full right-4 sm:right-0 left-4 sm:left-auto sm:mt-2 sm:w-80 md:w-96 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-[100]">
+
                                             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-white/5">
                                                 <h3 className="text-sm font-bold text-white">알림 센터</h3>
-                                                <button onClick={() => setIsNotiOpen(false)}><X className="w-4 h-4" /></button>
+                                                <button onClick={() => setIsNotiOpen(false)} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                                                    <X className="w-5 h-5 text-gray-400" />
+                                                </button>
                                             </div>
-                                            <ul className="max-h-[300px] overflow-y-auto custom-scrollbar">
+
+                                            <ul className="max-h-[60vh] sm:max-h-[350px] overflow-y-auto custom-scrollbar">
                                                 {notifications.length === 0 ? (
-                                                    <li className="py-12 text-center flex flex-col items-center gap-3 text-gray-500"><BellOff className="w-8 h-8 opacity-50" /><span className="text-xs font-bold">새로운 알림이 없습니다.</span></li>
+                                                    <li className="py-12 text-center flex flex-col items-center gap-3 text-gray-500">
+                                                        <BellOff className="w-8 h-8 opacity-50" />
+                                                        <span className="text-xs font-bold">새로운 알림이 없습니다.</span>
+                                                    </li>
                                                 ) : (
                                                     notifications.map((noti) => (
                                                         <li key={noti.id} onClick={() => handleNotificationClick(noti.id, noti.gameId)} className={`px-4 py-3 border-b border-white/5 cursor-pointer md:hover:bg-white/5 active:bg-white/10 transition-colors ${!noti.isRead ? 'bg-ps-blue/10' : ''}`}>
-                                                            <div className="flex justify-between items-start mb-1"><span className={`text-sm font-bold ${!noti.isRead ? 'text-ps-blue' : 'text-gray-300'}`}>{noti.title}</span>{!noti.isRead && <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5"></span>}</div>
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <span className={`text-sm font-bold ${!noti.isRead ? 'text-ps-blue' : 'text-gray-300'}`}>{noti.title}</span>
+                                                                {!noti.isRead && <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5 shrink-0"></span>}
+                                                            </div>
                                                             <p className="text-xs text-gray-400 line-clamp-2">{noti.message}</p>
                                                             <p className="text-[10px] text-gray-500 mt-2 text-right">{new Date(noti.createdAt).toLocaleDateString()}</p>
                                                         </li>

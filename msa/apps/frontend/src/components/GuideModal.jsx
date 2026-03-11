@@ -5,8 +5,14 @@ const GuideModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-ps-card border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+            onClick={onClose}
+        >
+            <div
+                className="bg-ps-card border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* 헤더 */}
                 <div className="bg-gradient-to-r from-ps-blue to-blue-900 p-6">
                     <h2 className="text-2xl font-black text-white">PS Tracker 가이드 📘</h2>

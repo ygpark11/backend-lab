@@ -13,8 +13,14 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-[#121212] border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden">
+        <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+            onClick={onClose}
+        >
+            <div
+                className="bg-[#121212] border border-white/10 rounded-2xl w-full max-w-2xl shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* 헤더 */}
                 <div className="flex items-center justify-between p-5 border-b border-white/10 bg-black/40">
