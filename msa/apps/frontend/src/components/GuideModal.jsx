@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Flame, Circle, Triangle, Square, Timer, Sparkles, Tag, Siren, Rocket, Search, Gamepad2 } from 'lucide-react';
+import { X, Flame, Circle, Triangle, Square, Timer, Sparkles, Tag, Siren, Rocket, Search, Gamepad2, Bell } from 'lucide-react';
 
 const GuideModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -10,19 +10,53 @@ const GuideModal = ({ isOpen, onClose }) => {
             onClick={onClose}
         >
             <div
-                className="bg-ps-card border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative overflow-hidden"
+                className="bg-ps-card border border-white/10 rounded-2xl w-full max-w-lg shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
-                <div className="bg-gradient-to-r from-ps-blue to-blue-900 p-6">
-                    <h2 className="text-2xl font-black text-white">PS Tracker 가이드 📘</h2>
-                    <p className="text-blue-200 text-sm">알아두면 쓸모있는 꿀기능 소개</p>
-                    <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors">
-                        <X className="w-6 h-6" />
+                <div className="shrink-0 bg-gradient-to-r from-ps-blue to-blue-900 p-6 relative">
+                    <h2 className="text-2xl font-black text-white">PS Tracker 가이드</h2>
+                    <p className="text-blue-200 text-sm mt-1">알아두면 쓸모있는 꿀기능 소개</p>
+                    <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors bg-black/20 p-1.5 rounded-full">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-6 space-y-8 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                {/* 스크롤 콘텐츠 영역 */}
+                <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar flex-1">
+
+                    <div className="flex gap-4">
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 border border-purple-500/30">
+                            <Bell className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="font-bold text-white text-lg flex items-center gap-2 mb-2">
+                                앱처럼 설치하고 알림 100% 받기
+                            </h3>
+                            <p className="text-sm text-gray-300 leading-relaxed mb-4">
+                                PS Tracker는 웹 서비스라 브라우저를 끄면 알림이 오지 않을 수 있어요. <strong>[홈 화면에 추가]</strong>를 통해 앱처럼 설치하면 쾌적한 환경에서 실시간 할인 알림을 놓치지 않고 받을 수 있습니다!
+                            </p>
+                            <div className="space-y-3">
+                                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
+                                    <h4 className="text-green-400 font-bold text-sm mb-1.5 flex items-center gap-1.5">갤럭시 (안드로이드)</h4>
+                                    <p className="text-xs text-gray-400 leading-relaxed">
+                                        크롬 브라우저 접속 → 우측 상단 <strong>점 세 개(⋮)</strong> 메뉴 → <strong>[앱 설치]</strong> 또는 <strong>[홈 화면에 추가]</strong> 클릭
+                                    </p>
+                                </div>
+                                <div className="bg-black/30 p-3 rounded-xl border border-white/5">
+                                    <h4 className="text-blue-400 font-bold text-sm mb-1.5 flex items-center gap-1.5">아이폰 (iOS)</h4>
+                                    <p className="text-xs text-gray-400 leading-relaxed">
+                                        <strong>Safari(사파리) 브라우저 접속 필수</strong> → 하단 중앙 <strong>공유 버튼(□↑)</strong> → <strong>[홈 화면에 추가]</strong> 클릭
+                                    </p>
+                                </div>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-3 font-bold bg-white/5 inline-block px-2 py-1 rounded">
+                                ※ 설치 후 바탕화면에 생긴 아이콘으로 접속해서 로그인해야 알림이 활성화됩니다!
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="w-full h-px bg-white/10 my-6"></div>
 
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
@@ -105,7 +139,9 @@ const GuideModal = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
-                    <div className="flex gap-4 pt-2 border-t border-white/5">
+                    <div className="w-full h-px bg-white/10 my-6"></div>
+
+                    <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                             <Search className="w-5 h-5" />
                         </div>
@@ -123,8 +159,8 @@ const GuideModal = ({ isOpen, onClose }) => {
                 </div>
 
                 {/* 푸터 */}
-                <div className="p-4 border-t border-white/10 bg-black/20 text-center">
-                    <button onClick={onClose} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                <div className="shrink-0 p-4 border-t border-white/10 bg-black/40 text-center">
+                    <button onClick={onClose} className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-lg">
                         확인했습니다! <Rocket className="w-4 h-4" />
                     </button>
                 </div>
