@@ -131,9 +131,9 @@ const InsightsPage = () => {
                 {/* 1. 역대 최저가 갱신 */}
                 <div
                     onClick={() => navigate('/games?isAllTimeLow=true')}
-                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-900/40 to-black border border-red-500/20 p-8 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(239,68,68,0.2)] transition-all duration-300 flex flex-col justify-between"
+                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 relative overflow-hidden rounded-3xl bg-gradient-to-br from-red-900/40 to-black border border-red-500/20 p-8 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(239,68,68,0.2)] transition-all duration-300 flex flex-col justify-between will-change-transform"
                 >
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -mr-20 -mt-20 transition-transform group-hover:scale-110"></div>
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -mr-20 -mt-20 transition-transform group-hover:scale-110 will-change-transform"></div>
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <Flame className="w-6 h-6 text-red-500 animate-pulse" />
@@ -157,7 +157,7 @@ const InsightsPage = () => {
                 {/* 2. 갓겜 할인 레이더 */}
                 <div
                     onClick={() => navigate('/games?minMetaScore=85&minDiscountRate=50')}
-                    className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/20 p-6 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(168,85,247,0.2)] transition-all duration-300 flex items-center justify-between"
+                    className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/20 p-6 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(168,85,247,0.2)] transition-all duration-300 flex items-center justify-between will-change-transform"
                 >
                     <div>
                         <div className="flex items-center gap-2 mb-1">

@@ -185,12 +185,12 @@ const WishlistPage = () => {
                         return (
                             <div
                                 key={realGameId}
-                                ref={isLastElement ? lastGameElementRef : null} // 🚀 센서 부착
-                                onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })} // 🚀 모달 라우팅
-                                className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-red-500/50'}`}
+                                ref={isLastElement ? lastGameElementRef : null}
+                                onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
+                                className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-red-500/50'}`}
                             >
                                 <div className="aspect-[3/4] overflow-hidden relative">
-                                    <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                    <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>
 
                                     {isPlatinum && <div className="absolute top-2 left-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
@@ -260,7 +260,7 @@ const WishlistPage = () => {
                     <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div></div>
                 )}
 
-                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
+                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out will-change-transform ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
                     <div className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 p-2 pl-4 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
 
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all" title="맨 위로">

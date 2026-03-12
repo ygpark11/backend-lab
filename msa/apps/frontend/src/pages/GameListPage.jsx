@@ -724,12 +724,16 @@ const GameListPage = () => {
                             return (
                                 <div
                                     key={game.id}
-                                    ref={isLastElement ? lastGameElementRef : null} // 센서 부착
+                                    ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-ps-card rounded-xl overflow-hidden shadow-lg border hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-ps-blue/50'}`}
+                                    className={`group bg-ps-card rounded-xl overflow-hidden shadow-lg border hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-ps-blue/50'}`}
                                 >
                                     <div className="aspect-[3/4] overflow-hidden relative">
-                                        <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <PSGameImage
+                                            src={game.imageUrl}
+                                            alt={game.name}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
+                                        />
 
                                         {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
                                         {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
@@ -791,7 +795,7 @@ const GameListPage = () => {
                 )}
 
                 {/* 스마트 플로팅 바 */}
-                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
+                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out will-change-transform ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
                     <div className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 p-2 pl-4 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
 
                         {/* 빠른 검색 & 위로 가기 */}
