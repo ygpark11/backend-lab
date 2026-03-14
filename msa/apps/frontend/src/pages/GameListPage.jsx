@@ -805,7 +805,7 @@ const GameListPage = () => {
 
                                         {/* 4. 가격 정보 */}
                                         <div className="mt-auto relative z-20">
-                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{displayOriginalPrice.toLocaleString()}원</p>}
+                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
                                             <div className="flex justify-between items-end gap-2">
                                                 <p className="text-lg font-black text-white">{game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}<span className="text-sm font-medium ml-1">원</span></p>
                                                 {game.metaScore > 0 && (
