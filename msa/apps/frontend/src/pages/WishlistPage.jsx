@@ -187,9 +187,9 @@ const WishlistPage = () => {
                                 key={realGameId}
                                 ref={isLastElement ? lastGameElementRef : null}
                                 onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
-                                className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-red-500/50'}`}
+                                className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-red-500/50'}`}
                             >
-                                <div className="aspect-[3/4] overflow-hidden relative">
+                                <div className="aspect-[3/4] overflow-hidden relative shrink-0">
                                     <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>
 
@@ -210,7 +210,7 @@ const WishlistPage = () => {
                                         <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
                                     ) : null}
                                 </div>
-                                <div className="p-4 flex flex-col h-full bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
+                                <div className="p-4 flex flex-col flex-1 bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
 
                                     {/* 1. 장르 영역 */}
                                     <div className="flex flex-wrap gap-1 mb-2 min-h-[22px]">

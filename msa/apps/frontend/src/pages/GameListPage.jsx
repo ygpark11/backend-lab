@@ -744,9 +744,9 @@ const GameListPage = () => {
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-ps-card rounded-xl overflow-hidden shadow-lg border hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-ps-blue/50'}`}
+                                    className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-ps-blue/50'}`}
                                 >
-                                    <div className="aspect-[3/4] overflow-hidden relative">
+                                    <div className="aspect-[3/4] overflow-hidden relative shrink-0">
                                         <PSGameImage
                                             src={game.imageUrl}
                                             alt={game.name}
@@ -776,7 +776,8 @@ const GameListPage = () => {
                                             </span>
                                         ) : null}
                                     </div>
-                                    <div className="p-4 flex flex-col h-full bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
+
+                                    <div className="p-4 flex flex-col flex-1 bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
 
                                         {/* 1. 장르 영역 */}
                                         <div className="flex flex-wrap gap-1 mb-2 min-h-[22px]">
@@ -804,7 +805,7 @@ const GameListPage = () => {
 
                                         {/* 4. 가격 정보 */}
                                         <div className="mt-auto relative z-20">
-                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{displayOriginalPrice.toLocaleString()}원</p>}
                                             <div className="flex justify-between items-end gap-2">
                                                 <p className="text-lg font-black text-white">{game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}<span className="text-sm font-medium ml-1">원</span></p>
                                                 {game.metaScore > 0 && (
