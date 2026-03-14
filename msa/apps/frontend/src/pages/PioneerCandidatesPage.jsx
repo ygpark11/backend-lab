@@ -207,24 +207,55 @@ const PioneerCandidatesPage = () => {
                         </div>
                     </div>
                     <button onClick={fetchCandidates} className="mt-5 sm:mt-0 relative z-10 flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/40 border border-blue-400/30 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-bold text-blue-100 group w-full sm:w-auto justify-center">
-                        <RefreshCw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" /> 레이더 재스캔
+                        <RefreshCw className={`w-4 h-4 transition-transform duration-700 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} /> 레이더 재스캔
                     </button>
                 </div>
 
-                {!error && candidates.length > 0 && (
-                    <div className="relative p-3 sm:p-6 md:p-8 bg-[#0d1117] rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 border-[#1f2937] shadow-[0_10px_30px_rgba(0,0,0,0.8),_inset_0_0_80px_rgba(0,0,0,0.9)] overflow-hidden mt-4">
-                        {/* 캐비닛 상단 네온 조명 */}
-                        <div className="absolute top-0 left-0 w-full h-[2px] sm:h-[3px] bg-gradient-to-r from-blue-900 via-blue-400 to-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.8)]"></div>
-                        {/* 캐비닛 내부 메쉬 텍스처 */}
-                        <div className="absolute inset-0 opacity-[0.03] bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#fff_10px,#fff_20px)] pointer-events-none"></div>
+                {!error && (
+                    candidates.length > 0 ? (
+                        <div className="relative p-3 sm:p-6 md:p-8 bg-[#0d1117] rounded-2xl sm:rounded-[3rem] border-2 sm:border-4 border-[#1f2937] shadow-[0_10px_30px_rgba(0,0,0,0.8),_inset_0_0_80px_rgba(0,0,0,0.9)] overflow-hidden mt-4 animate-fadeIn">
+                            {/* 캐비닛 상단 네온 조명 */}
+                            <div className="absolute top-0 left-0 w-full h-[2px] sm:h-[3px] bg-gradient-to-r from-blue-900 via-blue-400 to-blue-900 shadow-[0_0_30px_rgba(59,130,246,0.8)]"></div>
+                            {/* 캐비닛 내부 메쉬 텍스처 */}
+                            <div className="absolute inset-0 opacity-[0.03] bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#fff_10px,#fff_20px)] pointer-events-none"></div>
 
-                        {/* 간격도 모바일에서는 gap-3으로 타이트하게 */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5 relative z-10">
-                            {candidates.map((game) => (
-                                <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} isAuthenticated={isAuthenticated} openLoginModal={openLoginModal} />
-                            ))}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5 relative z-10">
+                                {candidates.map((game) => (
+                                    <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} isAuthenticated={isAuthenticated} openLoginModal={openLoginModal} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-24 sm:py-32 bg-[#0d1117] rounded-2xl sm:rounded-[3rem] border border-dashed border-[#1f2937] mt-4 relative overflow-hidden shadow-inner animate-fadeIn">
+
+                            {/* 배경 레이더 파동 애니메이션 */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
+                                <div className="absolute w-48 h-48 sm:w-64 sm:h-64 border border-blue-500/30 rounded-full animate-[ping_3s_ease-in-out_infinite]"></div>
+                                <div className="absolute w-32 h-32 sm:w-48 sm:h-48 border border-blue-400/20 rounded-full animate-[ping_3s_ease-in-out_infinite_0.5s]"></div>
+                            </div>
+
+                            {/* 메인 콘텐츠 */}
+                            <div className="relative z-10 flex flex-col items-center px-4 text-center">
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-blue-900/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-blue-500/30 mb-6 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+                                    <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-400 opacity-80" />
+                                </div>
+                                <h3 className="text-lg sm:text-2xl font-black text-gray-200 mb-2 drop-shadow-md">
+                                    현재 탐지된 신규 원석이 없습니다.
+                                </h3>
+                                <p className="text-gray-500 text-xs sm:text-sm max-w-md break-keep leading-relaxed">
+                                    개척자님들이 모든 데이터를 성공적으로 수집했습니다!<br/>
+                                    다음번 스토어 심층부 탐사가 끝날 때까지 기다려주세요.
+                                </p>
+
+                                <button
+                                    onClick={() => navigate('/games')}
+                                    className="mt-8 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all flex items-center gap-2 shadow-lg"
+                                >
+                                    기존 게임 진열장 둘러보기
+                                </button>
+                            </div>
+                        </div>
+                    )
                 )}
             </div>
         </div>
