@@ -799,17 +799,22 @@ const GameListPage = () => {
                                         )}
 
                                         {/* 3. 게임 제목 */}
-                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20 pr-7">
+                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
                                             {game.name.trim()}
                                         </h3>
 
                                         {/* 4. 가격 정보 */}
                                         <div className="mt-auto relative z-20">
-                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
-                                            <div className="flex justify-between items-end gap-2">
-                                                <p className="text-lg font-black text-white">{game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}<span className="text-sm font-medium ml-1">원</span></p>
+                                            {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                            <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
+                                                <p className="whitespace-nowrap text-base sm:text-lg font-black text-white tracking-tight">
+                                                    {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
+                                                    <span className="text-xs sm:text-sm font-medium ml-0.5">원</span>
+                                                </p>
                                                 {game.metaScore > 0 && (
-                                                    <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${game.metaScore >= 80 ? 'bg-green-900 text-green-300 border border-green-500/30' : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'}`}>{game.metaScore}</span>
+                                                    <span className={`shrink-0 text-[10px] sm:text-xs font-black px-1.5 py-0.5 sm:px-2 rounded shadow-sm ${game.metaScore >= 80 ? 'bg-green-900 text-green-300 border border-green-500/30' : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'}`}>
+                                                        {game.metaScore}
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>
