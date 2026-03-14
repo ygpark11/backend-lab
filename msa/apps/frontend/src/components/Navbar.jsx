@@ -1,6 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
-import {AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle, Megaphone, MoreVertical} from 'lucide-react';
+import {
+    AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle, Megaphone, Menu,
+    Sparkles, Activity
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
@@ -155,34 +158,34 @@ const Navbar = () => {
     return (
         <>
             <nav className={`fixed top-0 w-full z-50 bg-ps-black/80 backdrop-blur-md border-b border-white/10 h-16 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 h-full flex items-center justify-between">
 
-                    <div className="flex items-center gap-2 cursor-pointer group shrink-0" onClick={handleLogoClick}>
-                        <div className="bg-ps-blue p-1.5 rounded-lg transition-transform duration-300 md:group-hover:rotate-12 active:scale-95 active:rotate-12">
-                            <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                    <div className="flex items-center gap-2 md:gap-8 shrink-0">
+                        {/* 로고 */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group" onClick={handleLogoClick}>
+                            <div className="bg-ps-blue p-1.5 rounded-lg transition-transform duration-300 md:group-hover:rotate-12 active:scale-95 active:rotate-12">
+                                <Gamepad2 className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
+                            </div>
+                            <span className="text-[15px] sm:text-lg md:text-xl font-black tracking-tighter italic bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                                PS <span className="text-ps-blue">Tracker</span>
+                            </span>
                         </div>
-                        <span className="text-lg sm:text-xl font-black tracking-tighter italic bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                            PS <span className="text-ps-blue">Tracker</span>
-                        </span>
+
+                        <div className="hidden md:flex items-center gap-2">
+                            <button onClick={() => { navigate('/games'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/games') ? 'text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                <Gamepad2 className="w-4 h-4" /> 게임 목록
+                            </button>
+                            <button onClick={() => { navigate('/discover'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-ps-blue bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                <Sparkles className="w-4 h-4" /> 신작 수집소
+                            </button>
+                            <button onClick={() => { navigate('/insights'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-400 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                <Activity className="w-4 h-4" /> 통계 인사이트
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
-
-                        <div className="relative sm:hidden flex items-center" ref={mobileMenuRef}>
-                            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-gray-400 p-1.5 rounded-full active:bg-white/10 active:scale-95 transition-colors">
-                                <MoreVertical className="w-5 h-5" />
-                            </button>
-                            {isMobileMenuOpen && (
-                                <div className="absolute top-full right-0 mt-2 w-36 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-50">
-                                    <button onClick={() => { setIsGuideOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 active:bg-white/10 border-b border-white/5">
-                                        <HelpCircle className="w-4 h-4 text-gray-400" /> 가이드
-                                    </button>
-                                    <button onClick={() => { setIsLegalOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 active:bg-white/10">
-                                        <Shield className="w-4 h-4 text-gray-400" /> 법적 고지
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                    {/* 우측 유틸리티 영역 */}
+                    <div className="flex items-center gap-0.5 sm:gap-3 shrink-0">
 
                         <button onClick={() => setIsLegalOpen(true)} className="hidden sm:block text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"><Shield className="w-5 h-5" /></button>
                         <button onClick={() => setIsGuideOpen(true)} className="hidden sm:block text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-white/10"><HelpCircle className="w-5 h-5" /></button>
@@ -200,7 +203,7 @@ const Navbar = () => {
                         {isAuthenticated ? (
                             <>
                                 <div className="relative" ref={notiRef}>
-                                    <button onClick={toggleNotification} className="relative text-gray-400 transition-colors p-2 rounded-full md:hover:text-white md:hover:bg-white/10 active:bg-white/10">
+                                    <button onClick={toggleNotification} className="relative text-gray-400 transition-colors p-1.5 sm:p-2 rounded-full md:hover:text-white md:hover:bg-white/10 active:bg-white/10">
                                         <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
                                         {unreadCount > 0 && (
                                             <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
@@ -242,13 +245,13 @@ const Navbar = () => {
                                     )}
                                 </div>
 
-                                <button onClick={handleLogout} className="flex items-center gap-2 text-sm font-bold text-gray-400 p-2 rounded-lg transition-colors md:hover:text-red-400 md:hover:bg-white/5 active:text-red-400">
+                                <button onClick={handleLogout} className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-400 p-2 rounded-lg transition-colors md:hover:text-red-400 md:hover:bg-white/5 active:text-red-400">
                                     <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
 
-                                <button onClick={() => navigate('/wishlist')} className="relative group bg-gradient-to-r from-pink-600/10 to-purple-600/10 border border-pink-500/30 text-pink-400 p-2 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center gap-0 sm:gap-2 shadow-[0_0_10px_rgba(236,72,153,0.1)] md:hover:from-pink-600 md:hover:to-purple-600 md:hover:text-white md:hover:shadow-[0_0_20px_rgba(236,72,153,0.6)] active:scale-95 ml-1">
+                                <button onClick={() => navigate('/wishlist')} className="relative group bg-gradient-to-r from-pink-600/10 to-purple-600/10 border border-pink-500/30 text-pink-400 p-1.5 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center shadow-[0_0_10px_rgba(236,72,153,0.1)] active:scale-95 ml-0.5 sm:ml-1">
                                     <Heart className="w-5 h-5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
-                                    <span className="hidden sm:inline font-bold sm:text-sm">Wishlist</span>
+                                    <span className="hidden sm:inline font-bold sm:text-sm ml-2">Wishlist</span>
                                 </button>
                             </>
                         ) : (
@@ -257,6 +260,49 @@ const Navbar = () => {
                                 <span className="hidden sm:inline font-bold sm:text-sm tracking-wide">로그인</span>
                             </button>
                         )}
+
+                        <div className="relative md:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
+                            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5'}`}>
+                                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                            </button>
+
+                            {isMobileMenuOpen && (
+                                <div className="absolute top-full right-0 mt-3 w-52 bg-[#1a1a1a]/95 border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200 z-50">
+
+                                    {/* 모바일 핵심 서비스 영역 */}
+                                    <div className="p-2 border-b border-white/10 bg-black/40">
+                                        <button onClick={() => { navigate('/games'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/games') ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                            <div className="bg-gray-800 p-1.5 rounded-lg"><Gamepad2 className="w-4 h-4 text-gray-300" /></div> 게임 목록
+                                        </button>
+
+                                        <button onClick={() => { navigate('/discover'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/discover') ? 'bg-blue-500/20 text-ps-blue border border-blue-500/30' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                            <div className="bg-blue-500/20 p-1.5 rounded-lg"><Sparkles className="w-4 h-4 text-blue-400" /></div> 신작 수집소
+                                        </button>
+
+                                        <button onClick={() => { navigate('/insights'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/insights') ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                            <div className="bg-purple-500/20 p-1.5 rounded-lg"><Activity className="w-4 h-4 text-purple-400" /></div> 통계 인사이트
+                                        </button>
+                                    </div>
+
+                                    {/* 모바일 유틸리티 영역 */}
+                                    <div className="p-2">
+                                        <button onClick={() => { setIsGuideOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors">
+                                            <HelpCircle className="w-4 h-4 opacity-70" /> 초보자 가이드
+                                        </button>
+                                        <button onClick={() => { setIsLegalOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors">
+                                            <Shield className="w-4 h-4 opacity-70" /> 법적 고지
+                                        </button>
+
+                                        {isAuthenticated && (
+                                            <button onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm font-bold text-red-400 border border-transparent hover:bg-red-500/10 hover:border-red-500/20 active:bg-red-500/20 transition-colors">
+                                                <LogOut className="w-4 h-4 opacity-80" /> 안전하게 로그아웃
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                     </div>
                 </div>
             </nav>

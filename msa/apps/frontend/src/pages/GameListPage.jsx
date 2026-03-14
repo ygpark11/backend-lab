@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
     Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
-    Flame, ChevronRight
+    Flame, ChevronRight, Pickaxe
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -473,15 +473,16 @@ const GameListPage = () => {
 
                 ) : (
                     /* ⚪ 상태 4: 아무 필터도 없을 때 (기존 듀얼 액션 배너) */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/30 via-black to-black border border-red-500/20 flex flex-col sm:flex-row group transition-all hover:border-red-500/50 hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]">
-                        {/* 좌측 메인 영역: 클릭 시 '역대 최저가 파도타기'*/}
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/30 via-black to-black border border-red-500/20 flex flex-col md:flex-row group transition-all hover:border-red-500/50 hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]">
+
+                        {/* 좌측 메인 영역: 클릭 시 '역대 최저가 파도타기' (기존 동일) */}
                         <div
                             onClick={() => {
                                 setFilter(prev => ({...prev, isAllTimeLow: true}));
                                 setPage(0);
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
-                            className="flex-1 p-4 sm:p-5 cursor-pointer relative overflow-hidden flex items-center justify-between"
+                            className="flex-1 p-4 sm:p-5 cursor-pointer relative overflow-hidden flex items-center justify-between border-b md:border-b-0 border-white/10"
                         >
                             <div className="absolute top-0 left-0 w-48 h-full bg-red-500/10 blur-3xl transform -skew-x-12 group-hover:bg-red-500/20 transition-colors"></div>
                             <div className="flex items-center gap-4 relative z-10">
@@ -501,16 +502,33 @@ const GameListPage = () => {
                             </div>
                         </div>
 
-                        {/* 우측 분리 영역: '인사이트 페이지'로 가는 전용 버튼 */}
-                        <div
-                            onClick={() => navigate('/insights')}
-                            className="sm:w-48 border-t sm:border-t-0 sm:border-l border-white/10 bg-white/5 hover:bg-white/10 cursor-pointer flex items-center justify-center p-3 sm:p-0 transition-colors group/insight"
-                        >
-                            <div className="flex items-center gap-2 text-gray-300 font-bold text-xs sm:text-sm group-hover/insight:text-white">
-                                <Activity className="w-4 h-4 text-ps-blue" />
-                                <span>통계 대시보드</span>
-                                <ChevronRight className="w-4 h-4 opacity-50 group-hover/insight:translate-x-1 group-hover/insight:opacity-100 transition-all" />
+                        {/* 우측 분리 영역: 신작 수집소 & 통계 인사이트 (모바일은 좌우 반반, PC는 위아래 혹은 나란히) */}
+                        <div className="flex w-full md:w-auto md:border-l border-white/10 shrink-0">
+
+                            {/* 신작 수집소 (PS Blue 감성) */}
+                            <div
+                                onClick={() => navigate('/discover')}
+                                className="flex-1 md:w-36 border-r border-white/10 bg-blue-900/10 hover:bg-blue-500/20 cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/discover"
+                            >
+                                <Sparkles className="w-5 h-5 text-ps-blue mb-1 group-hover/discover:scale-110 group-hover/discover:text-blue-400 transition-all" />
+                                <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] sm:text-xs">
+                                    <span>신작 수집소</span>
+                                    <ChevronRight className="w-3 h-3 opacity-50 group-hover/discover:translate-x-1 group-hover/discover:opacity-100 transition-all" />
+                                </div>
                             </div>
+
+                            {/* 통계 인사이트 (퍼플/그레이 감성) */}
+                            <div
+                                onClick={() => navigate('/insights')}
+                                className="flex-1 md:w-36 bg-white/5 hover:bg-white/10 cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/insight"
+                            >
+                                <Activity className="w-5 h-5 text-purple-400 mb-1 group-hover/insight:scale-110 group-hover/insight:text-purple-300 transition-all" />
+                                <div className="flex items-center gap-1 text-gray-300 font-bold text-[11px] sm:text-xs group-hover/insight:text-white">
+                                    <span>통계 인사이트</span>
+                                    <ChevronRight className="w-3 h-3 opacity-50 group-hover/insight:translate-x-1 group-hover/insight:opacity-100 transition-all" />
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 )}
@@ -758,16 +776,40 @@ const GameListPage = () => {
                                             </span>
                                         ) : null}
                                     </div>
-                                    <div className="p-4">
-                                        <div className="flex flex-wrap gap-1.5 mb-3 min-h-[24px]">
-                                            {game.genres && game.genres.length > 0 ? game.genres.map((g, i) => <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>) : <span className="text-[10px] px-2 py-0.5 rounded-full border font-bold bg-gray-600/20 text-gray-400 border-gray-500/30">미분류</span>}
+                                    <div className="p-4 flex flex-col h-full bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
+
+                                        {/* 1. 장르 영역 */}
+                                        <div className="flex flex-wrap gap-1 mb-2 min-h-[22px]">
+                                            {game.genres && game.genres.length > 0 ? (
+                                                game.genres.map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)
+                                            ) : (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-gray-600/20 text-gray-400 border-gray-500/30">미분류</span>
+                                            )}
                                         </div>
-                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors">{game.name}</h3>
-                                        <div className="flex flex-col gap-0.5">
-                                            {game.discountRate > 0 && <span className="text-xs text-gray-500 line-through">{game.originalPrice?.toLocaleString()}원</span>}
-                                            <div className="flex justify-between items-end mt-1">
-                                                <span className="text-lg font-black text-white">{game.price?.toLocaleString()}원</span>
-                                                {game.metaScore > 0 && <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${game.metaScore >= 80 ? 'bg-green-900 text-green-300 border border-green-500/30' : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'}`}>{game.metaScore}</span>}
+
+                                        {/* 2. 개척자 닉네임 */}
+                                        {game.pioneerName && (
+                                            <div className="self-start inline-flex items-center gap-1.5 mb-3 -ml-4 bg-gradient-to-r from-blue-600/20 to-transparent border-l-[3px] border-blue-400 pl-3 pr-4 py-0.5 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                                                <Pickaxe className="w-3.5 h-3.5 text-blue-400 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
+                                                <span className="text-[10.5px] sm:text-xs font-black text-blue-100 truncate max-w-[130px] sm:max-w-[160px] drop-shadow-md">
+                                                    {game.pioneerName}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* 3. 게임 제목 */}
+                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20 pr-7">
+                                            {game.name.trim()}
+                                        </h3>
+
+                                        {/* 4. 가격 정보 */}
+                                        <div className="mt-auto relative z-20">
+                                            {game.discountRate > 0 && <p className="text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                            <div className="flex justify-between items-end gap-2">
+                                                <p className="text-lg font-black text-white">{game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}<span className="text-sm font-medium ml-1">원</span></p>
+                                                {game.metaScore > 0 && (
+                                                    <span className={`text-xs font-black px-2 py-0.5 rounded shadow-sm ${game.metaScore >= 80 ? 'bg-green-900 text-green-300 border border-green-500/30' : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'}`}>{game.metaScore}</span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

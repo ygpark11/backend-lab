@@ -35,7 +35,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .select(new QGameSearchResultDto(
                         game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
-                        game.isPlusExclusive, game.saleEndDate,
+                        game.isPlusExclusive, game.saleEndDate, game.pioneerName,
                         game.metaScore, game.userScore,
                         game.inCatalog, game.createdAt
                 ))
@@ -114,6 +114,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                     g.getDiscountRate(),
                     g.isPlusExclusive(),
                     g.getSaleEndDate(),
+                    g.getPioneerName(),
                     g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt()
             );
 

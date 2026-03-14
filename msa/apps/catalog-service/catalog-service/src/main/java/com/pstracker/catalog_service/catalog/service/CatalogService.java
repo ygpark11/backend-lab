@@ -30,6 +30,8 @@ public class CatalogService {
 
     @Value("${crawler.single-url}")
     private String CRAWLER_URL;
+    @Value("${crawler.secret-key}")
+    private String internalSecretKey;
 
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
@@ -401,7 +403,10 @@ public class CatalogService {
             String response = restClient.post()
                     .uri(CRAWLER_URL)
                     .header("Content-Type", "application/json")
-                    .body("{\"url\": \"" + targetUrl + "\"}")
+                    .body(Map.of(
+                            "url", targetUrl,
+                            "secretKey", internalSecretKey
+                    ))
                     .retrieve()
                     .body(String.class);
 

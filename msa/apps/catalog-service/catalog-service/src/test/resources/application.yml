@@ -44,6 +44,7 @@ app:
 
 crawler:
   url: http://collector-service:5000/run
+  queue-url: http://collector-service:5000/api/crawler/trigger
   single-url: http://collector-service:5000/crawl/single
   secret-key: "test-crawler-secret-key"
 

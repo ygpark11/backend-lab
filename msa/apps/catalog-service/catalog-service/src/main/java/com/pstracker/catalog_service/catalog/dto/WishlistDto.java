@@ -40,11 +40,13 @@ public class WishlistDto {
     @JsonProperty("inCatalog")
     private boolean inCatalog;
 
+    private String pioneerName;
+
     @QueryProjection
     public WishlistDto(Long id, Long gameId, String gameName, String gameImgUrl,
                        Integer originalPrice, Integer currentPrice, Integer discountRate,
                        boolean isPlusExclusive, LocalDate saleEndDate,
-                       Integer metaScore, boolean inCatalog,
+                       Integer metaScore, boolean inCatalog, String pioneerName,
                        LocalDateTime createdAt, LocalDateTime wishedAt) {
         this.id = id;
         this.gameId = gameId;
@@ -60,5 +62,6 @@ public class WishlistDto {
         this.saleEndDate = saleEndDate;
         this.isPlusExclusive = isPlusExclusive;
         this.inCatalog = inCatalog;
+        this.pioneerName = pioneerName;
     }
 }

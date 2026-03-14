@@ -62,17 +62,21 @@ public class SecurityConfig {
                 // 4. 요청별 권한 설정
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/games/manual-crawl").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/insights/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/scraping/candidates").permitAll()
 
                         .requestMatchers("/api/v1/notices/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/games/*/vote").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/scraping/request/**").authenticated()
 
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",
+                                "/api/internal/**",
                                 "/api/v1/members/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue",

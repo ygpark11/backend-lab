@@ -30,6 +30,8 @@ public record GameDetailResponse(
         LocalDate saleEndDate,
         LocalDate releaseDate,
 
+        String pioneerName,
+
         // [평점 정보]
         Integer metaScore,
         Double userScore,
@@ -66,7 +68,7 @@ public record GameDetailResponse(
                 this.imageUrl, this.description, this.psStoreId,
                 this.currentPrice, this.originalPrice, this.lowestPrice,
                 this.discountRate, this.isPlusExclusive, this.saleEndDate,
-                this.releaseDate, this.metaScore, this.userScore,
+                this.releaseDate, this.pioneerName, this.metaScore, this.userScore,
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, this.createdAt, this.priceVerdict,
                 this.verdictMessage, this.priceHistory, this.platforms,
@@ -132,7 +134,7 @@ public record GameDetailResponse(
                 game.getId(), game.getName(), game.getEnglishName(), game.getPublisher(),
                 game.getImageUrl(), game.getDescription(), game.getPsStoreId(),
                 currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(),
-                game.getSaleEndDate(), game.getReleaseDate(), game.getMetaScore(), game.getUserScore(),
+                game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(), game.getMetaScore(), game.getUserScore(),
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, game.getCreatedAt(), verdict, verdictMsg, history,
                 game.getPlatforms().stream().map(Enum::name).toList(),

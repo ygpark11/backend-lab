@@ -26,7 +26,7 @@ public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
                         wishlist.id, game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate,
-                        game.metaScore, game.inCatalog,
+                        game.metaScore, game.inCatalog, game.pioneerName,
                         game.createdAt, wishlist.createdAt
                 ))
                 .from(wishlist)

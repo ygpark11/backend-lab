@@ -7,6 +7,7 @@ import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
 import GameDetailPage from './pages/GameDetailPage';
 import InsightsPage from "./pages/InsightsPage.jsx";
+import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -16,9 +17,7 @@ import { onForegroundMessage } from './utils/fcm';
 
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
-
     const location = useLocation();
-
     const background = location.state && location.state.background;
 
     if (isAuthenticated === null) {
@@ -37,6 +36,7 @@ function AppRoutes() {
 
                 <Route element={<Layout />}>
                     <Route path="/games" element={<GameListPage />} />
+                    <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
                     <Route path="/games/:id" element={<GameDetailPage />} />
                     <Route

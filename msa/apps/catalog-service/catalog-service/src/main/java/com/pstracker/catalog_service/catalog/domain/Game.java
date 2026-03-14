@@ -101,6 +101,9 @@ public class Game {
     @Column(name = "family_id", length = 50)
     private String familyId;
 
+    @Column(name = "pioneer_name")
+    private String pioneerName;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
 
@@ -260,6 +263,12 @@ public class Game {
             if (this.allTimeLowPrice == null || this.allTimeLowPrice == 0 || currentPrice < this.allTimeLowPrice) {
                 this.allTimeLowPrice = currentPrice;
             }
+        }
+    }
+
+    public void updatePioneerName(String nickname) {
+        if (this.pioneerName == null && hasText(nickname)) {
+            this.pioneerName = nickname;
         }
     }
 

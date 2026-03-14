@@ -75,7 +75,7 @@ public class InsightsService {
     public void refreshInsightsCache() {
         var cache = cacheManager.getCache(INSIGHTS_CACHE);
         if (cache != null) {
-            cache.clear(); // @CacheEvict(allEntries = true) 와 동일한 역할
+            cache.clear();
             log.info("🧹 Insights 로컬 캐시(Caffeine) 전체 초기화 완료.");
         }
     }

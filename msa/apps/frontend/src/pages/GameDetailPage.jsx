@@ -11,7 +11,7 @@ import {
     AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Server, ExternalLink,
     Flame, Gamepad2, Heart, HelpCircle, Link, Search, Sparkles,
     Square, Timer, TrendingUp, Triangle, Users, X, Youtube, Trash2, Plus,
-    AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight
+    AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight, Pickaxe
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -311,6 +311,15 @@ export default function GameDetailPage() {
                                     <Calendar className="w-4 h-4 text-gray-400" />
                                     <span className="text-gray-300 text-xs font-bold tracking-wide">{game.releaseDate.replace(/-/g, '. ')} 출시</span>
                                     {differenceInCalendarDays(new Date(), parseISO(game.releaseDate)) <= 180 && <span className="ml-1.5 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black shadow-sm animate-pulse">NEW</span>}
+                                </div>
+                            )}
+
+                            {game.pioneerName && (
+                                <div className="flex items-center gap-1.5 bg-blue-900/20 px-3 py-1.5 rounded-lg border border-blue-500/30 backdrop-blur-sm shadow-[0_0_15px_rgba(59,130,246,0.15)] cursor-default transition-all hover:bg-blue-900/30">
+                                    <Pickaxe className="w-4 h-4 text-blue-400" />
+                                    <span className="text-blue-300 text-[10px] sm:text-xs font-bold tracking-widest">최초 발굴</span>
+                                    <div className="w-[1px] h-3 bg-blue-500/50 mx-0.5"></div>
+                                    <span className="text-white text-xs sm:text-sm font-black drop-shadow-md">{game.pioneerName}</span>
                                 </div>
                             )}
                         </div>

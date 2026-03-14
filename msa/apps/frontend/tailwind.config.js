@@ -18,6 +18,12 @@ export default {
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
+            },
+            keyframes: {
+                scan: {
+                    '0%': { top: '-150%' },
+                    '100%': { top: '150%' },
+                }
             }
         },
     },

@@ -49,4 +49,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     LocalDateTime findLatestUpdateDateTime();
 
     List<Game> findByFamilyIdOrderByOriginalPriceAsc(String familyId);
+
+    boolean existsByPsStoreId(String psStoreId);
 }

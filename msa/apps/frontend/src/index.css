@@ -39,4 +39,24 @@ body {
             background-position: 40px 0; /* 빗살무늬 패턴(20px)의 배수로 부드럽게 무한 스크롤 */
         }
     }
+
+    /* 🚀 추가: PS 원기옥(블랙홀) 흡수 애니메이션 */
+    @keyframes blackhole-absorb {
+        0% {
+            transform: translate(var(--startX), var(--startY)) scale(1.2) rotate(0deg);
+            opacity: 0;
+        }
+        20% {
+            opacity: 0.8;
+        }
+        100% {
+            transform: translate(0, 0) scale(0) rotate(360deg);
+            opacity: 0;
+        }
+    }
+
+    .animate-blackhole {
+        /* cubic-bezier를 써서 처음엔 천천히, 빨려들어갈 땐 확! 빨려가게 만듭니다 */
+        animation: blackhole-absorb 0.7s cubic-bezier(0.5, 0, 0.2, 1) infinite;
+    }
 }

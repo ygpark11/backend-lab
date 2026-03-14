@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FcmTokenRepository extends JpaRepository<FcmToken, Long> {
+    Optional<FcmToken> findByMember(Member member);
     Optional<FcmToken> findByMemberAndToken(Member member, String token);
     void deleteByMember(Member member);
 

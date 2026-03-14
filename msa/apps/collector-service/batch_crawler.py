@@ -1,3 +1,4 @@
+import queue
 import random
 import os
 import time
@@ -41,11 +42,15 @@ BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
 JAVA_API_URL = f"{BASE_URL}/api/v1/games/collect"
 TARGET_API_URL = f"{BASE_URL}/api/v1/games/targets"
 INSIGHT_REFRESH_API_URL = f"{BASE_URL}/api/v1/games/batch-complete"
+INTERNAL_SYNC_URL = f"{BASE_URL}/api/internal/scraping/candidates/sync"
+INTERNAL_CALLBACK_URL = f"{BASE_URL}/api/internal/scraping/callback"
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 
 lock = threading.Lock()
 is_running = False
+
+urgent_queue = queue.Queue()
 
 # [설정 유지]
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
@@ -133,6 +138,40 @@ def setup_page(context):
 
     page.route("**/*", route_intercept)
     return page
+
+def process_urgent_queue(current_context):
+    while not urgent_queue.empty():
+        urgent_task = urgent_queue.get()
+        req_id = urgent_task['request_id']
+        store_id = urgent_task['ps_store_id']
+        logger.info(f"🚨 [VIP 새치기 발동!] 유저 요청 {store_id} 우선 수집 중...")
+
+        urgent_page = setup_page(current_context)
+        status = "FAIL"
+        error_msg = "Unknown"
+
+        try:
+            target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
+            res = crawl_detail_and_send(urgent_page, target_url, verbose=True)
+            if res and not res.get("is_delisted"):
+                status = "SUCCESS"
+                error_msg = None
+            else:
+                error_msg = "단종 또는 데이터 파싱 실패"
+        except Exception as e:
+            error_msg = str(e)
+        finally:
+            urgent_page.close()
+
+        # 콜백 전송
+        callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
+        try:
+            requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
+            logger.info(f"   📞 [VIP 콜백 완료] {status}")
+        except Exception as e:
+            logger.error(f"   🔥 [VIP 콜백 실패] {e}")
+
+        time.sleep(1) # OS 숨고르기
 
 def mine_english_title(html_content):
     try:
@@ -466,6 +505,137 @@ def refresh_java_server_cache():
     except Exception as e:
         logger.error(f"❌ Network Error while clearing cache: {e}")
 
+def run_phase_0_explore(context):
+    """[Phase 0] 신규 게임(진열장 후보군) 탐사 및 단건 전송"""
+    logger.info(f"[Phase 0] 신규 게임(진열장 후보군) 탐사 시작...")
+
+    new_games_url = "https://store.playstation.com/ko-kr/category/e1699f77-77e1-43ca-a296-26d08abacb0f/1"
+    concept_urls = []
+
+    # 1. 목록 페이지에서 Concept URL 추출
+    page = setup_page(context)
+    try:
+        page.goto(new_games_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
+        page.wait_for_selector("a[href*='/concept/']", timeout=15000)
+
+        page.evaluate("window.scrollTo(0, 1000);")
+        time.sleep(1.5)
+
+        links = page.locator("a[href*='/concept/']").all()
+        for el in links:
+            href = el.get_attribute("href")
+            if href:
+                full_url = f"https://store.playstation.com{href}" if href.startswith("/") else href
+                if full_url not in concept_urls:
+                    concept_urls.append(full_url)
+
+        logger.info(f"   👀 [Phase 0] 1페이지에서 {len(concept_urls)}개의 Concept 발굴 성공")
+    except Exception as e:
+        logger.error(f"   🔥 [Phase 0] 목록 페이지 로딩 실패: {e}")
+        return
+    finally:
+        page.close()
+
+    # ---------------------------------------------------------
+    # 2. 각 Concept 페이지 순회
+    # ---------------------------------------------------------
+    product_urls = []
+    page = setup_page(context)
+
+    try:
+        for idx, concept_url in enumerate(concept_urls, 1):
+            if not is_running: break
+
+            #logger.info(f"   🔎 [{idx}/{len(concept_urls)}] Concept 분석 중: {concept_url.split('/')[-1]}")
+
+            try:
+                page.goto(concept_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
+                page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=15000)
+
+                # 1차 방어: 제목으로 체험판 컷
+                title_text = page.locator("[data-qa='mfe-game-title#name']").inner_text()
+                if any(word in title_text for word in ["체험판", "Demo", "TRIAL", "BETA"]):
+                    # logger.info(f"      ⏩ 스킵 (체험판/데모): {title_text[:20]}...")
+                    continue
+
+                # 2차 방어: 메타데이터에서 정규식으로 productI 추출
+                html_content = page.content()
+                # productId&quot;:&quot;ID&quot; 패턴 대응
+                product_ids = re.findall(r'(?:"|&quot;)productId(?:"|&quot;)\s*:\s*(?:"|&quot;)([^"&]+)', html_content)
+
+                valid_id = None
+                for pid in product_ids:
+                    pid_up = pid.upper()
+                    # 본편(Standard/Deluxe)에 해당하는 ID만 선별
+                    if pid and all(x not in pid_up for x in ["DEMO", "TRIAL", "CONCEPT", "PRE-ORDER"]):
+                        valid_id = pid
+                        break
+
+                if valid_id:
+                    real_product_url = f"https://store.playstation.com/ko-kr/product/{valid_id}"
+                    if real_product_url not in product_urls:
+                        product_urls.append(real_product_url)
+                        logger.debug(f"      대표 ID 추출: {valid_id}")
+                else:
+                    logger.warning(f"      ⚠유효 ID 없음: {concept_url}")
+
+            except Exception as e:
+                logger.warning(f"       분석 실패 (건너뜀): {e}")
+
+            # 페이지 이동 간 랜덤 휴식
+            time.sleep(random.uniform(0.8, 1.5))
+
+            process_urgent_queue(context)
+
+    finally:
+        page.close()
+
+    # ---------------------------------------------------------
+    # 3. 상세 정보 파싱 및 백엔드 전송
+    # ---------------------------------------------------------
+    logger.info(f"   🚀 [Phase 0] 최종 {len(product_urls)}개 게임 상세 정보 수집 및 전송 시작...")
+
+    page = setup_page(context)
+    try:
+        for idx, product_url in enumerate(product_urls, 1):
+            if not is_running: break
+
+            try:
+                page.goto(product_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
+                page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=15000)
+
+                ps_store_id = product_url.split("/")[-1].split("?")[0]
+                title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
+
+                # 이미지 URL 추출
+                image_url = ""
+                html_content = page.content()
+                img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_content)
+                if img_match:
+                    image_url = img_match.group(1).split("?")[0]
+
+                # 백엔드로 전송
+                payload = {"psStoreId": ps_store_id, "title": title, "imageUrl": image_url}
+                headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+
+                res = session.post(INTERNAL_SYNC_URL, json=payload, headers=headers, timeout=15)
+
+                if res.status_code == 200:
+                    logger.info(f"  [{idx}/{len(product_urls)}] 진열장 등록 완료: {title}")
+                else:
+                    logger.debug(f"   [{idx}/{len(product_urls)}] 진열장 스킵 (이미 존재): {title}")
+
+            except Exception as e:
+                logger.warning(f"   상세 수집 실패 ({product_url}): {e}")
+
+            process_urgent_queue(context)
+
+            time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+
+    finally:
+        page.close()
+        logger.info(f"[Phase 0] 신규 탐사 프로세스 전체 종료")
+
 # --- [4. 메인 실행 로직] ---
 def run_batch_crawler_logic():
     global is_running
@@ -477,6 +647,22 @@ def run_batch_crawler_logic():
 
     try:
         visited_urls = set()
+
+        if is_running:
+            try:
+                with sync_playwright() as p:
+                    browser, context = create_browser_context(p)
+                    run_phase_0_explore(context) # 위에서 만든 함수 호출!
+
+                    try: context.close() if context else None
+                    except: pass
+                    try: browser.close() if browser else None
+                    except: pass
+            except Exception as e:
+                logger.error(f"   🔥 Phase 0 치명적 에러: {e}")
+
+            gc.collect() #
+            time.sleep(3)
 
         # 1. 타겟 가져오기
         targets = fetch_update_targets()
@@ -520,8 +706,10 @@ def run_batch_crawler_logic():
                                             if res.get('discountRate', 0) > 0: collected_deals.append(res)
                                     visited_urls.add(url)
                                 finally:
-                                    # 🚀 이 줄이 핵심입니다! Phase 1에서도 작업 끝난 탭을 반드시 닫아줍니다.
                                     page.close()
+
+                                # 한 게임 끝날 때마다 유저 요청이 있는지 확인하고 있으면 먼저 처리!
+                                process_urgent_queue(context)
 
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
@@ -617,6 +805,9 @@ def run_batch_crawler_logic():
                                     finally:
                                         detail_page.close()
 
+                                    # 한 게임 끝날 때마다 유저 요청이 있는지 확인하고 있으면 먼저 처리!
+                                    process_urgent_queue(context)
+
                                     time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
@@ -644,13 +835,30 @@ def run_batch_crawler_logic():
         logger.info("Crawler finished.")
 
 # ==========================================
+# Flask API 라우트 영역
+# ==========================================
+def verify_secret(req_data):
+    """요청 바디에서 secretKey를 꺼내 검증하는 공통 함수"""
+    secret = req_data.get('secretKey')
+    if secret != CRAWLER_SECRET_KEY:
+        return False
+    return True
+
+# ==========================================
 # 단건 수집 API
 # ==========================================
 @app.route('/crawl/single', methods=['POST'])
 def crawl_single_url():
+    data = request.json or {}
+    if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
+
     target_url = request.json.get('url')
     if not target_url:
         return jsonify({"error": "URL is required"}), 400
+
+    global is_running
+    if is_running:
+        return jsonify({"status": "error", "message": "현재 자정 배치 또는 다른 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
     logger.info(f"🎯 Single Crawl Request: {target_url}")
 
@@ -698,6 +906,9 @@ def crawl_single_url():
 
 @app.route('/run', methods=['POST'])
 def trigger_crawl():
+    data = request.json or {}
+    if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
+
     global is_running
     with lock:
         if is_running: return jsonify({"status": "running"}), 409
@@ -706,6 +917,68 @@ def trigger_crawl():
     thread.daemon = True
     thread.start()
     return jsonify({"status": "started"}), 200
+
+@app.route('/api/crawler/trigger', methods=['POST'])
+def trigger_queue_crawl():
+    data = request.json or {}
+    if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
+
+    request_id = data.get('requestId')
+    ps_store_id = data.get('psStoreId')
+
+    if not request_id or not ps_store_id:
+        return jsonify({"error": "Bad Request"}), 400
+
+    global is_running
+    logger.info(f"🎯 [Queue] 유저 수집 지시 접수: {ps_store_id} (ID: {request_id})")
+
+    with lock:
+        if is_running:
+            logger.info("   ⚠️ 현재 서버가 작업 중입니다. VIP 큐에 등록합니다!")
+            urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
+            return jsonify({"status": "accepted", "message": "Added to urgent queue"}), 202
+        else:
+            # 서버가 쉬고 있을 때 들어왔다면, 즉시 락을 걸어서 다른 유저가 브라우저를 못 띄우게 막음!
+            is_running = True
+
+    def crawl_and_callback(req_id, store_id):
+        global is_running
+        target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
+        error_msg = "Unknown Error"
+        status = "FAIL"
+        try:
+            with sync_playwright() as p:
+                browser, context = create_browser_context(p)
+                page = setup_page(context)
+                try:
+                    res = crawl_detail_and_send(page, target_url, verbose=True)
+                    if res and not res.get("is_delisted"):
+                        status = "SUCCESS"
+                        error_msg = None
+                    else:
+                        error_msg = "단종 또는 데이터 파싱 실패"
+                except Exception as e: error_msg = str(e)
+                finally:
+                    page.close()
+
+                process_urgent_queue(context)
+
+                context.close()
+                browser.close()
+        except Exception as e: error_msg = f"Browser Engine Error: {e}"
+        finally:
+            with lock:
+                is_running = False # 모든 작업이 끝났으므로 락 해제!
+
+        callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
+        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+        try:
+            requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers=headers, timeout=10)
+            logger.info(f"   📞 [Queue] 백엔드 콜백 완료: {status}")
+        except Exception as e: logger.error(f"   🔥 [Queue] 백엔드 콜백 실패: {e}")
+
+    threading.Thread(target=crawl_and_callback, args=(request_id, ps_store_id), daemon=True).start()
+    return jsonify({"status": "accepted", "message": "Background task started"}), 202
 
 @app.route('/health', methods=['GET'])
 def health_check():

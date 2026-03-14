@@ -18,6 +18,7 @@ spring:
 # 로컬 Python 수집기 주소
 crawler:
   url: http://localhost:5000/run
+  queue-url: http://localhost:5000/api/crawler/trigger
   single-url: http://localhost:5000/crawl/single
 
 app:

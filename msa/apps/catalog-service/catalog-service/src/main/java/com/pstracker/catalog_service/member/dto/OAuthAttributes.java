@@ -46,9 +46,12 @@ public class OAuthAttributes {
 
     // 2. 엔티티 변환 (처음 가입 시 호출)
     public Member toEntity() {
+        String randomString = UUID.randomUUID().toString().split("-")[0].toUpperCase();
+        String randomNickname = "개척자_" + randomString;
+
         return Member.builder()
                 .email(email)
-                .nickname(name)
+                .nickname(randomNickname)
                 .password(UUID.randomUUID().toString()) // 소셜 로그인은 비번 불필요하므로 랜덤값
                 .role(Role.USER)
                 .provider(provider)

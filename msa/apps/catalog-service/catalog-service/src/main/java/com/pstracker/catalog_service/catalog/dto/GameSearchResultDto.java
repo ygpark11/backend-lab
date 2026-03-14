@@ -23,6 +23,8 @@ public class GameSearchResultDto implements Serializable {
     private boolean isPlusExclusive;
     private LocalDate saleEndDate;
 
+    private String pioneerName;
+
     // 평점 정보
     private Integer metaScore;
     private Double userScore;
@@ -39,7 +41,7 @@ public class GameSearchResultDto implements Serializable {
     @QueryProjection
     public GameSearchResultDto(Long id, String name, String imageUrl,
                                Integer originalPrice, Integer price, Integer discountRate,
-                               boolean isPlusExclusive, LocalDate saleEndDate,
+                               boolean isPlusExclusive, LocalDate saleEndDate, String pioneerName,
                                Integer metaScore, Double userScore,
                                boolean inCatalog, LocalDateTime createdAt) {
         this.id = id;
@@ -50,6 +52,7 @@ public class GameSearchResultDto implements Serializable {
         this.discountRate = discountRate != null ? discountRate : 0;
         this.isPlusExclusive = isPlusExclusive;
         this.saleEndDate = saleEndDate;
+        this.pioneerName = pioneerName;
         this.metaScore = metaScore;
         this.userScore = userScore;
         this.inCatalog = inCatalog;
