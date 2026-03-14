@@ -540,13 +540,15 @@ def run_phase_0_explore(context):
     # 2. 각 Concept 페이지 순회
     # ---------------------------------------------------------
     product_urls = []
-    page = setup_page(context)
+    # page = setup_page(context)
 
     try:
         for idx, concept_url in enumerate(concept_urls, 1):
             if not is_running: break
 
             #logger.info(f"   🔎 [{idx}/{len(concept_urls)}] Concept 분석 중: {concept_url.split('/')[-1]}")
+
+            page = setup_page(context)
 
             try:
                 page.goto(concept_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
@@ -581,24 +583,27 @@ def run_phase_0_explore(context):
 
             except Exception as e:
                 logger.warning(f"       분석 실패 (건너뜀): {e}")
+            finally:
+                page.close()
 
             # 페이지 이동 간 랜덤 휴식
             time.sleep(random.uniform(0.8, 1.5))
-
             process_urgent_queue(context)
 
-    finally:
-        page.close()
+    except Exception as e:
+        logger.error(f"   🔥 [Phase 0] Concept 순회 중 에러: {e}")
 
     # ---------------------------------------------------------
     # 3. 상세 정보 파싱 및 백엔드 전송
     # ---------------------------------------------------------
     logger.info(f"   🚀 [Phase 0] 최종 {len(product_urls)}개 게임 상세 정보 수집 및 전송 시작...")
 
-    page = setup_page(context)
+    # page = setup_page(context)
     try:
         for idx, product_url in enumerate(product_urls, 1):
             if not is_running: break
+
+            page = setup_page(context)
 
             try:
                 page.goto(product_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
@@ -627,14 +632,16 @@ def run_phase_0_explore(context):
 
             except Exception as e:
                 logger.warning(f"   상세 수집 실패 ({product_url}): {e}")
+            finally:
+                page.close()
 
             process_urgent_queue(context)
-
             time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
-    finally:
-        page.close()
-        logger.info(f"[Phase 0] 신규 탐사 프로세스 전체 종료")
+    except Exception as e:
+        logger.error(f"   🔥 [Phase 0] 상세 수집 중 에러: {e}")
+
+    logger.info(f"[Phase 0] 신규 탐사 프로세스 전체 종료")
 
 # --- [4. 메인 실행 로직] ---
 def run_batch_crawler_logic():
