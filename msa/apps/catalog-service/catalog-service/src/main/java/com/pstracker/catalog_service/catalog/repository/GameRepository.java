@@ -14,22 +14,15 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     Optional<Game> findByPsStoreId(String psStoreId);
 
     /**
-     * [수집 원칙 제1조 - 효율성 및 기간 존중]
-     * 크롤링(갱신) 대상 게임 목록을 조회합니다.
-     * 불필요한 트래픽을 방지하기 위해 다음 두 가지 조건을 모두 만족하는 게임만 선별합니다.
-     *
-     * 1. 갱신 주기 도래 (Time Check):
-     * - 마지막 갱신일(lastUpdated)이 기준일(threshold)보다 과거인 게임.
-     *
-     * 2. 세일 중인 게임 제외 (Optimization - NOT EXISTS):
-     * - 현재 진행 중인 세일(saleEndDate >= today)이 있다면 가격이 변동될 확률이 없으므로 수집 대상에서 제외합니다.
-     * - 즉, '정가 판매 중(NULL)'이거나 '세일이 막 종료된' 게임만 조회하여 갱신합니다.
+     * [수집 원칙 제1조 - 효율성 및 기간 존중 (완전판)]
+     * 1. 갱신 주기 도래: 오늘 자정(todayStart) 이전에 갱신된 게임 (하루 1회 보장)
+     * 2. 세일 중인 게임 제외: 정가(NULL)이거나, 할인이 어제부로 종료된 게임만 조회
      */
-    @Query("SELECT g FROM Game g WHERE g.lastUpdated < :threshold " +
-            "AND (g.saleEndDate IS NULL OR g.saleEndDate < :today) " + // 세일 중이 아닌 것(세일 끝났거나, 원래 없거나)
+    @Query("SELECT g FROM Game g WHERE g.lastUpdated < :todayStart " +
+            "AND (g.saleEndDate IS NULL OR g.saleEndDate < :today) " +
             "ORDER BY g.lastUpdated ASC")
     List<Game> findGamesToUpdate(
-            @Param("threshold") LocalDateTime threshold,
+            @Param("todayStart") LocalDateTime todayStart,
             @Param("today") LocalDate today
     );
 

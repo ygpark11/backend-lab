@@ -281,10 +281,10 @@ public class CatalogService {
      * @return 업데이트 대상 게임 PS 스토어 URL 리스트
      */
     public List<String> getGamesToUpdate() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(1);
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDate today = LocalDate.now();
 
-        return gameRepository.findGamesToUpdate(threshold, today).stream()
+        return gameRepository.findGamesToUpdate(todayStart, today).stream()
                 .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
                 .toList();
     }
