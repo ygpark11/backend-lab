@@ -794,34 +794,47 @@ def run_batch_crawler_logic():
                                         if "/ko-kr/product/" in full_url and full_url not in visited_urls:
                                             if full_url not in page_candidates: page_candidates.append(full_url)
                             except: pass
+                            finally:
+                                page.close()
 
                             if not page_candidates:
                                 logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
                             else:
                                 logger.info(f"      Found {len(page_candidates)} new candidates.")
 
+                                candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
+
                                 # 상세 크롤링
-                                for url in page_candidates:
+                                for chunk in candidate_chunks:
                                     if not is_running: break
 
-                                    detail_page = setup_page(context)
+                                    try: context.close() if context else None
+                                    except: pass
+                                    try: browser.close() if browser else None
+                                    except: pass
 
-                                    try:
-                                        res = crawl_detail_and_send(detail_page, url)
-                                        if res:
-                                            if res.get("is_delisted"):
-                                                delisted_games.append(res)
-                                            else:
-                                                total_processed_count += 1
-                                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                        visited_urls.add(url)
-                                    finally:
-                                        detail_page.close()
+                                    browser, context = create_browser_context(p)
 
-                                    # 한 게임 끝날 때마다 유저 요청이 있는지 확인하고 있으면 먼저 처리!
-                                    process_urgent_queue(context)
+                                    for url in chunk:
+                                        if not is_running: break
 
-                                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+                                        detail_page = setup_page(context)
+
+                                        try:
+                                            res = crawl_detail_and_send(detail_page, url)
+                                            if res:
+                                                if res.get("is_delisted"):
+                                                    delisted_games.append(res)
+                                                else:
+                                                    total_processed_count += 1
+                                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                            visited_urls.add(url)
+                                        finally:
+                                            detail_page.close()
+
+                                        process_urgent_queue(context)
+
+                                        time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
                             try: context.close() if context else None
