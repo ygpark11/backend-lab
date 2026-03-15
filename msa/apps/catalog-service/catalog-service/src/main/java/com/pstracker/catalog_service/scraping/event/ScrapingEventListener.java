@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -43,13 +43,13 @@ public class ScrapingEventListener {
             String title = "수집 완료! 🎮";
             String body = "요청하신 [" + game.getName() + "] 게임이 트래커 진열장에 등록되었습니다. 지금 바로 확인해보세요!";
 
-            Optional<FcmToken> token = fcmTokenRepository.findByMember(event.getMember());
-            if(token.isEmpty()) {
-                log.debug("FCM tokens found. Skipping push.");
+            List<FcmToken> tokens = fcmTokenRepository.findAllByMember(event.getMember());
+            if (tokens.isEmpty()) {
+                log.debug("FCM tokens not found. Skipping push.");
                 return;
             }
 
-            fcmService.sendMessage(token.get().getToken(), title, body);
+            fcmService.sendMulticastMessage(tokens, title, body);
             log.debug("🚀 개척자({})에게 FCM 알림 발송 완료", event.getMember().getNickname());
 
         } catch (Exception e) {

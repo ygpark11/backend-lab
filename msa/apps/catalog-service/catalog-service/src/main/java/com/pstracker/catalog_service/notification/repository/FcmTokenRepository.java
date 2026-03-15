@@ -10,9 +10,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface FcmTokenRepository extends JpaRepository<FcmToken, Long> {
-    Optional<FcmToken> findByMember(Member member);
     Optional<FcmToken> findByMemberAndToken(Member member, String token);
     void deleteByMember(Member member);
+    List<FcmToken> findAllByMember(Member member);
 
     @Query("SELECT ft FROM FcmToken ft WHERE ft.member.id IN :memberIds")
     List<FcmToken> findAllByMemberIdIn(@Param("memberIds") List<Long> memberIds);

@@ -51,6 +51,7 @@ lock = threading.Lock()
 is_running = False
 
 urgent_queue = queue.Queue()
+active_requests = set()
 
 # [설정 유지]
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
@@ -140,6 +141,8 @@ def setup_page(context):
     return page
 
 def process_urgent_queue(current_context):
+    global active_requests
+
     while not urgent_queue.empty():
         urgent_task = urgent_queue.get()
         req_id = urgent_task['request_id']
@@ -170,6 +173,9 @@ def process_urgent_queue(current_context):
             logger.info(f"   📞 [VIP 콜백 완료] {status}")
         except Exception as e:
             logger.error(f"   🔥 [VIP 콜백 실패] {e}")
+
+        try: active_requests.remove(req_id)
+        except: pass
 
         time.sleep(1) # OS 숨고르기
 
@@ -936,16 +942,21 @@ def trigger_queue_crawl():
     if not request_id or not ps_store_id:
         return jsonify({"error": "Bad Request"}), 400
 
-    global is_running
+    global is_running, active_requests # 🚀 추가
     logger.info(f"🎯 [Queue] 유저 수집 지시 접수: {ps_store_id} (ID: {request_id})")
 
     with lock:
+        if request_id in active_requests:
+            logger.info(f"   ⚠️ 이미 처리 중인 요청입니다 (중복 방어): ID {request_id}")
+            return jsonify({"status": "ignored", "message": "Already processing"}), 200
+
+        active_requests.add(request_id)
+
         if is_running:
             logger.info("   ⚠️ 현재 서버가 작업 중입니다. VIP 큐에 등록합니다!")
             urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
             return jsonify({"status": "accepted", "message": "Added to urgent queue"}), 202
         else:
-            # 서버가 쉬고 있을 때 들어왔다면, 즉시 락을 걸어서 다른 유저가 브라우저를 못 띄우게 막음!
             is_running = True
 
     def crawl_and_callback(req_id, store_id):
@@ -953,6 +964,7 @@ def trigger_queue_crawl():
         target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
         error_msg = "Unknown Error"
         status = "FAIL"
+
         try:
             with sync_playwright() as p:
                 browser, context = create_browser_context(p)
@@ -968,21 +980,29 @@ def trigger_queue_crawl():
                 finally:
                     page.close()
 
+                callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
+                headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+                try:
+                    requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers=headers, timeout=10)
+                    logger.info(f"   📞 [Queue] 백엔드 콜백 완료: {status}")
+                except Exception as e:
+                    logger.error(f"   🔥 [Queue] 백엔드 콜백 실패: {e}")
+
+                try: active_requests.remove(req_id)
+                except: pass
+
                 process_urgent_queue(context)
 
                 context.close()
                 browser.close()
-        except Exception as e: error_msg = f"Browser Engine Error: {e}"
+        except Exception as e:
+            error_msg = f"Browser Engine Error: {e}"
+            logger.error(error_msg)
+            try: active_requests.remove(req_id)
+            except: pass
         finally:
             with lock:
-                is_running = False # 모든 작업이 끝났으므로 락 해제!
-
-        callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
-        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-        try:
-            requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers=headers, timeout=10)
-            logger.info(f"   📞 [Queue] 백엔드 콜백 완료: {status}")
-        except Exception as e: logger.error(f"   🔥 [Queue] 백엔드 콜백 실패: {e}")
+                is_running = False
 
     threading.Thread(target=crawl_and_callback, args=(request_id, ps_store_id), daemon=True).start()
     return jsonify({"status": "accepted", "message": "Background task started"}), 202
