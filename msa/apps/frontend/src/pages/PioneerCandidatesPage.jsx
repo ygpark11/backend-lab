@@ -169,7 +169,18 @@ const PioneerCandidatesPage = () => {
             await client.post(`/api/v1/scraping/request/${game.psStoreId}`);
             setCandidates(prev => prev.filter(c => c.psStoreId !== game.psStoreId));
         } catch (err) {
-            toast.error("요청에 실패했습니다. 다시 시도해주세요.");
+            let errorMessage = "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+
+            if (err.response) {
+                if (err.response.status === 400 && typeof err.response.data === 'string') {
+                    errorMessage = err.response.data; // "1시간에 최대 3개의..." 문구 그대로 출력
+                }
+                else if (err.response.status === 500) {
+                    errorMessage = "수집 한도(1시간 3회)를 초과했거나 이미 처리 중인 게임입니다.";
+                }
+            }
+
+            toast.error(errorMessage);
             setIsFactoryModalOpen(false);
         }
     };
