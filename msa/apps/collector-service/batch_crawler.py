@@ -81,11 +81,14 @@ def create_browser_context(p):
 
     # User-Agent 리스트
     DESKTOP_USER_AGENTS = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Edg/144.0.0.0",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.7680.80 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
     ]
     user_agent = random.choice(DESKTOP_USER_AGENTS)
 
@@ -497,24 +500,19 @@ def refresh_java_server_cache():
     if not CRAWLER_SECRET_KEY:
         logger.warning("⚠️ CRAWLER_SECRET_KEY가 설정되지 않아 서버 캐시 초기화를 건너뜁니다.")
         return
-
     try:
         headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-
         res = requests.post(INSIGHT_REFRESH_API_URL, headers=headers, timeout=10)
-
         if res.status_code == 200:
             logger.info("🧹 Java Server Insights Cache cleared successfully!")
         else:
             logger.warning(f"⚠️ Failed to clear cache on Java server: {res.status_code} - {res.text}")
-
     except Exception as e:
         logger.error(f"❌ Network Error while clearing cache: {e}")
 
 def run_phase_0_explore(context):
     """[Phase 0] 신규 게임(진열장 후보군) 탐사 및 단건 전송"""
     logger.info(f"[Phase 0] 신규 게임(진열장 후보군) 탐사 시작...")
-
     new_games_url = "https://store.playstation.com/ko-kr/category/e1699f77-77e1-43ca-a296-26d08abacb0f/1"
     concept_urls = []
 
@@ -523,7 +521,6 @@ def run_phase_0_explore(context):
     try:
         page.goto(new_games_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
         page.wait_for_selector("a[href*='/concept/']", timeout=15000)
-
         page.evaluate("window.scrollTo(0, 1000);")
         time.sleep(1.5)
 
@@ -534,7 +531,6 @@ def run_phase_0_explore(context):
                 full_url = f"https://store.playstation.com{href}" if href.startswith("/") else href
                 if full_url not in concept_urls:
                     concept_urls.append(full_url)
-
         logger.info(f"   👀 [Phase 0] 1페이지에서 {len(concept_urls)}개의 Concept 발굴 성공")
     except Exception as e:
         logger.error(f"   🔥 [Phase 0] 목록 페이지 로딩 실패: {e}")
@@ -546,14 +542,11 @@ def run_phase_0_explore(context):
     # 2. 각 Concept 페이지 순회
     # ---------------------------------------------------------
     product_urls = []
-    # page = setup_page(context)
 
     try:
         for idx, concept_url in enumerate(concept_urls, 1):
             if not is_running: break
-
             #logger.info(f"   🔎 [{idx}/{len(concept_urls)}] Concept 분석 중: {concept_url.split('/')[-1]}")
-
             page = setup_page(context)
 
             try:
@@ -566,7 +559,7 @@ def run_phase_0_explore(context):
                     # logger.info(f"      ⏩ 스킵 (체험판/데모): {title_text[:20]}...")
                     continue
 
-                # 2차 방어: 메타데이터에서 정규식으로 productI 추출
+                # 2차 방어: 메타데이터에서 정규식으로 productId 추출
                 html_content = page.content()
                 # productId&quot;:&quot;ID&quot; 패턴 대응
                 product_ids = re.findall(r'(?:"|&quot;)productId(?:"|&quot;)\s*:\s*(?:"|&quot;)([^"&]+)', html_content)
@@ -574,7 +567,6 @@ def run_phase_0_explore(context):
                 valid_id = None
                 for pid in product_ids:
                     pid_up = pid.upper()
-                    # 본편(Standard/Deluxe)에 해당하는 ID만 선별
                     if pid and all(x not in pid_up for x in ["DEMO", "TRIAL", "CONCEPT", "PRE-ORDER"]):
                         valid_id = pid
                         break
@@ -583,7 +575,6 @@ def run_phase_0_explore(context):
                     real_product_url = f"https://store.playstation.com/ko-kr/product/{valid_id}"
                     if real_product_url not in product_urls:
                         product_urls.append(real_product_url)
-                        logger.debug(f"      대표 ID 추출: {valid_id}")
                 else:
                     logger.warning(f"      ⚠유효 ID 없음: {concept_url}")
 
@@ -604,11 +595,9 @@ def run_phase_0_explore(context):
     # ---------------------------------------------------------
     logger.info(f"   🚀 [Phase 0] 최종 {len(product_urls)}개 게임 상세 정보 수집 및 전송 시작...")
 
-    # page = setup_page(context)
     try:
         for idx, product_url in enumerate(product_urls, 1):
             if not is_running: break
-
             page = setup_page(context)
 
             try:
@@ -630,7 +619,6 @@ def run_phase_0_explore(context):
                 headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
 
                 res = session.post(INTERNAL_SYNC_URL, json=payload, headers=headers, timeout=15)
-
                 if res.status_code == 200:
                     logger.info(f"  [{idx}/{len(product_urls)}] 진열장 등록 완료: {title}")
                 else:
@@ -661,54 +649,44 @@ def run_batch_crawler_logic():
     try:
         visited_urls = set()
 
-        if is_running:
-            try:
-                with sync_playwright() as p:
-                    browser, context = create_browser_context(p)
-                    run_phase_0_explore(context) # 위에서 만든 함수 호출!
+        with sync_playwright() as p:
 
+            if is_running:
+                try:
+                    browser, context = create_browser_context(p)
+                    run_phase_0_explore(context)
                     try: context.close() if context else None
                     except: pass
                     try: browser.close() if browser else None
                     except: pass
-            except Exception as e:
-                logger.error(f"   🔥 Phase 0 치명적 에러: {e}")
+                except Exception as e:
+                    logger.error(f"   🔥 Phase 0 치명적 에러: {e}")
 
-            gc.collect() #
-            time.sleep(3)
+                gc.collect()
+                time.sleep(3)
 
-        # 1. 타겟 가져오기
-        targets = fetch_update_targets()
-        if not targets: targets = []
+            targets = fetch_update_targets()
+            if not targets: targets = []
 
-        # ------------------------------------------------------------------
-        # [Phase 1] 기존 타겟 갱신
-        # ------------------------------------------------------------------
-        if targets:
-            logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
+            # ------------------------------------------------------------------
+            # [Phase 1] 기존 타겟 갱신 (엔진 재사용)
+            # ------------------------------------------------------------------
+            if targets:
+                logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
+                BATCH_SIZE = CONF["restart_interval"]
+                target_chunks = [targets[i:i + BATCH_SIZE] for i in range(0, len(targets), BATCH_SIZE)]
 
-            BATCH_SIZE = CONF["restart_interval"]
-            target_chunks = [targets[i:i + BATCH_SIZE] for i in range(0, len(targets), BATCH_SIZE)]
-
-            for chunk_idx, chunk in enumerate(target_chunks):
-                if not is_running: break
-
-                logger.info(f"♻️ [Phase 1] Starting Batch {chunk_idx + 1}/{len(target_chunks)}")
-
-                # 배치마다 엔진(p)을 새로 만들고 끔
                 try:
-                    with sync_playwright() as p:
-                        browser = None
-                        context = None
-                        try:
-                            browser, context = create_browser_context(p)
-                            # page = setup_page(context)
+                    for chunk_idx, chunk in enumerate(target_chunks):
+                        if not is_running: break
 
+                        logger.info(f"♻️ [Phase 1] Starting Batch {chunk_idx + 1}/{len(target_chunks)}")
+                        browser, context = create_browser_context(p)
+
+                        try:
                             for url in chunk:
                                 if not is_running: break
-
                                 page = setup_page(context)
-
                                 try:
                                     res = crawl_detail_and_send(page, url)
                                     if res:
@@ -721,46 +699,39 @@ def run_batch_crawler_logic():
                                 finally:
                                     page.close()
 
-                                # 한 게임 끝날 때마다 유저 요청이 있는지 확인하고 있으면 먼저 처리!
                                 process_urgent_queue(context)
-
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
-                            # 브라우저 종료
                             try: context.close() if context else None
                             except: pass
                             try: browser.close() if browser else None
                             except: pass
 
+                        gc.collect()
+                        time.sleep(2)
                 except Exception as e:
-                    logger.error(f"   ⚠️ Batch Error: {e}")
+                    logger.error(f"   ⚠️ Phase 1 Engine Error: {e}")
 
-                # 배치 종료 후 강제 메모리 정리
-                p = None
-                gc.collect()
-                time.sleep(3) # OS가 숨 돌릴 시간 부여
+            # ------------------------------------------------------------------
+            # [Phase 2] 신규 게임 탐색 (엔진 재사용)
+            # ------------------------------------------------------------------
+            if is_running:
+                logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
+                base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
+                search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
 
-        # ------------------------------------------------------------------
-        # [Phase 2] 신규 게임 탐색
-        # ------------------------------------------------------------------
-        if is_running:
-            logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
-            base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+                current_page = 1
+                max_pages = 10
+                BATCH_SIZE = CONF["restart_interval"]
 
-            current_page = 1
-            max_pages = 10
-            BATCH_SIZE = CONF["restart_interval"] # LOW 모드 기준 10
+                while current_page <= max_pages:
+                    if not is_running: break
 
-            while current_page <= max_pages:
-                if not is_running: break
+                    page_candidates = []
+                    logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
 
-                page_candidates = []
-
-                logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
-                try:
-                    with sync_playwright() as p:
+                    try:
                         browser, context = create_browser_context(p)
                         page = setup_page(context)
                         try:
@@ -790,59 +761,54 @@ def run_batch_crawler_logic():
                             page.close()
                             context.close()
                             browser.close()
-                except Exception as e:
-                    logger.error(f"   🔥 List Scan Error: {e}")
+                    except Exception as e:
+                        logger.error(f"   🔥 List Scan Error: {e}")
 
-                gc.collect()
-                time.sleep(2)
+                    gc.collect()
+                    time.sleep(2)
 
-                if not page_candidates:
-                    logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
-                else:
-                    logger.info(f"      Found {len(page_candidates)} new candidates.")
+                    if not page_candidates:
+                        logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
+                    else:
+                        logger.info(f"      Found {len(page_candidates)} new candidates.")
+                        candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
 
-                    candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
+                        for chunk_idx, chunk in enumerate(candidate_chunks):
+                            if not is_running: break
 
-                    for chunk_idx, chunk in enumerate(candidate_chunks):
-                        if not is_running: break
-
-                        logger.info(f"      ▶️ Deep Scan Batch {chunk_idx + 1}/{len(candidate_chunks)}")
-
-                        try:
-                            with sync_playwright() as p:
+                            logger.info(f"      ▶️ Deep Scan Batch {chunk_idx + 1}/{len(candidate_chunks)}")
+                            try:
                                 browser, context = create_browser_context(p)
+                                try:
+                                    for url in chunk:
+                                        if not is_running: break
+                                        detail_page = setup_page(context)
+                                        try:
+                                            res = crawl_detail_and_send(detail_page, url)
+                                            if res:
+                                                if res.get("is_delisted"):
+                                                    delisted_games.append(res)
+                                                else:
+                                                    total_processed_count += 1
+                                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                            visited_urls.add(url)
+                                        finally:
+                                            detail_page.close()
 
-                                for url in chunk:
-                                    if not is_running: break
+                                        process_urgent_queue(context)
+                                        time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+                                finally:
+                                    context.close()
+                                    browser.close()
+                            except Exception as e:
+                                logger.error(f"   🔥 Chunk Error: {e}")
 
-                                    detail_page = setup_page(context)
-                                    try:
-                                        res = crawl_detail_and_send(detail_page, url)
-                                        if res:
-                                            if res.get("is_delisted"):
-                                                delisted_games.append(res)
-                                            else:
-                                                total_processed_count += 1
-                                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                        visited_urls.add(url)
-                                    finally:
-                                        detail_page.close()
+                            gc.collect()
+                            time.sleep(3)
 
-                                    process_urgent_queue(context)
-                                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
-                                context.close()
-                                browser.close()
-                        except Exception as e:
-                            logger.error(f"   🔥 Chunk Error: {e}")
-
-                        gc.collect()
-                        time.sleep(3)
-
-                current_page += 1
+                    current_page += 1
 
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
-
         refresh_java_server_cache()
 
     except Exception as e:
@@ -879,33 +845,22 @@ def crawl_single_url():
         return jsonify({"status": "error", "message": "현재 자정 배치 또는 다른 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
     logger.info(f"🎯 Single Crawl Request: {target_url}")
-
     result = None
 
     try:
-        # ✅ with 문을 사용하여 Playwright 엔진 생명주기 관리
         with sync_playwright() as p:
             browser = None
             context = None
-
             try:
-                # 브라우저 생성
                 browser, context = create_browser_context(p)
                 page = setup_page(context)
-
-                # 크롤링 수행
                 result = crawl_detail_and_send(page, target_url, verbose=True)
-
             finally:
-                # 🧹 브라우저부터 끄고 나서 -> p가 꺼지도록 순서 보장
                 logger.info("   🧹 Cleaning up resources...")
                 try: context.close() if context else None
                 except: pass
-
                 try: browser.close() if browser else None
                 except: pass
-
-                # 메모리 정리
                 page = None
                 context = None
                 browser = None
@@ -947,69 +902,41 @@ def trigger_queue_crawl():
     if not request_id or not ps_store_id:
         return jsonify({"error": "Bad Request"}), 400
 
-    global is_running, active_requests # 🚀 추가
+    global is_running, active_requests
     logger.info(f"🎯 [Queue] 유저 수집 지시 접수: {ps_store_id} (ID: {request_id})")
 
     with lock:
         if request_id in active_requests:
-            logger.info(f"   ⚠️ 이미 처리 중인 요청입니다 (중복 방어): ID {request_id}")
+            logger.info(f"   ⚠️ 이미 처리 중인 요청입니다: ID {request_id}")
             return jsonify({"status": "ignored", "message": "Already processing"}), 200
 
         active_requests.add(request_id)
+        urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
         if is_running:
-            logger.info("   ⚠️ 현재 서버가 작업 중입니다. VIP 큐에 등록합니다!")
-            urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
+            logger.info("   ⚠️ 현재 서버가 작업 중입니다. 기존 엔진이 VIP 큐를 처리합니다.")
             return jsonify({"status": "accepted", "message": "Added to urgent queue"}), 202
         else:
             is_running = True
 
-    def crawl_and_callback(req_id, store_id):
+    def process_queue_only():
         global is_running
-        target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
-        error_msg = "Unknown Error"
-        status = "FAIL"
-
+        logger.info("🚀 [Mini Worker] VIP 큐 전담 처리기 가동")
         try:
             with sync_playwright() as p:
                 browser, context = create_browser_context(p)
-                page = setup_page(context)
-                try:
-                    res = crawl_detail_and_send(page, target_url, verbose=True)
-                    if res and not res.get("is_delisted"):
-                        status = "SUCCESS"
-                        error_msg = None
-                    else:
-                        error_msg = "단종 또는 데이터 파싱 실패"
-                except Exception as e: error_msg = str(e)
-                finally:
-                    page.close()
-
-                callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
-                headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-                try:
-                    requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers=headers, timeout=10)
-                    logger.info(f"   📞 [Queue] 백엔드 콜백 완료: {status}")
-                except Exception as e:
-                    logger.error(f"   🔥 [Queue] 백엔드 콜백 실패: {e}")
-
-                try: active_requests.remove(req_id)
-                except: pass
-
                 process_urgent_queue(context)
-
-                context.close()
-                browser.close()
+                try: context.close()
+                except: pass
+                try: browser.close()
+                except: pass
         except Exception as e:
-            error_msg = f"Browser Engine Error: {e}"
-            logger.error(error_msg)
-            try: active_requests.remove(req_id)
-            except: pass
+            logger.error(f"🔥 Mini Worker Error: {e}")
         finally:
             with lock:
                 is_running = False
 
-    threading.Thread(target=crawl_and_callback, args=(request_id, ps_store_id), daemon=True).start()
+    threading.Thread(target=process_queue_only, daemon=True).start()
     return jsonify({"status": "accepted", "message": "Background task started"}), 202
 
 @app.route('/health', methods=['GET'])
