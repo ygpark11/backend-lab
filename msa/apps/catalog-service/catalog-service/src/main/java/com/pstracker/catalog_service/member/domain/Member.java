@@ -58,9 +58,8 @@ public class Member {
     }
 
     // --- [비즈니스 메서드] ---
-    public Member updateNickname(String nickname) {
+    public void updateNickname(String nickname) {
         this.nickname = nickname;
-        return this;
     }
 
     public void updateSettings(boolean priceAlertEnabled, boolean nightModeEnabled) {

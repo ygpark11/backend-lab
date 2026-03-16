@@ -1,7 +1,6 @@
 package com.pstracker.catalog_service.member.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
@@ -132,6 +131,8 @@ public class MyPageService {
         }
 
         member.updateNickname(trimmedNickname);
+
+        memberRepository.saveAndFlush(member);
 
         gameRepository.updatePioneerNameByMemberId(memberId, trimmedNickname);
 
