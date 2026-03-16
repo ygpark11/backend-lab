@@ -36,7 +36,7 @@ public class ScrapingEventListener {
                     .orElseThrow(() -> new IllegalArgumentException("수집 완료 콜백을 받았으나 DB에서 게임을 찾을 수 없습니다: " + event.getPsStoreId()));
 
             // 2. 개척자 명예의 전당 기록 (※ Game 엔티티에 pioneerName 필드와 update 메서드가 추가되어야 동작합니다)
-            game.updatePioneerName(event.getMember().getNickname());
+            game.updatePioneerInfo(event.getMember().getId(), event.getMember().getNickname());
             log.debug("👑 개척자 칭호 부여 완료: [{}] -> {}", game.getName(), event.getMember().getNickname());
 
             // 3. 해당 유저에게 FCM 푸시 알림 단건 발송

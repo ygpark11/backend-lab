@@ -8,6 +8,7 @@ import WishlistPage from './pages/WishlistPage';
 import GameDetailPage from './pages/GameDetailPage';
 import InsightsPage from "./pages/InsightsPage.jsx";
 import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
+import MyPage from './pages/MyPage';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -42,6 +43,10 @@ function AppRoutes() {
                     <Route
                         path="/wishlist"
                         element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}
+                    />
+                    <Route
+                        path="/profile"
+                        element={isAuthenticated ? <MyPage /> : <Navigate to="/games" replace />}
                     />
                 </Route>
             </Routes>

@@ -245,6 +245,10 @@ const Navbar = () => {
                                     )}
                                 </div>
 
+                                <button onClick={() => { navigate('/profile'); window.scrollTo(0,0); }} className={`hidden md:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-white bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.1)]' : 'text-gray-400 md:hover:text-white md:hover:bg-white/5'}`}>
+                                    <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" />
+                                </button>
+
                                 <button onClick={handleLogout} className="hidden md:flex items-center gap-2 text-sm font-bold text-gray-400 p-2 rounded-lg transition-colors md:hover:text-red-400 md:hover:bg-white/5 active:text-red-400">
                                     <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                                 </button>
@@ -286,6 +290,12 @@ const Navbar = () => {
 
                                     {/* 모바일 유틸리티 영역 */}
                                     <div className="p-2">
+                                        {isAuthenticated && (
+                                            <button onClick={() => { navigate('/profile'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/profile') ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white hover:bg-white/10 active:bg-white/20'}`}>
+                                                <UserCircle className="w-4 h-4 opacity-70" /> 마이페이지
+                                            </button>
+                                        )}
+
                                         <button onClick={() => { setIsGuideOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/10 active:bg-white/20 transition-colors">
                                             <HelpCircle className="w-4 h-4 opacity-70" /> 초보자 가이드
                                         </button>

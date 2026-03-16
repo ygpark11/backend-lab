@@ -11,4 +11,6 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     // 중복 가입 방지용
     boolean existsByEmail(String email);
+
+    boolean existsByNickname(String trimmedNickname);
 }

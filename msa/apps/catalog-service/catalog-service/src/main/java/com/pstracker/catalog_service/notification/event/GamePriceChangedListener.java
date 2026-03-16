@@ -39,9 +39,9 @@ public class GamePriceChangedListener {
         log.debug("🔔 Event Received: Price Drop for '{}' ({} -> {})",
                 event.getGameName(), event.getOldPrice(), event.getNewPrice());
 
-        List<Member> subscribers = wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId());
+        List<Member> allSubscribers = wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId());
 
-        if (subscribers.isEmpty()) {
+        if (allSubscribers.isEmpty()) {
             log.debug("📭 No subscribers for '{}'. Skipping notification.", event.getGameName());
             return;
         }
@@ -59,14 +59,21 @@ public class GamePriceChangedListener {
         String message = String.format("가격이 %,d원으로 내려갔어요! (%d%% 할인)",
                 event.getNewPrice(), event.getDiscountRate());
 
-        List<Notification> notifications = subscribers.stream()
+        List<Notification> notifications = allSubscribers.stream()
                 .map(member -> Notification.create(member, dbTitle, message, gameId))
                 .toList();
         notificationRepository.saveAll(notifications);
         log.debug("Saved {} in-app notifications to DB.", notifications.size());
 
-        // [Push] FCM 발송 로직 호출
-        sendFcmNotifications(subscribers, pushTitle, message);
+        List<Member> alertEnabledSubscribers = allSubscribers.stream()
+                .filter(Member::isPriceAlertEnabled)
+                .toList();
+
+        if (!alertEnabledSubscribers.isEmpty()) {
+            sendFcmNotifications(alertEnabledSubscribers, pushTitle, message);
+        } else {
+            log.debug("📭 푸시 알림 대상이 없습니다 (해당 게임을 찜한 유저들이 모두 푸시를 껐습니다).");
+        }
     }
 
     private void sendFcmNotifications(List<Member> subscribers, String title, String body) {

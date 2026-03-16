@@ -74,6 +74,26 @@ public class GamePriceChangedListenerTest {
     }
 
     @Test
+    @DisplayName("가격 하락 알림을 끈 유저에게는 DB 알림만 저장되고 FCM은 발송되지 않아야 한다.")
+    void handle_PriceAlertDisabled() {
+        GamePriceChangedEvent event = createEvent();
+        Member member = mock(Member.class);
+
+        given(member.isPriceAlertEnabled()).willReturn(false); // 알림 수신 거부 상태!
+
+        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
+                .willReturn(List.of(member));
+
+        listener.handlePriceChange(event);
+
+        // 1. 알림을 껐더라도 인앱 DB 알림은 저장되어야 함
+        verify(notificationRepository, times(1)).saveAll(anyList());
+        // 2. 알림을 껐기 때문에 토큰 조회나 푸시 발송 로직은 타지 않아야 함
+        verify(fcmTokenRepository, never()).findAllByMemberIdIn(anyList());
+        verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any());
+    }
+
+    @Test
     @DisplayName("구독자와 토큰이 모두 존재하면 DB 저장 및 FCM 발송이 수행되어야 한다.")
     void handle_FullFlow() {
         // given
@@ -140,12 +160,14 @@ public class GamePriceChangedListenerTest {
     private Member createMember(Long id) {
         Member member = mock(Member.class);
         given(member.getId()).willReturn(id);
+
+        lenient().when(member.isPriceAlertEnabled()).thenReturn(true);
+
         return member;
     }
 
     private FcmToken createToken(Member member, String tokenValue) {
         FcmToken token = mock(FcmToken.class);
-        // 테스트 로직상 실제로 getToken()을 까보진 않지만, 혹시 몰라 유지합니다.
         lenient().when(token.getToken()).thenReturn(tokenValue);
         return token;
     }

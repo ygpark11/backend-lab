@@ -5,7 +5,6 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.cglib.core.Local;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -100,6 +99,9 @@ public class Game {
 
     @Column(name = "family_id", length = 50)
     private String familyId;
+
+    @Column(name = "pioneer_member_id")
+    private Long pioneerMemberId;
 
     @Column(name = "pioneer_name")
     private String pioneerName;
@@ -266,8 +268,9 @@ public class Game {
         }
     }
 
-    public void updatePioneerName(String nickname) {
-        if (this.pioneerName == null && hasText(nickname)) {
+    public void updatePioneerInfo(Long memberId, String nickname) {
+        if (this.pioneerMemberId == null && this.pioneerName == null) {
+            this.pioneerMemberId = memberId;
             this.pioneerName = nickname;
         }
     }

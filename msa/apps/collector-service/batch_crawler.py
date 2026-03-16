@@ -751,102 +751,94 @@ def run_batch_crawler_logic():
 
             current_page = 1
             max_pages = 10
-            BATCH_SIZE = CONF["restart_interval"]
+            BATCH_SIZE = CONF["restart_interval"] # LOW 모드 기준 10
 
             while current_page <= max_pages:
                 if not is_running: break
 
-                # Phase 2도 페이지 단위로 엔진을 새로 켬
+                page_candidates = []
+
+                logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
                 try:
                     with sync_playwright() as p:
-                        browser = None
-                        context = None
+                        browser, context = create_browser_context(p)
+                        page = setup_page(context)
                         try:
-                            browser, context = create_browser_context(p)
-                            page = setup_page(context)
-
                             target_list_url = f"{base_category_path}/{current_page}{search_params}"
-                            logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
-
+                            page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
                             try:
-                                page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
-                                try:
-                                    page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                                except:
-                                    page.reload(timeout=CONF['timeout'], wait_until="commit")
-                                    page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                                page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
-                                time.sleep(random.uniform(0.5, 1.0))
-                                page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
-                                time.sleep(random.uniform(1.0, 2.0))
-                            except Exception as e:
-                                logger.warning(f"   ⚠️ List load failed. Skip. ({e})")
-                                current_page += 1
-                                continue
+                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                            except:
+                                page.reload(timeout=CONF['timeout'], wait_until="commit")
+                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
 
-                            page_candidates = []
-                            try:
-                                links = page.locator("a[href*='/product/']").all()
-                                for el in links:
-                                    url = el.get_attribute("href")
-                                    if url:
-                                        full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
-                                        if "/ko-kr/product/" in full_url and full_url not in visited_urls:
-                                            if full_url not in page_candidates: page_candidates.append(full_url)
-                            except: pass
-                            finally:
-                                page.close()
+                            page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
+                            time.sleep(random.uniform(0.5, 1.0))
+                            page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
+                            time.sleep(random.uniform(1.0, 2.0))
 
-                            if not page_candidates:
-                                logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
-                            else:
-                                logger.info(f"      Found {len(page_candidates)} new candidates.")
-
-                                candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
-
-                                # 상세 크롤링
-                                for chunk in candidate_chunks:
-                                    if not is_running: break
-
-                                    try: context.close() if context else None
-                                    except: pass
-                                    try: browser.close() if browser else None
-                                    except: pass
-
-                                    browser, context = create_browser_context(p)
-
-                                    for url in chunk:
-                                        if not is_running: break
-
-                                        detail_page = setup_page(context)
-
-                                        try:
-                                            res = crawl_detail_and_send(detail_page, url)
-                                            if res:
-                                                if res.get("is_delisted"):
-                                                    delisted_games.append(res)
-                                                else:
-                                                    total_processed_count += 1
-                                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                            visited_urls.add(url)
-                                        finally:
-                                            detail_page.close()
-
-                                        process_urgent_queue(context)
-
-                                        time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
+                            links = page.locator("a[href*='/product/']").all()
+                            for el in links:
+                                url = el.get_attribute("href")
+                                if url:
+                                    full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
+                                    if "/ko-kr/product/" in full_url and full_url not in visited_urls:
+                                        if full_url not in page_candidates: page_candidates.append(full_url)
+                        except Exception as e:
+                            logger.warning(f"   ⚠️ List load failed. Skip. ({e})")
                         finally:
-                            try: context.close() if context else None
-                            except: pass
-                            try: browser.close() if browser else None
-                            except: pass
-
+                            page.close()
+                            context.close()
+                            browser.close()
                 except Exception as e:
-                    logger.error(f"   🔥 Phase 2 Error: {e}")
+                    logger.error(f"   🔥 List Scan Error: {e}")
 
                 gc.collect()
-                time.sleep(3)
+                time.sleep(2)
+
+                if not page_candidates:
+                    logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
+                else:
+                    logger.info(f"      Found {len(page_candidates)} new candidates.")
+
+                    candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
+
+                    for chunk_idx, chunk in enumerate(candidate_chunks):
+                        if not is_running: break
+
+                        logger.info(f"      ▶️ Deep Scan Batch {chunk_idx + 1}/{len(candidate_chunks)}")
+
+                        try:
+                            with sync_playwright() as p:
+                                browser, context = create_browser_context(p)
+
+                                for url in chunk:
+                                    if not is_running: break
+
+                                    detail_page = setup_page(context)
+                                    try:
+                                        res = crawl_detail_and_send(detail_page, url)
+                                        if res:
+                                            if res.get("is_delisted"):
+                                                delisted_games.append(res)
+                                            else:
+                                                total_processed_count += 1
+                                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                        visited_urls.add(url)
+                                    finally:
+                                        detail_page.close()
+
+                                    process_urgent_queue(context)
+                                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+
+                                context.close()
+                                browser.close()
+                        except Exception as e:
+                            logger.error(f"   🔥 Chunk Error: {e}")
+
+                        gc.collect()
+                        time.sleep(3)
+
                 current_page += 1
 
         send_discord_summary(total_processed_count, collected_deals, delisted_games)

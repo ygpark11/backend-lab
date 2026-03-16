@@ -73,6 +73,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/games/*/vote").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/scraping/request/**").authenticated()
 
+                        .requestMatchers("/api/v1/members/me/**").authenticated()
+
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",

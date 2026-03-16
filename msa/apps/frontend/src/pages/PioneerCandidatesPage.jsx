@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import { Pickaxe, Sparkles, Gamepad2, AlertCircle, RefreshCw, Cpu, Fingerprint, Circle, Triangle, Square, X as XIcon, Lock, Unlock } from 'lucide-react';
+import {Circle, Cpu, Gamepad2, Lock, Pickaxe, RefreshCw, Square, Triangle, Unlock, X as XIcon} from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
-import { useAuth } from '../contexts/AuthContext';
+import {useAuth} from '../contexts/AuthContext';
 import PSFactoryLoader from '../components/PSFactoryLoader';
 
 // 🎮 RE9 스타일 자판기 개별 슬롯 컴포넌트
 const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => {
     const [isHolding, setIsHolding] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [isUnlocked, setIsUnlocked] = useState(false); // 🚀 대망의 언락 상태!
+    const [isUnlocked, setIsUnlocked] = useState(false);
     const holdTimer = useRef(null);
     const progressInterval = useRef(null);
 
@@ -29,7 +29,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
 
     const startHold = (e) => {
         if (!isAuthenticated) { openLoginModal(); return; }
-        if (isUnlocked) return; // 이미 열렸으면 작동 안함
+        if (isUnlocked) return;
 
         setIsHolding(true);
         setProgress(0);
@@ -37,7 +37,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
         progressInterval.current = setInterval(() => {
             setProgress((prev) => {
                 if (prev >= 100) { clearInterval(progressInterval.current); return 100; }
-                return prev + 1.5; // 속도 살짝 높임
+                return prev + 1.5;
             });
         }, 15);
 
@@ -46,10 +46,8 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
             setIsHolding(false);
             setProgress(100);
 
-            // 🚀 1. 게이지가 차면 유리문 개방 애니메이션 시작!
             setIsUnlocked(true);
 
-            // 🚀 2. 0.8초 동안 튀어나오는 포스터를 감상하게 한 뒤 팩토리 모달로 이동
             setTimeout(() => {
                 onExtract(game);
             }, 800);

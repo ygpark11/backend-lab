@@ -25,4 +25,9 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
     long countByMemberId(Long memberId);
 
     long count();
+
+    @Query("SELECT COALESCE(SUM(g.originalPrice - g.currentPrice), 0) " +
+            "FROM Wishlist w JOIN w.game g " +
+            "WHERE w.member.id = :memberId AND g.discountRate > 0")
+    int sumSavedAmountByMemberId(@Param("memberId") Long memberId);
 }

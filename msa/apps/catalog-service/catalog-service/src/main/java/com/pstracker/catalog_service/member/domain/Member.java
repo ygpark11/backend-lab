@@ -38,6 +38,12 @@ public class Member {
     private String provider;
     private String providerId;
 
+    @Column(name = "price_alert_enabled", nullable = false)
+    private boolean priceAlertEnabled = true;
+
+    @Column(name = "night_mode_enabled", nullable = false)
+    private boolean nightModeEnabled = false;
+
     @Builder
     public Member(String email, String password, String nickname, Role role, String provider, String providerId) {
         this.email = email;
@@ -46,6 +52,8 @@ public class Member {
         this.role = role;
         this.provider = provider;
         this.providerId = providerId;
+        this.priceAlertEnabled = true;
+        this.nightModeEnabled = false;
         this.createdAt = LocalDateTime.now(); // 생성 시점 주입
     }
 
@@ -53,6 +61,11 @@ public class Member {
     public Member updateNickname(String nickname) {
         this.nickname = nickname;
         return this;
+    }
+
+    public void updateSettings(boolean priceAlertEnabled, boolean nightModeEnabled) {
+        this.priceAlertEnabled = priceAlertEnabled;
+        this.nightModeEnabled = nightModeEnabled;
     }
 
     public String getRoleKey() {

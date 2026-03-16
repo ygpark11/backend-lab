@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -44,4 +45,12 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     List<Game> findByFamilyIdOrderByOriginalPriceAsc(String familyId);
 
     boolean existsByPsStoreId(String psStoreId);
+
+    long countByPioneerMemberId(Long pioneerMemberId);
+
+    List<Game> findAllByPioneerMemberIdOrderByCreatedAtDesc(Long pioneerMemberId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.pioneerName = :newNickname WHERE g.pioneerMemberId = :memberId")
+    void updatePioneerNameByMemberId(@Param("memberId") Long memberId, @Param("newNickname") String newNickname);
 }
