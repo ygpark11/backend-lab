@@ -135,7 +135,6 @@ public class IgdbApiClient {
             }
         } catch (Exception e) {
             log.warn("⚠️ IGDB Error [{}]: {}", logPrefix, e.getMessage());
-            e.printStackTrace();
         }
         return null;
     }

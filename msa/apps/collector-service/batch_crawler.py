@@ -50,6 +50,9 @@ CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 lock = threading.Lock()
 is_running = False
 
+vip_lock = threading.Lock()
+vip_is_running = False
+
 urgent_queue = queue.Queue()
 active_requests = set()
 
@@ -142,45 +145,6 @@ def setup_page(context):
 
     page.route("**/*", route_intercept)
     return page
-
-def process_urgent_queue(current_context):
-    global active_requests
-
-    while not urgent_queue.empty():
-        urgent_task = urgent_queue.get()
-        req_id = urgent_task['request_id']
-        store_id = urgent_task['ps_store_id']
-        logger.info(f"🚨 [VIP 새치기 발동!] 유저 요청 {store_id} 우선 수집 중...")
-
-        urgent_page = setup_page(current_context)
-        status = "FAIL"
-        error_msg = "Unknown"
-
-        try:
-            target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
-            res = crawl_detail_and_send(urgent_page, target_url, verbose=True)
-            if res and not res.get("is_delisted"):
-                status = "SUCCESS"
-                error_msg = None
-            else:
-                error_msg = "단종 또는 데이터 파싱 실패"
-        except Exception as e:
-            error_msg = str(e)
-        finally:
-            urgent_page.close()
-
-        # 콜백 전송
-        callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
-        try:
-            requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
-            logger.info(f"   📞 [VIP 콜백 완료] {status}")
-        except Exception as e:
-            logger.error(f"   🔥 [VIP 콜백 실패] {e}")
-
-        try: active_requests.remove(req_id)
-        except: pass
-
-        time.sleep(1) # OS 숨고르기
 
 def mine_english_title(html_content):
     try:
@@ -585,7 +549,6 @@ def run_phase_0_explore(context):
 
             # 페이지 이동 간 랜덤 휴식
             time.sleep(random.uniform(0.8, 1.5))
-            process_urgent_queue(context)
 
     except Exception as e:
         logger.error(f"   🔥 [Phase 0] Concept 순회 중 에러: {e}")
@@ -606,6 +569,25 @@ def run_phase_0_explore(context):
 
                 ps_store_id = product_url.split("/")[-1].split("?")[0]
                 title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
+
+                html_content = page.content()
+
+                is_free = False
+                try:
+                    # 1. 화면에 보이는 가격 텍스트가 "무료"인지 확인
+                    price_loc = page.locator("[data-qa='mfeCtaMain#offer0#finalPrice']")
+                    if price_loc.count() > 0 and "무료" in price_loc.first.inner_text():
+                        is_free = True
+                except:
+                    pass
+
+                # 2. JSON 메타데이터 내부에 무료 플래그가 있는지 2중 확인
+                if not is_free and ('"isFree":true' in html_content or '"basePrice":"무료"' in html_content):
+                    is_free = True
+
+                if is_free:
+                    logger.info(f"   ⏩ [{idx}/{len(product_urls)}] 진열장 스킵 (무료 게임): {title}")
+                    continue
 
                 # 이미지 URL 추출
                 image_url = ""
@@ -629,7 +611,6 @@ def run_phase_0_explore(context):
             finally:
                 page.close()
 
-            process_urgent_queue(context)
             time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
     except Exception as e:
@@ -699,7 +680,6 @@ def run_batch_crawler_logic():
                                 finally:
                                     page.close()
 
-                                process_urgent_queue(context)
                                 time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                         finally:
@@ -795,7 +775,6 @@ def run_batch_crawler_logic():
                                         finally:
                                             detail_page.close()
 
-                                        process_urgent_queue(context)
                                         time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
                                 finally:
                                     context.close()
@@ -891,6 +870,60 @@ def trigger_crawl():
     thread.start()
     return jsonify({"status": "started"}), 200
 
+def process_vip_queue_only():
+    global vip_is_running, active_requests
+    logger.info("🚨 [VIP Worker] 새치기 전담반 엔진 가동!")
+    try:
+        with sync_playwright() as p:
+            browser, context = create_browser_context(p)
+
+            while not urgent_queue.empty():
+                urgent_task = urgent_queue.get()
+                req_id = urgent_task['request_id']
+                store_id = urgent_task['ps_store_id']
+                logger.info(f"🔥 [VIP 새치기 발동!] 유저 요청 {store_id} 즉시 수집 중...")
+
+                urgent_page = setup_page(context)
+                status = "FAIL"
+                error_msg = "Unknown"
+
+                try:
+                    target_url = f"https://store.playstation.com/ko-kr/product/{store_id}"
+                    res = crawl_detail_and_send(urgent_page, target_url, verbose=True)
+                    if res and not res.get("is_delisted"):
+                        status = "SUCCESS"
+                        error_msg = None
+                    else:
+                        error_msg = "단종 또는 데이터 파싱 실패"
+                except Exception as e:
+                    error_msg = str(e)
+                finally:
+                    urgent_page.close()
+
+                # 백엔드로 처리 결과 콜백 쏘기
+                callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
+                try:
+                    requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
+                    logger.info(f"   📞 [VIP 콜백 완료] {status}")
+                except Exception as e:
+                    logger.error(f"   💥 [VIP 콜백 실패] {e}")
+
+                try: active_requests.remove(req_id)
+                except: pass
+
+                time.sleep(1) # OS 숨고르기
+
+            try: context.close()
+            except: pass
+            try: browser.close()
+            except: pass
+    except Exception as e:
+        logger.error(f"💥 VIP Worker Critical Error: {e}")
+    finally:
+        with vip_lock:
+            vip_is_running = False
+        logger.info("🛑 [VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
+
 @app.route('/api/crawler/trigger', methods=['POST'])
 def trigger_queue_crawl():
     data = request.json or {}
@@ -902,10 +935,10 @@ def trigger_queue_crawl():
     if not request_id or not ps_store_id:
         return jsonify({"error": "Bad Request"}), 400
 
-    global is_running, active_requests
+    global vip_is_running, active_requests
     logger.info(f"🎯 [Queue] 유저 수집 지시 접수: {ps_store_id} (ID: {request_id})")
 
-    with lock:
+    with vip_lock:
         if request_id in active_requests:
             logger.info(f"   ⚠️ 이미 처리 중인 요청입니다: ID {request_id}")
             return jsonify({"status": "ignored", "message": "Already processing"}), 200
@@ -913,31 +946,15 @@ def trigger_queue_crawl():
         active_requests.add(request_id)
         urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
-        if is_running:
-            logger.info("   ⚠️ 현재 서버가 작업 중입니다. 기존 엔진이 VIP 큐를 처리합니다.")
-            return jsonify({"status": "accepted", "message": "Added to urgent queue"}), 202
+        # 핵심: 본진(배치 크롤러)이 뻗었든 말든 상관없이, VIP 워커가 쉬고 있으면 무조건 즉시 출동!
+        if not vip_is_running:
+            vip_is_running = True
+            threading.Thread(target=process_vip_queue_only, daemon=True).start()
+            logger.info("   🚀 [VIP Worker] 새치기 전담 스레드 즉시 출발!")
+            return jsonify({"status": "accepted", "message": "VIP task started"}), 202
         else:
-            is_running = True
-
-    def process_queue_only():
-        global is_running
-        logger.info("🚀 [Mini Worker] VIP 큐 전담 처리기 가동")
-        try:
-            with sync_playwright() as p:
-                browser, context = create_browser_context(p)
-                process_urgent_queue(context)
-                try: context.close()
-                except: pass
-                try: browser.close()
-                except: pass
-        except Exception as e:
-            logger.error(f"🔥 Mini Worker Error: {e}")
-        finally:
-            with lock:
-                is_running = False
-
-    threading.Thread(target=process_queue_only, daemon=True).start()
-    return jsonify({"status": "accepted", "message": "Background task started"}), 202
+            logger.info("   ⚠️ [VIP Worker] 이미 전담 스레드가 작업 중입니다. 대기열에 얌전히 추가됨.")
+            return jsonify({"status": "accepted", "message": "Added to VIP queue"}), 202
 
 @app.route('/health', methods=['GET'])
 def health_check():

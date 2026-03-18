@@ -12,8 +12,9 @@ import MyPage from './pages/MyPage';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
+import BootingScreen from './components/BootingScreen';
 
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { onForegroundMessage } from './utils/fcm';
 
 function AppRoutes() {
@@ -66,8 +67,12 @@ const LoginModalWrapper = () => {
 };
 
 function App() {
+    const [isBooting, setIsBooting] = useState(false);
 
     useEffect(() => {
+        const handleBooting = () => setIsBooting(true);
+        window.addEventListener('backend-booting', handleBooting);
+
         let unsubscribeFCM = null;
 
         onForegroundMessage().then((unsub) => {
@@ -75,11 +80,21 @@ function App() {
         });
 
         return () => {
+            window.removeEventListener('backend-booting', handleBooting);
             if (unsubscribeFCM) {
                 unsubscribeFCM();
             }
         };
     }, []);
+
+    const handleResolved = () => {
+        setIsBooting(false);
+        window.location.href = '/games';
+    };
+
+    if (isBooting) {
+        return <BootingScreen onResolved={handleResolved} />;
+    }
 
     return (
         <AuthProvider>

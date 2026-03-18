@@ -172,8 +172,9 @@ const PioneerCandidatesPage = () => {
             let errorMessage = "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
 
             if (err.response) {
+                // 🚀 바로 이 부분!
                 if (err.response.status === 400 && typeof err.response.data === 'string') {
-                    errorMessage = err.response.data; // "1시간에 최대 3개의..." 문구 그대로 출력
+                    errorMessage = err.response.data; // 백엔드가 던진 순수 텍스트 그대로 출력
                 }
                 else if (err.response.status === 500) {
                     errorMessage = "수집 한도(1시간 3회)를 초과했거나 이미 처리 중인 게임입니다.";

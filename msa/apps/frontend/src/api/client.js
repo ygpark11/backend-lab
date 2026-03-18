@@ -1,7 +1,7 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const BASE_URL = import.meta.env.MODE === 'development'
+export const BASE_URL = import.meta.env.MODE === 'development'
     ? 'http://localhost:8080'
     : '';
 
@@ -21,12 +21,10 @@ const client = axios.create({
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-// 대기열에 등록
 function subscribeTokenRefresh(callback) {
     refreshSubscribers.push(callback);
 }
 
-// 대기열 실행 (재발급 성공 시)
 function onRefreshed() {
     refreshSubscribers.forEach((callback) => callback());
     refreshSubscribers = [];
@@ -35,7 +33,14 @@ function onRefreshed() {
 client.interceptors.response.use(
     (response) => response,
     async (error) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config || {};
+
+        if (originalRequest?.url && !originalRequest.url.includes('/actuator/health')) {
+            if (!error.response || [502, 503, 504].includes(error.response?.status)) {
+                window.dispatchEvent(new Event('backend-booting'));
+                return Promise.reject(error);
+            }
+        }
 
         if (!error.response) {
             return Promise.reject(error);
@@ -58,9 +63,8 @@ client.interceptors.response.use(
 
         // 401 Unauthorized
         if (status === 401 && !originalRequest._retry) {
-
             // 🚨 reissue 요청 자체가 401이면 무한 루프 방지를 위해 즉시 거절
-            if (originalRequest.url.includes('/reissue')) {
+            if (originalRequest?.url?.includes('/reissue')) {
                 return Promise.reject(error);
             }
 
