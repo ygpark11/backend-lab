@@ -59,6 +59,21 @@ const WishlistPage = () => {
 
     useEffect(() => { fetchMyWishlist(page); }, [page]);
 
+    useEffect(() => {
+        const handleWishlistUpdate = (e) => {
+            const { gameId, liked } = e.detail;
+
+            // 찜 상태가 해제(false)되었다면 내 찜 목록 화면에서 날려버림
+            if (!liked) {
+                setGames(prev => prev.filter(game => Number(game.gameId || game.id) !== Number(gameId)));
+                setTotalElements(prev => Math.max(0, prev - 1)); // 음수 방지
+            }
+        };
+
+        window.addEventListener('ps-wishlist-updated', handleWishlistUpdate);
+        return () => window.removeEventListener('ps-wishlist-updated', handleWishlistUpdate);
+    }, []);
+
     const fetchMyWishlist = async (pageNumber) => {
         setLoading(true);
         try {
@@ -98,11 +113,21 @@ const WishlistPage = () => {
         const toastId = toast.loading('삭제 중...');
         try {
             await client.post(`/api/v1/wishlists/${gameId}`);
-            // 🚀 Optimistic UI: 삭제 성공 시 새로고침 안 하고 화면에서만 즉시 날림
-            setGames(prev => prev.filter(game => (game.gameId || game.id) !== gameId));
-            setTotalElements(prev => prev - 1);
-            toast.success("삭제되었습니다 🗑️", { id: toastId });
-        } catch (error) { toast.error("삭제 실패", { id: toastId }); }
+
+            setGames(prev => prev.filter(game => Number(game.gameId || game.id) !== Number(gameId)));
+            setTotalElements(prev => Math.max(0, prev - 1));
+
+            toast.dismiss(toastId);
+            toast.success("삭제되었습니다 🗑️", { duration: 3000 });
+
+            window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
+                detail: { gameId: Number(gameId), liked: false }
+            }));
+
+        } catch (error) {
+            toast.dismiss(toastId);
+            toast.error("삭제 실패", { duration: 3000 });
+        }
     };
 
     const handleGenreClick = (e, genre) => {

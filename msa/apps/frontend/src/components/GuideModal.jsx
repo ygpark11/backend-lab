@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Flame, Circle, Triangle, Square, Timer, Sparkles, Tag, Siren, Rocket, Search, Gamepad2, Bell } from 'lucide-react';
+import { X, Circle, Triangle, Square, Timer, Sparkles, Tag, Siren, Rocket, Search, Gamepad2, Bell, ShieldAlert, Crosshair } from 'lucide-react';
 
 const GuideModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -25,8 +25,9 @@ const GuideModal = ({ isOpen, onClose }) => {
                 {/* 스크롤 콘텐츠 영역 */}
                 <div className="p-6 space-y-8 overflow-y-auto custom-scrollbar flex-1">
 
+                    {/* 앱 설치 및 알림 가이드 */}
                     <div className="flex gap-4">
-                        <div className="shrink-0 w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 border border-purple-500/30">
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 border border-blue-500/30">
                             <Bell className="w-5 h-5" />
                         </div>
                         <div className="flex-1">
@@ -58,20 +59,39 @@ const GuideModal = ({ isOpen, onClose }) => {
 
                     <div className="w-full h-px bg-white/10 my-6"></div>
 
+                    {/* 🚀 [신규 추가] 할인 방어력 티어 설명 */}
                     <div className="flex gap-4">
-                        <div className="shrink-0 w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-500">
-                            <Flame className="w-6 h-6" />
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center text-red-500">
+                            <ShieldAlert className="w-6 h-6" />
                         </div>
                         <div>
                             <h3 className="font-bold text-white text-lg flex items-center gap-2">
-                                가성비 전투력 <Flame className="w-5 h-5 text-orange-500" />
+                                할인 방어력 스카우터 <ShieldAlert className="w-5 h-5 text-red-500" />
                             </h3>
                             <p className="text-gray-400 text-sm leading-relaxed mt-1">
-                                <span className="text-orange-400 font-bold">IGDB 평점(재미)</span>와 <span className="text-green-400 font-bold">가격(저렴함)</span>을 조합해 계산한 수치입니다. 점수가 높을수록 무조건 사야 하는 "갓성비" 게임입니다!
+                                게임의 과거 할인 빈도와 역대 최저가를 분석해 가격 방어력을 측정합니다. <strong className="text-red-400">S급 철벽</strong>은 할인을 거의 안 하니 무리한 존버는 피하고, <strong className="text-green-400">C급 솜방패</strong>는 혜자 게임이니 반값 이하를 넉넉히 노려보세요!
                             </p>
                         </div>
                     </div>
 
+                    {/* 🚀 [신규 추가] 목표가 락온 기능 설명 */}
+                    <div className="flex gap-4">
+                        <div className="shrink-0 w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                            <Crosshair className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                                타겟 프라이스 락온 (지능형 알림) <Crosshair className="w-5 h-5 text-purple-400" />
+                            </h3>
+                            <p className="text-gray-400 text-sm leading-relaxed mt-1">
+                                단순한 찜하기를 넘어 <strong>내가 원하는 목표 가격을 락온</strong>해 보세요. 락온한 가격에 도달했을 때는 물론(존버 승리!), 할인이 시작될 때도 상황에 맞는 스마트한 브리핑 푸시 알림을 보내드립니다.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="w-full h-px bg-white/10 my-6"></div>
+
+                    {/* 기존 기능: 가격 신호등 */}
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-500">
                             <Siren className="w-6 h-6" />
@@ -80,7 +100,7 @@ const GuideModal = ({ isOpen, onClose }) => {
                             <h3 className="font-bold text-white text-lg flex items-center gap-2">
                                 가격 신호등 <Siren className="w-5 h-5 text-green-500" />
                             </h3>
-                            <p className="text-xs text-gray-500 mb-3">PS 컨트롤러 버튼 모양으로 현재 가격 상태를 알려드려요.</p>
+                            <p className="text-xs text-gray-500 mb-3">PS 컨트롤러 버튼 모양으로 현재 가격 상태를 직관적으로 알려드려요.</p>
                             <ul className="text-sm text-gray-400 space-y-2.5">
                                 <li className="flex items-center gap-2">
                                     <Circle className="w-4 h-4 text-green-500 fill-current" />
@@ -88,20 +108,21 @@ const GuideModal = ({ isOpen, onClose }) => {
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Triangle className="w-4 h-4 text-yellow-500 fill-current" />
-                                    <span><strong className="text-yellow-400">GOOD OFFER:</strong> 꽤 괜찮은 가격입니다.</span>
+                                    <span><strong className="text-yellow-400">GOOD OFFER:</strong> 꽤 괜찮은 타협점입니다.</span>
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <X className="w-4 h-4 text-red-500 stroke-[3px]" />
-                                    <span><strong className="text-red-400">WAIT:</strong> 비싸요. 다음 할인을 기다리세요.</span>
+                                    <span><strong className="text-red-400">WAIT:</strong> 아직 비싸요. 방어선이 무너지길 기다리세요.</span>
                                 </li>
                                 <li className="flex items-center gap-2">
                                     <Square className="w-4 h-4 text-blue-500 fill-current" />
-                                    <span><strong className="text-blue-400">TRACKING:</strong> 아직 데이터를 모으고 있어요.</span>
+                                    <span><strong className="text-blue-400">TRACKING:</strong> 아직 할인 데이터를 스캔 중입니다.</span>
                                 </li>
                             </ul>
                         </div>
                     </div>
 
+                    {/* 기존 기능: 뱃지 설명 */}
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
                             <Tag className="w-6 h-6" />
@@ -141,6 +162,7 @@ const GuideModal = ({ isOpen, onClose }) => {
 
                     <div className="w-full h-px bg-white/10 my-6"></div>
 
+                    {/* 빠른 검색 꿀팁 */}
                     <div className="flex gap-4">
                         <div className="shrink-0 w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                             <Search className="w-5 h-5" />
@@ -151,7 +173,7 @@ const GuideModal = ({ isOpen, onClose }) => {
                             </h3>
                             <ul className="text-sm text-gray-400 space-y-2 list-disc list-inside ml-1">
                                 <li>화면 아래 둥둥 떠 있는 <strong>돋보기 버튼</strong>을 누르면 언제든 즉시 <strong>빠른 검색과 필터링</strong>이 가능해요.</li>
-                                <li><strong>찜 목록(Wishlist)</strong>에 게임을 담아두면, 할인 알림도 받고 내가 이 사이트를 통해 <strong>총 얼마를 절약했는지</strong> 볼 수 있어요!</li>
+                                <li>마이페이지에서 나만의 닉네임을 설정하고 다른 요원들에게 내 발굴 업적을 뽐내보세요!</li>
                             </ul>
                         </div>
                     </div>
