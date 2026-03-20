@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.notification.event;
 
+import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import com.pstracker.catalog_service.member.domain.Member;
@@ -42,7 +43,7 @@ public class GamePriceChangedListenerTest {
     void handle_NoSubscribers() {
         GamePriceChangedEvent event = createEvent();
 
-        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
+        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
                 .willReturn(Collections.emptyList());
 
         listener.handlePriceChange(event);
@@ -58,9 +59,10 @@ public class GamePriceChangedListenerTest {
     void handle_Subscribers_NoToken() {
         GamePriceChangedEvent event = createEvent();
         Member member = createMember(1L);
+        Wishlist wishlist = createWishlist(member, 50000);
 
-        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
-                .willReturn(List.of(member));
+        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+                .willReturn(List.of(wishlist));
 
         given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L)))
                 .willReturn(Collections.emptyList());
@@ -81,8 +83,10 @@ public class GamePriceChangedListenerTest {
 
         given(member.isPriceAlertEnabled()).willReturn(false); // 알림 수신 거부 상태!
 
-        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
-                .willReturn(List.of(member));
+        Wishlist wishlist = createWishlist(member, 50000);
+
+        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+                .willReturn(List.of(wishlist));
 
         listener.handlePriceChange(event);
 
@@ -94,34 +98,38 @@ public class GamePriceChangedListenerTest {
     }
 
     @Test
-    @DisplayName("구독자와 토큰이 모두 존재하면 DB 저장 및 FCM 발송이 수행되어야 한다.")
+    @DisplayName("구독자와 토큰이 모두 존재하면 DB 저장 및 FCM 발송이 개별 수행되어야 한다.")
     void handle_FullFlow() {
         // given
         GamePriceChangedEvent event = createEvent();
+
         Member member1 = createMember(1L);
         Member member2 = createMember(2L);
 
-        // 구독자 2명
-        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
-                .willReturn(List.of(member1, member2));
+        Wishlist wish1 = createWishlist(member1, 50000); // 타겟가 5만 원
+        Wishlist wish2 = createWishlist(member2, 30000); // 타겟가 3만 원
 
-        // 토큰도 2개
+        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+                .willReturn(List.of(wish1, wish2));
+
         FcmToken token1 = createToken(member1, "token_1");
         FcmToken token2 = createToken(member2, "token_2");
-        given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L, 2L)))
-                .willReturn(List.of(token1, token2));
+
+        // 개별 발송이므로 각각 토큰을 조회함
+        given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L))).willReturn(List.of(token1));
+        given(fcmTokenRepository.findAllByMemberIdIn(List.of(2L))).willReturn(List.of(token2));
 
         // when
         listener.handlePriceChange(event);
 
         // then
-        // 1. DB 알림 저장 확인
+        // 1. DB 알림 일괄 저장 확인
         verify(notificationRepository, times(1)).saveAll(argThat(items ->
                 ((java.util.Collection<?>) items).size() == 2
         ));
 
-        // 2. FCM 다중 발송 확인
-        verify(fcmService, times(1)).sendMulticastMessage(anyList(), any(), any());
+        // 2. FCM 다중 발송이 개별적으로 2번 호출되어야 함!
+        verify(fcmService, times(2)).sendMulticastMessage(anyList(), anyString(), anyString());
     }
 
     @Test
@@ -130,10 +138,11 @@ public class GamePriceChangedListenerTest {
         // given
         GamePriceChangedEvent event = createEvent();
         Member member = createMember(1L);
+        Wishlist wishlist = createWishlist(member, 50000);
         FcmToken token = createToken(member, "token_error");
 
-        given(wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId()))
-                .willReturn(List.of(member));
+        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+                .willReturn(List.of(wishlist));
         given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L)))
                 .willReturn(List.of(token));
 
@@ -141,7 +150,6 @@ public class GamePriceChangedListenerTest {
                 .when(fcmService).sendMulticastMessage(anyList(), any(), any());
 
         // when
-        // 예외가 발생해도 메서드 밖으로 던져지지 않아야 함 (try-catch 검증)
         listener.handlePriceChange(event);
 
         // then
@@ -159,11 +167,16 @@ public class GamePriceChangedListenerTest {
 
     private Member createMember(Long id) {
         Member member = mock(Member.class);
-        given(member.getId()).willReturn(id);
-
+        lenient().when(member.getId()).thenReturn(id);
         lenient().when(member.isPriceAlertEnabled()).thenReturn(true);
-
         return member;
+    }
+
+    private Wishlist createWishlist(Member member, Integer targetPrice) {
+        Wishlist wishlist = mock(Wishlist.class);
+        lenient().when(wishlist.getMember()).thenReturn(member);
+        lenient().when(wishlist.getTargetPrice()).thenReturn(targetPrice);
+        return wishlist;
     }
 
     private FcmToken createToken(Member member, String tokenValue) {

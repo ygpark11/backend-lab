@@ -474,14 +474,16 @@ def refresh_java_server_cache():
     except Exception as e:
         logger.error(f"❌ Network Error while clearing cache: {e}")
 
-def run_phase_0_explore(context):
-    """[Phase 0] 신규 게임(진열장 후보군) 탐사 및 단건 전송"""
+def run_phase_0_explore(page):
+    """
+    [Phase 0] 신규 게임 탐사
+    * 핵심 변경: context 대신 이미 열려있는 단일 page 객체를 받아서 재사용합니다.
+    """
     logger.info(f"[Phase 0] 신규 게임(진열장 후보군) 탐사 시작...")
     new_games_url = "https://store.playstation.com/ko-kr/category/e1699f77-77e1-43ca-a296-26d08abacb0f/1"
     concept_urls = []
 
     # 1. 목록 페이지에서 Concept URL 추출
-    page = setup_page(context)
     try:
         page.goto(new_games_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
         page.wait_for_selector("a[href*='/concept/']", timeout=15000)
@@ -498,20 +500,15 @@ def run_phase_0_explore(context):
         logger.info(f"   👀 [Phase 0] 1페이지에서 {len(concept_urls)}개의 Concept 발굴 성공")
     except Exception as e:
         logger.error(f"   🔥 [Phase 0] 목록 페이지 로딩 실패: {e}")
-        return
-    finally:
-        page.close()
+        return # 실패 시 그대로 리턴 (탭은 메인 함수에서 관리)
 
     # ---------------------------------------------------------
-    # 2. 각 Concept 페이지 순회
+    # 2. 각 Concept 페이지 순회 (단일 탭 재사용)
     # ---------------------------------------------------------
     product_urls = []
-
     try:
         for idx, concept_url in enumerate(concept_urls, 1):
             if not is_running: break
-            #logger.info(f"   🔎 [{idx}/{len(concept_urls)}] Concept 분석 중: {concept_url.split('/')[-1]}")
-            page = setup_page(context)
 
             try:
                 page.goto(concept_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
@@ -520,12 +517,10 @@ def run_phase_0_explore(context):
                 # 1차 방어: 제목으로 체험판 컷
                 title_text = page.locator("[data-qa='mfe-game-title#name']").inner_text()
                 if any(word in title_text for word in ["체험판", "Demo", "TRIAL", "BETA"]):
-                    # logger.info(f"      ⏩ 스킵 (체험판/데모): {title_text[:20]}...")
                     continue
 
                 # 2차 방어: 메타데이터에서 정규식으로 productId 추출
                 html_content = page.content()
-                # productId&quot;:&quot;ID&quot; 패턴 대응
                 product_ids = re.findall(r'(?:"|&quot;)productId(?:"|&quot;)\s*:\s*(?:"|&quot;)([^"&]+)', html_content)
 
                 valid_id = None
@@ -544,24 +539,20 @@ def run_phase_0_explore(context):
 
             except Exception as e:
                 logger.warning(f"       분석 실패 (건너뜀): {e}")
-            finally:
-                page.close()
 
-            # 페이지 이동 간 랜덤 휴식
             time.sleep(random.uniform(0.8, 1.5))
 
     except Exception as e:
         logger.error(f"   🔥 [Phase 0] Concept 순회 중 에러: {e}")
 
     # ---------------------------------------------------------
-    # 3. 상세 정보 파싱 및 백엔드 전송
+    # 3. 상세 정보 파싱 및 백엔드 전송 (단일 탭 재사용)
     # ---------------------------------------------------------
     logger.info(f"   🚀 [Phase 0] 최종 {len(product_urls)}개 게임 상세 정보 수집 및 전송 시작...")
 
     try:
         for idx, product_url in enumerate(product_urls, 1):
             if not is_running: break
-            page = setup_page(context)
 
             try:
                 page.goto(product_url, timeout=CONF['timeout'], wait_until="domcontentloaded")
@@ -570,33 +561,25 @@ def run_phase_0_explore(context):
                 ps_store_id = product_url.split("/")[-1].split("?")[0]
                 title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
 
-                html_content = page.content()
-
                 is_free = False
                 try:
-                    # 1. 화면에 보이는 가격 텍스트가 "무료"인지 확인
-                    price_loc = page.locator("[data-qa='mfeCtaMain#offer0#finalPrice']")
-                    if price_loc.count() > 0 and "무료" in price_loc.first.inner_text():
-                        is_free = True
-                except:
-                    pass
-
-                # 2. JSON 메타데이터 내부에 무료 플래그가 있는지 2중 확인
-                if not is_free and ('"isFree":true' in html_content or '"basePrice":"무료"' in html_content):
-                    is_free = True
+                    main_price_loc = page.locator("[data-qa='mfeCtaMain#offer0#finalPrice']")
+                    if main_price_loc.count() > 0:
+                        price_text = main_price_loc.first.text_content(timeout=2000) # (유저님 요청: 여긴 기존 버그 수정분이라 남김)
+                        if price_text and "무료" in price_text:
+                            is_free = True
+                except Exception: pass
 
                 if is_free:
                     logger.info(f"   ⏩ [{idx}/{len(product_urls)}] 진열장 스킵 (무료 게임): {title}")
                     continue
 
-                # 이미지 URL 추출
                 image_url = ""
                 html_content = page.content()
                 img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_content)
                 if img_match:
                     image_url = img_match.group(1).split("?")[0]
 
-                # 백엔드로 전송
                 payload = {"psStoreId": ps_store_id, "title": title, "imageUrl": image_url}
                 headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
 
@@ -608,8 +591,6 @@ def run_phase_0_explore(context):
 
             except Exception as e:
                 logger.warning(f"   상세 수집 실패 ({product_url}): {e}")
-            finally:
-                page.close()
 
             time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
@@ -631,18 +612,23 @@ def run_batch_crawler_logic():
         visited_urls = set()
 
         with sync_playwright() as p:
+            logger.info("   🔥 [System] Booting Chrome Engine for Marathon...")
+            # 🌟 [핵심 1] 브라우저는 딱 한 번만 켭니다.
+            browser, context = create_browser_context(p)
+            # 🌟 [핵심 2] 탭도 딱 한 개만 만듭니다. 이 탭이 마라톤 릴레이 바통입니다.
+            page = setup_page(context)
 
+            recycle_counter = 0
+
+            # ------------------------------------------------------------------
+            # [Phase 0] 신규 탐사
+            # ------------------------------------------------------------------
             if is_running:
                 try:
-                    browser, context = create_browser_context(p)
-                    run_phase_0_explore(context)
-                    try: context.close() if context else None
-                    except: pass
-                    try: browser.close() if browser else None
-                    except: pass
+                    # 🌟 [핵심 3] 단일 탭(page)을 Phase 0에게 넘겨줍니다.
+                    run_phase_0_explore(page)
                 except Exception as e:
                     logger.error(f"   🔥 Phase 0 치명적 에러: {e}")
-
                 gc.collect()
                 time.sleep(3)
 
@@ -650,51 +636,54 @@ def run_batch_crawler_logic():
             if not targets: targets = []
 
             # ------------------------------------------------------------------
-            # [Phase 1] 기존 타겟 갱신 (엔진 재사용)
+            # [Phase 1] 기존 타겟 갱신
             # ------------------------------------------------------------------
-            if targets:
+            if targets and is_running:
                 logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
-                BATCH_SIZE = CONF["restart_interval"]
-                target_chunks = [targets[i:i + BATCH_SIZE] for i in range(0, len(targets), BATCH_SIZE)]
 
-                try:
-                    for chunk_idx, chunk in enumerate(target_chunks):
-                        if not is_running: break
+                for idx, url in enumerate(targets, 1):
+                    if not is_running: break
 
-                        logger.info(f"♻️ [Phase 1] Starting Batch {chunk_idx + 1}/{len(target_chunks)}")
-                        browser, context = create_browser_context(p)
-
-                        try:
-                            for url in chunk:
-                                if not is_running: break
-                                page = setup_page(context)
-                                try:
-                                    res = crawl_detail_and_send(page, url)
-                                    if res:
-                                        if res.get("is_delisted"):
-                                            delisted_games.append(res)
-                                        else:
-                                            total_processed_count += 1
-                                            if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                    visited_urls.add(url)
-                                finally:
-                                    page.close()
-
-                                time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-
-                        finally:
-                            try: context.close() if context else None
-                            except: pass
-                            try: browser.close() if browser else None
-                            except: pass
-
+                    # 🌟 [핵심 4] 100번마다 세탁소 가동
+                    if recycle_counter >= 100:
+                        logger.info("   ♻️ [System] Recycling Browser Context to free memory...")
+                        try: page.close()
+                        except: pass
+                        try: context.close()
+                        except: pass
                         gc.collect()
-                        time.sleep(2)
-                except Exception as e:
-                    logger.error(f"   ⚠️ Phase 1 Engine Error: {e}")
+
+                        _, context = create_browser_context(p)
+                        page = setup_page(context) # 새 바통(탭) 발급
+                        recycle_counter = 0
+
+                    logger.info(f"   ▶️ [Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
+
+                    try:
+                        # 동일한 탭(page)으로 이동
+                        res = crawl_detail_and_send(page, url)
+                        if res:
+                            if res.get("is_delisted"):
+                                delisted_games.append(res)
+                            else:
+                                total_processed_count += 1
+                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                        visited_urls.add(url)
+                        recycle_counter += 1
+
+                    except Exception as e:
+                        logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
+                        # 🌟 [핵심 5] 에러 발생 시에만 탭 버리고 새 탭 발급
+                        try: page.close()
+                        except: pass
+                        page = setup_page(context)
+
+                    time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
+
+                gc.collect()
 
             # ------------------------------------------------------------------
-            # [Phase 2] 신규 게임 탐색 (엔진 재사용)
+            # [Phase 2] 신규 게임 탐색
             # ------------------------------------------------------------------
             if is_running:
                 logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
@@ -703,46 +692,39 @@ def run_batch_crawler_logic():
 
                 current_page = 1
                 max_pages = 10
-                BATCH_SIZE = CONF["restart_interval"]
 
                 while current_page <= max_pages:
                     if not is_running: break
 
                     page_candidates = []
-                    logger.info(f"   📖 Scanning Page {current_page}/{max_pages}")
+                    logger.info(f"   📖 Scanning Category Page {current_page}/{max_pages}")
 
                     try:
-                        browser, context = create_browser_context(p)
-                        page = setup_page(context)
+                        target_list_url = f"{base_category_path}/{current_page}{search_params}"
+                        page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
                         try:
-                            target_list_url = f"{base_category_path}/{current_page}{search_params}"
-                            page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
-                            try:
-                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                            except:
-                                page.reload(timeout=CONF['timeout'], wait_until="commit")
-                                page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                            page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                        except:
+                            page.reload(timeout=CONF['timeout'], wait_until="commit")
+                            page.wait_for_selector("a[href*='/product/']", timeout=10000)
 
-                            page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
-                            time.sleep(random.uniform(0.5, 1.0))
-                            page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
-                            time.sleep(random.uniform(1.0, 2.0))
+                        page.evaluate(f"window.scrollTo(0, {random.randint(800, 1200)});")
+                        time.sleep(random.uniform(0.5, 1.0))
+                        page.evaluate(f"window.scrollTo(0, {random.randint(3000, 4500)});")
+                        time.sleep(random.uniform(1.0, 2.0))
 
-                            links = page.locator("a[href*='/product/']").all()
-                            for el in links:
-                                url = el.get_attribute("href")
-                                if url:
-                                    full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
-                                    if "/ko-kr/product/" in full_url and full_url not in visited_urls:
-                                        if full_url not in page_candidates: page_candidates.append(full_url)
-                        except Exception as e:
-                            logger.warning(f"   ⚠️ List load failed. Skip. ({e})")
-                        finally:
-                            page.close()
-                            context.close()
-                            browser.close()
+                        links = page.locator("a[href*='/product/']").all()
+                        for el in links:
+                            url = el.get_attribute("href")
+                            if url:
+                                full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
+                                if "/ko-kr/product/" in full_url and full_url not in visited_urls:
+                                    if full_url not in page_candidates: page_candidates.append(full_url)
                     except Exception as e:
-                        logger.error(f"   🔥 List Scan Error: {e}")
+                        logger.warning(f"   ⚠️ List load failed. Skip. ({e})")
+                        try: page.close()
+                        except: pass
+                        page = setup_page(context)
 
                     gc.collect()
                     time.sleep(2)
@@ -751,41 +733,49 @@ def run_batch_crawler_logic():
                         logger.warning(f"   ⚠️ No candidates found on page {current_page}. Moving to next page.")
                     else:
                         logger.info(f"      Found {len(page_candidates)} new candidates.")
-                        candidate_chunks = [page_candidates[i:i + BATCH_SIZE] for i in range(0, len(page_candidates), BATCH_SIZE)]
 
-                        for chunk_idx, chunk in enumerate(candidate_chunks):
+                        for idx, url in enumerate(page_candidates, 1):
                             if not is_running: break
 
-                            logger.info(f"      ▶️ Deep Scan Batch {chunk_idx + 1}/{len(candidate_chunks)}")
+                            # 🌟 Phase 2 세탁소 가동
+                            if recycle_counter >= 100:
+                                logger.info("   ♻️ [System] Recycling Browser Context to free memory...")
+                                try: page.close()
+                                except: pass
+                                try: context.close()
+                                except: pass
+                                gc.collect()
+                                _, context = create_browser_context(p)
+                                page = setup_page(context)
+                                recycle_counter = 0
+
                             try:
-                                browser, context = create_browser_context(p)
-                                try:
-                                    for url in chunk:
-                                        if not is_running: break
-                                        detail_page = setup_page(context)
-                                        try:
-                                            res = crawl_detail_and_send(detail_page, url)
-                                            if res:
-                                                if res.get("is_delisted"):
-                                                    delisted_games.append(res)
-                                                else:
-                                                    total_processed_count += 1
-                                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                            visited_urls.add(url)
-                                        finally:
-                                            detail_page.close()
-
-                                        time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
-                                finally:
-                                    context.close()
-                                    browser.close()
+                                res = crawl_detail_and_send(page, url)
+                                if res:
+                                    if res.get("is_delisted"):
+                                        delisted_games.append(res)
+                                    else:
+                                        total_processed_count += 1
+                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                                visited_urls.add(url)
+                                recycle_counter += 1
                             except Exception as e:
-                                logger.error(f"   🔥 Chunk Error: {e}")
+                                logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
+                                try: page.close()
+                                except: pass
+                                page = setup_page(context)
 
-                            gc.collect()
-                            time.sleep(3)
+                            time.sleep(random.uniform(CONF["sleep_min"], CONF["sleep_max"]))
 
                     current_page += 1
+
+            logger.info("   🏁 [System] Marathon finished. Closing Browser Engine.")
+            try: page.close() if page else None
+            except: pass
+            try: context.close() if context else None
+            except: pass
+            try: browser.close() if browser else None
+            except: pass
 
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
         refresh_java_server_cache()

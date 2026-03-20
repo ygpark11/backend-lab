@@ -5,13 +5,15 @@ import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
 import RelatedGameCard from '../components/RelatedGameCard';
 import {getGenreBadgeStyle} from '../utils/uiUtils';
-import {calculateCombatPower, getTrafficLight} from '../utils/priceUtils';
+import { getTrafficLight } from '../utils/priceUtils';
+import TargetPriceModal from '../components/TargetPriceModal';
+import StealthPanel from '../components/StealthPanel';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
-    AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Server, ExternalLink,
+    AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Crosshair, Server, ExternalLink,
     Flame, Gamepad2, Heart, HelpCircle, Link, Search, Sparkles,
     Square, Timer, TrendingUp, Triangle, Users, X, Youtube, Trash2, Plus,
-    AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight, Pickaxe
+    AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight, Pickaxe, ShieldAlert
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -59,9 +61,10 @@ export default function GameDetailPage() {
     const [loading, setLoading] = useState(true);
     const [isLiked, setIsLiked] = useState(false);
     const [isDonationOpen, setIsDonationOpen] = useState(false);
+    const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
     const { isAdmin } = useCurrentUser();
-    const { openLoginModal } = useAuth();
+    const { isAuthenticated, openLoginModal } = useAuth();
 
     const [voteCounts, setVoteCounts] = useState({ likes: 0, dislikes: 0 });
     const [userVote, setUserVote] = useState(null);
@@ -138,16 +141,27 @@ export default function GameDetailPage() {
         ), { duration: 5000, style: { background: 'transparent', boxShadow: 'none' } });
     };
 
-    const handleLike = async () => {
+    const handleTargetSubmit = async (targetPrice = null) => {
         const toastId = toast.loading('처리 중...');
         try {
-            const response = await client.post(`/api/v1/wishlists/${id}`);
-            const added = response.data.includes("추가");
+            const response = await client.post(`/api/v1/wishlists/${id}`, { targetPrice });
+            const msg = response.data;
+            const added = msg.includes("추가") || msg.includes("설정") || msg.includes("완료");
+
             setIsLiked(added);
-            toast.success(response.data, {
+            setIsTargetModalOpen(false);
+            toast.success(msg, {
                 id: toastId,
                 icon: added ? <Heart className="w-5 h-5 text-red-500 fill-current animate-bounce" /> : <Heart className="w-5 h-5 text-gray-400" />
             });
+
+            window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
+                detail: { gameId: Number(id), liked: added }
+            }));
+
+            const res = await client.get(`/api/v1/games/${id}`);
+            setGame(res.data);
+            return true;
         } catch (error) {
             if (error.response && error.response.status === 401) {
                 toast.dismiss(toastId);
@@ -164,9 +178,24 @@ export default function GameDetailPage() {
             } else {
                 const errorMessage = typeof error.response?.data === 'string'
                     ? error.response.data
-                    : "찜하기 요청에 실패했습니다.";
+                    : "요청 처리에 실패했습니다.";
                 toast.error(errorMessage, { id: toastId });
             }
+            return false;
+        }
+    };
+
+    const onWishlistClick = async () => {
+        if (!isAuthenticated) {
+            openLoginModal();
+            return;
+        }
+
+        if (isLiked) {
+            handleTargetSubmit(null);
+        } else {
+            const success = await handleTargetSubmit(null);
+            if (success) setIsTargetModalOpen(true);
         }
     };
 
@@ -241,7 +270,6 @@ export default function GameDetailPage() {
     if (!game) return null;
 
     const traffic = getTrafficLight(game.priceVerdict);
-    const combatPower = calculateCombatPower(game.metaScore, game.currentPrice);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
     const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
@@ -268,15 +296,23 @@ export default function GameDetailPage() {
                             {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-xs font-black px-2 py-1 rounded shadow-lg z-10">NEW</span>}
                             {isClosingSoon && <span className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 마감임박</span>}
                         </div>
-                        {combatPower > 0 && (
-                            <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-xl p-4 text-center hover:border-ps-blue/50 transition-colors cursor-help group shadow-lg hidden md:block">
-                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
-                                    <Flame className="w-3 h-3 text-orange-500" /> Combat Power
+                        {game.defenseTier && (
+                            <div className={`bg-black/60 backdrop-blur-md border rounded-xl p-4 text-center transition-colors shadow-lg hidden md:block ${
+                                game.defenseTier.includes('S') || game.defenseTier.includes('A')
+                                    ? 'border-red-500/30'
+                                    : 'border-green-500/30'
+                            }`}>
+                                <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1 ${
+                                    game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-400' : 'text-green-400'
+                                }`}>
+                                    <ShieldAlert className="w-3 h-3" /> 할인 방어력
                                 </p>
-                                <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-600 group-hover:from-yellow-300 group-hover:to-red-500 transition-all">
-                                    {combatPower.toLocaleString()}
+                                <div className={`text-xl font-black mt-2 transition-all ${
+                                    game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-400'
+                                }`}>
+                                    {game.defenseTier}
                                 </div>
-                                <p className="text-xs text-gray-500 mt-1">가성비 전투력</p>
+                                <p className="text-xs text-gray-400 mt-2 break-keep leading-relaxed">{game.defenseMessage}</p>
                             </div>
                         )}
                     </div>
@@ -357,6 +393,17 @@ export default function GameDetailPage() {
                                 </div>
                             )}
                         </div>
+
+                        {/* 스텔스 브리핑 패널 */}
+                        {game.scouterTotalWatchers > 0 && (
+                            <div className="mb-6">
+                                <StealthPanel
+                                    watchersCount={game.scouterTotalWatchers}
+                                    averagePrice={game.scouterAverageTargetPrice}
+                                    isLiked={isLiked}
+                                />
+                            </div>
+                        )}
 
                         {/* 에디션(가족 게임) 모아보기 UI */}
                         {game.familyGames && game.familyGames.length > 1 && (
@@ -479,13 +526,69 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                            <a href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-white text-black hover:bg-gray-200 py-3 sm:py-4 rounded-xl sm:rounded-full font-black text-sm sm:text-base text-center transition-transform hover:-translate-y-1 shadow-xl flex items-center justify-center gap-2 group will-change-transform"><Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform will-change-transform" /> PS Store에서 보기</a>
-                            <div className="flex gap-3 sm:gap-4 w-full sm:w-auto">
-                                <button onClick={handleLike} className={`flex-1 sm:flex-none px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-full border transition-all font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg hover:-translate-y-1 will-change-transform ${isLiked ? 'bg-red-500/10 border-red-500 text-red-500 shadow-red-500/20' : 'bg-white/5 border-white/10 hover:bg-white/10 text-gray-200 hover:text-white backdrop-blur-md'}`}>
-                                    <div className={`transition-transform duration-300 ${isLiked ? 'scale-110' : 'scale-100'}`}><Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${isLiked ? 'fill-current' : ''}`} /></div><span className="whitespace-nowrap">{isLiked ? '찜 목록에 있음' : '찜하기'}</span>
+                        <div className="flex flex-col sm:flex-row items-stretch sm:justify-start gap-3 sm:gap-4 w-full mt-6 p-1 sm:p-0">
+
+                            {/* PS Store 버튼: PC에서는 내용만큼만(flex-none), 모바일에서는 꽉 차게(flex-1) */}
+                            <a
+                                href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 sm:flex-none shrink-0 flex items-center justify-center gap-2 bg-white text-black hover:bg-gray-200 py-3 sm:py-4 px-6 sm:px-8 rounded-xl sm:rounded-full font-black text-sm sm:text-base text-center transition-transform hover:-translate-y-1 shadow-xl whitespace-nowrap will-change-transform group"
+                            >
+                                <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform will-change-transform" />
+                                PS Store에서 보기
+                            </a>
+
+                            {/* 우측 보조 버튼 묶음: 모바일에서는 꽉 차게(w-full), PC에서는 내용만큼만(w-auto) */}
+                            <div className="flex items-stretch gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
+
+                                {/* 1. 내 목표가 수정 버튼 (찜했을 때만 등장) */}
+                                {game.liked && (
+                                    <button
+                                        onClick={() => setIsTargetModalOpen(true)}
+                                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full border border-ps-blue/40 bg-ps-blue/10 text-blue-400 hover:bg-ps-blue/20 hover:text-white hover:border-ps-blue/60 transition-all font-bold text-[11px] sm:text-sm shadow-[0_0_15px_rgba(59,130,246,0.15)] hover:-translate-y-1 will-change-transform"
+                                    >
+                                        <Crosshair className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                                        <span className="whitespace-nowrap">
+                                            {game.myTargetPrice ? (
+                                                <>
+                                                    <span className="sm:hidden">{game.myTargetPrice.toLocaleString()}원</span>
+                                                    <span className="hidden sm:inline">{game.myTargetPrice.toLocaleString()}원 설정 중</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <span className="sm:hidden">목표가</span>
+                                                    <span className="hidden sm:inline">목표가 설정</span>
+                                                </>
+                                            )}
+                                        </span>
+                                    </button>
+                                )}
+
+                                {/* 2. 하트 버튼: 모바일에서 남은 공간을 균등하게 차지하도록 flex-1 적용 */}
+                                <button
+                                    onClick={onWishlistClick}
+                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-4 rounded-xl sm:rounded-full border transition-all font-bold shadow-lg hover:-translate-y-1 will-change-transform ${
+                                        game.liked
+                                            ? 'px-2 sm:px-6 bg-red-500/10 border-red-500/50 text-red-400 hover:bg-red-500/20 hover:text-red-500'
+                                            : 'px-4 sm:px-8 bg-white/5 border-white/10 hover:bg-white/10 text-gray-200 hover:text-white backdrop-blur-md'
+                                    }`}
+                                >
+                                    <div className={`transition-transform duration-300 ${game.liked ? 'scale-110' : 'scale-100'}`}>
+                                        <Heart className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${game.liked ? 'fill-current' : ''}`} />
+                                    </div>
+                                    <span className={`whitespace-nowrap text-[11px] sm:text-sm leading-tight ${game.liked ? 'hidden sm:inline' : 'inline'}`}>
+                                        {game.liked ? '찜 취소' : '찜하기'}
+                                    </span>
                                 </button>
-                                <button onClick={handleShare} className="px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full border border-white/10 bg-white/5 text-gray-300 hover:bg-ps-blue hover:border-ps-blue hover:text-white transition-all font-bold flex items-center justify-center shadow-lg hover:-translate-y-1 backdrop-blur-md group shrink-0 will-change-transform"><Link className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-45 transition-transform will-change-transform" /></button>
+
+                                {/* 3. 공유 버튼: 무조건 고정 크기 유지(shrink-0) */}
+                                <button
+                                    onClick={handleShare}
+                                    className="shrink-0 flex items-center justify-center px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full border border-white/10 bg-white/5 text-gray-300 hover:bg-white/20 hover:text-white transition-all font-bold shadow-lg hover:-translate-y-1 backdrop-blur-md will-change-transform"
+                                >
+                                    <Link className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -646,6 +749,14 @@ export default function GameDetailPage() {
                 )}
             </div>
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
+
+            <TargetPriceModal
+                isOpen={isTargetModalOpen}
+                onClose={() => setIsTargetModalOpen(false)}
+                game={game}
+                defenseTier={game.defenseTier}
+                onSubmit={(price) => handleTargetSubmit(price)}
+            />
         </div>
     );
 
@@ -659,6 +770,12 @@ export default function GameDetailPage() {
                         <PSGameImage src={game.imageUrl} className="absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-60 blur-[8px] brightness-70" />
                         <div className="absolute inset-0 bg-gradient-to-t from-ps-black via-ps-black/80 to-transparent"></div>
                         <div className="absolute inset-0 bg-gradient-to-r from-ps-black/50 via-transparent to-transparent"></div>
+
+                        <div className="absolute inset-0 z-20 mix-blend-screen opacity-60">
+                            <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
+                            <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
+                            <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+                        </div>
                     </div>
                     {pageContent}
                 </div>
@@ -673,6 +790,12 @@ export default function GameDetailPage() {
                 <PSGameImage src={game.imageUrl} className="absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-60 blur-[8px] brightness-70" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ps-black via-ps-black/80 to-transparent"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-ps-black/50 via-transparent to-transparent"></div>
+
+                <div className="absolute inset-0 z-20 mix-blend-screen opacity-60">
+                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-600/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+                </div>
             </div>
             {pageContent}
         </div>

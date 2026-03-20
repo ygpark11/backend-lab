@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,7 +25,7 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class WishlistService {
 
-    private static final int MAX_WISHLIST_LIMIT = 50;
+    private static final int MAX_WISHLIST_LIMIT = 30;
 
     private final WishlistRepository wishlistRepository;
     private final GameRepository gameRepository;
@@ -37,26 +38,41 @@ public class WishlistService {
      * - 없으면 -> 저장 (return true)
      */
     @Transactional
-    public boolean toggleWishlist(Long memberId, Long gameId) {
-        return wishlistRepository.findByMemberIdAndGameId(memberId, gameId)
-                .map(wishlist -> {
-                    wishlistRepository.delete(wishlist);
-                    return false;
-                })
-                .orElseGet(() -> {
-                    long currentCount = wishlistRepository.countByMemberId(memberId);
+    public String toggleWishlist(Long memberId, Long gameId, Integer targetPrice) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 게임을 찾을 수 없습니다."));
 
-                    if (currentCount >= MAX_WISHLIST_LIMIT) {
-                        throw new IllegalStateException("찜 목록은 최대 " + MAX_WISHLIST_LIMIT + "개까지만 저장할 수 있습니다.");
-                    }
+        if (targetPrice != null && targetPrice >= game.getOriginalPrice()) {
+            throw new IllegalArgumentException("목표가는 정가(" + game.getOriginalPrice() + "원)보다 낮아야 합니다.");
+        }
 
-                    // 프록시 객체 활용 (DB Select 최소화)
-                    Member memberRef = memberRepository.getReferenceById(memberId);
-                    Game gameRef = gameRepository.getReferenceById(gameId);
+        Optional<Wishlist> existingWishlist = wishlistRepository.findByMemberIdAndGameId(memberId, gameId);
 
-                    wishlistRepository.save(Wishlist.create(memberRef, gameRef));
-                    return true;
-                });
+        if (existingWishlist.isPresent()) {
+            Wishlist wishlist = existingWishlist.get();
+
+            // 1. 이미 찜한 상태인데 새로운 목표가를 보냈다 -> '수정'
+            if (targetPrice != null) {
+                wishlist.updateTargetPrice(targetPrice);
+                return "목표가가 설정되었습니다. 🎯";
+            } else {
+                // 2. 목표가 없이 다시 하트를 눌렀다 -> 기존 찜 '취소'
+                wishlistRepository.delete(wishlist);
+                return "찜 목록에서 삭제되었습니다.";
+            }
+        } else {
+            // 3. 새로 찜하는 경우 -> '추가'
+            if (wishlistRepository.countByMemberId(memberId) >= MAX_WISHLIST_LIMIT) {
+                throw new IllegalStateException("위시리스트는 최대 " + MAX_WISHLIST_LIMIT + "개까지만 등록 가능합니다.");
+            }
+
+            Member memberRef = memberRepository.getReferenceById(memberId);
+
+            Wishlist newWishlist = Wishlist.createWithTargetPrice(memberRef, game, targetPrice);
+            wishlistRepository.save(newWishlist);
+
+            return "찜 목록에 추가되었습니다.";
+        }
     }
 
     /**

@@ -19,7 +19,6 @@ public class GameVoteService {
 
     private final GameRepository gameRepository;
     private final GameVoteRepository gameVoteRepository;
-    private final GameReadService gameReadService;
 
     @Transactional
     public GameVoteResponseDto toggleVote(Long gameId, Long memberId, VoteType requestedVoteType) {
@@ -68,9 +67,6 @@ public class GameVoteService {
             }
             finalUserVote = requestedVoteType;
         }
-
-        // 게임 엔티티의 좋아요/싫어요 카운트가 변경되었으므로 캐시 무효화
-        gameReadService.evictGameDetailCache(gameId);
 
         // 역정규화된 게임 테이블의 카운트 최신 상태와 유저의 최종 상태를 반환
         return new GameVoteResponseDto(game.getLikeCount(), game.getDislikeCount(), finalUserVote);

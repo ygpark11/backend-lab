@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.controller;
 
 import com.pstracker.catalog_service.catalog.dto.WishlistDto;
+import com.pstracker.catalog_service.catalog.dto.WishlistRequest;
 import com.pstracker.catalog_service.catalog.service.WishlistService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -22,11 +23,15 @@ public class WishlistController {
     @PostMapping("/{gameId}")
     public ResponseEntity<String> toggleWishlist(
             @PathVariable Long gameId,
-            @AuthenticationPrincipal MemberPrincipal principal // Security Context에서 ID 바로 획득
+            @RequestBody(required = false) WishlistRequest request,
+            @AuthenticationPrincipal MemberPrincipal principal
     ) {
         try {
-            boolean isAdded = wishlistService.toggleWishlist(principal.getMemberId(), gameId);
-            return ResponseEntity.ok(isAdded ? "찜 목록에 추가되었습니다." : "찜 목록에서 삭제되었습니다.");
+            Integer targetPrice = (request != null) ? request.getTargetPrice() : null;
+
+            String resultMessage = wishlistService.toggleWishlist(principal.getMemberId(), gameId, targetPrice);
+
+            return ResponseEntity.ok(resultMessage);
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }

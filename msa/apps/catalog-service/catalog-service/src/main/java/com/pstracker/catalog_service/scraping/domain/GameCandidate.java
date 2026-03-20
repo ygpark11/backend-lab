@@ -27,6 +27,9 @@ public class GameCandidate {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "is_hidden", nullable = false)
+    private boolean isHidden = false;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -36,5 +39,10 @@ public class GameCandidate {
         this.title = title;
         this.imageUrl = imageUrl;
         this.createdAt = LocalDateTime.now();
+        this.isHidden = false;
+    }
+
+    public void sendToIncinerator() {
+        this.isHidden = true;
     }
 }

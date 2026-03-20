@@ -42,12 +42,18 @@ public record GameDetailResponse(
         VoteType userVote,
 
         boolean liked,
+        Integer myTargetPrice,
         LocalDateTime createdAt,
 
         // [판정 및 차트]
         PriceVerdict priceVerdict, // 판정 결과
         String verdictMessage,     // 판정 메시지
         List<PriceHistoryDto> priceHistory, // 차트용 데이터
+
+        Integer scouterTotalWatchers,
+        Integer scouterAverageTargetPrice,
+        String defenseTier,
+        String defenseMessage,
 
         // [기타]
         List<String> platforms,
@@ -62,7 +68,11 @@ public record GameDetailResponse(
 
     private static final long serialVersionUID = 1L;
 
-    public GameDetailResponse withDynamicData(boolean isLiked, VoteType userVote) {
+    public GameDetailResponse withDynamicData(
+            boolean isLiked, VoteType userVote,
+            int totalWatchers, Integer avgTargetPrice, Integer myTargetPrice,
+            String defTier, String defMessage) {
+
         return new GameDetailResponse(
                 this.id, this.title, this.originalTitle, this.publisher,
                 this.imageUrl, this.description, this.psStoreId,
@@ -70,9 +80,10 @@ public record GameDetailResponse(
                 this.discountRate, this.isPlusExclusive, this.saleEndDate,
                 this.releaseDate, this.pioneerName, this.metaScore, this.userScore,
                 this.likeCount, this.dislikeCount, userVote,
-                isLiked, this.createdAt, this.priceVerdict,
-                this.verdictMessage, this.priceHistory, this.platforms,
-                this.genres, this.inCatalog, this.familyGames, this.relatedGames
+                isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
+                this.verdictMessage, this.priceHistory,
+                totalWatchers, avgTargetPrice, defTier, defMessage,
+                this.platforms, this.genres, this.inCatalog, this.familyGames, this.relatedGames
         );
     }
 
@@ -136,7 +147,8 @@ public record GameDetailResponse(
                 currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(),
                 game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(), game.getMetaScore(), game.getUserScore(),
                 game.getLikeCount(), game.getDislikeCount(), null,
-                liked, game.getCreatedAt(), verdict, verdictMsg, history,
+                liked, null, game.getCreatedAt(), verdict, verdictMsg, history,
+                0, null, null ,null,
                 game.getPlatforms().stream().map(Enum::name).toList(),
                 genreList, game.isInCatalog(), familyGames, relatedGames
         );

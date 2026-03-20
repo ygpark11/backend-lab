@@ -24,6 +24,9 @@ export default {
                     '0%': { top: '-150%' },
                     '100%': { top: '150%' },
                 }
+            },
+            animation: {
+                'spin-slow': 'spin 10s linear infinite',
             }
         },
     },

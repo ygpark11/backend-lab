@@ -216,6 +216,21 @@ const GameListPage = () => {
     }, []);
 
     useEffect(() => {
+        const handleWishlistUpdate = (e) => {
+            const { gameId, liked } = e.detail;
+
+            setGames(prevGames =>
+                prevGames.map(game =>
+                    game.id === gameId ? { ...game, liked: liked } : game
+                )
+            );
+        };
+
+        window.addEventListener('ps-wishlist-updated', handleWishlistUpdate);
+        return () => window.removeEventListener('ps-wishlist-updated', handleWishlistUpdate);
+    }, []);
+
+    useEffect(() => {
         if (!location.search) {
             setFilter(prev => {
                 const isAlreadyDefault =

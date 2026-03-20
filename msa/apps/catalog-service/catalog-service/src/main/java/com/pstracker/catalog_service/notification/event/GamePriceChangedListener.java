@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.notification.event;
 
+import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import com.pstracker.catalog_service.member.domain.Member;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -39,40 +41,78 @@ public class GamePriceChangedListener {
         log.debug("🔔 Event Received: Price Drop for '{}' ({} -> {})",
                 event.getGameName(), event.getOldPrice(), event.getNewPrice());
 
-        List<Member> allSubscribers = wishlistRepository.findMembersByGamePsStoreId(event.getPsStoreId());
+        Long gameId = event.getGameId();
 
-        if (allSubscribers.isEmpty()) {
-            log.debug("📭 No subscribers for '{}'. Skipping notification.", event.getGameName());
-            return;
+        List<Wishlist> wishlists = wishlistRepository.findAllByGameIdWithMember(gameId);
+
+        if (wishlists.isEmpty()) return;
+
+        String shortGameName = event.getGameName().length() > 20
+                ? event.getGameName().substring(0, 20) + "..."
+                : event.getGameName();
+
+        List<Notification> notificationsToSave = new ArrayList<>();
+        List<Member> fcmTargetMembers = new ArrayList<>();
+        List<String> fcmTitles = new ArrayList<>();
+        List<String> fcmBodies = new ArrayList<>();
+
+        for (Wishlist wish : wishlists) {
+            Member member = wish.getMember();
+            Integer targetPrice = wish.getTargetPrice();
+            int currentPrice = event.getNewPrice();
+
+            String dbTitle = "";
+            String pushTitle = "";
+            String message = "";
+
+            if (targetPrice != null && targetPrice > 0) {
+                if (currentPrice <= targetPrice) {
+                    // 시나리오 A: 현재가가 목표가 도달
+                    dbTitle = "[목표 가격 도달] " + event.getGameName();
+                    pushTitle = "목표 가격 도달! " + shortGameName;
+                    message = String.format("드디어 목표가(%s원)에 도달했습니다! 현재가: %s원.",
+                            String.format("%,d", targetPrice), String.format("%,d", currentPrice));
+                } else {
+                    // 시나리오 B: 할인은 했지만 목표가보단 비쌈
+                    dbTitle = "[할인 시작] " + event.getGameName();
+                    pushTitle = "할인이 시작되었어요! " + shortGameName;
+                    message = String.format("목표가(%s원)까진 아직 멀었지만, 현재 %s원(%d%% 할인)으로 떨어졌습니다.",
+                            String.format("%,d", targetPrice), String.format("%,d", currentPrice), event.getDiscountRate());
+                }
+            } else {
+                // 시나리오 C: 일반 찜 (목표가 없음)
+                dbTitle = "[가격 하락] " + event.getGameName();
+                pushTitle = "가격 하락! " + shortGameName;
+                message = String.format("가격이 %s원으로 내려갔어요! (%d%% 할인)",
+                        String.format("%,d", currentPrice), event.getDiscountRate());
+            }
+
+            notificationsToSave.add(Notification.create(member, dbTitle, message, gameId));
+
+            if (member.isPriceAlertEnabled()) {
+                fcmTargetMembers.add(member);
+                fcmTitles.add(pushTitle);
+                fcmBodies.add(message);
+            }
         }
 
-        Long gameId = event.getGameId();
-        String rawGameName = event.getGameName();
+        notificationRepository.saveAll(notificationsToSave);
 
-        String shortGameName = rawGameName.length() > 20
-                ? rawGameName.substring(0, 20) + "..."
-                : rawGameName;
+        if (!fcmTargetMembers.isEmpty()) {
+            for (int i = 0; i < fcmTargetMembers.size(); i++) {
+                sendSingleFcmNotification(fcmTargetMembers.get(i), fcmTitles.get(i), fcmBodies.get(i));
+            }
+        }
+    }
 
-        String dbTitle = "[가격 하락] " + rawGameName;     // 인앱 알림용
-        String pushTitle = "[가격 하락] " + shortGameName; // 모바일 푸시용
-
-        String message = String.format("가격이 %,d원으로 내려갔어요! (%d%% 할인)",
-                event.getNewPrice(), event.getDiscountRate());
-
-        List<Notification> notifications = allSubscribers.stream()
-                .map(member -> Notification.create(member, dbTitle, message, gameId))
-                .toList();
-        notificationRepository.saveAll(notifications);
-        log.debug("Saved {} in-app notifications to DB.", notifications.size());
-
-        List<Member> alertEnabledSubscribers = allSubscribers.stream()
-                .filter(Member::isPriceAlertEnabled)
-                .toList();
-
-        if (!alertEnabledSubscribers.isEmpty()) {
-            sendFcmNotifications(alertEnabledSubscribers, pushTitle, message);
-        } else {
-            log.debug("📭 푸시 알림 대상이 없습니다 (해당 게임을 찜한 유저들이 모두 푸시를 껐습니다).");
+    private void sendSingleFcmNotification(Member member, String title, String body) {
+        try {
+            List<FcmToken> tokens = fcmTokenRepository.findAllByMemberIdIn(List.of(member.getId()));
+            if (!tokens.isEmpty()) {
+                fcmService.sendMulticastMessage(tokens, title, body);
+            }
+        } catch (Exception e) {
+            log.error("❌ Failed to send FCM for Member {}: {}", member.getId(), e.getMessage());
         }
     }
 

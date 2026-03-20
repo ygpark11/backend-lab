@@ -43,6 +43,7 @@ public class CatalogService {
     private final IgdbApiClient igdbApiClient;
 
     private final GameReadService gameReadService;
+    private final GameScouterService gameScouterService;
 
     /**
      * 게임 데이터 수집 및 저장 (Upsert)
@@ -63,6 +64,8 @@ public class CatalogService {
         // 2. 게임 엔티티 조회 또는 생성
         Game game = findOrCreateGame(request);
 
+        Integer oldOriginalPrice = game.getOriginalPrice();
+
         // 3. 게임 메타데이터 업데이트 (제목, 설명, 이미지, 장르, 플랫폼)
         updateGameMetadata(game, request, genreEntities);
 
@@ -78,6 +81,13 @@ public class CatalogService {
                 request.getSaleEndDate(),
                 request.isInCatalog()
         );
+
+        Integer newOriginalPrice = request.getOriginalPrice();
+        if (oldOriginalPrice != null && newOriginalPrice != null && newOriginalPrice < oldOriginalPrice) {
+            // 정가가 내려갔다면, 모순된 목표가를 가진 Wishlist들을 일괄 초기화!
+            wishlistRepository.resetInvalidTargetPrices(game.getId(), newOriginalPrice);
+            log.debug("정가 영구 인하 감지 ({} -> {}). 관련 목표 가격 초기화 완료.", oldOriginalPrice, newOriginalPrice);
+        }
 
         // 5. 게임 정보 저장
         gameRepository.save(game);
@@ -321,20 +331,40 @@ public class CatalogService {
         GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
         boolean isLiked = false;
+        Integer myTargetPrice = null;
         VoteType userVote = null;
 
         // 2. 유저별 동적 데이터(찜 여부, 투표 상태)는 실시간 DB 조회 (비로그인이면 Pass)
         if (memberId != null) {
-            isLiked = wishlistRepository.existsByMemberIdAndGameId(memberId, gameId);
-
-            // 🚀 로그인한 유저의 투표 상태 확인
+            Optional<Wishlist> myWish = wishlistRepository.findByMemberIdAndGameId(memberId, gameId);
+            if (myWish.isPresent()) {
+                isLiked = true;
+                myTargetPrice = myWish.get().getTargetPrice();
+            }
             userVote = gameVoteRepository.findByMemberIdAndGameId(memberId, gameId)
                     .map(GameVote::getVoteType)
                     .orElse(null);
         }
 
-        // 3. 캐시된 객체의 내용을 재사용하되, liked 상태만 변경해서 반환
-        return baseResponse.withDynamicData(isLiked, userVote);
+        // 3. 스카우터 통계 조회 (총 인원, 평균가)
+        int totalWatchers = wishlistRepository.countByGameId(gameId);
+        Integer avgTargetPrice = null;
+        if (totalWatchers >= 2) { // 2명 이상일 때만 평균가 계산
+            avgTargetPrice = wishlistRepository.getAverageTargetPriceByGameId(gameId);
+        }
+
+        // 4. 방어력 티어 계산 (캐시된 이력 데이터 활용)
+        String[] defenseInfo = gameScouterService.calculateDefenseTier(
+                baseResponse.originalPrice(),
+                baseResponse.lowestPrice(),
+                baseResponse.releaseDate(),
+                baseResponse.priceHistory()
+        );
+
+        return baseResponse.withDynamicData(
+                isLiked, userVote,
+                totalWatchers, avgTargetPrice, myTargetPrice, defenseInfo[0], defenseInfo[1]
+        );
     }
 
     /**
