@@ -7,18 +7,44 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
 
     if (!isOpen || !game) return null;
 
-    const hasDiscountHistory = game.lowestPrice && game.lowestPrice > 0 && game.lowestPrice < game.originalPrice;
-    const target1Price = hasDiscountHistory ? game.lowestPrice : Math.floor((game.originalPrice * 0.8) / 100) * 100;
-    const target1Title = hasDiscountHistory ? "역대 최저가 맞춤" : "첫 세일 대기 (20%)";
-    const target1Desc = hasDiscountHistory ? "가장 현실적인 존버 라인" : "무난한 첫 할인 목표";
-    const target2Price = Math.floor((game.originalPrice * 0.5) / 100) * 100;
-    const target3Price = hasDiscountHistory ? Math.floor((game.lowestPrice * 0.9) / 100) * 100 : Math.floor((game.originalPrice * 0.7) / 100) * 100;
-    const target3Title = hasDiscountHistory ? "방어선 붕괴 대기" : "본격 세일 대기 (30%)";
-    const target3Desc = hasDiscountHistory ? "최저가 기록 갱신 노리기" : "인내심이 필요한 라인";
+    // [추가/수정] 현재 가장 싼 가격 (역대 최저가와 현재가 중 더 싼 것 찾기)
+    const bestPrice = (game.lowestPrice && game.lowestPrice > 0)
+        ? Math.min(game.lowestPrice, game.currentPrice)
+        : game.currentPrice;
+
+    // 할인을 한 번이라도 한 적이 있는지?
+    const isDiscounted = bestPrice < game.originalPrice;
+    // 현재 가격이 역대 최저가(또는 그 이하)인지?
+    const isCurrentBest = game.currentPrice <= bestPrice;
+
+    // 목표 1: (할인 없음: 정가 -20%) | (현재 최저가: 최저가 -10%) | (과거 최저가: 최저가 맞춤)
+    const target1Price = isDiscounted
+        ? (isCurrentBest ? Math.floor((bestPrice * 0.9) / 100) * 100 : bestPrice)
+        : Math.floor((game.originalPrice * 0.8) / 100) * 100;
+    const target1Title = isDiscounted
+        ? (isCurrentBest ? "최저가 갱신 대기 (-10%)" : "역대 최저가 맞춤")
+        : "첫 세일 대기 (20%)";
+    const target1Desc = isDiscounted
+        ? (isCurrentBest ? "현재 최저가에서 10% 추가 하락" : "가장 현실적인 존버 라인")
+        : "무난한 첫 할인 목표";
+
+    // 목표 2: (할인 없음: 정가 -30%) | (할인 중: 최저가 -20%)
+    const target2Price = isDiscounted
+        ? Math.floor((bestPrice * 0.8) / 100) * 100
+        : Math.floor((game.originalPrice * 0.7) / 100) * 100;
+    const target2Title = isDiscounted ? "존버 모드 (-20%)" : "본격 세일 대기 (30%)";
+    const target2Desc = isDiscounted ? "최저가에서 20% 추가 하락" : "인내심이 필요한 라인";
+
+    // 목표 3: (할인 없음: 정가 -50%) | (할인 중: 최저가 -30%)
+    const target3Price = isDiscounted
+        ? Math.floor((bestPrice * 0.7) / 100) * 100
+        : Math.floor((game.originalPrice * 0.5) / 100) * 100;
+    const target3Title = isDiscounted ? "극강의 존버 (-30%)" : "반값 타협 (50%)";
+    const target3Desc = isDiscounted ? "최저가에서 30% 추가 하락" : "언젠가는 오겠지 마인드";
 
     const handleQuickSelect = (price) => {
-        if (price >= game.originalPrice) {
-            toast.error("정가보다 낮은 목표가를 설정해주세요!");
+        if (price >= game.currentPrice) {
+            toast.error("현재 가격보다 낮은 목표가를 설정해주세요!");
             return;
         }
         onSubmit(price);
@@ -27,11 +53,11 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
     const handleManualSubmit = (e) => {
         e.preventDefault();
         const price = parseInt(manualPrice.replace(/[^0-9]/g, ''), 10);
-        if (price >= game.originalPrice) {
-            toast.error("정가보다 낮은 금액을 입력해주세요!");
+        if (price >= game.currentPrice) {
+            toast.error("현재 가격보다 낮은 금액을 입력해주세요!");
             return;
         }
-        if (price > 0 && price < game.originalPrice) {
+        if (price > 0 && price < game.currentPrice) {
             onSubmit(price);
         }
     };
@@ -43,8 +69,6 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-
-            {/* 🚀 [추가] 모달 뒷배경 PS 도형 워터마크 (은은하게 펄스) */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none overflow-hidden text-white flex justify-center items-center">
                 <TriangleShape className="absolute top-[15%] left-[10%] w-32 h-32 rotate-12 animate-[pulse_6s_ease-in-out_infinite]" />
                 <CircleShape className="absolute top-[25%] right-[15%] w-40 h-40 -rotate-12 animate-[pulse_8s_ease-in-out_infinite]" />
@@ -73,11 +97,11 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                     </div>
 
                     <div className="space-y-2.5 relative z-10">
-                        {/* 🚀 1번 버튼 (호버 시 Triangle 슬라이드 인) */}
+                        {/* 1번 버튼 */}
                         <button onClick={() => handleQuickSelect(target1Price)} className="relative overflow-hidden w-full flex justify-between items-center p-4 rounded-xl bg-white/5 hover:bg-ps-blue/20 border border-white/10 hover:border-ps-blue/50 text-left transition-all group shadow-sm hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]">
                             <div className="relative z-10">
                                 <div className="text-white font-bold text-sm flex items-center gap-1.5">
-                                    {hasDiscountHistory ? <TrendingDown className="w-4 h-4 text-ps-blue"/> : <Target className="w-4 h-4 text-ps-blue"/>}
+                                    {isDiscounted ? <TrendingDown className="w-4 h-4 text-ps-blue"/> : <Target className="w-4 h-4 text-ps-blue"/>}
                                     {target1Title}
                                 </div>
                                 <div className="text-gray-400 text-xs mt-0.5">{target1Desc}</div>
@@ -86,21 +110,21 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                             <TriangleShape className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 text-ps-blue opacity-0 group-hover:opacity-10 translate-x-4 group-hover:translate-x-0 transition-all duration-500 pointer-events-none" />
                         </button>
 
-                        {/* 🚀 2번 버튼 (호버 시 Circle 슬라이드 인) */}
+                        {/* 2번 버튼 */}
                         <button onClick={() => handleQuickSelect(target2Price)} className="relative overflow-hidden w-full flex justify-between items-center p-4 rounded-xl bg-white/5 hover:bg-purple-500/20 border border-white/10 hover:border-purple-500/50 text-left transition-all group shadow-sm hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                             <div className="relative z-10">
-                                <div className="text-white font-bold text-sm flex items-center gap-1.5"><Target className="w-4 h-4 text-purple-400"/> 반값 타협 (50%)</div>
-                                <div className="text-gray-400 text-xs mt-0.5">언젠가는 오겠지 마인드</div>
+                                <div className="text-white font-bold text-sm flex items-center gap-1.5"><Target className="w-4 h-4 text-purple-400"/> {target2Title}</div>
+                                <div className="text-gray-400 text-xs mt-0.5">{target2Desc}</div>
                             </div>
                             <span className="text-purple-400 font-black relative z-10">{target2Price.toLocaleString()}원</span>
                             <CircleShape className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 text-purple-400 opacity-0 group-hover:opacity-10 translate-x-4 group-hover:translate-x-0 transition-all duration-500 pointer-events-none" />
                         </button>
 
-                        {/* 🚀 3번 버튼 (호버 시 X_Shape 슬라이드 인) */}
+                        {/* 3번 버튼 */}
                         <button onClick={() => handleQuickSelect(target3Price)} className="relative overflow-hidden w-full flex justify-between items-center p-4 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/50 text-left transition-all group shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]">
                             <div className="relative z-10">
                                 <div className="text-white font-bold text-sm flex items-center gap-1.5">
-                                    {hasDiscountHistory ? <ShieldAlert className="w-4 h-4 text-red-400"/> : <AlertTriangle className="w-4 h-4 text-red-400"/>}
+                                    {isDiscounted ? <ShieldAlert className="w-4 h-4 text-red-400"/> : <AlertTriangle className="w-4 h-4 text-red-400"/>}
                                     {target3Title}
                                 </div>
                                 <div className="text-gray-400 text-xs mt-0.5">{target3Desc}</div>
