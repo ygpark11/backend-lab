@@ -166,7 +166,7 @@ def verify_secret(req_data):
     return req_data.get('secretKey') == CRAWLER_SECRET_KEY
 
 
-# --- [4. 🚀 VIP 새치기 로직 (안전한 콜백 처리)] ---
+# --- [4. VIP 새치기 로직 (안전한 콜백 처리)] ---
 def check_and_run_vip(bm):
     global active_requests
     while not urgent_queue.empty():
@@ -267,12 +267,26 @@ def crawl_phase0_new_releases(bm):
             human_like_scroll(page)
 
             if "/concept/" in url:
-                main_cta = page.locator("div[data-qa='mfeCtaMain']")
-                if main_cta.is_visible(timeout=3000):
-                    price_text = main_cta.locator("span[data-qa$='#finalPrice']").inner_text(timeout=2000).strip()
-                    if "무료" in price_text or price_text == "0원":
-                        logger.info(f"   ⏭️ [Phase 0 스킵] 기본 영역 무료 판정 -> {url}")
-                        continue
+                html_content = page.content()
+                is_free_game = False
+
+                if '"isFree":true' in html_content or '"basePrice":"무료"' in html_content:
+                    is_free_game = True
+                else:
+                    # 안전망: 화면에 렌더링된 메인 버튼 텍스트도 확인 (기다리지 않음)
+                    try:
+                        main_cta = page.locator("div[data-qa='mfeCtaMain']")
+                        if main_cta.count() > 0:
+                            price_loc = main_cta.locator("span[data-qa$='#finalPrice']")
+                            if price_loc.count() > 0:
+                                price_text = price_loc.first.inner_text().strip()
+                                if "무료" in price_text or price_text == "0원":
+                                    is_free_game = True
+                    except: pass
+
+                if is_free_game:
+                    logger.info(f"   ⏭️ [Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
+                    continue
 
                 ps_store_id = None
                 editions = page.locator("article[data-qa^='mfeUpsell#productEdition']").all()
@@ -297,33 +311,54 @@ def crawl_phase0_new_releases(bm):
                             continue
 
                 if not ps_store_id:
-                    meta_loc = page.locator("a[data-telemetry-meta]")
-                    if meta_loc.is_visible(timeout=2000):
-                        meta_str = meta_loc.first.get_attribute("data-telemetry-meta")
-                        meta_json = json.loads(meta_str)
-                        ps_store_id = meta_json.get("productId")
+                    try:
+                        meta_loc = page.locator("a[data-telemetry-meta]").first
+                        if meta_loc.is_visible(timeout=2000):
+                            meta_str = meta_loc.get_attribute("data-telemetry-meta")
+                            meta_json = json.loads(meta_str)
+                            ps_store_id = meta_json.get("productId")
+                    except:
+                        pass
 
                 if ps_store_id:
-                    title = page.locator("[data-qa='mfe-game-title#name']").inner_text(timeout=3000).strip()
-                    img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
-                    img_url = img_loc.get_attribute("src") if img_loc.is_visible(timeout=2000) else ""
+                    page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=25000)
+                    title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
+
+                    image_url = ""
+                    try:
+                        match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', page.content())
+                        if match: image_url = match.group(1).split("?")[0]
+                        if not image_url:
+                            img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
+                            if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
+                    except: pass
 
                     logger.info(f"   ✅ [Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
-                    # V2 오리지널 Sync API 적용
                     session.post(INTERNAL_SYNC_URL, json={
                         "psStoreId": ps_store_id,
                         "title": title,
-                        "imageUrl": img_url
+                        "imageUrl": image_url
                     }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
 
             elif "/product/" in url:
                 ps_store_id = url.split('/')[-1]
-                title = page.locator("[data-qa='mfe-game-title#name']").inner_text(timeout=3000).strip()
+                page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=25000)
+                title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
+
+                image_url = ""
+                try:
+                    match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', page.content())
+                    if match: image_url = match.group(1).split("?")[0]
+                    if not image_url:
+                        img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
+                        if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
+                except: pass
+
                 logger.info(f"   ✅ [Phase 0 등록] {title} ({ps_store_id})")
                 session.post(INTERNAL_SYNC_URL, json={
                     "psStoreId": ps_store_id,
                     "title": title,
-                    "imageUrl": ""
+                    "imageUrl": image_url
                 }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
 
         except Exception as e:
