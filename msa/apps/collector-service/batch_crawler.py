@@ -234,7 +234,7 @@ def crawl_phase0_new_releases(bm):
         human_like_delay(2, 4)
         human_like_scroll(page)
 
-        page.wait_for_selector("a[href*='/concept/'], a[href*='/product/']", timeout=15000)
+        page.wait_for_selector("a[href*='/concept/'], a[href*='/product/']", state="attached", timeout=15000)
         links = page.locator("a[href*='/concept/'], a[href*='/product/']").all()
 
         for link in links:
