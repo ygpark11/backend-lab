@@ -418,6 +418,20 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             elif "VR" in raw_text: platform_set.add("PS_VR")
         platforms = list(platform_set)
 
+        is_ps5_pro_enhanced = False
+        try:
+            for el in page.locator("[data-qa^='mfe-game-title#productTag']").all():
+                if "PS5 Pro 성능 향상" in el.inner_text() or "PS5 Pro Enhanced" in el.inner_text():
+                    is_ps5_pro_enhanced = True
+                    break
+
+            if not is_ps5_pro_enhanced:
+                for el in page.locator("[data-qa^='mfe-compatibility-notices#notices']").all():
+                    if "PS5 Pro 성능 향상" in el.inner_text() or "PS5 Pro Enhanced" in el.inner_text():
+                        is_ps5_pro_enhanced = True
+                        break
+        except: pass
+
         genre_ids = ""
         try: genre_ids = page.locator("[data-qa='gameInfo#releaseInformation#genre-value']").inner_text()
         except: pass
@@ -504,7 +518,8 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "imageUrl": image_url, "description": "Full Data Crawler", "genreIds": genre_ids, "releaseDate": release_date,
             "originalPrice": best_offer_data["originalPrice"], "currentPrice": best_offer_data["currentPrice"],
             "discountRate": best_offer_data["discountRate"], "saleEndDate": best_offer_data["saleEndDate"],
-            "isPlusExclusive": best_offer_data["isPlusExclusive"], "inCatalog": is_in_catalog_global, "platforms": platforms
+            "isPlusExclusive": best_offer_data["isPlusExclusive"], "inCatalog": is_in_catalog_global, "platforms": platforms,
+            "isPs5ProEnhanced": is_ps5_pro_enhanced
         }
 
         # 오리지널 API(JAVA_API_URL)로 데이터 전송

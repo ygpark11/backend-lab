@@ -37,7 +37,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate, game.pioneerName,
                         game.metaScore, game.userScore,
-                        game.inCatalog, game.createdAt
+                        game.inCatalog, game.createdAt,
+                        game.isPs5ProEnhanced
                 ))
                 .from(game)
                 .where(
@@ -50,7 +51,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         plusExclusiveEq(condition.getIsPlusExclusive()),
                         genreEq(condition.getGenre()),
                         inCatalogEq(condition.getInCatalog()),
-                        isAllTimeLow(condition.getIsAllTimeLow())
+                        isAllTimeLow(condition.getIsAllTimeLow()),
+                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced())
                 )
                 .orderBy(getOrderSpecifiers(pageable.getSort()))
                 .offset(pageable.getOffset())
@@ -70,7 +72,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         plusExclusiveEq(condition.getIsPlusExclusive()),
                         genreEq(condition.getGenre()),
                         inCatalogEq(condition.getInCatalog()),
-                        isAllTimeLow(condition.getIsAllTimeLow())
+                        isAllTimeLow(condition.getIsAllTimeLow()),
+                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -106,16 +109,12 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
      */
     private List<GameSearchResultDto> convertToDtos(List<Game> games) {
         return games.stream().map(g -> {
-
             GameSearchResultDto dto = new GameSearchResultDto(
                     g.getId(), g.getName(), g.getImageUrl(),
-                    g.getOriginalPrice(),
-                    g.getCurrentPrice(),
-                    g.getDiscountRate(),
-                    g.isPlusExclusive(),
-                    g.getSaleEndDate(),
-                    g.getPioneerName(),
-                    g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt()
+                    g.getOriginalPrice(), g.getCurrentPrice(), g.getDiscountRate(),
+                    g.isPlusExclusive(), g.getSaleEndDate(), g.getPioneerName(),
+                    g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt(),
+                    g.isPs5ProEnhanced()
             );
 
             // 장르 이름 매핑
@@ -179,6 +178,13 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         }
 
         return game.discountRate.gt(0).and(game.currentPrice.loe(game.allTimeLowPrice));
+    }
+
+    private BooleanExpression ps5ProEnhancedEq(Boolean isPs5ProEnhanced) {
+        if (isPs5ProEnhanced == null || !isPs5ProEnhanced) {
+            return null;
+        }
+        return game.isPs5ProEnhanced.isTrue();
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {

@@ -106,6 +106,9 @@ public class Game {
     @Column(name = "pioneer_name")
     private String pioneerName;
 
+    @Column(name = "is_ps5_pro_enhanced")
+    private boolean isPs5ProEnhanced;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
 
@@ -153,7 +156,8 @@ public class Game {
 
     // --- [비즈니스 로직: 정보 업데이트 통합] ---
     public void updateInfo(String name, String englishName, String publisher,
-                           String imageUrl, String description, LocalDate releaseDate, Set<Genre> newGenres) {
+                           String imageUrl, String description, LocalDate releaseDate, Set<Genre> newGenres,
+                           boolean isPs5ProEnhanced) {
 
         if (hasText(name) && !name.equals(this.name)) {
             this.name = name;
@@ -190,6 +194,10 @@ public class Game {
 
         if (this.familyId == null && hasText(this.psStoreId)) {
             this.familyId = extractFamilyId(this.psStoreId);
+        }
+
+        if (isPs5ProEnhanced) {
+            this.isPs5ProEnhanced = true;
         }
 
         this.lastUpdated = LocalDateTime.now();

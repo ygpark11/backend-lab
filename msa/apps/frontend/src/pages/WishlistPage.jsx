@@ -238,7 +238,14 @@ const WishlistPage = () => {
                                 <div className="p-4 flex flex-col flex-1 bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
 
                                     {/* 1. 장르 영역 */}
-                                    <div className="flex flex-wrap gap-1 mb-2 min-h-[22px]">
+                                    <div className="flex flex-wrap gap-1 mb-2 min-h-[22px] items-center">
+                                        {/* 🚀 [추가] PS5 Pro 은색 마이크로 뱃지 */}
+                                        {game.isPs5ProEnhanced && (
+                                            <span className="text-[10px] px-1.5 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">
+                                                PRO
+                                            </span>
+                                        )}
+
                                         {game.genres && game.genres.length > 0 ? (
                                             game.genres.map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)
                                         ) : (

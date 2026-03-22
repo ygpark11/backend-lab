@@ -11,7 +11,7 @@ import StealthPanel from '../components/StealthPanel';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertCircle, ArrowLeft, CalendarDays, Check, Circle, Crosshair, Server, ExternalLink,
-    Flame, Gamepad2, Heart, HelpCircle, Link, Search, Sparkles,
+    Flame, Gamepad2, Heart, HelpCircle, Link, MonitorPlay, Search, Sparkles,
     Square, Timer, TrendingUp, Triangle, Users, X, Youtube, Trash2, Plus,
     AlertTriangle, RefreshCw, Building2, Calendar, Star, Layers, TrendingDown, ArrowUpRight, Pickaxe, ShieldAlert
 } from 'lucide-react';
@@ -319,6 +319,11 @@ export default function GameDetailPage() {
 
                     <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap gap-2 mb-4">
+                            {game.isPs5ProEnhanced && (
+                                <span className="px-3 py-1 rounded text-xs font-black border transition-all bg-gradient-to-r from-gray-200 to-white text-black border-white shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center gap-1.5 animate-pulse-slow">
+                                    <Sparkles className="w-3.5 h-3.5 text-black" /> PS5 Pro Enhanced
+                                </span>
+                            )}
                             {game.genres && game.genres.length > 0 ? game.genres.map(g => (
                                 <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded text-xs font-bold border transition-all hover:scale-105 active:scale-95 bg-black/40 backdrop-blur-sm ${getGenreBadgeStyle(g)}`}>
                                     {g}
@@ -338,6 +343,14 @@ export default function GameDetailPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
+                            {game.isPs5ProEnhanced && (
+                                <div className="flex items-center gap-2.5 bg-gradient-to-r from-white/15 to-transparent border-l-4 border-white px-3 py-1.5 rounded-r-xl shadow-sm backdrop-blur-md cursor-default w-full sm:w-auto mt-1 sm:mt-0 order-last sm:order-none">
+                                    <MonitorPlay className="w-4 h-4 sm:w-5 sm:h-5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-pulse" />
+                                    <div>
+                                        <p className="text-white font-black text-[11px] sm:text-xs tracking-wide drop-shadow-md">PS5 Pro 성능 향상 (PSSR)</p>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-sm shadow-sm hover:bg-white/10 transition-colors cursor-default">
                                 <Building2 className="w-4 h-4 text-gray-400" />
                                 <span className="text-gray-300 text-xs font-bold tracking-wide">{game.publisher}</span>

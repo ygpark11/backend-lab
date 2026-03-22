@@ -37,20 +37,20 @@ public class ScrapingEventListener {
 
             // 2. 개척자 명예의 전당 기록 (※ Game 엔티티에 pioneerName 필드와 update 메서드가 추가되어야 동작합니다)
             game.updatePioneerInfo(event.getMember().getId(), event.getMember().getNickname());
-            log.debug("👑 개척자 칭호 부여 완료: [{}] -> {}", game.getName(), event.getMember().getNickname());
+            log.debug("개척자 칭호 부여 완료: [{}] -> {}", game.getName(), event.getMember().getNickname());
 
             // 3. 해당 유저에게 FCM 푸시 알림 단건 발송
             String title = "수집 완료! 🎮";
             String body = "요청하신 [" + game.getName() + "] 게임이 트래커 진열장에 등록되었습니다. 지금 바로 확인해보세요!";
 
-            List<FcmToken> tokens = fcmTokenRepository.findAllByMember(event.getMember());
+            List<FcmToken> tokens = fcmTokenRepository.findAllByMemberWithMember(event.getMember());
             if (tokens.isEmpty()) {
                 log.debug("FCM tokens not found. Skipping push.");
                 return;
             }
 
             fcmService.sendMulticastMessage(tokens, title, body);
-            log.debug("🚀 개척자({})에게 FCM 알림 발송 완료", event.getMember().getNickname());
+            log.debug("개척자({})에게 FCM 알림 발송 완료", event.getMember().getNickname());
 
         } catch (Exception e) {
             log.error("개척자 수집 완료 이벤트 처리 중 치명적 에러 발생", e);

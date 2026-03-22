@@ -20,6 +20,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -99,40 +100,25 @@ public class GamePriceChangedListener {
         notificationRepository.saveAll(notificationsToSave);
 
         if (!fcmTargetMembers.isEmpty()) {
+            List<Long> targetMemberIds = fcmTargetMembers.stream().map(Member::getId).toList();
+
+            List<FcmToken> allTokens = fcmTokenRepository.findAllByMemberIdInWithMember(targetMemberIds);
+
+            Map<Long, List<FcmToken>> tokenMap = allTokens.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(t -> t.getMember().getId()));
+
             for (int i = 0; i < fcmTargetMembers.size(); i++) {
-                sendSingleFcmNotification(fcmTargetMembers.get(i), fcmTitles.get(i), fcmBodies.get(i));
+                Member member = fcmTargetMembers.get(i);
+                List<FcmToken> memberTokens = tokenMap.getOrDefault(member.getId(), new java.util.ArrayList<>());
+
+                if (!memberTokens.isEmpty()) {
+                    try {
+                        fcmService.sendMulticastMessage(memberTokens, fcmTitles.get(i), fcmBodies.get(i));
+                    } catch (Exception e) {
+                        log.error("❌ Failed to send FCM for Member {}: {}", member.getId(), e.getMessage());
+                    }
+                }
             }
-        }
-    }
-
-    private void sendSingleFcmNotification(Member member, String title, String body) {
-        try {
-            List<FcmToken> tokens = fcmTokenRepository.findAllByMemberIdIn(List.of(member.getId()));
-            if (!tokens.isEmpty()) {
-                fcmService.sendMulticastMessage(tokens, title, body);
-            }
-        } catch (Exception e) {
-            log.error("❌ Failed to send FCM for Member {}: {}", member.getId(), e.getMessage());
-        }
-    }
-
-    private void sendFcmNotifications(List<Member> subscribers, String title, String body) {
-        try {
-            List<Long> memberIds = subscribers.stream().map(Member::getId).toList();
-            List<FcmToken> tokens = fcmTokenRepository.findAllByMemberIdIn(memberIds);
-
-            if (tokens.isEmpty()) {
-                log.debug("Subscribers exist, but no FCM tokens found. Skipping push.");
-                return;
-            }
-
-            fcmService.sendMulticastMessage(tokens, title, body);
-
-            log.info("🚀 Triggered FCM Multicast for {} devices (Target Members: {}, Title: {})",
-                    tokens.size(), subscribers.size(), title);
-
-        } catch (Exception e) {
-            log.error("❌ Failed to send FCM notifications: {}", e.getMessage());
         }
     }
 }

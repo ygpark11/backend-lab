@@ -32,6 +32,9 @@ public class GameSearchResultDto implements Serializable {
     @JsonProperty("inCatalog")
     private boolean inCatalog;
 
+    @JsonProperty("isPs5ProEnhanced")
+    private boolean isPs5ProEnhanced;
+
     private LocalDateTime createdAt;
     private List<String> genres;
 
@@ -43,7 +46,8 @@ public class GameSearchResultDto implements Serializable {
                                Integer originalPrice, Integer price, Integer discountRate,
                                boolean isPlusExclusive, LocalDate saleEndDate, String pioneerName,
                                Integer metaScore, Double userScore,
-                               boolean inCatalog, LocalDateTime createdAt) {
+                               boolean inCatalog, LocalDateTime createdAt,
+                               boolean isPs5ProEnhanced) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -57,5 +61,6 @@ public class GameSearchResultDto implements Serializable {
         this.userScore = userScore;
         this.inCatalog = inCatalog;
         this.createdAt = createdAt;
+        this.isPs5ProEnhanced = isPs5ProEnhanced;
     }
 }

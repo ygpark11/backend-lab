@@ -28,8 +28,7 @@ public class GameSearchCondition {
     // 장르 필터
     private String genre;
 
-    // PS 카탈로그 포함 여부
     private Boolean inCatalog;
-
     private Boolean isAllTimeLow;
+    private Boolean isPs5ProEnhanced;
 }

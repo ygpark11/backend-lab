@@ -177,7 +177,8 @@ public class CatalogServiceTest {
                 LocalDate.of(2026,1,1),
                 false,
                 false,
-                List.of("PS5")
+                List.of("PS5"),
+                false
         );
     }
 }

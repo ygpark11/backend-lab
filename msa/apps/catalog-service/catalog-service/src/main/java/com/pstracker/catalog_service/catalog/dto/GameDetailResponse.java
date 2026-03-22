@@ -25,6 +25,8 @@ public record GameDetailResponse(
         Integer discountRate,
         @JsonProperty("isPlusExclusive")
         boolean isPlusExclusive,
+        @JsonProperty("isPs5ProEnhanced")
+        boolean isPs5ProEnhanced,
 
         // [일자 정보]
         LocalDate saleEndDate,
@@ -77,8 +79,8 @@ public record GameDetailResponse(
                 this.id, this.title, this.originalTitle, this.publisher,
                 this.imageUrl, this.description, this.psStoreId,
                 this.currentPrice, this.originalPrice, this.lowestPrice,
-                this.discountRate, this.isPlusExclusive, this.saleEndDate,
-                this.releaseDate, this.pioneerName, this.metaScore, this.userScore,
+                this.discountRate, this.isPlusExclusive, this.isPs5ProEnhanced,
+                this.saleEndDate, this.releaseDate, this.pioneerName, this.metaScore, this.userScore,
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
                 this.verdictMessage, this.priceHistory,
@@ -144,7 +146,7 @@ public record GameDetailResponse(
         return new GameDetailResponse(
                 game.getId(), game.getName(), game.getEnglishName(), game.getPublisher(),
                 game.getImageUrl(), game.getDescription(), game.getPsStoreId(),
-                currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(),
+                currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(), game.isPs5ProEnhanced(),
                 game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(), game.getMetaScore(), game.getUserScore(),
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, null, game.getCreatedAt(), verdict, verdictMsg, history,

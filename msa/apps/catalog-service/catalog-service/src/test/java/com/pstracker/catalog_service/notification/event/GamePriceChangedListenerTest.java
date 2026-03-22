@@ -51,7 +51,7 @@ public class GamePriceChangedListenerTest {
         // 1. DB 저장이 호출되지 않아야 함
         verify(notificationRepository, never()).saveAll(anyList());
         // 2. 토큰 조회도 하지 않아야 함
-        verify(fcmTokenRepository, never()).findAllByMemberIdIn(anyList());
+        verify(fcmTokenRepository, never()).findAllByMemberIdInWithMember(anyList());
     }
 
     @Test
@@ -64,14 +64,12 @@ public class GamePriceChangedListenerTest {
         given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
                 .willReturn(List.of(wishlist));
 
-        given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L)))
+        given(fcmTokenRepository.findAllByMemberIdInWithMember(List.of(1L)))
                 .willReturn(Collections.emptyList());
 
         listener.handlePriceChange(event);
 
-        // 1. DB 알림은 저장되어야 함
         verify(notificationRepository, times(1)).saveAll(anyList());
-        // 2. FCM 다중 발송은 시도하지 않아야 함
         verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any());
     }
 
@@ -81,7 +79,7 @@ public class GamePriceChangedListenerTest {
         GamePriceChangedEvent event = createEvent();
         Member member = mock(Member.class);
 
-        given(member.isPriceAlertEnabled()).willReturn(false); // 알림 수신 거부 상태!
+        given(member.isPriceAlertEnabled()).willReturn(false);
 
         Wishlist wishlist = createWishlist(member, 50000);
 
@@ -90,10 +88,8 @@ public class GamePriceChangedListenerTest {
 
         listener.handlePriceChange(event);
 
-        // 1. 알림을 껐더라도 인앱 DB 알림은 저장되어야 함
         verify(notificationRepository, times(1)).saveAll(anyList());
-        // 2. 알림을 껐기 때문에 토큰 조회나 푸시 발송 로직은 타지 않아야 함
-        verify(fcmTokenRepository, never()).findAllByMemberIdIn(anyList());
+        verify(fcmTokenRepository, never()).findAllByMemberIdInWithMember(anyList());
         verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any());
     }
 
@@ -106,8 +102,8 @@ public class GamePriceChangedListenerTest {
         Member member1 = createMember(1L);
         Member member2 = createMember(2L);
 
-        Wishlist wish1 = createWishlist(member1, 50000); // 타겟가 5만 원
-        Wishlist wish2 = createWishlist(member2, 30000); // 타겟가 3만 원
+        Wishlist wish1 = createWishlist(member1, 50000);
+        Wishlist wish2 = createWishlist(member2, 30000);
 
         given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
                 .willReturn(List.of(wish1, wish2));
@@ -115,20 +111,18 @@ public class GamePriceChangedListenerTest {
         FcmToken token1 = createToken(member1, "token_1");
         FcmToken token2 = createToken(member2, "token_2");
 
-        // 개별 발송이므로 각각 토큰을 조회함
-        given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L))).willReturn(List.of(token1));
-        given(fcmTokenRepository.findAllByMemberIdIn(List.of(2L))).willReturn(List.of(token2));
+        given(fcmTokenRepository.findAllByMemberIdInWithMember(List.of(1L, 2L)))
+                .willReturn(List.of(token1, token2));
 
         // when
         listener.handlePriceChange(event);
 
         // then
-        // 1. DB 알림 일괄 저장 확인
         verify(notificationRepository, times(1)).saveAll(argThat(items ->
                 ((java.util.Collection<?>) items).size() == 2
         ));
 
-        // 2. FCM 다중 발송이 개별적으로 2번 호출되어야 함!
+        // FCM 다중 발송은 여전히 개별적으로 2번 호출되어야 함
         verify(fcmService, times(2)).sendMulticastMessage(anyList(), anyString(), anyString());
     }
 
@@ -143,7 +137,8 @@ public class GamePriceChangedListenerTest {
 
         given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
                 .willReturn(List.of(wishlist));
-        given(fcmTokenRepository.findAllByMemberIdIn(List.of(1L)))
+
+        given(fcmTokenRepository.findAllByMemberIdInWithMember(List.of(1L)))
                 .willReturn(List.of(token));
 
         doThrow(new RuntimeException("FCM Connection Timeout"))
@@ -153,10 +148,7 @@ public class GamePriceChangedListenerTest {
         listener.handlePriceChange(event);
 
         // then
-        // 1. 에러가 났지만 DB 저장은 이미 수행되었어야 함
         verify(notificationRepository, times(1)).saveAll(anyList());
-
-        // 2. FCM 다중 발송 시도는 했어야 함
         verify(fcmService, times(1)).sendMulticastMessage(anyList(), any(), any());
     }
 
@@ -182,6 +174,8 @@ public class GamePriceChangedListenerTest {
     private FcmToken createToken(Member member, String tokenValue) {
         FcmToken token = mock(FcmToken.class);
         lenient().when(token.getToken()).thenReturn(tokenValue);
+        // 리스너에서 Collectors.groupingBy(t -> t.getMember().getId()) 를 쓰기 때문에,
+        lenient().when(token.getMember()).thenReturn(member);
         return token;
     }
 }

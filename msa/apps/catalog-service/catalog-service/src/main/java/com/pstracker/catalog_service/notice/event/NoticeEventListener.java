@@ -5,9 +5,10 @@ import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -20,11 +21,11 @@ public class NoticeEventListener {
     private final FcmService fcmService;
 
     @Async
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleNoticeCreated(NoticeCreatedEvent event) {
         log.debug("공지사항 등록 이벤트 수신! 전체 유저에게 푸시를 발송합니다.");
 
-        List<FcmToken> allTokens = fcmTokenRepository.findAll();
+        List<FcmToken> allTokens = fcmTokenRepository.findAllWithMember();
 
         if (allTokens.isEmpty()) {
             log.debug("📭 발송할 FCM 토큰이 없습니다.");

@@ -32,10 +32,13 @@ public class CollectRequestDto {
     private LocalDate releaseDate;
 
     @JsonProperty("isPlusExclusive")
-    private boolean isPlusExclusive; // PS Plus 전용 할인 여부
+    private boolean isPlusExclusive;
 
     @JsonProperty("inCatalog")
     private boolean inCatalog;
 
     private List<String> platforms;
+
+    @JsonProperty("isPs5ProEnhanced")
+    private boolean isPs5ProEnhanced;
 }

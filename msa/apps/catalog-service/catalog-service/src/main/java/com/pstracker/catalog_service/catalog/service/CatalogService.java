@@ -156,7 +156,8 @@ public class CatalogService {
                 request.getImageUrl(),
                 request.getDescription(),
                 request.getReleaseDate(),
-                genres
+                genres,
+                request.isPs5ProEnhanced()
         );
 
         // 플랫폼 정보 최신화

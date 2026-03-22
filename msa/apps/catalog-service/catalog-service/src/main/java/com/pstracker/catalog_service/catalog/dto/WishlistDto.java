@@ -40,6 +40,9 @@ public class WishlistDto {
     @JsonProperty("inCatalog")
     private boolean inCatalog;
 
+    @JsonProperty("isPs5ProEnhanced")
+    private boolean isPs5ProEnhanced;
+
     private String pioneerName;
 
     @QueryProjection
@@ -47,7 +50,8 @@ public class WishlistDto {
                        Integer originalPrice, Integer currentPrice, Integer discountRate,
                        boolean isPlusExclusive, LocalDate saleEndDate,
                        Integer metaScore, boolean inCatalog, String pioneerName,
-                       LocalDateTime createdAt, LocalDateTime wishedAt) {
+                       LocalDateTime createdAt, LocalDateTime wishedAt,
+                       boolean isPs5ProEnhanced) {
         this.id = id;
         this.gameId = gameId;
         this.name = gameName;
@@ -63,5 +67,6 @@ public class WishlistDto {
         this.isPlusExclusive = isPlusExclusive;
         this.inCatalog = inCatalog;
         this.pioneerName = pioneerName;
+        this.isPs5ProEnhanced = isPs5ProEnhanced;
     }
 }

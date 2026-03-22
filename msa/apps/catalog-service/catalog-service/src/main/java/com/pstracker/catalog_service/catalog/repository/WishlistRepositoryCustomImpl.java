@@ -27,7 +27,8 @@ public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate,
                         game.metaScore, game.inCatalog, game.pioneerName,
-                        game.createdAt, wishlist.createdAt
+                        game.createdAt, wishlist.createdAt,
+                        game.isPs5ProEnhanced
                 ))
                 .from(wishlist)
                 .join(wishlist.game, game)
