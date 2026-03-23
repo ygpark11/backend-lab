@@ -112,17 +112,24 @@ class BrowserManager:
         return browser, context
 
     def get_context(self):
-        # 🚀 설정된 주기마다 브라우저 세탁 (메모리 누수 원천 차단)
         if self.request_count >= CONF["restart_interval"]:
-            logger.info(f"🔄 [메모리 관리] {CONF['restart_interval']}회 수집 완료 -> 브라우저 강제 환생! 🧹")
             try: self.context.close()
             except: pass
             try: self.browser.close()
             except: pass
             gc.collect()
 
-            self.browser, self.context = self._create_browser()
+            time.sleep(3)
+
+            try:
+                self.browser, self.context = self._create_browser()
+            except Exception as e:
+                logger.error(f"브라우저 환생 중 감자 서버 헐떡임 발생! 5초 대기 후 재시도... : {e}")
+                time.sleep(5)
+                self.browser, self.context = self._create_browser()
+
             self.request_count = 0
+
         return self.context
 
     def increment(self):
@@ -146,7 +153,6 @@ def setup_page(context):
 
     page.route("**/*", route_intercept)
     return page
-
 
 # --- [3. 공통 유틸리티 및 검증] ---
 def human_like_delay(min_sec=None, max_sec=None):
