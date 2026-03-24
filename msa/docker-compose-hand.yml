@@ -18,6 +18,8 @@ services:
       - CRAWLER_MODE=LOW
       - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
     shm_size: '1gb'
+    volumes:
+      - ./crawler_data:/app/data
     networks:
       - ps-network
     restart: unless-stopped

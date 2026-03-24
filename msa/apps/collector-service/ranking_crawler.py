@@ -21,7 +21,11 @@ TARGETS = {
     "MOST_DOWNLOADED": "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897/{}?sortBy=downloads30&sortOrder=desc"
 }
 
-CACHE_FILE = 'concept_map.json'
+DATA_DIR = 'data'
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+
+CACHE_FILE = os.path.join(DATA_DIR, 'concept_map.json')
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -109,7 +113,7 @@ def fetch_product_id_from_concept(bm, concept_url):
             except: pass
 
     except Exception as e:
-        ogger.error(f"컨셉 변환 타임아웃 또는 실패 ({concept_url}): {e}")
+        logger.error(f"컨셉 변환 타임아웃 또는 실패 ({concept_url}): {e}")
     finally:
         try: page.close()
         except: pass
