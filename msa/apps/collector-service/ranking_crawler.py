@@ -81,11 +81,12 @@ def fetch_product_id_from_concept(bm, concept_url):
     logger.info(f"신규 컨셉 발견! Product ID 탐색 중... ({concept_url})")
     context = bm.get_context()
     page = context.new_page()
+
     page.set_default_timeout(30000)
 
     product_id = None
     try:
-        page.goto("https://store.playstation.com" + concept_url, wait_until="domcontentloaded")
+        page.goto("https://store.playstation.com" + concept_url, wait_until="domcontentloaded", timeout=15000)
         human_like_delay(1.5, 2.5)
 
         # 기존 Phase 0 처럼 data-telemetry-meta 에서 추출 시도
@@ -108,9 +109,10 @@ def fetch_product_id_from_concept(bm, concept_url):
             except: pass
 
     except Exception as e:
-        logger.error(f"컨셉 페이지 변환 실패: {e}")
+        ogger.error(f"컨셉 변환 타임아웃 또는 실패 ({concept_url}): {e}")
     finally:
-        page.close()
+        try: page.close()
+        except: pass
         bm.increment()
 
     return product_id
