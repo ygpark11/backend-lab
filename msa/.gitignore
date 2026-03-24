@@ -35,3 +35,6 @@ apps/frontend/*.log
 
 # Firebase Admin SDK Key
 firebase-service-account.json
+
+# Crawler Cache
+concept_map.json

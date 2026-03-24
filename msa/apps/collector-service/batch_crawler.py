@@ -15,6 +15,7 @@ from datetime import datetime
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from flask import Flask, jsonify, request
 import requests
+import ranking_crawler
 
 # --- [1. 설정 및 로깅 초기화] ---
 if not os.path.exists('logs'):
@@ -202,9 +203,9 @@ def check_and_run_vip(bm):
         callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
         try:
             requests.post(INTERNAL_CALLBACK_URL, json=callback_payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
-            logger.info(f"   📞 [VIP 콜백 완료] {status}")
+            logger.info(f"[VIP 콜백 완료] {status}")
         except Exception as e:
-            logger.error(f"   💥 [VIP 콜백 실패] {e}")
+            logger.error(f"[VIP 콜백 실패] {e}")
 
         try: active_requests.remove(req_id)
         except: pass
@@ -774,6 +775,22 @@ def trigger_crawl():
 
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
+
+@app.route('/run-ranking', methods=['POST'])
+def trigger_ranking_crawl():
+    data = request.json or {}
+    if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
+
+    global is_batch_running
+    with crawler_lock:
+        if is_batch_running:
+            logger.warning("메인 배치가 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
+            return jsonify({"status": "error", "message": "Main batch is running"}), 409
+
+    logger.info("[API] 랭킹 크롤러 백그라운드 실행 요청 수신")
+    threading.Thread(target=ranking_crawler.main, daemon=True).start()
+
+    return jsonify({"status": "started", "message": "Ranking crawler triggered"}), 200
 
 @app.route('/health', methods=['GET'])
 def health_check():

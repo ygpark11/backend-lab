@@ -2,14 +2,12 @@ package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Platform;
-import com.pstracker.catalog_service.catalog.domain.QGamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
-import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +36,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.isPlusExclusive, game.saleEndDate, game.pioneerName,
                         game.metaScore, game.userScore,
                         game.inCatalog, game.createdAt,
-                        game.isPs5ProEnhanced
+                        game.isPs5ProEnhanced,
+                        game.bestSellerRank, game.mostDownloadedRank
                 ))
                 .from(game)
                 .where(
@@ -52,9 +51,11 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         genreEq(condition.getGenre()),
                         inCatalogEq(condition.getInCatalog()),
                         isAllTimeLow(condition.getIsAllTimeLow()),
-                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced())
+                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
+                        bestSellerEq(condition.getIsBestSeller()),
+                        mostDownloadedEq(condition.getIsMostDownloaded())
                 )
-                .orderBy(getOrderSpecifiers(pageable.getSort()))
+                .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -73,7 +74,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         genreEq(condition.getGenre()),
                         inCatalogEq(condition.getInCatalog()),
                         isAllTimeLow(condition.getIsAllTimeLow()),
-                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced())
+                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
+                        bestSellerEq(condition.getIsBestSeller()),
+                        mostDownloadedEq(condition.getIsMostDownloaded())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -114,7 +117,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                     g.getOriginalPrice(), g.getCurrentPrice(), g.getDiscountRate(),
                     g.isPlusExclusive(), g.getSaleEndDate(), g.getPioneerName(),
                     g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt(),
-                    g.isPs5ProEnhanced()
+                    g.isPs5ProEnhanced(), g.getBestSellerRank(), g.getMostDownloadedRank()
             );
 
             // 장르 이름 매핑
@@ -187,8 +190,27 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         return game.isPs5ProEnhanced.isTrue();
     }
 
-    private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort) {
+    private BooleanExpression bestSellerEq(Boolean isBestSeller) {
+        return Boolean.TRUE.equals(isBestSeller) ? game.bestSellerRank.isNotNull() : null;
+    }
+
+    private BooleanExpression mostDownloadedEq(Boolean isMostDownloaded) {
+        return Boolean.TRUE.equals(isMostDownloaded) ? game.mostDownloadedRank.isNotNull() : null;
+    }
+
+    private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort, GameSearchCondition condition) {
         List<OrderSpecifier<?>> orders = new ArrayList<>();
+
+        if (Boolean.TRUE.equals(condition.getIsBestSeller())) {
+            orders.add(game.bestSellerRank.asc());
+            return orders.toArray(new OrderSpecifier[0]);
+        }
+
+        if (Boolean.TRUE.equals(condition.getIsMostDownloaded())) {
+            orders.add(game.mostDownloadedRank.asc());
+            return orders.toArray(new OrderSpecifier[0]);
+        }
+
         for (Sort.Order order : sort) {
             Order direction = order.isAscending() ? Order.ASC : Order.DESC;
             switch (order.getProperty()) {

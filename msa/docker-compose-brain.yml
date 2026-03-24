@@ -38,6 +38,7 @@ services:
       - CRAWLER_URL=http://10.0.0.61:5000/run
       - CRAWLER_QUEUE_URL=http://10.0.0.61:5000/api/crawler/trigger
       - CRAWLER_SINGLE_URL=http://10.0.0.61:5000/crawl/single
+      - CRAWLER_RANKING_URL=http://10.0.0.61:5000/run-ranking
     volumes:
       - ./firebase-service-account.json:/app/firebase-service-account.json
       - ./logs/backend:/var/log/pstracker

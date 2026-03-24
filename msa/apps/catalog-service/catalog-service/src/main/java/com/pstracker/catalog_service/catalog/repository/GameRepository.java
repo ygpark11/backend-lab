@@ -53,4 +53,14 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Game g SET g.pioneerName = :newNickname WHERE g.pioneerMemberId = :memberId")
     void updatePioneerNameByMemberId(@Param("memberId") Long memberId, @Param("newNickname") String newNickname);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.bestSellerRank = null")
+    void clearBestSellerRanks();
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.mostDownloadedRank = null")
+    void clearMostDownloadedRanks();
+
+    List<Game> findByPsStoreIdIn(List<String> psStoreIds);
 }

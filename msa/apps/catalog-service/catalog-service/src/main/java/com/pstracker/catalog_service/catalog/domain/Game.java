@@ -121,6 +121,12 @@ public class Game {
     @Column(name = "platform")
     private Set<Platform> platforms = new HashSet<>();
 
+    @Column(name = "best_seller_rank")
+    private Integer bestSellerRank;
+
+    @Column(name = "most_downloaded_rank")
+    private Integer mostDownloadedRank;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<GameGenre> gameGenres = new HashSet<>();
 
@@ -297,5 +303,13 @@ public class Game {
 
     public void removeDislike() {
         if (this.dislikeCount > 0) this.dislikeCount--;
+    }
+
+    public void updateRank(String rankingType, Integer rank) {
+        if ("BEST_SELLER".equals(rankingType)) {
+            this.bestSellerRank = rank;
+        } else if ("MOST_DOWNLOADED".equals(rankingType)) {
+            this.mostDownloadedRank = rank;
+        }
     }
 }

@@ -18,6 +18,9 @@ public class CrawlerScheduler {
     @Value("${crawler.url:http://localhost:5000/run}")
     private String crawlerUrl;
 
+    @Value("${crawler.ranking-url:http://localhost:5000/run-ranking}")
+    private String rankingCrawlerUrl;
+
     @Value("${crawler.secret-key}")
     private String internalSecretKey;
 
@@ -27,13 +30,18 @@ public class CrawlerScheduler {
      */
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void scheduleCrawling() {
-        log.info("⏰ Scheduled Task: Triggering Batch Crawler...");
-        triggerCrawler();
+        log.info("Scheduled Task: Triggering Batch Crawler...");
+        triggerCrawler(crawlerUrl, "Main Batch Crawler");
     }
 
-    // 수동 테스트나, 스케줄링 로직에서 공통으로 호출
+    @Scheduled(cron = "0 0 12 * * *", zone = "Asia/Seoul")
+    public void scheduleRankingCrawling() {
+        log.info("Scheduled Task: Triggering Ranking Crawler...");
+        triggerCrawler(rankingCrawlerUrl, "Ranking Crawler");
+    }
+
     public void triggerCrawler() {
-        log.info("🚀 Triggering daily batch crawl...");
+        log.info("Triggering daily batch crawl...");
 
         RestClient restClient = RestClient.create();
         try {
@@ -44,9 +52,27 @@ public class CrawlerScheduler {
                     .retrieve()
                     .body(String.class);
 
-            log.info("✅ Crawler Triggered Successfully! Response: {}", response);
+            log.info("Crawler Triggered Successfully! Response: {}", response);
         } catch (Exception e) {
-            log.error("❌ Failed to trigger batch crawler: {}", e.getMessage());
+            log.error("Failed to trigger batch crawler: {}", e.getMessage());
+        }
+    }
+
+    private void triggerCrawler(String targetUrl, String crawlerName) {
+        log.info("Triggering {}...", crawlerName);
+
+        RestClient restClient = RestClient.create();
+        try {
+            String response = restClient.post()
+                    .uri(targetUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("secretKey", internalSecretKey))
+                    .retrieve()
+                    .body(String.class);
+
+            log.info("{} Triggered Successfully! Response: {}", crawlerName, response);
+        } catch (Exception e) {
+            log.error("Failed to trigger {}: {}", crawlerName, e.getMessage());
         }
     }
 }

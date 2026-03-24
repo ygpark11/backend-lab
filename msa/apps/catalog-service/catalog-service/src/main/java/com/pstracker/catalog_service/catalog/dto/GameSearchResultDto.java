@@ -41,13 +41,17 @@ public class GameSearchResultDto implements Serializable {
     // 찜 여부
     private boolean liked;
 
+    private Integer bestSellerRank;
+    private Integer mostDownloadedRank;
+
     @QueryProjection
     public GameSearchResultDto(Long id, String name, String imageUrl,
                                Integer originalPrice, Integer price, Integer discountRate,
                                boolean isPlusExclusive, LocalDate saleEndDate, String pioneerName,
                                Integer metaScore, Double userScore,
                                boolean inCatalog, LocalDateTime createdAt,
-                               boolean isPs5ProEnhanced) {
+                               boolean isPs5ProEnhanced,
+                               Integer bestSellerRank, Integer mostDownloadedRank) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -62,5 +66,7 @@ public class GameSearchResultDto implements Serializable {
         this.inCatalog = inCatalog;
         this.createdAt = createdAt;
         this.isPs5ProEnhanced = isPs5ProEnhanced;
+        this.bestSellerRank = bestSellerRank;
+        this.mostDownloadedRank = mostDownloadedRank;
     }
 }

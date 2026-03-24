@@ -1,6 +1,8 @@
 package com.pstracker.catalog_service.scraping.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CrawlerCallbackRequest;
+import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
+import com.pstracker.catalog_service.catalog.service.RankingService;
 import com.pstracker.catalog_service.scraping.dto.CandidateSyncRequest;
 import com.pstracker.catalog_service.scraping.service.ScrapingWebhookService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class InternalWebhookController {
     private String internalSecretKey;
 
     private final ScrapingWebhookService scrapingWebhookService;
+    private final RankingService rankingService;
 
     @PostMapping("/callback")
     @Transactional
@@ -55,5 +58,22 @@ public class InternalWebhookController {
             log.info("새벽 탐사: 신규 후보군 진열장 등록 완료 ({})", payload.title());
         }
         return ResponseEntity.ok("Sync processed");
+    }
+
+    @PostMapping("/rankings/update")
+    @Transactional
+    public ResponseEntity<String> updateRankings(
+            @RequestHeader(value = "X-Internal-Secret", required = false) String secretHeader,
+            @RequestBody RankingUpdateRequestDto payload) {
+
+        if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
+            log.warn("잘못된 시크릿 키로 랭킹 업데이트 API 접근 시도!");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied");
+        }
+
+        rankingService.updateRankings(payload);
+
+        log.info("[Webhook] 랭킹 업데이트 수신 및 처리 완료 ({})", payload.getRankingType());
+        return ResponseEntity.ok("Rankings processed");
     }
 }

@@ -31,4 +31,7 @@ public class GameSearchCondition {
     private Boolean inCatalog;
     private Boolean isAllTimeLow;
     private Boolean isPs5ProEnhanced;
+
+    private Boolean isBestSeller;
+    private Boolean isMostDownloaded;
 }
