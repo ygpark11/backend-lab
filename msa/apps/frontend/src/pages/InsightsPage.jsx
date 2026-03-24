@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Flame, Star, TrendingDown, Activity, Database, Clock,
     ChevronRight, Heart, CircleDollarSign, RefreshCw,
-    AlertTriangle, Server
+    AlertTriangle, Server, Trophy, Download
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client';
@@ -190,6 +190,56 @@ const InsightsPage = () => {
                     </h2>
                     <div className="text-2xl font-black text-white truncate">
                         {formatCurrency(stats.totalDiscountAmount)}<span className="text-sm text-gray-500 ml-1">원</span>
+                    </div>
+                </div>
+
+                {/* 베스트셀러 랭킹 진입점 */}
+                <div
+                    onClick={() => navigate('/games?isBestSeller=true')}
+                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-900/40 via-black to-black border border-amber-500/20 p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(245,158,11,0.2)] transition-all duration-300"
+                >
+                    <div className="absolute right-0 bottom-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 will-change-transform"></div>
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Trophy className="w-5 h-5 text-amber-400" />
+                                    <h2 className="text-amber-400 font-bold text-sm tracking-wider uppercase">TOP SELLERS</h2>
+                                </div>
+                                <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mt-1 drop-shadow-md">
+                                    지갑이 열리는 중!<br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">실시간 베스트셀러</span>
+                                </h3>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-amber-500 transition-colors shrink-0 shadow-lg">
+                                <ChevronRight className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 최다 다운로드 랭킹 진입점 */}
+                <div
+                    onClick={() => navigate('/games?isMostDownloaded=true')}
+                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-gradient-to-br from-cyan-900/40 via-black to-black border border-cyan-500/20 p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:shadow-[0_10px_40px_rgba(6,182,212,0.2)] transition-all duration-300"
+                >
+                    <div className="absolute right-0 bottom-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 will-change-transform"></div>
+                    <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Download className="w-5 h-5 text-cyan-400" />
+                                    <h2 className="text-cyan-400 font-bold text-sm tracking-wider uppercase">MOST DOWNLOADED</h2>
+                                </div>
+                                <h3 className="text-2xl md:text-3xl font-black text-white leading-tight mt-1 drop-shadow-md">
+                                    지금 제일 핫한 게임<br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">실시간 최다 다운로드</span>
+                                </h3>
+                            </div>
+                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-cyan-500 transition-colors shrink-0 shadow-lg">
+                                <ChevronRight className="w-5 h-5 text-white" />
+                            </div>
+                        </div>
                     </div>
                 </div>
 

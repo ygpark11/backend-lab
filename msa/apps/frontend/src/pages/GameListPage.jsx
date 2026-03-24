@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
     Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
-    Flame, ChevronRight, Pickaxe
+    Flame, ChevronRight, Pickaxe, Trophy, Download, Lock
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -52,7 +52,9 @@ const GameListPage = () => {
         minPrice: searchParams.get('minPrice') || '',
         maxPrice: searchParams.get('maxPrice') || '',
         isAllTimeLow: searchParams.get('isAllTimeLow') === 'true',
-        isPs5ProEnhanced: searchParams.get('isPs5ProEnhanced') === 'true'
+        isPs5ProEnhanced: searchParams.get('isPs5ProEnhanced') === 'true',
+        isBestSeller: searchParams.get('isBestSeller') === 'true',
+        isMostDownloaded: searchParams.get('isMostDownloaded') === 'true'
     }));
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
@@ -72,6 +74,8 @@ const GameListPage = () => {
                 ...(currentFilter.maxPrice && { maxPrice: currentFilter.maxPrice }),
                 ...(currentFilter.isAllTimeLow && { isAllTimeLow: true }),
                 ...(currentFilter.isPs5ProEnhanced && { isPs5ProEnhanced: true }),
+                ...(currentFilter.isBestSeller && { isBestSeller: true }),
+                ...(currentFilter.isMostDownloaded && { isMostDownloaded: true }),
             };
             const response = await client.get('/api/v1/games/search', { params });
 
@@ -242,7 +246,9 @@ const GameListPage = () => {
                     !prev.inCatalog && prev.sort === 'lastUpdated,desc' &&
                     prev.minPrice === '' && prev.maxPrice === '' &&
                     !prev.isAllTimeLow &&
-                    !prev.isPs5ProEnhanced;
+                    !prev.isPs5ProEnhanced &&
+                    !prev.isBestSeller &&
+                    !prev.isMostDownloaded;
 
                 if (isAlreadyDefault) return prev;
 
@@ -254,7 +260,9 @@ const GameListPage = () => {
                     platform: '', isPlusExclusive: false, inCatalog: false,
                     sort: 'lastUpdated,desc', minPrice: '', maxPrice: '',
                     isAllTimeLow: false,
-                    isPs5ProEnhanced: false
+                    isPs5ProEnhanced: false,
+                    isBestSeller: false,
+                    isMostDownloaded: false
                 };
             });
         } else {
@@ -270,6 +278,8 @@ const GameListPage = () => {
             const urlMaxPrice = searchParams.get('maxPrice') || '';
             const urlIsAllTimeLow = searchParams.get('isAllTimeLow') === 'true';
             const urlIsPs5ProEnhanced = searchParams.get('isPs5ProEnhanced') === 'true';
+            const urlIsBestSeller = searchParams.get('isBestSeller') === 'true';
+            const urlIsMostDownloaded = searchParams.get('isMostDownloaded') === 'true';
 
             setFilter(prev => {
                 if (
@@ -284,7 +294,9 @@ const GameListPage = () => {
                     prev.minPrice === urlMinPrice &&
                     prev.maxPrice === urlMaxPrice &&
                     prev.isAllTimeLow === urlIsAllTimeLow &&
-                    prev.isPs5ProEnhanced === urlIsPs5ProEnhanced
+                    prev.isPs5ProEnhanced === urlIsPs5ProEnhanced &&
+                    prev.isBestSeller === urlIsBestSeller &&
+                    prev.isMostDownloaded === urlIsMostDownloaded
                 ) {
                     return prev;
                 }
@@ -298,7 +310,9 @@ const GameListPage = () => {
                     minMetaScore: urlMinMetaScore, platform: urlPlatform, isPlusExclusive: urlIsPlusExclusive,
                     inCatalog: urlInCatalog, sort: urlSort, minPrice: urlMinPrice,
                     maxPrice: urlMaxPrice, isAllTimeLow: urlIsAllTimeLow,
-                    isPs5ProEnhanced: urlIsPs5ProEnhanced
+                    isPs5ProEnhanced: urlIsPs5ProEnhanced,
+                    isBestSeller: urlIsBestSeller,
+                    isMostDownloaded: urlIsMostDownloaded
                 };
             });
         }
@@ -318,6 +332,8 @@ const GameListPage = () => {
         if (filter.maxPrice) params.maxPrice = filter.maxPrice;
         if (filter.isAllTimeLow) params.isAllTimeLow = 'true';
         if (filter.isPs5ProEnhanced) params.isPs5ProEnhanced = 'true';
+        if (filter.isBestSeller) params.isBestSeller = 'true';
+        if (filter.isMostDownloaded) params.isMostDownloaded = 'true';
 
         const currentParamsStr = searchParams.toString();
         const newParamsStr = new URLSearchParams(params).toString();
@@ -342,7 +358,9 @@ const GameListPage = () => {
         filter.maxPrice,
         filter.isAllTimeLow,
         filter.keyword,
-        filter.isPs5ProEnhanced
+        filter.isPs5ProEnhanced,
+        filter.isBestSeller,
+        filter.isMostDownloaded
     ]);
 
     useEffect(() => {
@@ -496,9 +514,51 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                ) : filter.isBestSeller ? (
+                    /* 상태 4: 베스트셀러 랭킹 모드 */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-900/50 via-amber-950 to-black border border-amber-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+                        <div className="absolute top-0 left-0 w-48 h-full bg-amber-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                                <Trophy className="w-6 h-6 text-amber-400" />
+                            </div>
+                            <div>
+                                <div className="text-amber-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
+                                    <Activity className="w-3 h-3"/> RANKING BOARD
+                                </div>
+                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">베스트셀러</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isBestSeller: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
 
+                ) : filter.isMostDownloaded ? (
+                    /* 상태 5: 최다 다운로드 랭킹 모드 */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-cyan-900/50 via-cyan-950 to-black border border-cyan-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(6,182,212,0.2)]">
+                        <div className="absolute top-0 left-0 w-48 h-full bg-cyan-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+                                <Download className="w-6 h-6 text-cyan-400" />
+                            </div>
+                            <div>
+                                <div className="text-cyan-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
+                                    <Activity className="w-3 h-3"/> RANKING BOARD
+                                </div>
+                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
+                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">최다 다운로드</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isMostDownloaded: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
                 ) : (
-                    /* ⚪ 상태 4: 아무 필터도 없을 때 (기존 듀얼 액션 배너) */
+                    /* ⚪ 상태 6: 아무 필터도 없을 때 (기존 듀얼 액션 배너) */
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/30 via-black to-black border border-red-500/20 flex flex-col md:flex-row group transition-all hover:border-red-500/50 hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]">
 
                         {/* 좌측 메인 영역: 클릭 시 '역대 최저가 파도타기' (기존 동일) */}
@@ -575,14 +635,26 @@ const GameListPage = () => {
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
                         </div>
 
-                        {/* 🚀 정렬 드롭다운 (Custom) */}
+                        {/* 정렬 드롭다운 (Custom) */}
                         <div className="relative min-w-[180px]">
-                            <button onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'sort' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all">
+                            <button
+                                disabled={filter.isBestSeller || filter.isMostDownloaded}
+                                onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
+                                onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'sort' ? null : prev), 200)}
+                                className={`w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between transition-all 
+                                    ${(filter.isBestSeller || filter.isMostDownloaded) ? 'opacity-50 cursor-not-allowed bg-black/60' : 'hover:border-ps-blue hover:bg-white/5'}`}
+                            >
                                 <span className="flex items-center gap-2">
-                                    {sortOptions.find(opt => opt.value === filter.sort)?.icon && React.createElement(sortOptions.find(opt => opt.value === filter.sort).icon, { className: `w-4 h-4 ${sortOptions.find(opt => opt.value === filter.sort).color}` })}
-                                    {sortOptions.find(opt => opt.value === filter.sort)?.label.split(' ')[1] || '정렬'}
+                                    {(filter.isBestSeller || filter.isMostDownloaded) ? (
+                                        <><Lock className="w-4 h-4 text-gray-400"/> 랭킹순 고정됨</>
+                                    ) : (
+                                        <>
+                                            {sortOptions.find(opt => opt.value === filter.sort)?.icon && React.createElement(sortOptions.find(opt => opt.value === filter.sort).icon, { className: `w-4 h-4 ${sortOptions.find(opt => opt.value === filter.sort).color}` })}
+                                            {sortOptions.find(opt => opt.value === filter.sort)?.label.split(' ')[1] || '정렬'}
+                                        </>
+                                    )}
                                 </span>
-                                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />
+                                {!(filter.isBestSeller || filter.isMostDownloaded) && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />}
                             </button>
                             {activeDropdown === 'sort' && (
                                 <div className="absolute top-full mt-2 right-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn origin-top">
@@ -768,12 +840,16 @@ const GameListPage = () => {
                     ) : (
                         games.length > 0 ? games.map((game, index) => {
                             const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
-                            const isLastElement = games.length === index + 1; // 인피니트 스크롤 센서
+                            const isLastElement = games.length === index + 1;
 
                             const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
                             const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                             const isLastCall = daysLeft >= 0 && daysLeft <= 1;
-                            const isClosing = !isLastCall && daysLeft <= 3; // 🚀 복구 완료: 마감임박 계산
+                            const isClosing = !isLastCall && daysLeft <= 3;
+
+                            const rankToDisplay = filter.isBestSeller ? game.bestSellerRank
+                                : filter.isMostDownloaded ? game.mostDownloadedRank
+                                    : null;
 
                             return (
                                 <div
@@ -789,8 +865,38 @@ const GameListPage = () => {
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
                                         />
 
+                                        {rankToDisplay && (
+                                            <div className={`absolute top-0 left-0 z-30 px-2 py-0.5 rounded-br-xl flex items-center shadow-lg backdrop-blur-md border-b border-r overflow-hidden
+                                                ${rankToDisplay === 1 ? 'bg-black/70 border-yellow-500/40' :
+                                                rankToDisplay === 2 ? 'bg-black/70 border-gray-400/40' :
+                                                    rankToDisplay === 3 ? 'bg-black/70 border-amber-600/40' :
+                                                        'bg-black/70 border-white/10'}`}>
+
+                                                {/* 🔵 4위 이하: 극도로 얇은 PS5 블루 LED 라인 */}
+                                                {rankToDisplay > 3 && (
+                                                    <div className="absolute top-0 left-0 w-0.5 h-full bg-ps-blue shadow-[0_0_5px_rgba(0,67,156,0.8)]"></div>
+                                                )}
+
+                                                {/* 🏆 1~3위: 심플한 트로피 포인트 */}
+                                                {rankToDisplay <= 3 && (
+                                                    <Trophy className={`w-3 h-3 mr-1 ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-300' : 'text-amber-500'}`} />
+                                                )}
+
+                                                {/* 🏁 텍스트: 다시 직관적인 'X위'로 복구하고 사이즈 확 축소 */}
+                                                <span className={`text-[11px] font-black tracking-tight drop-shadow-md ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-300' : rankToDisplay === 3 ? 'text-amber-500' : 'text-white ml-0.5'}`}>
+                                                    {rankToDisplay}위
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {isNew && (
+                                            <span className={`absolute left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20 transition-all
+                                                ${rankToDisplay ? 'top-8' : 'top-2'}`}>
+                                                NEW
+                                            </span>
+                                        )}
+
                                         {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
-                                        {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
 
                                         {isLastCall && <span className="absolute top-2 right-10 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
 
@@ -966,18 +1072,27 @@ const GameListPage = () => {
 
                             {/* 2. 정렬 칩 (클릭 즉시 적용 후 닫힘) */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-400 mb-3">정렬 기준</label>
+                                <label className="block text-sm font-bold text-gray-400 mb-3 flex items-center justify-between">
+                                    정렬 기준
+                                    {(filter.isBestSeller || filter.isMostDownloaded) && <span className="text-xs text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3"/> 랭킹 모드 고정됨</span>}
+                                </label>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {sortOptions.map((opt) => (
-                                        <button
-                                            key={opt.value}
-                                            onClick={() => handleQuickSelect('sort', opt.value)}
-                                            className={`flex items-center gap-2 p-3 rounded-xl border font-bold text-xs md:text-sm transition-all ${filter.sort === opt.value ? 'bg-ps-blue/20 border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                        >
-                                            <opt.icon className={`w-4 h-4 shrink-0 ${filter.sort === opt.value ? 'text-ps-blue' : opt.color}`} />
-                                            <span className="truncate">{opt.label}</span>
-                                        </button>
-                                    ))}
+                                    {sortOptions.map((opt) => {
+                                        const isLocked = filter.isBestSeller || filter.isMostDownloaded;
+                                        return (
+                                            <button
+                                                key={opt.value}
+                                                disabled={isLocked}
+                                                onClick={() => handleQuickSelect('sort', opt.value)}
+                                                className={`flex items-center gap-2 p-3 rounded-xl border font-bold text-xs md:text-sm transition-all 
+                                                ${isLocked ? 'opacity-40 cursor-not-allowed bg-black/60 border-white/5 text-gray-500'
+                                                    : filter.sort === opt.value ? 'bg-ps-blue/20 border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]'
+                                                        : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                                            >
+                                                <opt.icon className={`w-4 h-4 shrink-0 ${isLocked ? 'text-gray-500' : filter.sort === opt.value ? 'text-ps-blue' : opt.color}`} />
+                                                <span className="truncate">{opt.label}</span>
+                                            </button>
+                                        )})}
                                 </div>
                             </div>
 

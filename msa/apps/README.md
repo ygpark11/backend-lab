@@ -19,6 +19,22 @@
 
 ---
 
+## 핵심 서비스 기능 (Key Features)
+단순한 데이터 나열을 넘어, 게이머의 구매 결정을 돕는 **'큐레이션(Curation)'** 과 **'게이미피케이션(Gamification)'** 에 집중했습니다.
+
+* **가격 변동 추적 및 차트 (Price Tracking & History):** 
+  * 매일 수집되는 데이터를 바탕으로 게임별 역대 가격 변동 내역을 차트로 시각화하여, 현재 할인이 진짜 '역대가'인지 한눈에 파악할 수 있게 돕습니다.
+* **스마트 위시리스트 & 맞춤형 알림 (Smart Wishlist & Alert):** 
+  * 유저가 설정한 '목표가' 도달 시 웹 푸시(FCM)를 발송하며, 야간 방해금지 및 수신 채널 제어 등 개인화 설정을 지원합니다.
+* **최신 스토어 랭킹 연동 (Store Rankings):** 
+  * 소니 공식 스토어의 '베스트셀러', '최다 다운로드' 랭킹 데이터를 매일 배치(Batch)로 수집·통합하여 게이머들에게 정확한 소비 트렌드를 제공합니다.
+* **심층 큐레이션 및 스마트 필터 (Deep Curation):** 
+  * '역대 최저가', 'IGDB 85점 이상 명작', 'PS5 Pro 향상' 등 게이머의 니즈를 정확히 찌르는 복합 필터링을 지원합니다.
+* **데이터 인사이트 & 신작 수집소 (Insights & Discover):** 
+  * 스토어에 갓 등록된 미분류 신작을 매일 자동 수집하며, **유저가 직접 숨겨진 게임을 발굴(Unlock)해 정식 트래킹 카탈로그로 편입시키는 '유저 참여형 파이프라인'** 을 구축했습니다. 누적된 스토어 통계 데이터는 벤토 박스(Bento) UI를 통해 직관적으로 제공합니다.
+
+---
+
 ## 2. 핵심 기술 성과 (Key Engineering Achievements)
 
 ### 🚀 자동화 및 아키텍처 (Automation & Architecture)
@@ -312,28 +328,3 @@ curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
 ```bash
 ./gradlew test
 ```
-
----
-
-## 9. 향후 계획 (Future Roadmap)
-단순 기능 구현을 넘어, **서비스의 지속 가능성(Sustainability)** 과 **품질(Quality)** 을 높이는 데 집중하고 있습니다.
-
-### ✅ Phase 1. 서비스 안정화 (Completed)
-- [x] 이원화 아키텍처(Brain/Hand) 구축을 통한 리소스 격리
-- [x] Google Gemini API 연동을 통한 게임 설명 요약 (Daily Batch)
-- [x] Github Actions & Docker 기반 CI/CD 파이프라인 구축
-
-### 🚧 Phase 2. 신뢰성 및 성능 (In Progress)
-
-단순한 기능 추가보다, 서비스의 내실을 다지고 트래픽 증가에 대비한 확장성 확보에 집중하고 있습니다.
-
-* [x] **코드 신뢰성 확보 (Test Coverage):**
-  * **Core Logic:** JUnit 5 & Mockito를 도입하여 `CatalogService`의 핵심 로직(Smart Upsert, 가격 변동 감지, 0원 방어) 검증 완료.
-  * **Event Listener:** `GamePriceChangedListener`의 알림 발송 및 예외 처리 로직에 대한 단위 테스트 작성.
-  * **CI Integration:** Docker 빌드 파이프라인에 테스트 단계를 강제하여 배포 전 회귀 버그(Regression Bug) 차단.
-
-* [X] **전략적 캐싱 레이어 구축 (Performance vs Scalability):**
-  * **Target:** DB I/O가 빈번하게 발생하는 '게임 상세 정보' 및 '장르별 목록' 조회 성능 최적화.
-  * **Abstraction First:** Spring Cache 추상화(`@Cacheable`)를 적용하여 비즈니스 로직과 캐시 구현체(Store) 간의 의존성 분리.
-  * **Local-First Strategy:** 현재의 단일 인스턴스 및 1GB RAM 제약을 고려하여, 네트워크 비용(Network I/O)이 없는 **Caffeine(Local Cache)** 을 우선 적용해 응답 속도 극대화.
-  * **Redis-Ready:** 추후 다중 인스턴스 확장(Scale-out) 시, 코드 수정 없이 설정 변경만으로 **Redis(Global Cache)**로 전환 가능한 유연한 아키텍처 검증.

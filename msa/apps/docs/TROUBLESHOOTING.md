@@ -147,6 +147,10 @@
 * **Problem:** 가상환경 폴더(`venv/`)가 원격 저장소에 업로드됨.
 * **Solution:** `.gitignore` 추가 후 `git rm -r --cached venv/` 명령어로 원격 저장소에서만 삭제.
 
+### 🐳 Case 31. CI/CD 배포 시 도커 컨테이너 휘발성(Ephemeral)으로 인한 크롤러 캐시 증발
+* **Problem:** 랭킹 크롤러가 속도 최적화를 위해 생성한 로컬 캐시 수첩(`concept_map.json`)이, Github Actions로 새 버전이 배포(Down & Up)될 때마다 함께 삭제되어 매번 초기 수집 시 30분 이상의 딜레이가 발생함.
+* **Cause:** 도커 컨테이너 내부의 파일 시스템은 휘발성이므로, 컨테이너가 교체되면 내부 데이터도 초기화됨.
+* **Solution:** **Docker Volume 마운트**를 적용하여, 크롤러의 `data` 폴더를 Host OS(Ubuntu)의 영구 디렉토리와 동기화(`- ./crawler_data:/app/data`). 이를 통해 캐시파일이 유지되도록 보장.
 ---
 
 ## 5. Frontend & Network (프론트엔드 및 네트워크)
