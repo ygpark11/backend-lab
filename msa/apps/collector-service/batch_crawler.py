@@ -31,6 +31,13 @@ logger = logging.getLogger("PS-Collector")
 logger.setLevel(logging.INFO)
 logger.addHandler(file_handler)
 logger.addHandler(console_handler)
+logger.propagate = False
+
+ranking_logger = logging.getLogger("Ranking-Crawler")
+ranking_logger.setLevel(logging.INFO)
+ranking_logger.addHandler(file_handler)
+ranking_logger.addHandler(console_handler)
+ranking_logger.propagate = False
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 

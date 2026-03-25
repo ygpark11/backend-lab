@@ -7,7 +7,6 @@ import gc
 import requests
 from playwright.sync_api import sync_playwright
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger("Ranking-Crawler")
 
 BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8080")
@@ -123,7 +122,7 @@ def fetch_product_id_from_concept(bm, concept_url):
 
 def send_to_backend(ranking_type, ps_store_ids):
     if not ps_store_ids:
-        logger.warning(f"⚠️ [{ranking_type}] 수집된 ID가 없어 전송을 스킵합니다.")
+        logger.warning(f"[{ranking_type}] 수집된 ID가 없어 전송을 스킵합니다.")
         return
 
     payload = {
@@ -136,15 +135,15 @@ def send_to_backend(ranking_type, ps_store_ids):
     }
 
     try:
-        logger.info(f"📤 백엔드로 [{ranking_type}] 전송 시작... (총 {len(ps_store_ids)}개)")
+        logger.info(f"백엔드로 [{ranking_type}] 전송 시작... (총 {len(ps_store_ids)}개)")
         res = requests.post(JAVA_RANKING_API_URL, json=payload, headers=headers, timeout=10)
 
         if res.status_code == 200:
-            logger.info(f"🎉 [{ranking_type}] 백엔드 DB 업데이트 대성공!")
+            logger.info(f"[{ranking_type}] 백엔드 DB 업데이트 대성공!")
         else:
-            logger.error(f"💥 백엔드 응답 에러 ({res.status_code}): {res.text}")
+            logger.error(f"백엔드 응답 에러 ({res.status_code}): {res.text}")
     except Exception as e:
-        logger.error(f"💥 백엔드 통신 실패: {e}")
+        logger.error(f"백엔드 통신 실패: {e}")
 
 # --- [5. 핵심 수집 로직 (안전한 분리 버전)] ---
 def collect_rankings(ranking_type, url_template, bm, concept_cache):
@@ -210,7 +209,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
 
 # --- [6. 메인 실행 블록] ---
 def main():
-    logger.info("랭킹 특공대 크롤러 출동!")
+    logger.info("랭킹 크롤러 시작")
     concept_cache = load_cache()
     logger.info(f"로컬 캐시(수첩) 로드 완료: 기존 저장된 컨셉 {len(concept_cache)}개")
 
@@ -228,9 +227,10 @@ def main():
             send_to_backend("MOST_DOWNLOADED", most_downloaded_ids)
 
         except Exception as e:
-            logger.error(f"🔥 치명적 에러 발생: {e}")
+            logger.error(f"치명적 에러 발생: {e}")
 
     logger.info("랭킹 수집 완료!")
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     main()
