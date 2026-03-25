@@ -347,7 +347,7 @@ export default function GameDetailPage() {
                                 <div className="flex items-center gap-2.5 bg-gradient-to-r from-white/15 to-transparent border-l-4 border-white px-3 py-1.5 rounded-r-xl shadow-sm backdrop-blur-md cursor-default w-full sm:w-auto mt-1 sm:mt-0 order-last sm:order-none">
                                     <MonitorPlay className="w-4 h-4 sm:w-5 sm:h-5 text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] animate-pulse" />
                                     <div>
-                                        <p className="text-white font-black text-[11px] sm:text-xs tracking-wide drop-shadow-md">PS5 Pro 성능 향상 (PSSR)</p>
+                                        <p className="text-white font-black text-[11px] sm:text-xs tracking-wide drop-shadow-md">PS5 Pro 성능 향상</p>
                                     </div>
                                 </div>
                             )}
