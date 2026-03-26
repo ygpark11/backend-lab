@@ -8,9 +8,9 @@
 ## 1. 프로젝트 소개 (Introduction)
 **PS-Tracker**는 매일 변동하는 플레이스테이션 스토어의 게임 가격 정보를 수집하고, 사용자에게 최적의 구매 시점을 안내하는 개인화 서비스입니다.
 
-단순한 크롤링 프로젝트를 넘어, **"제한된 리소스(1GB RAM) 환경에서 고가용성 서비스를 구축하는 것"**을 목표로 했습니다. MSA(Microservices Architecture)의 개념을 도입하여 수집 노드와 API 노드를 분리하였고, 데이터 수집부터 배포, 모니터링까지 전 과정을 자동화하여 1인 개발의 운영 효율을 극대화했습니다.
+단순한 크롤링 프로젝트를 넘어, **"제한된 리소스(1GB RAM) 환경에서 고가용성 서비스를 구축하는 것"** 을 목표로 했습니다. MSA(Microservices Architecture)의 개념을 도입하여 수집 노드와 API 노드를 분리하였고, 데이터 수집부터 배포, 모니터링까지 전 과정을 자동화하여 1인 개발의 운영 효율을 극대화했습니다.
 
-* **개발 기간:** 2025.11 ~ 2026.01 (진행 중)
+* **개발 기간:** 2025.11 ~ (운영 중)
 * **개발 인원:** 1인 (Full Stack & DevOps)
 * **주요 역할:**
   * **Backend:** Spring Boot 기반의 REST API 설계 및 비즈니스 로직 구현
@@ -92,6 +92,7 @@ graph TD
         subgraph Node_2 ["🖥️ Node 2: Worker Server"]
             Py[Python Collector]
             Browser[Headless Chromium]
+            Cache[(Local Cache: concept_map.json)]
         end
 
         %% --- [Connections: Inbound] ---
@@ -103,9 +104,10 @@ graph TD
         SB <-->|JPA| MySQL
         
         %% Private Network Communication (Brain <-> Hand)
-        SB --"POST /run (Private IP)"--> Py
+        SB --"POST /run & /run-ranking"--> Py
         Py --"Playwright (CDP)"--> Browser
-        Py --"POST /collect (Private IP)"--> SB
+        Browser -.->|ID Mapping| Cache
+        Py --"POST /collect & /rankings/update"--> SB
 
         %% --- [Connections: Outbound / Observability] ---
         SB -.->|Logs & Metrics| Alloy
@@ -121,6 +123,7 @@ graph TD
     %% --- [Styling] ---
     style Node_1 fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style Node_2 fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Cache fill:#fff9c4,stroke:#fbc02d,stroke-width:1px,stroke-dasharray: 5 5
     style Alloy fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,stroke-dasharray: 5 5
     style External_Services fill:#f5f5f5,stroke:#9e9e9e,stroke-width:1px
     style Gemini fill:#f3e5f5,stroke:#7b1fa2,stroke-width:1px
@@ -130,9 +133,9 @@ graph TD
 
 | 구분 | Node 1: Main Server (API/DB) | Node 2: Worker Server (Crawler) |
 | :--- | :--- | :--- |
-| **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 리소스 집약적 작업(Headless Browser) 수행 |
+| **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 리소스 집약적 작업(Headless Browser), 랭킹 수집 |
 | **IP 주소** | `10.0.0.161` (Private) | `10.0.0.61` (Private) |
-| **Tech Stack** | Java 17 (Spring Boot), MySQL 8.0, Nginx, React | Python 3.10, Playwright (Chromium), Manual Stealth |
+| **Tech Stack** | Java 17 (Spring Boot), MySQL 8.0, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) |
 | **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000/4444` (Private Only, 외부 접근 차단) |
 
 > **💡 핵심 전략: 리소스 격리 (Resource Isolation)**
@@ -148,11 +151,13 @@ graph TD
 
 안정적인 데이터 수집과 처리를 위한 순환 구조입니다.
 
-1.  **Trigger (Scheduler):** Spring Boot의 스케줄러가 매일 새벽 크롤링 서버(Node 2)에 작업 명령(`POST /run`)을 전송합니다.
-2.  **Collection (Python Worker):** Python 서버가 Playwright를 통해 브라우저를 제어합니다. 이때, 화면 렌더링을 기다리지 않고 **JSON 모델 데이터**를 즉시 추출합니다.
-3.  **Filtering (Java Logic):** 수집된 데이터는 다시 메인 서버(Node 1)로 전송되며, `CatalogService`가 기존 데이터와 비교하여 **변동이 발생한 건만 선별**합니다.
-4.  **Persistence (MySQL):** 선별된 데이터만 DB에 저장(Smart Upsert)하여 데이터 용량을 최적화합니다.
-5.  **Notification (Event):** 가격 하락이 감지되면 비동기 이벤트(`GamePriceChangedEvent`)가 발행되어 Web Push 알림을 발송합니다.
+1.  **Trigger (Scheduler):** Spring Boot의 스케줄러가 매일 정해진 시간에 크롤링 서버(Node 2)에 배치 수집 및 랭킹 업데이트 명령(`POST /run`, `/run-ranking`)을 전송합니다.
+2.  **Collection (Python Worker):** Python 서버가 Playwright를 통해 데이터를 수집합니다.
+    1. Batch Mode: 페이지 내 특정 **데이터 태그(data-qa)** 를 타겟팅하여 가격 및 메타 정보를 정밀 파싱합니다.
+    2. Ranking Mode: 스토어 인기 순위 리스트를 스캔하며, **로컬 캐시(concept_map.json)** 를 참조해 불필요한 상세 페이지 호출을 최소화(최적화)합니다.
+3.  **Filtering (Java Logic):** 수집된 데이터는 메인 서버(Node 1)로 전송되며, `CatalogService`가 기존 데이터와 비교하여 **변동이 발생한 건(가격, 할인 기간 등)만 선별**합니다.
+4.  **Persistence (MySQL):** 선별된 데이터만 DB에 저장(Smart Upsert)하고, 랭킹 정보는 별도의 전용 테이블에 업데이트하여 조회 성능을 최적화합니다.
+5.  **Notification (Event):** 가격 하락이 감지되면 비동기 이벤트가 발행되어 Web Push(FCM)를 전송합니다.
 
 ---
 
