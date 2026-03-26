@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
     Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
     Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
-    Flame, ChevronRight, Pickaxe, Trophy, Download, Lock
+    Flame, ChevronRight, Pickaxe, Trophy, Download, Lock, Mail
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -202,6 +202,25 @@ const GameListPage = () => {
         });
         if (node) observer.current.observe(node);
     }, [loading, page, totalPages]);
+
+    const handleContactClick = useCallback((e) => {
+        e.preventDefault();
+        const email = 'pstracker.help@gmail.com';
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(email).then(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            }).catch(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            });
+        } else {
+            toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+        }
+
+        setTimeout(() => {
+            window.location.href = `mailto:${email}`;
+        }, 500);
+    }, []);
 
     // 스크롤 감지 (플로팅 바 숨김/표시)
     useEffect(() => {
@@ -998,6 +1017,17 @@ const GameListPage = () => {
                         <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all border border-white/5 bg-white/5" title="빠른 검색"><Search className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" /></button>
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all" title="맨 위로">
                             <Triangle className="w-5 h-5 text-green-400 fill-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)] group-hover:-translate-y-1 transition-transform" />
+                        </button>
+
+                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+
+                        <button
+                            onClick={handleContactClick}
+                            className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/30 relative overflow-hidden"
+                            title="문의 및 제휴"
+                        >
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] group-hover:scale-110 transition-transform" />
                         </button>
 
                         <div className="w-[1px] h-6 bg-white/20 mx-1"></div>

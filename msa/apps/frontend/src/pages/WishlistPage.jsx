@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { getGenreBadgeStyle } from "../utils/uiUtils.js";
-import SkeletonCard from '../components/SkeletonCard';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {getGenreBadgeStyle} from "../utils/uiUtils.js";
+import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertTriangle, ExternalLink, Gamepad2, Heart, PiggyBank, Sparkles,
-    Timer, Trash2, TrendingDown, Triangle, Server, Pickaxe
+    Timer, Trash2, TrendingDown, Triangle, Server, Pickaxe, Mail
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -28,6 +27,25 @@ const WishlistPage = () => {
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
     const lastScrollYRef = useRef(0);
 
+    const handleContactClick = useCallback((e) => {
+        e.preventDefault();
+        const email = 'pstracker.help@gmail.com';
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(email).then(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            }).catch(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            });
+        } else {
+            toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+        }
+
+        setTimeout(() => {
+            window.location.href = `mailto:${email}`;
+        }, 500);
+    }, []);
+
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
@@ -44,7 +62,6 @@ const WishlistPage = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // 🚀 인피니트 스크롤 Observer
     const observer = useRef();
     const lastGameElementRef = useCallback(node => {
         if (loading) return;
@@ -318,6 +335,17 @@ const WishlistPage = () => {
 
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all" title="맨 위로">
                             <Triangle className="w-5 h-5 text-green-400 fill-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)] group-hover:-translate-y-1 transition-transform" />
+                        </button>
+
+                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
+
+                        <button
+                            onClick={handleContactClick}
+                            className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/30 relative overflow-hidden"
+                            title="문의 및 제휴"
+                        >
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] group-hover:scale-110 transition-transform" />
                         </button>
 
                         <div className="w-[1px] h-6 bg-white/20 mx-1"></div>

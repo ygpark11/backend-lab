@@ -159,7 +159,7 @@ const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
                                 <div className="bg-red-500/10 border border-red-500/20 rounded p-3 text-xs text-gray-400">
                                     ※ 현재 서비스 내에 자동 회원탈퇴 기능이 제공되지 않습니다. 계정 삭제 및 개인정보 파기를 원하시는 경우, 아래 이메일로 요청해 주시면 지체 없이 처리해 드립니다.<br/>
                                     <strong className="text-gray-300 mt-2 inline-block">
-                                        📧 문의 및 탈퇴 요청: pstracker.help@gmail.com
+                                        문의 및 탈퇴 요청: pstracker.help@gmail.com
                                     </strong>
                                 </div>
                             </section>

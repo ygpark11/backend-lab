@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Trophy, Medal, Award, Crown, Settings, Gamepad2,
     Bell, Moon, Edit3, Pickaxe, Zap, Shield, CheckCircle2,
-    Triangle, Circle, X as XIcon, Square, Loader2, Lock
+    Triangle, Circle, X as XIcon, Square, Loader2, Lock,
+    Mail, Copy, MessageSquare
 } from 'lucide-react';
 import PSGameImage from '../components/common/PSGameImage';
 import client from '../api/client';
@@ -21,6 +22,25 @@ export default function MyPage() {
 
     const [isEditingNickname, setIsEditingNickname] = useState(false);
     const [editNicknameValue, setEditNicknameValue] = useState('');
+
+    const handleContactClick = useCallback((e) => {
+        e.preventDefault();
+        const email = 'pstracker.help@gmail.com';
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(email).then(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            }).catch(() => {
+                toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+            });
+        } else {
+            toast.success('이메일 복사 완료! (메일 앱이 안 열리면 직접 붙여넣어 주세요)', { duration: 4000 });
+        }
+
+        setTimeout(() => {
+            window.location.href = `mailto:${email}`;
+        }, 500);
+    }, []);
 
     useEffect(() => {
         const fetchMyPageData = async () => {
@@ -293,7 +313,8 @@ export default function MyPage() {
 
                     {activeTab === 'settings' && (
                         <div className="animate-fadeIn max-w-xl mx-auto sm:mx-0">
-                            <div className="bg-white/[0.02] border border-white/10 rounded-xl p-4 sm:p-5 backdrop-blur-md">
+
+                            <div className="bg-white/[0.02] border border-white/10 rounded-xl p-4 sm:p-5 backdrop-blur-md mb-6">
                                 <h3 className="text-xs font-bold text-gray-400 mb-4 flex items-center gap-1.5 uppercase tracking-widest"><Zap className="w-3.5 h-3.5 text-yellow-500"/> 알림 제어판</h3>
 
                                 <div className="space-y-2.5">
@@ -349,12 +370,52 @@ export default function MyPage() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
+                            <div className="bg-[#121212]/80 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden shadow-xl animate-fadeIn" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+                                <div className="p-4 sm:p-5 border-b border-white/5 flex items-center gap-3 bg-black/20">
+                                    <Mail className="w-5 h-5 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                                    <h3 className="text-sm sm:text-base font-black text-white tracking-wide">고객센터 & 제휴 문의</h3>
+                                </div>
+
+                                <div className="p-4 sm:p-5 bg-gradient-to-b from-transparent to-[#0a0a0a]">
+                                    <div
+                                        onClick={handleContactClick}
+                                        className="group flex flex-col gap-4 sm:gap-5 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-blue-500/40 rounded-xl p-4 sm:p-6 cursor-pointer transition-all duration-300 relative overflow-hidden shadow-lg"
+                                    >
+                                        <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-300 pointer-events-none"></div>
+
+                                        <div className="relative z-10 w-full">
+                                            <h4 className="font-bold text-gray-200 text-sm sm:text-base mb-2.5 group-hover:text-blue-300 transition-colors flex items-center gap-2">
+                                                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 group-hover:text-blue-400 transition-colors" />
+                                                개발자에게 메시지 보내기
+                                            </h4>
+
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                <span className="px-2.5 py-1 bg-white/10 border border-white/20 rounded-md text-[11px] sm:text-xs font-bold text-gray-300 shadow-sm">버그 리포트</span>
+                                                <span className="px-2.5 py-1 bg-white/10 border border-white/20 rounded-md text-[11px] sm:text-xs font-bold text-gray-300 shadow-sm">기능 건의</span>
+                                                <span className="px-2.5 py-1 bg-white/10 border border-white/20 rounded-md text-[11px] sm:text-xs font-bold text-gray-300 shadow-sm">커피 챗</span>
+                                                <span className="px-2.5 py-1 bg-blue-500/20 border border-blue-500/40 rounded-md text-[11px] sm:text-xs font-bold text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.2)]">비즈니스 제휴</span>
+                                            </div>
+
+                                            <p className="text-[11px] sm:text-xs text-gray-400 leading-relaxed break-keep tracking-tight max-w-[280px] sm:max-w-none">
+                                                <strong className="text-gray-100 font-medium">작은 의견</strong>이라도 소중하게 듣고 있습니다. <br className="block sm:hidden" />
+                                                PS Tracker에 전하고 싶은 <strong className="text-gray-100 font-medium">이야기</strong>가 있다면 <strong className="text-gray-100 font-medium">언제든 편하게 메시지</strong>를 남겨주세요!
+                                            </p>
+                                        </div>
+
+                                        <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-3 bg-black/80 rounded-xl border border-white/10 group-hover:border-blue-400/50 group-hover:bg-blue-900/20 transition-all duration-300 shadow-inner w-full sm:w-max mt-1">
+                                            <span className="text-blue-300 group-hover:text-blue-200 text-xs sm:text-sm font-mono font-bold tracking-wider drop-shadow-md">pstracker.help@gmail.com</span>
+                                            <div className="bg-white/10 p-1.5 rounded-lg group-hover:bg-blue-500/30 transition-colors shadow-sm">
+                                                <Copy className="w-4 h-4 text-gray-300 group-hover:text-blue-300 transition-colors" />
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </div>
