@@ -605,7 +605,7 @@ def run_batch_crawler_logic():
     global is_batch_running
     with crawler_lock:
         is_batch_running = True
-        logger.info(f"🚀 [Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
+        logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
 
         total_processed_count = 0
         collected_deals = []
@@ -622,7 +622,7 @@ def run_batch_crawler_logic():
 
                 targets = fetch_update_targets()
 
-                # 🚀 [Phase 1] 기존 타겟 갱신
+                # [Phase 1] 기존 타겟 갱신
                 if targets:
                     logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
                     for idx, url in enumerate(targets, 1):
@@ -644,7 +644,7 @@ def run_batch_crawler_logic():
                             page.close()
                             bm.increment()
 
-                # 🚀 [Phase 2] 신규 게임 탐색
+                # [Phase 2] 신규 게임 탐색
                 logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
                 base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
                 search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
@@ -765,10 +765,10 @@ def trigger_queue_crawl():
 
     if not is_batch_running and not is_vip_running:
         threading.Thread(target=run_vip_only_logic, daemon=True).start()
-        logger.info(f"🚀 [VIP Worker] 새치기 전담 스레드 즉시 출발!")
+        logger.info(f"[VIP Worker] 새치기 전담 스레드 즉시 출발!")
         return jsonify({"status": "accepted", "message": "VIP task started"}), 202
     else:
-        logger.info(f"🎯 [VIP Queue] 대기열 등록 (배치 중 새치기 대기)")
+        logger.info(f"[VIP Queue] 대기열 등록 (배치 중 새치기 대기)")
         return jsonify({"status": "accepted", "message": "Added to VIP queue"}), 202
 
 @app.route('/run', methods=['POST'])

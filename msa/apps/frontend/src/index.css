@@ -2,61 +2,181 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
-    scrollbar-gutter: stable;
+@layer base {
+    :root {
+        /* ⚫ PS4 Dark Mode */
+        --color-bg-base: #121212;
+        --color-bg-surface: rgba(255, 255, 255, 0.03);
+        --color-bg-surface-hover: rgba(255, 255, 255, 0.08);
+        --color-bg-glass: rgba(18, 18, 18, 0.8);
+
+        --color-text-primary: #ffffff;
+        --color-text-secondary: #9ca3af;
+        --color-text-muted: #6b7280;
+
+        --color-border-default: rgba(255, 255, 255, 0.05);
+        --color-border-strong: rgba(255, 255, 255, 0.1);
+
+        --color-brand-blue: #3b82f6;
+
+        --color-score-green-bg: #064e3b;
+        --color-score-green-text: #86efac;
+        --color-score-yellow-bg: #713f12;
+        --color-score-yellow-text: #fde047;
+
+        --color-backdrop: rgba(0, 0, 0, 0.7);
+        --shadow-glow: 0 0 15px rgba(255, 255, 255, 0.2);
+        --shadow-glow-blue: 0 0 20px rgba(59, 130, 246, 0.4);
+
+        --bento-card-bg: #141414;
+
+        --bento-red-from: rgba(127, 29, 29, 0.4);
+        --bento-red-border: rgba(239, 68, 68, 0.25);
+        --bento-red-border-hover: rgba(239, 68, 68, 0.6);
+        --bento-red-shadow: 0 10px 40px rgba(239, 68, 68, 0.25);
+
+        --bento-purple-from: rgba(88, 28, 135, 0.4);
+        --bento-purple-border: rgba(168, 85, 247, 0.25);
+        --bento-purple-border-hover: rgba(168, 85, 247, 0.6);
+        --bento-purple-shadow: 0 10px 40px rgba(168, 85, 247, 0.25);
+
+        --bento-green-from: rgba(6, 78, 59, 0.4);
+        --bento-green-border: rgba(34, 197, 94, 0.25);
+        --bento-green-border-hover: rgba(34, 197, 94, 0.6);
+        --bento-green-shadow: 0 10px 30px rgba(34, 197, 94, 0.2);
+
+        --bento-blue-from: rgba(30, 58, 138, 0.4);
+        --bento-blue-border: rgba(59, 130, 246, 0.25);
+        --bento-blue-border-hover: rgba(59, 130, 246, 0.6);
+        --bento-blue-shadow: 0 10px 30px rgba(59, 130, 246, 0.2);
+
+        --bento-amber-from: rgba(120, 53, 15, 0.4);
+        --bento-amber-border: rgba(245, 158, 11, 0.25);
+        --bento-amber-border-hover: rgba(245, 158, 11, 0.6);
+        --bento-amber-shadow: 0 10px 40px rgba(245, 158, 11, 0.25);
+
+        --bento-cyan-from: rgba(22, 78, 99, 0.4);
+        --bento-cyan-border: rgba(6, 182, 212, 0.25);
+        --bento-cyan-border-hover: rgba(6, 182, 212, 0.6);
+        --bento-cyan-shadow: 0 10px 40px rgba(6, 182, 212, 0.25);
+
+        --bento-pink-from: rgba(131, 24, 67, 0.4);
+        --bento-pink-border: rgba(236, 72, 153, 0.25);
+        --bento-pink-border-hover: rgba(236, 72, 153, 0.6);
+        --bento-pink-shadow: 0 10px 40px rgba(236, 72, 153, 0.25);
+
+        --bento-emerald-from: rgba(6, 78, 59, 0.4);
+        --bento-emerald-border: rgba(16, 185, 129, 0.25);
+        --bento-emerald-border-hover: rgba(16, 185, 129, 0.6);
+        --bento-emerald-shadow: 0 10px 40px rgba(16, 185, 129, 0.25);
+
+        --bento-yellow-from: rgba(113, 63, 18, 0.4);
+        --bento-yellow-border: rgba(234, 179, 8, 0.25);
+        --bento-yellow-border-hover: rgba(234, 179, 8, 0.6);
+        --bento-yellow-shadow: 0 10px 40px rgba(234, 179, 8, 0.25);
+    }
+
+    /* ⚪ PS5 Light Mode */
+    [data-theme='ps5'] {
+        --color-bg-base: #f8f9fb;
+        --color-bg-surface: #ffffff;
+        --color-bg-surface-hover: #f1f5f9;
+        --color-bg-glass: rgba(255, 255, 255, 0.85);
+
+        --color-text-primary: #111827;
+        --color-text-secondary: #6b7280;
+        --color-text-muted: #9ca3af;
+
+        --color-border-default: #e5e7eb;
+        --color-border-strong: #d1d5db;
+
+        --color-brand-blue: #2563eb;
+
+        --color-score-green-bg: #dcfce7;
+        --color-score-green-text: #15803d;
+        --color-score-yellow-bg: #fef08a;
+        --color-score-yellow-text: #a16207;
+
+        --color-backdrop: rgba(0, 0, 0, 0.4);
+        --shadow-glow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        --shadow-glow-blue: 0 4px 20px rgba(59, 130, 246, 0.2);
+
+        --bento-card-bg: #ffffff;
+
+        --bento-red-from: #fef2f2;
+        --bento-red-border: #fecaca;
+        --bento-red-border-hover: #f87171;
+        --bento-red-shadow: 0 10px 40px rgba(239, 68, 68, 0.15);
+
+        --bento-purple-from: #faf5ff;
+        --bento-purple-border: #e9d5ff;
+        --bento-purple-border-hover: #c084fc;
+        --bento-purple-shadow: 0 10px 40px rgba(168, 85, 247, 0.15);
+
+        --bento-green-from: #f0fdf4;
+        --bento-green-border: #bbf7d0;
+        --bento-green-border-hover: #4ade80;
+        --bento-green-shadow: 0 10px 30px rgba(34, 197, 94, 0.15);
+
+        --bento-blue-from: #eff6ff;
+        --bento-blue-border: #bfdbfe;
+        --bento-blue-border-hover: #60a5fa;
+        --bento-blue-shadow: 0 10px 30px rgba(59, 130, 246, 0.15);
+
+        --bento-amber-from: #fffbeb;
+        --bento-amber-border: #fde68a;
+        --bento-amber-border-hover: #fbbf24;
+        --bento-amber-shadow: 0 10px 40px rgba(245, 158, 11, 0.15);
+
+        --bento-cyan-from: #ecfeff;
+        --bento-cyan-border: #a5f3fc;
+        --bento-cyan-border-hover: #22d3ee;
+        --bento-cyan-shadow: 0 10px 40px rgba(6, 182, 212, 0.15);
+
+        --bento-pink-from: #fdf2f8;
+        --bento-pink-border: #fbcfe8;
+        --bento-pink-border-hover: #f472b6;
+        --bento-pink-shadow: 0 10px 40px rgba(236, 72, 153, 0.15);
+
+        --bento-emerald-from: #ecfdf5;
+        --bento-emerald-border: #a7f3d0;
+        --bento-emerald-border-hover: #34d399;
+        --bento-emerald-shadow: 0 10px 40px rgba(16, 185, 129, 0.15);
+
+        --bento-yellow-from: #fefce8;
+        --bento-yellow-border: #fef08a;
+        --bento-yellow-border-hover: #facc15;
+        --bento-yellow-shadow: 0 10px 40px rgba(234, 179, 8, 0.15);
+    }
+
+    body {
+        background-color: var(--color-bg-base);
+        color: var(--color-text-primary);
+        transition: background-color 0.5s ease, color 0.5s ease;
+    }
 }
 
-body {
-    background-color: #121212;
-    color: #eeeeee;
-}
+html { scrollbar-gutter: stable; }
 
 @layer utilities {
-    /* 🚀 PS 감성 다크 커스텀 스크롤바 */
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px; /* 아주 슬림한 두께 */
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent; /* 트랙은 투명하게 */
-    }
-
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: rgba(255, 255, 255, 0.1); /* 평소엔 아주 옅은 흰색 */
-        border-radius: 9999px; /* 둥근 모서리 */
+        background-color: var(--color-border-strong);
+        border-radius: 9999px;
     }
-
-    /* 스크롤바에 마우스를 올렸을 때 PS Blue 색상으로 하이라이트 */
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background-color: rgba(78, 108, 187, 0.5);
-    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: var(--color-brand-blue); }
 
     @keyframes progress {
-        0% {
-            background-position: 0 0;
-        }
-        100% {
-            background-position: 40px 0; /* 빗살무늬 패턴(20px)의 배수로 부드럽게 무한 스크롤 */
-        }
+        0% { background-position: 0 0; }
+        100% { background-position: 40px 0; }
     }
 
-    /* 🚀 추가: PS 원기옥(블랙홀) 흡수 애니메이션 */
     @keyframes blackhole-absorb {
-        0% {
-            transform: translate(var(--startX), var(--startY)) scale(1.2) rotate(0deg);
-            opacity: 0;
-        }
-        20% {
-            opacity: 0.8;
-        }
-        100% {
-            transform: translate(0, 0) scale(0) rotate(360deg);
-            opacity: 0;
-        }
+        0% { transform: translate(var(--startX), var(--startY)) scale(1.5) rotate(0deg); opacity: 0; filter: brightness(1.5); }
+        20% { opacity: 1; filter: brightness(2); }
+        100% { transform: translate(0, 0) scale(0) rotate(1080deg); opacity: 0; filter: brightness(3); }
     }
 
-    .animate-blackhole {
-        /* cubic-bezier를 써서 처음엔 천천히, 빨려들어갈 땐 확! 빨려가게 만듭니다 */
-        animation: blackhole-absorb 0.7s cubic-bezier(0.5, 0, 0.2, 1) infinite;
-    }
+    .animate-blackhole { animation: blackhole-absorb 0.8s cubic-bezier(0.3, -0.2, 0.2, 1) infinite; }
 }

@@ -4,7 +4,6 @@ import './index.css'
 import App from './App.jsx'
 import { HelmetProvider } from 'react-helmet-async';
 
-// --- 🚀 최신 Sentry 설정 (업데이트된 DSN 반영) ---
 import * as Sentry from "@sentry/react";
 
 Sentry.init({
@@ -18,7 +17,7 @@ Sentry.init({
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
 });
-// --- 🚀 Sentry 설정 끝 ---
+// --- Sentry 설정 끝 ---
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>

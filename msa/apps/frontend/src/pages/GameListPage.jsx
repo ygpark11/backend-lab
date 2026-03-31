@@ -4,7 +4,8 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import SkeletonCard from '../components/SkeletonCard';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
+import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import {
     Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
     Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
@@ -18,7 +19,7 @@ import { requestFcmToken, isSupported } from '../utils/fcm';
 import DonationModal from '../components/DonationModal';
 
 const GameListPage = () => {
-    const navigate = useNavigate();
+    const navigate = useTransitionNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const { isAuthenticated, openLoginModal } = useAuth();
@@ -153,19 +154,17 @@ const GameListPage = () => {
         if (name !== 'keyword') setPage(0);
     };
 
-    // 커스텀 드롭다운 핸들러 (메인 화면)
     const handleCustomSelect = (name, value) => {
         setFilter(prev => ({ ...prev, [name]: value }));
         setActiveDropdown(null);
         setPage(0);
     };
 
-    // 퀵 서치 즉시 적용 핸들러 (바텀 시트용)
     const handleQuickSelect = (name, value) => {
         setFilter(prev => ({ ...prev, [name]: value }));
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // 최상단 이동
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         setPage(0);
-        setIsQuickSearchOpen(false); // 즉시 닫힘 (배경 선명해짐)
+        setIsQuickSearchOpen(false);
     };
 
     const handleLike = async (e, gameId) => {
@@ -222,7 +221,6 @@ const GameListPage = () => {
         }, 500);
     }, []);
 
-    // 스크롤 감지 (플로팅 바 숨김/표시)
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
@@ -273,7 +271,7 @@ const GameListPage = () => {
 
                 setPage(0);
                 setSearchInput('');
-                setPriceRange({ min: '', max: '' }); // 가격 UI도 초기화
+                setPriceRange({ min: '', max: '' });
                 return {
                     keyword: '', genre: '', minDiscountRate: '', minMetaScore: '',
                     platform: '', isPlusExclusive: false, inCatalog: false,
@@ -321,7 +319,7 @@ const GameListPage = () => {
                 }
 
                 setPage(0);
-                setSearchInput(urlKeyword); // 검색창 UI 동기화
+                setSearchInput(urlKeyword);
                 setPriceRange({ min: urlMinPrice, max: urlMaxPrice });
 
                 return {
@@ -383,7 +381,6 @@ const GameListPage = () => {
     ]);
 
     useEffect(() => {
-
         if (!isAuthenticated) return;
 
         const initNotificationToast = async () => {
@@ -394,11 +391,11 @@ const GameListPage = () => {
 
             if (Notification.permission === 'default' && !hasSkipped) {
                 toast((t) => (
-                    <div className="flex flex-col gap-3 min-w-[250px]">
-                        <div className="flex flex-col"><span className="font-bold text-sm text-gray-900">찜한 게임 할인 알림 받기</span><span className="text-xs text-gray-500 mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span></div>
+                    <div className="flex flex-col gap-3 min-w-[250px] bg-base p-4 rounded-xl border border-divider shadow-xl">
+                        <div className="flex flex-col"><span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span><span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span></div>
                         <div className="flex gap-2">
-                            <button className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold shadow-md flex-1" onClick={async () => { toast.dismiss(t.id); await requestFcmToken(); if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨'); }}>네, 받을래요!</button>
-                            <button className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded text-xs font-bold flex-1" onClick={() => {
+                            <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => { toast.dismiss(t.id); await requestFcmToken(); if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨'); }}>네, 받을래요!</button>
+                            <button className="bg-surface hover:bg-surface-hover border border-divider text-secondary px-3 py-2 rounded-lg text-xs font-bold flex-1 transition-colors" onClick={() => {
                                 toast.dismiss(t.id);
                                 sessionStorage.setItem('skipNotification', 'true');
                             }}>나중에</button>
@@ -407,14 +404,13 @@ const GameListPage = () => {
                 ), {
                     id: 'fcm-permission-toast',
                     duration: 10000,
-                    style: { background: '#fff', padding: '16px', borderRadius: '12px' }
+                    style: { background: 'transparent', boxShadow: 'none', padding: 0 }
                 });
             }
         };
         initNotificationToast();
     }, [isAuthenticated]);
 
-    // 드롭다운 및 칩에 사용될 옵션 데이터
     const sortOptions = [
         { value: 'lastUpdated,desc', label: '최근 업데이트순', icon: Clock, color: 'text-blue-400' },
         { value: 'releaseDate,desc', label: '최신 발매순', icon: CalendarDays, color: 'text-purple-400' },
@@ -443,205 +439,196 @@ const GameListPage = () => {
         { value: 'PS4', label: 'PS4 호환' }
     ];
 
-    if (loading && page === 0 && isInitialLoad) return <div className="min-h-screen pt-20 flex justify-center"><PSLoader /></div>;
+    if (loading && page === 0 && isInitialLoad) return <div className="min-h-screen pt-20 flex justify-center bg-base transition-colors duration-500"><PSLoader /></div>;
 
     return (
-        <div className="min-h-screen bg-ps-black text-white relative">
+        <div className="min-h-screen text-primary relative transition-colors duration-500">
             <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" />
 
-            <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto">
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
+                <div className="absolute inset-0 z-20 mix-blend-screen dark:mix-blend-screen opacity-40 dark:opacity-50">
+                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+                </div>
+            </div>
+
+            {/* 메인 컨텐츠 영역 */}
+            <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">
 
                 {/* 장르 파도타기 배너 */}
                 {filter.genre && (
-                    <div className="mb-6 relative overflow-hidden rounded-xl border border-blue-500/30 group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 via-purple-900/60 to-blue-900/60 animate-pulse"></div>
+                    <div className="mb-6 relative overflow-hidden rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-card-bg)] shadow-[var(--bento-blue-shadow)] group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--bento-blue-from)] to-transparent animate-pulse"></div>
                         <div className="relative p-5 flex items-center justify-between z-10">
                             <div className="flex items-center gap-4">
                                 <div>
-                                    <p className="text-xs text-blue-200 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1"><Waves className="w-3 h-3" /> Genre Surfing</p>
-                                    <h2 className="text-xl font-black text-white tracking-tight"><span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-white">'{filter.genre}'</span> 게임 모아보기</h2>
+                                    <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1"><Waves className="w-3 h-3" /> Genre Surfing</p>
+                                    <h2 className="text-xl font-black text-primary tracking-tight">'{filter.genre}' 게임 모아보기</h2>
                                 </div>
                             </div>
-                            <button onClick={clearGenreFilter} className="flex items-center gap-1.5 bg-black/30 hover:bg-white/10 border border-white/10 px-4 py-2 rounded-lg transition-all text-sm font-bold text-gray-300 hover:text-white"><X className="w-4 h-4" /> 필터 해제</button>
+                            <button onClick={clearGenreFilter} className="flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-4 py-2 rounded-lg transition-all text-sm font-bold text-secondary hover:text-primary"><X className="w-4 h-4" /> 필터 해제</button>
                         </div>
                     </div>
                 )}
 
                 {/* 다이내믹 인사이트 배너 */}
                 {filter.isAllTimeLow ? (
-                    /* 🔴 상태 1: 역대 최저가 파도타기 중 */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/50 via-red-950 to-black border border-red-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-                        <div className="absolute top-0 left-0 w-48 h-full bg-red-500/20 blur-3xl transform -skew-x-12"></div>
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-red-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-red-border-hover)] hover:[box-shadow:var(--bento-red-shadow)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-red-from)] to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-red-from)] blur-3xl transform -skew-x-12"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/40 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]">
-                                <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+                            <div className="w-12 h-12 rounded-full bg-[var(--bento-red-from)] flex items-center justify-center border border-[color:var(--bento-red-border)] animate-pulse">
+                                <Flame className="w-6 h-6 text-red-600 dark:text-red-500" />
                             </div>
                             <div>
-                                <div className="text-red-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
-                                    <Waves className="w-3 h-3"/> WIDGET SURFING
-                                </div>
-                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">역대 최저가</span>' 게임만 모아보는 중!
+                                <div className="text-red-600 dark:text-red-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Waves className="w-3 h-3"/> WIDGET SURFING</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500">역대 최저가</span>' 게임만 모아보는 중!
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({...prev, isAllTimeLow: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                        <button onClick={() => { setFilter(prev => ({...prev, isAllTimeLow: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
 
                 ) : (filter.minMetaScore === '85' && filter.minDiscountRate === '50') ? (
-                    /* 🟣 상태 2: 명작 갓겜 파도타기 중 */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-purple-900/50 via-indigo-950 to-black border border-purple-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(168,85,247,0.2)]">
-                        <div className="absolute top-0 left-0 w-48 h-full bg-purple-500/20 blur-3xl transform -skew-x-12"></div>
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-purple-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-purple-border-hover)] hover:[box-shadow:var(--bento-purple-shadow)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-purple-from)] to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-purple-from)] blur-3xl transform -skew-x-12"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/40 animate-pulse shadow-[0_0_15px_rgba(168,85,247,0.5)]">
-                                <Star className="w-6 h-6 text-purple-400 animate-pulse" />
+                            <div className="w-12 h-12 rounded-full bg-[var(--bento-purple-from)] flex items-center justify-center border border-[color:var(--bento-purple-border)] animate-pulse">
+                                <Star className="w-6 h-6 text-purple-600 dark:text-purple-500" />
                             </div>
                             <div>
-                                <div className="text-purple-300 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
-                                    <Waves className="w-3 h-3"/> WIDGET SURFING
-                                </div>
-                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">인증된 명작 갓겜</span>' 모아보는 중!
+                                <div className="text-purple-600 dark:text-purple-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Waves className="w-3 h-3"/> WIDGET SURFING</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-500 dark:to-pink-500">인증된 명작 갓겜</span>' 모아보는 중!
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({...prev, minMetaScore: '', minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                        <button onClick={() => { setFilter(prev => ({...prev, minMetaScore: '', minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
 
                 ) : (filter.minDiscountRate === '1' && filter.minMetaScore === '') ? (
-                    /* 🟢 상태 3: 진행 중인 총 할인 파도타기 중 (새로 추가됨!) */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-green-900/40 via-green-950 to-black border border-green-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(34,197,94,0.2)]">
-                        <div className="absolute top-0 left-0 w-48 h-full bg-green-500/20 blur-3xl transform -skew-x-12"></div>
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-green-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-green-from)] to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-green-from)] blur-3xl transform -skew-x-12"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/40 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.5)]">
-                                <TrendingDown className="w-6 h-6 text-green-400 animate-pulse" />
+                            <div className="w-12 h-12 rounded-full bg-[var(--bento-green-from)] flex items-center justify-center border border-[color:var(--bento-green-border)] animate-pulse">
+                                <TrendingDown className="w-6 h-6 text-green-600 dark:text-green-500" />
                             </div>
                             <div>
-                                <div className="text-green-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
-                                    <Waves className="w-3 h-3"/> WIDGET SURFING
-                                </div>
-                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-400">진행 중인 모든 할인</span>' 모아보는 중!
+                                <div className="text-green-600 dark:text-green-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Waves className="w-3 h-3"/> WIDGET SURFING</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-500 dark:to-emerald-500">진행 중인 모든 할인</span>' 모아보는 중!
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({...prev, minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                        <button onClick={() => { setFilter(prev => ({...prev, minDiscountRate: ''})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
                 ) : filter.isBestSeller ? (
-                    /* 상태 4: 베스트셀러 랭킹 모드 */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-900/50 via-amber-950 to-black border border-amber-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-                        <div className="absolute top-0 left-0 w-48 h-full bg-amber-500/20 blur-3xl transform -skew-x-12"></div>
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-amber-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-amber-border-hover)] hover:[box-shadow:var(--bento-amber-shadow)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-amber-from)] to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-amber-from)] blur-3xl transform -skew-x-12"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-                                <Trophy className="w-6 h-6 text-amber-400" />
+                            <div className="w-12 h-12 rounded-full bg-[var(--bento-amber-from)] flex items-center justify-center border border-[color:var(--bento-amber-border)]">
+                                <Trophy className="w-6 h-6 text-amber-600 dark:text-amber-500" />
                             </div>
                             <div>
-                                <div className="text-amber-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
-                                    <Activity className="w-3 h-3"/> RANKING BOARD
-                                </div>
-                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-yellow-500">베스트셀러</span>
+                                <div className="text-amber-600 dark:text-amber-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Activity className="w-3 h-3"/> RANKING BOARD</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600 dark:from-amber-500 dark:to-yellow-500">베스트셀러</span>
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({...prev, isBestSeller: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                        <button onClick={() => { setFilter(prev => ({...prev, isBestSeller: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
 
                 ) : filter.isMostDownloaded ? (
-                    /* 상태 5: 최다 다운로드 랭킹 모드 */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-cyan-900/50 via-cyan-950 to-black border border-cyan-500/50 p-4 sm:p-5 flex items-center justify-between shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-                        <div className="absolute top-0 left-0 w-48 h-full bg-cyan-500/20 blur-3xl transform -skew-x-12"></div>
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-cyan-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-cyan-border-hover)] hover:[box-shadow:var(--bento-cyan-shadow)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-cyan-from)] to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-cyan-from)] blur-3xl transform -skew-x-12"></div>
                         <div className="flex items-center gap-4 relative z-10">
-                            <div className="w-12 h-12 rounded-full bg-cyan-500/20 flex items-center justify-center border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-                                <Download className="w-6 h-6 text-cyan-400" />
+                            <div className="w-12 h-12 rounded-full bg-[var(--bento-cyan-from)] flex items-center justify-center border border-[color:var(--bento-cyan-border)]">
+                                <Download className="w-6 h-6 text-cyan-600 dark:text-cyan-500" />
                             </div>
                             <div>
-                                <div className="text-cyan-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1">
-                                    <Activity className="w-3 h-3"/> RANKING BOARD
-                                </div>
-                                <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500">최다 다운로드</span>
+                                <div className="text-cyan-600 dark:text-cyan-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Activity className="w-3 h-3"/> RANKING BOARD</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    현재 스토어 <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-500 dark:to-blue-500">최다 다운로드</span>
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({...prev, isMostDownloaded: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-black/50 hover:bg-white/10 border border-white/20 px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-gray-300 hover:text-white">
+                        <button onClick={() => { setFilter(prev => ({...prev, isMostDownloaded: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
                 ) : (
-                    /* ⚪ 상태 6: 아무 필터도 없을 때 (기존 듀얼 액션 배너) */
-                    <div className="mb-8 relative overflow-hidden rounded-xl bg-gradient-to-r from-red-900/30 via-black to-black border border-red-500/20 flex flex-col md:flex-row group transition-all hover:border-red-500/50 hover:shadow-[0_0_30px_rgba(239,68,68,0.15)]">
-
-                        {/* 좌측 메인 영역: 클릭 시 '역대 최저가 파도타기' (기존 동일) */}
+                    /* ⚪ 상태 6: 아무 필터도 없을 때 기본 배너 */
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-divider flex flex-col md:flex-row shadow-sm transition-all hover:shadow-md">
                         <div
                             onClick={() => {
                                 setFilter(prev => ({...prev, isAllTimeLow: true}));
                                 setPage(0);
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                             }}
-                            className="flex-1 p-4 sm:p-5 cursor-pointer relative overflow-hidden flex items-center justify-between border-b md:border-b-0 border-white/10"
+                            className="flex-1 p-4 sm:p-5 cursor-pointer relative overflow-hidden flex items-center justify-between border-b md:border-b-0 md:border-r border-divider group hover:bg-[var(--bento-red-from)] transition-colors"
                         >
-                            <div className="absolute top-0 left-0 w-48 h-full bg-red-500/10 blur-3xl transform -skew-x-12 group-hover:bg-red-500/20 transition-colors"></div>
+                            <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-red-from)] to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+                            <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-red-from)] blur-3xl transform -skew-x-12 opacity-50 group-hover:opacity-100 transition-opacity"></div>
                             <div className="flex items-center gap-4 relative z-10">
-                                <div className="hidden sm:flex w-12 h-12 rounded-full bg-red-500/10 items-center justify-center border border-red-500/20 group-hover:scale-110 transition-transform">
-                                    <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+                                <div className="hidden sm:flex w-12 h-12 rounded-full bg-[var(--bento-red-from)] items-center justify-center border border-[color:var(--bento-red-border)] group-hover:scale-110 transition-transform">
+                                    <Flame className="w-6 h-6 text-red-600 dark:text-red-500 animate-pulse" />
                                 </div>
                                 <div>
-                                    <div className="text-red-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider">TODAY'S HOT DEAL</div>
-                                    <div className="text-white font-black text-sm sm:text-base lg:text-lg">
-                                        지금 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">수많은 게임</span>이 역대 최저가 갱신 중!
+                                    <div className="text-red-600 dark:text-red-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider">TODAY'S HOT DEAL</div>
+                                    <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                        지금 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500">수많은 게임</span>이 역대 최저가 갱신 중!
                                     </div>
                                 </div>
                             </div>
-                            <div className="text-red-400/80 font-bold text-xs sm:text-sm flex items-center gap-1 group-hover:text-red-400 transition-colors pr-2">
+                            <div className="text-red-600 dark:text-red-500 font-bold text-xs sm:text-sm flex items-center gap-1 group-hover:translate-x-1 transition-transform pr-2 relative z-10">
                                 <span className="hidden sm:inline">모아보기</span>
                                 <ChevronRight className="w-4 h-4" />
                             </div>
                         </div>
 
-                        {/* 우측 분리 영역: 신작 수집소 & 통계 인사이트 (모바일은 좌우 반반, PC는 위아래 혹은 나란히) */}
-                        <div className="flex w-full md:w-auto md:border-l border-white/10 shrink-0">
-
-                            {/* 신작 수집소 (PS Blue 감성) */}
+                        <div className="flex w-full md:w-auto shrink-0 bg-base">
                             <div
                                 onClick={() => navigate('/discover')}
-                                className="flex-1 md:w-36 border-r border-white/10 bg-blue-900/10 hover:bg-blue-500/20 cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/discover"
+                                className="flex-1 md:w-36 md:border-l border-r border-divider bg-[var(--bento-blue-from)] hover:bg-[color:var(--bento-blue-border-hover)] cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/discover"
                             >
-                                <Sparkles className="w-5 h-5 text-ps-blue mb-1 group-hover/discover:scale-110 group-hover/discover:text-blue-400 transition-all" />
-                                <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] sm:text-xs">
+                                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-1 group-hover/discover:scale-110 transition-transform" />
+                                <div className="flex items-center gap-1 text-blue-700 dark:text-blue-300 font-bold text-[11px] sm:text-xs">
                                     <span>신작 수집소</span>
                                     <ChevronRight className="w-3 h-3 opacity-50 group-hover/discover:translate-x-1 group-hover/discover:opacity-100 transition-all" />
                                 </div>
                             </div>
 
-                            {/* 통계 인사이트 (퍼플/그레이 감성) */}
                             <div
                                 onClick={() => navigate('/insights')}
-                                className="flex-1 md:w-36 bg-white/5 hover:bg-white/10 cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/insight"
+                                className="flex-1 md:w-36 bg-[var(--bento-purple-from)] hover:bg-[color:var(--bento-purple-border-hover)] cursor-pointer flex flex-col items-center justify-center p-3 transition-colors group/insight"
                             >
-                                <Activity className="w-5 h-5 text-purple-400 mb-1 group-hover/insight:scale-110 group-hover/insight:text-purple-300 transition-all" />
-                                <div className="flex items-center gap-1 text-gray-300 font-bold text-[11px] sm:text-xs group-hover/insight:text-white">
+                                <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400 mb-1 group-hover/insight:scale-110 transition-transform" />
+                                <div className="flex items-center gap-1 text-purple-700 dark:text-purple-300 font-bold text-[11px] sm:text-xs">
                                     <span>통계 인사이트</span>
                                     <ChevronRight className="w-3 h-3 opacity-50 group-hover/insight:translate-x-1 group-hover/insight:opacity-100 transition-all" />
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 )}
 
-                {/* 메인 검색/필터 UI */}
-                <div className="bg-ps-card p-6 rounded-xl border border-white/10 shadow-lg mb-8">
+                <div className="relative z-40 bg-glass backdrop-blur-xl p-6 rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
                     <div className="flex flex-col md:flex-row gap-4">
-                        {/* 검색창 */}
                         <div className="relative flex-1">
                             <input
                                 type="text"
@@ -650,22 +637,21 @@ const GameListPage = () => {
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                className="w-full bg-black/50 border border-white/10 rounded-lg py-3 pl-12 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all" />
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+                                className="w-full bg-base border border-divider rounded-lg py-3 pl-12 pr-4 text-primary placeholder-muted focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all shadow-inner" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
                         </div>
 
-                        {/* 정렬 드롭다운 (Custom) */}
                         <div className="relative min-w-[180px]">
                             <button
                                 disabled={filter.isBestSeller || filter.isMostDownloaded}
                                 onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
                                 onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'sort' ? null : prev), 200)}
-                                className={`w-full bg-black/30 border border-white/10 rounded-lg px-4 py-3 text-sm font-bold text-white flex items-center justify-between transition-all 
-                                    ${(filter.isBestSeller || filter.isMostDownloaded) ? 'opacity-50 cursor-not-allowed bg-black/60' : 'hover:border-ps-blue hover:bg-white/5'}`}
+                                className={`w-full bg-base border border-divider rounded-lg px-4 py-3 text-sm font-bold text-primary flex items-center justify-between transition-all shadow-inner
+                                    ${(filter.isBestSeller || filter.isMostDownloaded) ? 'opacity-50 cursor-not-allowed' : 'hover:border-ps-blue hover:bg-surface-hover'}`}
                             >
                                 <span className="flex items-center gap-2">
                                     {(filter.isBestSeller || filter.isMostDownloaded) ? (
-                                        <><Lock className="w-4 h-4 text-gray-400"/> 랭킹순 고정됨</>
+                                        <><Lock className="w-4 h-4 text-secondary"/> 랭킹순 고정됨</>
                                     ) : (
                                         <>
                                             {sortOptions.find(opt => opt.value === filter.sort)?.icon && React.createElement(sortOptions.find(opt => opt.value === filter.sort).icon, { className: `w-4 h-4 ${sortOptions.find(opt => opt.value === filter.sort).color}` })}
@@ -673,13 +659,13 @@ const GameListPage = () => {
                                         </>
                                     )}
                                 </span>
-                                {!(filter.isBestSeller || filter.isMostDownloaded) && <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />}
+                                {!(filter.isBestSeller || filter.isMostDownloaded) && <ChevronDown className={`w-4 h-4 text-secondary transition-transform duration-200 ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />}
                             </button>
                             {activeDropdown === 'sort' && (
-                                <div className="absolute top-full mt-2 right-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn origin-top">
+                                <div className="absolute top-full mt-2 right-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn origin-top">
                                     <div className="py-1">
                                         {sortOptions.map((option) => (
-                                            <button key={option.value} onClick={() => handleCustomSelect('sort', option.value)} className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${filter.sort === option.value ? 'bg-white/10 text-white' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                            <button key={option.value} onClick={() => handleCustomSelect('sort', option.value)} className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${filter.sort === option.value ? 'bg-ps-blue/10 text-ps-blue' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                                 <option.icon className={`w-4 h-4 ${option.color}`} /> {option.label}
                                             </button>
                                         ))}
@@ -688,27 +674,37 @@ const GameListPage = () => {
                             )}
                         </div>
 
-                        <button onClick={() => setShowFilter(!showFilter)} className={`px-4 py-3 rounded-lg border text-sm font-bold flex items-center gap-2 transition-colors whitespace-nowrap ${showFilter ? 'bg-ps-blue border-ps-blue text-white' : 'border-white/20 text-gray-300 hover:bg-white/10'}`}>
+                        <button
+                            onClick={() => setShowFilter(!showFilter)}
+                            className={`px-4 py-3 rounded-lg border text-sm font-bold flex items-center gap-2 transition-all duration-300 whitespace-nowrap ${
+                                showFilter
+                                    ? 'bg-ps-blue border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                                    : 'bg-base border-divider text-secondary hover:border-primary hover:text-primary shadow-inner'
+                            }`}
+                        >
                             <Filter className="w-4 h-4" /> 상세 필터
                         </button>
-                        <button onClick={executeSearch} className="px-6 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors whitespace-nowrap">검색</button>
+                        <button
+                            onClick={executeSearch}
+                            className="px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 whitespace-nowrap bg-primary text-[color:var(--color-bg-base)] hover:opacity-80 shadow-md"
+                        >
+                            검색
+                        </button>
                     </div>
 
                     {showFilter && (
-                        <div className="mt-6 pt-6 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-6 animate-fadeIn">
-
-                            {/* 할인율 드롭다운 */}
+                        <div className="mt-6 pt-6 border-t border-divider grid grid-cols-2 md:grid-cols-4 gap-6 animate-fadeIn">
                             <div className="relative">
-                                <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><Percent className="w-3 h-3 text-red-400"/>최소 할인율</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'discount' ? null : 'discount')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'discount' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Percent className="w-3 h-3 text-red-400"/>최소 할인율</label>
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'discount' ? null : 'discount')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'discount' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
                                     <span className="truncate">{discountOptions.find(o => o.value === filter.minDiscountRate)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'discount' ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'discount' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {activeDropdown === 'discount' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
+                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
                                         <div className="py-1">
                                             {discountOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('minDiscountRate', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minDiscountRate === opt.value ? 'bg-ps-blue/20 text-white font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                                <button key={opt.value} onClick={() => handleCustomSelect('minDiscountRate', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minDiscountRate === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                                     {opt.label}
                                                 </button>
                                             ))}
@@ -717,17 +713,12 @@ const GameListPage = () => {
                                 )}
                             </div>
 
-                            {/* 🚀 가격대 필터 팝오버 (디자인 통일 완료) */}
                             <div className="relative">
-                                <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1">
-                                    <CircleDollarSign className="w-3 h-3 text-green-400"/>가격 범위
-                                </label>
+                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><CircleDollarSign className="w-3 h-3 text-green-400"/>가격 범위</label>
                                 <button
                                     onClick={() => setActiveDropdown(activeDropdown === 'price' ? null : 'price')}
-                                    className={`w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left ${
-                                        isPriceFilterActive
-                                            ? 'bg-ps-blue/20 text-white font-bold border-ps-blue/50'
-                                            : 'text-white'
+                                    className={`w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner ${
+                                        isPriceFilterActive ? 'bg-ps-blue/10 text-ps-blue font-bold border-ps-blue/50' : 'text-primary'
                                     }`}
                                 >
                                     <span className="truncate">
@@ -735,61 +726,40 @@ const GameListPage = () => {
                                             ? `${filter.minPrice ? Number(filter.minPrice).toLocaleString() + '원' : '0원'} ~ ${filter.maxPrice ? Number(filter.maxPrice).toLocaleString() + '원' : '최대'}`
                                             : '전체 범위'}
                                     </span>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'price' ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'price' ? 'rotate-180' : ''}`} />
                                 </button>
-
                                 {activeDropdown === 'price' && (
-                                    <div className="absolute top-full mt-2 right-0 md:right-auto md:left-0 w-[300px] md:w-80 bg-[#1a1a1a]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn origin-top-right md:origin-top-left"
-                                         onClick={(e) => e.stopPropagation()}
-                                    >
+                                    <div className="absolute top-full mt-2 right-0 md:right-auto md:left-0 w-[300px] md:w-80 bg-base border border-divider rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn origin-top-right md:origin-top-left" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center gap-2 mb-5">
                                             <div className="relative flex-1">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    placeholder="예: 10000"
-                                                    value={priceRange.min}
-                                                    onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
-                                                    onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
-                                                    className="w-full bg-black/50 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-white text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">원</span>
+                                                <input type="number" min="0" placeholder="예: 10000" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-bold text-xs">원</span>
                                             </div>
-                                            <span className="text-gray-500 font-bold">~</span>
+                                            <span className="text-secondary font-bold">~</span>
                                             <div className="relative flex-1">
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    placeholder="예: 50000"
-                                                    value={priceRange.max}
-                                                    onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
-                                                    onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
-                                                    className="w-full bg-black/50 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-white text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                                />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">원</span>
+                                                <input type="number" min="0" placeholder="예: 50000" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-bold text-xs">원</span>
                                             </div>
                                         </div>
-
                                         <div className="flex gap-2">
-                                            <button onClick={handlePriceReset} className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-xs font-bold transition-colors">초기화</button>
+                                            <button onClick={handlePriceReset} className="flex-1 px-4 py-2 bg-surface hover:bg-surface-hover text-secondary hover:text-primary rounded-lg text-xs font-bold transition-colors">초기화</button>
                                             <button onClick={handlePriceApply} className="flex-1 px-4 py-2 bg-ps-blue hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors shadow-[0_0_15px_rgba(59,130,246,0.3)]">적용</button>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* IGDB 드롭다운 */}
                             <div className="relative">
-                                <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>IGDB스코어</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'metaScore' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>IGDB스코어</label>
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'metaScore' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
                                     <span className="truncate">{metaScoreOptions.find(o => o.value === filter.minMetaScore)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'metaScore' ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'metaScore' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {activeDropdown === 'metaScore' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
+                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
                                         <div className="py-1">
                                             {metaScoreOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('minMetaScore', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minMetaScore === opt.value ? 'bg-ps-blue/20 text-white font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                                <button key={opt.value} onClick={() => handleCustomSelect('minMetaScore', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minMetaScore === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                                     {opt.label}
                                                 </button>
                                             ))}
@@ -798,18 +768,17 @@ const GameListPage = () => {
                                 )}
                             </div>
 
-                            {/* 플랫폼 드롭다운 */}
                             <div className="relative">
-                                <label className="block text-xs text-gray-400 mb-2 font-bold flex items-center gap-1"><MonitorPlay className="w-3 h-3 text-blue-300"/>플랫폼</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'platform' ? null : 'platform')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'platform' ? null : prev), 200)} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white flex items-center justify-between hover:border-ps-blue hover:bg-white/5 transition-all text-left">
+                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><MonitorPlay className="w-3 h-3 text-blue-400"/>플랫폼</label>
+                                <button onClick={() => setActiveDropdown(activeDropdown === 'platform' ? null : 'platform')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'platform' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
                                     <span className="truncate">{platformOptions.find(o => o.value === filter.platform)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-gray-500 shrink-0 transition-transform ${activeDropdown === 'platform' ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'platform' ? 'rotate-180' : ''}`} />
                                 </button>
                                 {activeDropdown === 'platform' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
+                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
                                         <div className="py-1">
                                             {platformOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('platform', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.platform === opt.value ? 'bg-ps-blue/20 text-white font-bold' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+                                                <button key={opt.value} onClick={() => handleCustomSelect('platform', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.platform === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                                     {opt.label}
                                                 </button>
                                             ))}
@@ -818,31 +787,30 @@ const GameListPage = () => {
                                 )}
                             </div>
 
-                            {/* 체크박스 영역 */}
                             <div className="col-span-2 md:col-span-4 flex flex-row flex-wrap items-center gap-6 pt-2 h-full">
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-colors border border-transparent">
+                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
                                     <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="isPlusExclusive" checked={filter.isPlusExclusive} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer" />
-                                        <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                                        <input type="checkbox" name="isPlusExclusive" checked={filter.isPlusExclusive} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer shadow-inner" />
+                                        <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 group-hover:text-yellow-400 transition-colors"><span className="text-yellow-500 font-black">PLUS</span> 전용 할인</span>
+                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors"><span className="text-yellow-500 font-black">PLUS</span> 전용 할인</span>
                                 </label>
 
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-colors border border-transparent">
+                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
                                     <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="inCatalog" checked={filter.inCatalog} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer" />
-                                        <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                                        <input type="checkbox" name="inCatalog" checked={filter.inCatalog} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer shadow-inner" />
+                                        <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 group-hover:text-yellow-400 transition-colors flex items-center gap-1.5"><Gamepad2 className="w-4 h-4 text-yellow-500" /> 스페셜(무료) 포함</span>
+                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors flex items-center gap-1.5"><Gamepad2 className="w-4 h-4 text-yellow-500" /> 스페셜(무료) 포함</span>
                                 </label>
 
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-colors border border-transparent">
+                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
                                     <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="isPs5ProEnhanced" checked={filter.isPs5ProEnhanced} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-gray-800 border border-gray-600 checked:bg-gray-200 checked:border-white transition-all cursor-pointer" />
-                                        <Check className="absolute w-3 h-3 text-black opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
+                                        <input type="checkbox" name="isPs5ProEnhanced" checked={filter.isPs5ProEnhanced} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-primary checked:border-primary transition-all cursor-pointer shadow-inner" />
+                                        <Check className="absolute w-3 h-3 text-[color:var(--color-bg-base)] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
                                     </div>
-                                    <span className="text-sm font-bold text-gray-400 group-hover:text-white transition-colors flex items-center gap-1.5">
-                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-white' : 'text-gray-400'}`} /> PS5 Pro 향상
+                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors flex items-center gap-1.5">
+                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-primary' : 'text-secondary'}`} /> PS5 Pro 향상
                                     </span>
                                 </label>
                             </div>
@@ -850,9 +818,8 @@ const GameListPage = () => {
                     )}
                 </div>
 
-                {!loading && <p className="text-ps-muted text-sm mb-4 text-right">총 <span className="text-white font-bold">{totalElements.toLocaleString()}</span>개의 게임이 검색되었습니다.</p>}
+                {!loading && <p className="text-muted text-sm mb-4 text-right">총 <span className="text-primary font-bold">{totalElements.toLocaleString()}</span>개의 게임이 검색되었습니다.</p>}
 
-                {/* 게임 리스트 */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {loading && page === 0 && !isInitialLoad ? (
                         Array.from({ length: 10 }).map((_, idx) => <SkeletonCard key={idx} />)
@@ -875,53 +842,37 @@ const GameListPage = () => {
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-ps-card rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full will-change-transform ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-transparent hover:border-ps-blue/50'}`}
+                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${isPlatinum ? 'border-[color:var(--bento-yellow-border-hover)] shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                                 >
-                                    <div className="aspect-[3/4] overflow-hidden relative shrink-0">
+                                    <div
+                                        className="aspect-[3/4] overflow-hidden relative shrink-0 bg-base"
+                                    >
                                         <PSGameImage
                                             src={game.imageUrl}
                                             alt={game.name}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 will-change-transform"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                         />
 
                                         {rankToDisplay && (
                                             <div className={`absolute top-0 left-0 z-30 px-2 py-0.5 rounded-br-xl flex items-center shadow-lg backdrop-blur-md border-b border-r overflow-hidden
-                                                ${rankToDisplay === 1 ? 'bg-black/70 border-yellow-500/40' :
-                                                rankToDisplay === 2 ? 'bg-black/70 border-gray-400/40' :
-                                                    rankToDisplay === 3 ? 'bg-black/70 border-amber-600/40' :
-                                                        'bg-black/70 border-white/10'}`}>
-
-                                                {/* 🔵 4위 이하: 극도로 얇은 PS5 블루 LED 라인 */}
-                                                {rankToDisplay > 3 && (
-                                                    <div className="absolute top-0 left-0 w-0.5 h-full bg-ps-blue shadow-[0_0_5px_rgba(0,67,156,0.8)]"></div>
-                                                )}
-
-                                                {/* 🏆 1~3위: 심플한 트로피 포인트 */}
-                                                {rankToDisplay <= 3 && (
-                                                    <Trophy className={`w-3 h-3 mr-1 ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-300' : 'text-amber-500'}`} />
-                                                )}
-
-                                                {/* 🏁 텍스트: 다시 직관적인 'X위'로 복구하고 사이즈 확 축소 */}
-                                                <span className={`text-[11px] font-black tracking-tight drop-shadow-md ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-300' : rankToDisplay === 3 ? 'text-amber-500' : 'text-white ml-0.5'}`}>
+                                                ${rankToDisplay === 1 ? 'bg-glass border-yellow-500/40' :
+                                                rankToDisplay === 2 ? 'bg-glass border-gray-400/40' :
+                                                    rankToDisplay === 3 ? 'bg-glass border-amber-600/40' :
+                                                        'bg-glass border-divider'}`}>
+                                                {rankToDisplay > 3 && <div className="absolute top-0 left-0 w-0.5 h-full bg-ps-blue shadow-[0_0_5px_rgba(0,67,156,0.8)]"></div>}
+                                                {rankToDisplay <= 3 && <Trophy className={`w-3 h-3 mr-1 ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-400' : 'text-amber-500'}`} />}
+                                                <span className={`text-[11px] font-black tracking-tight drop-shadow-md ${rankToDisplay === 1 ? 'text-yellow-400' : rankToDisplay === 2 ? 'text-gray-400' : rankToDisplay === 3 ? 'text-amber-500' : 'text-primary ml-0.5'}`}>
                                                     {rankToDisplay}위
                                                 </span>
                                             </div>
                                         )}
 
-                                        {isNew && (
-                                            <span className={`absolute left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20 transition-all
-                                                ${rankToDisplay ? 'top-8' : 'top-2'}`}>
-                                                NEW
-                                            </span>
-                                        )}
-
+                                        {isNew && <span className={`absolute left-2 bg-green-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20 transition-all ${rankToDisplay ? 'top-8' : 'top-2'}`}>NEW</span>}
                                         {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
-
                                         {isLastCall && <span className="absolute top-2 right-10 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
-
                                         {isClosing && <span className="absolute top-2 right-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
 
-                                        <button onClick={(e) => handleLike(e, game.id)} className={`absolute bottom-12 right-2 p-2 rounded-full transition-all transform hover:scale-110 z-20 shadow-lg backdrop-blur-sm ${game.liked ? 'bg-red-500/20 text-red-500' : 'bg-black/40 text-gray-300 hover:bg-red-500 hover:text-white'}`}>
+                                        <button onClick={(e) => handleLike(e, game.id)} className={`absolute bottom-12 right-2 p-2 rounded-full transition-all transform hover:scale-110 z-20 shadow-lg backdrop-blur-sm ${game.liked ? 'bg-red-500/20 text-red-500' : 'bg-glass text-secondary hover:bg-[var(--bento-red-from)] hover:text-red-500'}`}>
                                             <Heart className={`w-5 h-5 ${game.liked ? 'fill-current' : ''}`} />
                                         </button>
 
@@ -932,54 +883,40 @@ const GameListPage = () => {
                                                 <Gamepad2 className="w-3 h-3 fill-black" /> EXTRA
                                             </span>
                                         ) : game.isPlusExclusive ? (
-                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">
-                                                PLUS
-                                            </span>
+                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
                                         ) : null}
                                     </div>
 
-                                    <div className="p-4 flex flex-col flex-1 bg-[#111] transition-colors duration-300 group-hover:bg-[#181818] relative z-20">
-
-                                        {/* 1. 장르 영역 */}
+                                    <div className="p-4 flex flex-col flex-1 bg-transparent relative z-20">
                                         <div className="flex flex-wrap gap-1 mb-2 min-h-[22px] items-center">
-                                            {game.isPs5ProEnhanced && (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">
-                                                    PRO
-                                                </span>
-                                            )}
-
+                                            {game.isPs5ProEnhanced && <span className="text-[10px] px-1.5 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">PRO</span>}
                                             {game.genres && game.genres.length > 0 ? (
                                                 game.genres.map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)
                                             ) : (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-gray-600/20 text-gray-400 border-gray-500/30">미분류</span>
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-secondary border-divider">미분류</span>
                                             )}
                                         </div>
 
-                                        {/* 2. 개척자 닉네임 */}
                                         {game.pioneerName && (
-                                            <div className="self-start inline-flex items-center gap-1.5 mb-3 -ml-4 bg-gradient-to-r from-blue-600/20 to-transparent border-l-[3px] border-blue-400 pl-3 pr-4 py-0.5 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
-                                                <Pickaxe className="w-3.5 h-3.5 text-blue-400 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
-                                                <span className="text-[10.5px] sm:text-xs font-black text-blue-100 truncate max-w-[130px] sm:max-w-[160px] drop-shadow-md">
-                                                    {game.pioneerName}
-                                                </span>
+                                            <div className="self-start inline-flex items-center gap-1.5 mb-3 -ml-4 bg-surface border-y border-r border-divider border-l-[4px] border-l-ps-blue py-1 pl-3 pr-4 rounded-r-lg shadow-md">
+                                                <Pickaxe className="w-3.5 h-3.5 text-ps-blue drop-shadow-sm" />
+                                                <span className="text-[10.5px] sm:text-xs font-black text-ps-blue truncate max-w-[130px] sm:max-w-[160px]">{game.pioneerName}</span>
                                             </div>
                                         )}
 
-                                        {/* 3. 게임 제목 */}
-                                        <h3 className="text-sm font-bold text-gray-100 leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
+                                        <h3 className="text-sm font-bold text-primary leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
                                             {game.name.trim()}
                                         </h3>
 
-                                        {/* 4. 가격 정보 */}
                                         <div className="mt-auto relative z-20">
-                                            {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-gray-500 line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                            {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-muted line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
                                             <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
-                                                <p className="whitespace-nowrap text-base sm:text-lg font-black text-white tracking-tight">
+                                                <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
                                                     {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
                                                     <span className="text-xs sm:text-sm font-medium ml-0.5">원</span>
                                                 </p>
                                                 {game.metaScore > 0 && (
-                                                    <span className={`shrink-0 text-[10px] sm:text-xs font-black px-1.5 py-0.5 sm:px-2 rounded shadow-sm ${game.metaScore >= 80 ? 'bg-green-900 text-green-300 border border-green-500/30' : 'bg-yellow-900 text-yellow-300 border border-yellow-500/30'}`}>
+                                                    <span className={`shrink-0 text-[10px] sm:text-xs font-black px-1.5 py-0.5 sm:px-2 rounded shadow-sm border ${game.metaScore >= 80 ? 'bg-score-green-bg text-score-green-text border-green-500/30' : 'bg-score-yellow-bg text-score-yellow-text border-yellow-500/30'}`}>
                                                         {game.metaScore}
                                                     </span>
                                                 )}
@@ -991,8 +928,8 @@ const GameListPage = () => {
                         }) : (
                             !loading && (
                                 <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
-                                    <Gamepad2 className="w-12 h-12 text-gray-600" />
-                                    <p className="text-gray-400">검색 결과가 없습니다.</p>
+                                    <Gamepad2 className="w-12 h-12 text-muted" />
+                                    <p className="text-secondary">검색 결과가 없습니다.</p>
                                 </div>
                             )
                         )
@@ -1000,9 +937,9 @@ const GameListPage = () => {
                 </div>
 
                 {!loading && games.length > 0 && page >= totalPages - 1 && (
-                    <div className="py-16 text-center flex flex-col items-center gap-3 opacity-50 border-t border-white/5 mt-10">
-                        <Gamepad2 className="w-8 h-8 text-gray-500" />
-                        <p className="text-gray-400 font-bold text-sm">모든 게임을 다 보셨습니다 🎮</p>
+                    <div className="py-16 text-center flex flex-col items-center gap-3 opacity-50 border-t border-divider mt-10">
+                        <Gamepad2 className="w-8 h-8 text-secondary" />
+                        <p className="text-secondary font-bold text-sm">모든 게임을 다 보셨습니다 🎮</p>
                     </div>
                 )}
                 {loading && page > 0 && (
@@ -1010,99 +947,59 @@ const GameListPage = () => {
                 )}
 
                 {/* 스마트 플로팅 바 */}
-                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out will-change-transform ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
-                    <div className="flex items-center gap-2 bg-black/80 backdrop-blur-xl border border-white/10 p-2 pl-4 rounded-full shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
+                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
+                    <div className="flex items-center gap-2 bg-glass backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
+                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="빠른 검색"><Search className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" /></button>
 
-                        {/* 빠른 검색 & 위로 가기 */}
-                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all border border-white/5 bg-white/5" title="빠른 검색"><Search className="w-4 h-4 text-gray-300 group-hover:text-white transition-colors" /></button>
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-white/10 transition-all" title="맨 위로">
-                            <Triangle className="w-5 h-5 text-green-400 fill-green-400 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)] group-hover:-translate-y-1 transition-transform" />
-                        </button>
+                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="맨 위로"><Triangle className="w-5 h-5 text-green-500 fill-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] group-hover:-translate-y-1 transition-transform" /></button>
 
-                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
-
-                        <button
-                            onClick={handleContactClick}
-                            className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all border border-blue-500/40 bg-blue-500/15 hover:bg-blue-500/30 relative overflow-hidden"
-                            title="문의 및 제휴"
-                        >
+                        <div className="w-[1px] h-6 bg-divider mx-1"></div>
+                        <button onClick={handleContactClick} className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] hover:border-[color:var(--bento-blue-border-hover)] relative overflow-hidden" title="문의 및 제휴">
                             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] group-hover:scale-110 transition-transform" />
+                            <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-ps-blue drop-shadow-[0_0_8px_rgba(59,130,246,0.8)] group-hover:scale-110 transition-transform" />
                         </button>
-
-                        <div className="w-[1px] h-6 bg-white/20 mx-1"></div>
-
-                        <button
-                            onClick={() => setIsDonationOpen(true)}
-                            className="group flex items-center gap-2 px-4 py-2.5 rounded-full transition-all border border-yellow-500/40 bg-yellow-500/15 hover:bg-yellow-500/25 relative overflow-hidden"
-                            title="감자 서버 밥 주기"
-                        >
+                        <div className="w-[1px] h-6 bg-divider mx-1"></div>
+                        <button onClick={() => setIsDonationOpen(true)} className="group flex items-center gap-2 px-4 py-2.5 rounded-full transition-all border border-[color:var(--bento-yellow-border)] bg-[var(--bento-yellow-from)] hover:border-[color:var(--bento-yellow-border-hover)] relative overflow-hidden" title="감자 서버 밥 주기">
                             <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
-
-                            <Server className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] group-hover:scale-110 group-hover:-rotate-12 transition-transform" />
-                            <span className="text-xs sm:text-sm font-black text-yellow-500 whitespace-nowrap drop-shadow-md">감자 서버 밥 주기</span>
+                            <Server className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 dark:text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)] group-hover:scale-110 group-hover:-rotate-12 transition-transform" />
+                            <span className="text-xs sm:text-sm font-black text-yellow-600 dark:text-yellow-500 whitespace-nowrap drop-shadow-md">감자 서버 밥 주기</span>
                         </button>
-
                     </div>
                 </div>
 
-                <div className={`fixed inset-x-0 bottom-0 z-[60] transform transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                    <div className="bg-[#1a1a1a] border-t border-white/10 p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.8)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                        <div className="flex justify-between items-center mb-6 sticky top-0 bg-[#1a1a1a] pb-4 z-10 border-b border-white/5">
-                            <h3 className="text-xl font-black text-white flex items-center gap-2"><Search className="w-5 h-5 text-ps-blue"/> 퀵 서치 & 필터</h3>
-                            <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-white/5 hover:bg-red-500/80 rounded-full transition-colors"><X className="w-5 h-5 text-gray-300"/></button>
+                <div className={`fixed inset-x-0 bottom-0 z-[60] transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+                    <div className="bg-base border-t border-divider p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.5)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <div className="flex justify-between items-center mb-6 sticky top-0 bg-base pb-4 z-10 border-b border-divider">
+                            <h3 className="text-xl font-black text-primary flex items-center gap-2"><Search className="w-5 h-5 text-ps-blue"/> 퀵 서치 & 필터</h3>
+                            <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-surface hover:bg-[var(--bento-red-from)] rounded-full transition-colors"><X className="w-5 h-5 text-secondary hover:text-red-500"/></button>
                         </div>
 
                         <div className="flex flex-col gap-8 pb-24">
-                            {/* 1. 검색어 입력 (검색어는 버튼 눌러야 적용) */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-400 mb-2">어떤 게임을 찾으시나요?</label>
+                                <label className="block text-sm font-bold text-secondary mb-2">어떤 게임을 찾으시나요?</label>
                                 <div className="relative">
-                                    <input
-                                        type="text"
-                                        name="keyword"
-                                        value={searchInput}
-                                        onChange={(e) => setSearchInput(e.target.value)}
-                                        onKeyDown={handleKeyDown}
-                                        className="w-full bg-black border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:border-ps-blue outline-none transition-all" />
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+                                    <input type="text" name="keyword" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={handleKeyDown} className="w-full bg-surface border border-divider rounded-xl py-4 pl-12 pr-4 text-primary placeholder-muted focus:border-ps-blue outline-none transition-all shadow-inner" />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-bold text-gray-400 mb-2">원하시는 가격대가 있나요?</label>
+                                <label className="block text-sm font-bold text-secondary mb-2">원하시는 가격대가 있나요?</label>
                                 <div className="flex items-center gap-3">
                                     <div className="relative flex-1">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            placeholder="예: 10000"
-                                            value={priceRange.min}
-                                            onChange={(e) => setPriceRange({...priceRange, min: e.target.value})}
-                                            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
-                                            className="w-full bg-black border border-white/10 rounded-xl py-4 pl-4 pr-10 text-white focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                        />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
+                                        <input type="number" min="0" placeholder="예: 10000" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
                                     </div>
-                                    <span className="text-gray-500 font-bold">~</span>
+                                    <span className="text-secondary font-bold">~</span>
                                     <div className="relative flex-1">
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            placeholder="예: 50000"
-                                            value={priceRange.max}
-                                            onChange={(e) => setPriceRange({...priceRange, max: e.target.value})}
-                                            onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }}
-                                            className="w-full bg-black border border-white/10 rounded-xl py-4 pl-4 pr-10 text-white focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                        />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">원</span>
+                                        <input type="number" min="0" placeholder="예: 50000" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* 2. 정렬 칩 (클릭 즉시 적용 후 닫힘) */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-400 mb-3 flex items-center justify-between">
+                                <label className="block text-sm font-bold text-secondary mb-3 flex items-center justify-between">
                                     정렬 기준
                                     {(filter.isBestSeller || filter.isMostDownloaded) && <span className="text-xs text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3"/> 랭킹 모드 고정됨</span>}
                                 </label>
@@ -1110,47 +1007,30 @@ const GameListPage = () => {
                                     {sortOptions.map((opt) => {
                                         const isLocked = filter.isBestSeller || filter.isMostDownloaded;
                                         return (
-                                            <button
-                                                key={opt.value}
-                                                disabled={isLocked}
-                                                onClick={() => handleQuickSelect('sort', opt.value)}
-                                                className={`flex items-center gap-2 p-3 rounded-xl border font-bold text-xs md:text-sm transition-all 
-                                                ${isLocked ? 'opacity-40 cursor-not-allowed bg-black/60 border-white/5 text-gray-500'
-                                                    : filter.sort === opt.value ? 'bg-ps-blue/20 border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.2)]'
-                                                        : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                            >
-                                                <opt.icon className={`w-4 h-4 shrink-0 ${isLocked ? 'text-gray-500' : filter.sort === opt.value ? 'text-ps-blue' : opt.color}`} />
+                                            <button key={opt.value} disabled={isLocked} onClick={() => handleQuickSelect('sort', opt.value)} className={`flex items-center gap-2 p-3 rounded-xl border font-bold text-xs md:text-sm transition-all ${isLocked ? 'opacity-40 cursor-not-allowed bg-surface border-divider text-muted' : filter.sort === opt.value ? 'bg-ps-blue/10 border-ps-blue text-ps-blue shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                                <opt.icon className={`w-4 h-4 shrink-0 ${isLocked ? 'text-muted' : filter.sort === opt.value ? 'text-ps-blue' : opt.color}`} />
                                                 <span className="truncate">{opt.label}</span>
                                             </button>
                                         )})}
                                 </div>
                             </div>
 
-                            {/* 3. 할인율 & IGDB 칩 (클릭 즉시 적용 후 닫힘) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-3">최소 할인율</label>
+                                    <label className="block text-sm font-bold text-secondary mb-3">최소 할인율</label>
                                     <div className="flex flex-wrap gap-2">
                                         {discountOptions.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => handleQuickSelect('minDiscountRate', opt.value)}
-                                                className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minDiscountRate === opt.value ? 'bg-red-500/20 border-red-500 text-white' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                            >
+                                            <button key={opt.value} onClick={() => handleQuickSelect('minDiscountRate', opt.value)} className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minDiscountRate === opt.value ? 'bg-[var(--bento-red-from)] border-[color:var(--bento-red-border)] text-red-500 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
                                                 {opt.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-400 mb-3">IGDB 스코어</label>
+                                    <label className="block text-sm font-bold text-secondary mb-3">IGDB 스코어</label>
                                     <div className="flex flex-wrap gap-2">
                                         {metaScoreOptions.map((opt) => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => handleQuickSelect('minMetaScore', opt.value)}
-                                                className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minMetaScore === opt.value ? 'bg-purple-500/20 border-purple-500 text-white' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                            >
+                                            <button key={opt.value} onClick={() => handleQuickSelect('minMetaScore', opt.value)} className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minMetaScore === opt.value ? 'bg-[var(--bento-purple-from)] border-[color:var(--bento-purple-border)] text-purple-500 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
                                                 {opt.label}
                                             </button>
                                         ))}
@@ -1158,54 +1038,40 @@ const GameListPage = () => {
                                 </div>
                             </div>
 
-                            {/* 4. 플랫폼 및 기타 필터 (클릭 즉시 적용 후 닫힘) */}
                             <div>
-                                <label className="block text-sm font-bold text-gray-400 mb-3">추가 옵션</label>
+                                <label className="block text-sm font-bold text-secondary mb-3">추가 옵션</label>
                                 <div className="flex flex-wrap gap-3">
                                     {platformOptions.slice(1).map((opt) => (
-                                        <button
-                                            key={opt.value}
-                                            onClick={() => handleQuickSelect('platform', filter.platform === opt.value ? '' : opt.value)} // 토글 방식
-                                            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.platform === opt.value ? 'bg-blue-500/20 border-blue-500 text-white' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                        >
-                                            <MonitorPlay className="w-4 h-4" /> {opt.label}
+                                        <button key={opt.value} onClick={() => handleQuickSelect('platform', filter.platform === opt.value ? '' : opt.value)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.platform === opt.value ? 'bg-[var(--bento-blue-from)] border-[color:var(--bento-blue-border)] text-ps-blue shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                            <MonitorPlay className="w-4 h-4 text-blue-500" /> {opt.label}
                                         </button>
                                     ))}
-                                    <button
-                                        onClick={() => handleQuickSelect('isPlusExclusive', !filter.isPlusExclusive)}
-                                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.isPlusExclusive ? 'bg-yellow-500/20 border-yellow-500 text-white' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                    >
-                                        <span className="text-yellow-500 font-black">PLUS</span> 할인만
+                                    <button onClick={() => handleQuickSelect('isPlusExclusive', !filter.isPlusExclusive)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.isPlusExclusive ? 'bg-[var(--bento-yellow-from)] border-[color:var(--bento-yellow-border)] text-yellow-600 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                        <Star className="w-4 h-4 text-yellow-500" /> <span className="text-yellow-500 font-black">PLUS</span> 할인만
                                     </button>
-                                    <button
-                                        onClick={() => handleQuickSelect('inCatalog', !filter.inCatalog)}
-                                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.inCatalog ? 'bg-yellow-500/20 border-yellow-500 text-white' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                    >
-                                        <Gamepad2 className="w-4 h-4 text-yellow-500" /> 스페셜 카탈로그
+                                    <button onClick={() => handleQuickSelect('inCatalog', !filter.inCatalog)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.inCatalog ? 'bg-[var(--bento-yellow-from)] border-[color:var(--bento-yellow-border)] text-yellow-600 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                        <Layers className="w-4 h-4 text-yellow-500" /> 스페셜 카탈로그
                                     </button>
-                                    <button
-                                        onClick={() => handleQuickSelect('isPs5ProEnhanced', !filter.isPs5ProEnhanced)}
-                                        className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.isPs5ProEnhanced ? 'bg-gray-200 border-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'bg-black/50 border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
-                                    >
-                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-black' : ''}`} /> PS5 Pro 향상
+                                    <button onClick={() => handleFilterChange('isPs5ProEnhanced', !filter.isPs5ProEnhanced)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${filter.isPs5ProEnhanced ? 'bg-primary border-primary text-[color:var(--color-bg-base)] shadow-glow' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-base' : 'text-primary'}`} /> PS5 Pro 향상
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 검색어 입력 시 사용할 적용 버튼 */}
-                        <div className="absolute bottom-0 left-0 w-full p-4 bg-[#1a1a1a] border-t border-white/5">
-                            <button onClick={executeSearch} className="w-full bg-ps-blue hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-colors shadow-[0_0_20px_rgba(59,130,246,0.4)] flex items-center justify-center gap-2">
+                        <div className="absolute bottom-0 left-0 w-full p-4 bg-base border-t border-divider">
+                            <button onClick={executeSearch} className="w-full bg-ps-blue hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-colors shadow-glow-blue flex items-center justify-center gap-2">
                                 <Search className="w-5 h-5" /> 검색어 적용하기
                             </button>
                         </div>
                     </div>
                 </div>
-                {isQuickSearchOpen && <div className="fixed inset-0 z-[55] bg-black/60 backdrop-blur-sm transition-opacity animate-fadeIn" onClick={() => setIsQuickSearchOpen(false)}></div>}
+                {isQuickSearchOpen && <div className="fixed inset-0 z-[55] bg-backdrop backdrop-blur-md transition-opacity animate-fadeIn" onClick={() => setIsQuickSearchOpen(false)}></div>}
 
                 <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
             </div>
         </div>
     );
 };
+
 export default GameListPage;
