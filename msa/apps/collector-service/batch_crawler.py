@@ -108,7 +108,8 @@ class BrowserManager:
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-extensions",
-                "--disable-blink-features=AutomationControlled"
+                "--disable-blink-features=AutomationControlled",
+                "--js-flags=--max-old-space-size=256"
             ]
         )
         context = browser.new_context(
@@ -125,6 +126,9 @@ class BrowserManager:
             except: pass
             try: self.browser.close()
             except: pass
+
+            self.context = None
+            self.browser = None
             gc.collect()
 
             time.sleep(3)
@@ -298,6 +302,8 @@ def crawl_phase0_new_releases(bm):
                                     is_free_game = True
                     except: pass
 
+                del html_content
+
                 if is_free_game:
                     logger.info(f"   ⏭️ [Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
                     continue
@@ -340,8 +346,11 @@ def crawl_phase0_new_releases(bm):
 
                     image_url = ""
                     try:
-                        match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', page.content())
+                        temp_html_img = page.content()
+                        match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
                         if match: image_url = match.group(1).split("?")[0]
+                        del temp_html_img
+
                         if not image_url:
                             img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                             if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
@@ -361,8 +370,11 @@ def crawl_phase0_new_releases(bm):
 
                 image_url = ""
                 try:
-                    match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', page.content())
+                    temp_html_img = page.content()
+                    match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
                     if match: image_url = match.group(1).split("?")[0]
+                    del temp_html_img
+
                     if not image_url:
                         img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                         if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
@@ -414,7 +426,10 @@ def crawl_detail_and_send(page, target_url, verbose=False):
                 return None
 
         title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
-        english_title = mine_english_title(page.content())
+
+        temp_html_title = page.content()
+        english_title = mine_english_title(temp_html_title)
+        del temp_html_title
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
@@ -518,8 +533,11 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         image_url = ""
         try:
-            match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', page.content())
+            temp_html_img = page.content()
+            match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
             if match: image_url = match.group(1).split("?")[0]
+            del temp_html_img
+
             if not image_url:
                 img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                 if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
