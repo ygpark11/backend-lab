@@ -509,41 +509,51 @@ export default function GameDetailPage() {
                                                 </div>
 
                                                 <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0 w-full sm:w-auto border-t sm:border-t-0 border-divider pt-2 sm:pt-0">
-                                                    {!isCurrent && isHigherTier && priceGap < 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black text-green-600 dark:text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-1 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
-                                                        <Sparkles className="w-3 h-3" /> 상위판이 더 저렴!
-                                                        </span>
-                                                        )}
 
-                                                    {!isCurrent && isLowerTier && priceGap > 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-600 dark:text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                            <AlertTriangle className="w-3 h-3" /> 하위판인데 더 비쌈
+                                                    {/* 1. 상위판이 더 저렴! */}
+                                                    {!isCurrent && isHigherTier && priceGap < 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-1 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
+                                                            <Sparkles className="w-3 h-3 text-green-500" /> 상위판이 더 저렴!
                                                         </span>
                                                     )}
 
+                                                    {/* 2. 하위판인데 더 비쌈 */}
+                                                    {!isCurrent && isLowerTier && priceGap > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
+                                                            <AlertTriangle className="w-3 h-3 text-red-500" /> 하위판인데 더 비쌈
+                                                        </span>
+                                                    )}
+
+                                                    {/* 3 & 4. 정상적인 상위 에디션 업그레이드 */}
                                                     {!isCurrent && isHigherTier && priceGap >= 0 && (
                                                         (priceGap <= 15000 && edition.discountRate > 0) ? (
-                                                            <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-yellow-600 dark:text-yellow-600 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                                <ArrowUpRight className="w-3 h-3" /> +{priceGap.toLocaleString()}원 업그레이드
+                                                            // 소액 업그레이드 (노란색 쨍하게)
+                                                            <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
+                                                                <ArrowUpRight className="w-3 h-3 text-yellow-500" /> +{priceGap.toLocaleString()}원 업그레이드
                                                             </span>
                                                         ) : (
+                                                            // 일반적인 추가 금액 (차분한 보조색)
                                                             <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-secondary bg-surface border border-divider px-1.5 py-1 rounded whitespace-nowrap shrink-0">
                                                                 <Plus className="w-3 h-3 text-muted" /> {priceGap.toLocaleString()}원 추가
                                                             </span>
                                                         )
                                                     )}
 
+                                                    {/* 5. 절약 */}
                                                     {!isCurrent && isLowerTier && priceGap < 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-blue-700 dark:text-ps-blue bg-ps-blue/10 border border-ps-blue/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                            <TrendingDown className="w-3 h-3" /> {Math.abs(priceGap).toLocaleString()}원 절약
+                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-blue-500 bg-blue-500/10 border border-blue-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
+                                                            <TrendingDown className="w-3 h-3 text-blue-500" /> {Math.abs(priceGap).toLocaleString()}원 절약
                                                         </span>
                                                     )}
 
+                                                    {/* 할인율 표시 */}
                                                     {edition.discountRate > 0 && (
-                                                        <span className="text-xs font-black text-green-600 dark:text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
+                                                        <span className="text-xs font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
                                                             -{edition.discountRate}%
                                                         </span>
                                                     )}
+
+                                                    {/* 가격 정보 */}
                                                     <div className="flex flex-col text-right min-w-[50px] sm:min-w-[60px] shrink-0">
                                                         {edition.discountRate > 0 && <span className="text-[10px] text-muted line-through leading-none">{edition.originalPrice.toLocaleString()}원</span>}
                                                         <span className={`font-black ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
