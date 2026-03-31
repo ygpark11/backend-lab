@@ -4,7 +4,7 @@
 importScripts('https://www.gstatic.com/firebasejs/9.2.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.2.0/firebase-messaging-compat.js');
 
-// 2. Firebase 설정 (여기는 .env가 안 먹히니, 아까 그 값들을 직접 넣어주세요!)
+// 2. Firebase 설정 (환경 변수 대신 직접 입력)
 const firebaseConfig = {
     apiKey: "AIzaSyBSKbkUpFaEa9ajeujv5H04o59SfxBeZ7A",        // .env의 VITE_FIREBASE_API_KEY 값
     authDomain: "ps-tracker-bd58e.firebaseapp.com",           // .env의 VITE_FIREBASE_AUTH_DOMAIN 값
@@ -23,13 +23,19 @@ const messaging = firebase.messaging();
 
 // 5. 백그라운드 메시지 수신 리스너
 messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] 백그라운드 메시지 수신:', payload);
+    console.debug('[SW] 백그라운드 메시지 수신:', payload);
 
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/favicon.ico', // 아이콘 경로 (public 폴더 기준)
-    };
+    // 🛡방어 로직: payload.notification이 "없을 때만" 직접 알림을 띄우도록 (중복 방지)
+    // (notification이 있으면 Firebase가 알아서 띄우므로 중복 방지)
+    if (!payload.notification) {
+        // 백엔드에서 data 페이로드만 보냈을 경우를 대비한 추출
+        const notificationTitle = payload.data?.title || 'PS Tracker';
+        const notificationOptions = {
+            body: payload.data?.body || '새로운 알림이 도착했습니다.',
+            icon: '/favicon.ico',
+        };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+        self.registration.showNotification(notificationTitle, notificationOptions);
+    }
+
 });

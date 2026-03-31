@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
                 setIsAuthenticated(true);
 
                 requestFcmToken();
-                onForegroundMessage();
+                //onForegroundMessage();
             } catch (error) {
                 setUser(null);
                 setIsAuthenticated(false);
