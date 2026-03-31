@@ -44,7 +44,7 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base/95 backdrop-blur-sm animate-fadeIn p-4 sm:p-8 overflow-hidden transition-colors duration-500">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base backdrop-blur-md animate-fadeIn p-4 sm:p-8 overflow-hidden">
 
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes gpu-scan {
