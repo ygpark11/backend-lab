@@ -228,9 +228,7 @@ const NoticeModal = ({ isOpen, onClose }) => {
 
     useEffect(() => {
         if (isOpen) {
-            const scrollBarWidth = window.innerWidth - document.documentElement.clientWidth;
             document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = `${scrollBarWidth}px`;
 
             setPage(0);
             setHasMore(true);
@@ -238,12 +236,10 @@ const NoticeModal = ({ isOpen, onClose }) => {
             fetchNotices(0);
         } else {
             document.body.style.overflow = '';
-            document.body.style.paddingRight = '0px';
         }
 
         return () => {
             document.body.style.overflow = '';
-            document.body.style.paddingRight = '0px';
         };
     }, [isOpen]);
 
@@ -332,10 +328,10 @@ const NoticeModal = ({ isOpen, onClose }) => {
                                     onChange={(e) => setFormData({...formData, type: e.target.value})}
                                     className="w-full bg-surface border border-divider rounded-xl px-4 py-3 text-primary focus:border-ps-blue outline-none transition-all appearance-none text-sm md:text-base shadow-inner"
                                 >
-                                    <option value="INFO">일반 공지 (INFO)</option>
-                                    <option value="UPDATE">기능 업데이트 (UPDATE)</option>
-                                    <option value="FIX">버그 수정 (FIX)</option>
-                                    <option value="MAINTENANCE">서버 점검 (MAINTENANCE)</option>
+                                    <option value="INFO" className="bg-base text-primary">일반 공지 (INFO)</option>
+                                    <option value="UPDATE" className="bg-base text-primary">기능 업데이트 (UPDATE)</option>
+                                    <option value="FIX" className="bg-base text-primary">버그 수정 (FIX)</option>
+                                    <option value="MAINTENANCE" className="bg-base text-primary">서버 점검 (MAINTENANCE)</option>
                                 </select>
                             </div>
                             <div>
