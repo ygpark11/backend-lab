@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -108,6 +110,10 @@ public class Game {
 
     @Column(name = "is_ps5_pro_enhanced")
     private boolean isPs5ProEnhanced;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "vibe_tags", columnDefinition = "json")
+    private List<String> vibeTags;
 
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
     private List<GamePriceHistory> priceHistories = new ArrayList<>();
@@ -264,6 +270,15 @@ public class Game {
      */
     public void updateDescription(String summary) {
         this.description = summary;
+    }
+
+    public void updateAiInsights(String description, List<String> vibeTags) {
+        if (hasText(description)) {
+            this.description = description;
+        }
+        if (vibeTags != null && !vibeTags.isEmpty()) {
+            this.vibeTags = vibeTags;
+        }
     }
 
     public void updatePriceSearchInfo(Integer originalPrice, Integer currentPrice, Integer discountRate,

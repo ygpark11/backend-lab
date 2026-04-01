@@ -63,4 +63,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     void clearMostDownloadedRanks();
 
     List<Game> findByPsStoreIdIn(List<String> psStoreIds);
+
+    List<Game> findTop5ByDescriptionEqualsOrVibeTagsIsNull(String description);
 }

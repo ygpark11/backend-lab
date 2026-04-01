@@ -1,13 +1,24 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import { useLocation } from 'react-router-dom';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import {useLocation} from 'react-router-dom';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
-    AlertTriangle, ExternalLink, Gamepad2, Heart, PiggyBank, Sparkles,
-    Timer, Trash2, TrendingDown, Triangle, Server, Pickaxe, Mail
+    AlertTriangle,
+    ExternalLink,
+    Gamepad2,
+    Heart,
+    Mail,
+    Pickaxe,
+    PiggyBank,
+    Server,
+    Sparkles,
+    Timer,
+    Trash2,
+    TrendingDown,
+    Triangle
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -162,47 +173,6 @@ const WishlistPage = () => {
         const saving = game.originalPrice - game.currentPrice;
         return acc + (saving > 0 ? saving : 0);
     }, 0);
-
-    // 알림 설정 토스트 로직
-    useEffect(() => {
-        const initNotificationToast = async () => {
-            // 이미 FCM 로직이 별도 유틸이나 Context에 있다면 여기서 체크
-            const hasSkipped = sessionStorage.getItem('skipNotification');
-
-            if (Notification.permission === 'default' && !hasSkipped) {
-                toast((t) => (
-                    <div className="flex flex-col gap-3 min-w-[250px]">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span>
-                            <span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span>
-                        </div>
-                        <div className="flex gap-2">
-                            <button className="bg-ps-blue text-white px-3 py-1.5 rounded text-xs font-bold shadow-md flex-1" onClick={async () => {
-                                toast.dismiss(t.id);
-                                // 임시 주석: FCM 요청 함수 호출부
-                                // await requestFcmToken();
-                                if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨');
-                            }}>
-                                네, 받을래요!
-                            </button>
-                            <button className="bg-surface border border-divider text-secondary px-3 py-1.5 rounded text-xs font-bold flex-1 hover:bg-surface-hover hover:text-primary transition-colors" onClick={() => {
-                                toast.dismiss(t.id);
-                                sessionStorage.setItem('skipNotification', 'true');
-                            }}>
-                                나중에
-                            </button>
-                        </div>
-                    </div>
-                ), {
-                    id: 'fcm-permission-toast',
-                    duration: 10000,
-                    style: { background: 'var(--color-bg-surface)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-default)' }
-                });
-            }
-        };
-        initNotificationToast();
-    }, []);
-
 
     if (loading && page === 0) return <div className="min-h-screen pt-20 flex justify-center bg-base"><PSLoader /></div>;
 

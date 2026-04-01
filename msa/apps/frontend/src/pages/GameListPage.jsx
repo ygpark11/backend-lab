@@ -1,28 +1,54 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { getGenreBadgeStyle } from "../utils/uiUtils.js";
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import SkeletonCard from '../components/SkeletonCard';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
-import { useSearchParams, useLocation } from 'react-router-dom';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import {differenceInCalendarDays, parseISO} from 'date-fns';
+import {useLocation, useSearchParams} from 'react-router-dom';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {
-    Activity, Banknote, ChevronDown, CircleDollarSign, Clock, Filter, Gamepad2, Heart, TrendingDown, Search, Sparkles,
-    Timer, TrendingUp, Waves, X, Check, CalendarDays, Star, Server, Triangle, Layers, MonitorPlay, Percent,
-    Flame, ChevronRight, Pickaxe, Trophy, Download, Lock, Mail
+    Activity,
+    Banknote,
+    CalendarDays,
+    Check,
+    ChevronDown,
+    ChevronRight,
+    CircleDollarSign,
+    Clock,
+    Download,
+    Filter,
+    Flame,
+    Gamepad2,
+    Heart,
+    Layers,
+    Lock,
+    Mail,
+    MonitorPlay,
+    Percent,
+    Pickaxe,
+    Search,
+    Server,
+    Sparkles,
+    Star,
+    Timer,
+    TrendingDown,
+    TrendingUp,
+    Triangle,
+    Trophy,
+    Waves,
+    X
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
-import { useAuth } from '../contexts/AuthContext';
-import { requestFcmToken, isSupported } from '../utils/fcm';
+import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 
 const GameListPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { isAuthenticated, openLoginModal } = useAuth();
+    const { openLoginModal } = useAuth();
 
     const lastScrollYRef = useRef(0);
     const observer = useRef();
@@ -379,37 +405,6 @@ const GameListPage = () => {
         filter.isBestSeller,
         filter.isMostDownloaded
     ]);
-
-    useEffect(() => {
-        if (!isAuthenticated) return;
-
-        const initNotificationToast = async () => {
-            const supported = await isSupported();
-            if (!supported || !('Notification' in window)) return;
-
-            const hasSkipped = sessionStorage.getItem('skipNotification');
-
-            if (Notification.permission === 'default' && !hasSkipped) {
-                toast((t) => (
-                    <div className="flex flex-col gap-3 min-w-[250px] bg-base p-4 rounded-xl border border-divider shadow-xl">
-                        <div className="flex flex-col"><span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span><span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span></div>
-                        <div className="flex gap-2">
-                            <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => { toast.dismiss(t.id); await requestFcmToken(); if (Notification.permission === 'granted') toast.success('알림 설정 완료!'); else toast.error('알림 차단됨'); }}>네, 받을래요!</button>
-                            <button className="bg-surface hover:bg-surface-hover border border-divider text-secondary px-3 py-2 rounded-lg text-xs font-bold flex-1 transition-colors" onClick={() => {
-                                toast.dismiss(t.id);
-                                sessionStorage.setItem('skipNotification', 'true');
-                            }}>나중에</button>
-                        </div>
-                    </div>
-                ), {
-                    id: 'fcm-permission-toast',
-                    duration: 10000,
-                    style: { background: 'transparent', boxShadow: 'none', padding: 0 }
-                });
-            }
-        };
-        initNotificationToast();
-    }, [isAuthenticated]);
 
     const sortOptions = [
         { value: 'lastUpdated,desc', label: '최근 업데이트순', icon: Clock, color: 'text-blue-400' },

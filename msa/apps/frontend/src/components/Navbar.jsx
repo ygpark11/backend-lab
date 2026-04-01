@@ -1,6 +1,7 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router-dom';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import { requestFcmToken, isSupported } from '../utils/fcm';
 
 import {
     AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle, Megaphone, Menu,
@@ -32,6 +33,55 @@ const Navbar = () => {
     const lastScrollYRef = useRef(0);
 
     const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('ps-theme') === 'ps5');
+
+    useEffect(() => {
+        // 로그인하지 않은 유저에게는 알림 설정을 묻지 않음
+        if (!isAuthenticated) return;
+
+        const initNotificationToast = async () => {
+            // FCM 지원 여부 체크
+            const supported = await isSupported();
+
+            if (!supported || !('Notification' in window)) return;
+
+            const hasSkipped = sessionStorage.getItem('skipNotification');
+
+            if (Notification.permission === 'default' && !hasSkipped) {
+                toast((t) => (
+                    <div className="flex flex-col gap-3 min-w-[250px] bg-base p-4 rounded-xl border border-divider shadow-xl">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span>
+                            <span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => {
+                                toast.dismiss(t.id);
+                                await requestFcmToken();
+                                if ('Notification' in window && Notification.permission === 'granted') {
+                                    toast.success('알림 설정 완료!');
+                                } else {
+                                    toast.error('알림 차단됨');
+                                }
+                            }}>
+                                네, 받을래요!
+                            </button>
+                            <button className="bg-surface hover:bg-surface-hover border border-divider text-secondary px-3 py-2 rounded-lg text-xs font-bold flex-1 transition-colors" onClick={() => {
+                                toast.dismiss(t.id);
+                                sessionStorage.setItem('skipNotification', 'true');
+                            }}>
+                                나중에
+                            </button>
+                        </div>
+                    </div>
+                ), {
+                    id: 'fcm-permission-toast',
+                    duration: 10000,
+                    style: { background: 'transparent', boxShadow: 'none', padding: 0 }
+                });
+            }
+        };
+        initNotificationToast();
+    }, [isAuthenticated]);
 
     useEffect(() => {
         if (isLightMode) {
