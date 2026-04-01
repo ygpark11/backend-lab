@@ -9,8 +9,15 @@ export const useTransitionNavigate = () => {
             return;
         }
 
-        document.startViewTransition(() => {
+        const transition = document.startViewTransition(() => {
             navigate(to, options);
+        });
+
+        transition.ready.catch(() => {});
+        transition.finished.catch((e) => {
+            if (e.name !== 'AbortError') {
+                console.error('View transition error:', e);
+            }
         });
     };
 };

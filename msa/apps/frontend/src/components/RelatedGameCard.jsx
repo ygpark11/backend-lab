@@ -1,8 +1,8 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
-import { Sparkles, Timer, Circle, Triangle, Square, X } from 'lucide-react';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import {useLocation} from 'react-router-dom';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
+import {Circle, Sparkles, Square, Timer, Triangle, X} from 'lucide-react';
+import {differenceInCalendarDays, parseISO} from 'date-fns';
 import PSGameImage from "./common/PSGameImage.jsx";
 
 export default function RelatedGameCard({ game }) {
@@ -40,7 +40,6 @@ export default function RelatedGameCard({ game }) {
         >
             <div
                 className="aspect-[16/9] overflow-hidden relative"
-                style={{ viewTransitionName: `game-poster-${game.id}` }}
             >
                 <PSGameImage
                     src={game.imageUrl}
