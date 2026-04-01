@@ -23,11 +23,9 @@ public class AiDescriptionScheduler {
     private final GameRepository gameRepository;
     private final AiService aiService;
 
-    private static final int MAX_API_CALLS_PER_DAY = 20; // 하루 20번의 할당량
-    private static final int BATCH_SIZE = 5; // 한 번에 보낼 게임 수
-
-    // 타겟 문구 정의 (이게 보이면 AI 요약 대상임)
     private static final String TARGET_DESCRIPTION = "Full Data Crawler";
+    private static final int MAX_API_CALLS_PER_DAY = 20; // 일일 무료 호출 할당량
+    private static final int BATCH_SIZE = 5; // 한 번에 분석할 게임 수
 
     /**
      * ⏰ 매일 새벽 1시 0분 0초 실행 (KST 기준)
@@ -55,8 +53,14 @@ public class AiDescriptionScheduler {
             List<AiService.AiInsightDto> insights = aiService.generateBatchInsights(targetGames);
 
             if (insights.isEmpty()) {
-                log.warn("AI 응답이 비어있어 이번 배치를 건너뜁니다.");
-                break; // 에러 지속을 막기 위해 탈출
+                log.warn("⚠️ AI 응답 파싱 실패 또는 빈 응답. 잠시 대기 후 재시도합니다.");
+                try {
+                    Thread.sleep(10_000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                continue;
             }
 
             Map<Long, AiService.AiInsightDto> insightMap = insights.stream()
@@ -80,6 +84,6 @@ public class AiDescriptionScheduler {
                 break;
             }
         }
-        log.info("오늘의 AI Batch 완료. 총 업데이트 게임: {}건", totalSuccess);
+        log.info("[Daily Batch] Finished. Updated {} games today.", totalSuccess);
     }
 }

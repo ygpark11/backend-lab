@@ -272,9 +272,9 @@ public class Game {
         this.description = summary;
     }
 
-    public void updateAiInsights(String description, List<String> vibeTags) {
-        if (hasText(description)) {
-            this.description = description;
+    public void updateAiInsights(String summary, List<String> vibeTags) {
+        if (hasText(summary)) {
+            this.description = summary;
         }
         if (vibeTags != null && !vibeTags.isEmpty()) {
             this.vibeTags = vibeTags;

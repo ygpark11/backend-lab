@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.ai.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pstracker.catalog_service.catalog.domain.Game;
+import com.pstracker.catalog_service.catalog.domain.tag.TagTaxonomyRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -18,12 +19,17 @@ public class AiService {
 
     private final String apiKey;
     private final ObjectMapper objectMapper;
+    private final TagTaxonomyRegistry taxonomyRegistry;
+
     private static final String MODEL_NAME = "gemini-2.5-flash";
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent";
 
-    public AiService(@Value("${spring.ai.openai.api-key}") String apiKey, ObjectMapper objectMapper) {
+    public AiService(@Value("${spring.ai.openai.api-key}") String apiKey,
+                     ObjectMapper objectMapper,
+                     TagTaxonomyRegistry taxonomyRegistry) {
         this.apiKey = apiKey;
         this.objectMapper = objectMapper;
+        this.taxonomyRegistry = taxonomyRegistry;
     }
 
     /**
@@ -60,28 +66,34 @@ public class AiService {
 
     public List<AiInsightDto> generateBatchInsights(List<Game> games) {
         try {
-            // 1. 요청할 5개 게임 목록 조립
             String gameListText = games.stream()
                     .map(g -> "{id: " + g.getId() + ", title: '" + g.getName() + "'}")
                     .collect(Collectors.joining(", "));
 
-            // 2. 프롬프트 작성 (JSON 응답 강제)
+            String allowedTags = taxonomyRegistry.getAllAllowedTagsAsString();
+
             String prompt = """
-                너는 게임 큐레이터야. 다음 게임들의 3줄 요약(summary)과 감성 태그 3개(vibeTags)를 분석해줘.
+                너는 게임 큐레이터야. 다음 게임들의 3줄 요약(summary)과 감성 태그(vibeTags)를 분석해줘.
                 
                 [조건]
-                1. 태그는 반드시 다음 목록에서만 3개를 골라야 해: %s
-                2. 응답은 무조건 마크다운 없이 순수한 JSON 배열 형태로만 반환해.
-                3. 형식: [{"id": 게임ID, "summary": "3줄 요약", "vibeTags": ["#태그1", "#태그2", "#태그3"]}]
+                1. [태그 풀 제한]: 태그는 반드시 아래 제공된 카테고리별 목록에서만 골라야 해. 임의로 새로운 태그를 만들면 절대 안 돼.
+                %s
+                
+                2. [선택 개수]: 너무 지엽적인 특징은 배제하고, 유저가 이 게임을 살 때 가장 기대하는 '핵심 정체성' 위주로 최소 3개에서 최대 5개의 태그만 골라줘.
+                3. [입체적 밸런스]: 한쪽 카테고리에만 너무 쏠리지 않도록 주의해. 가급적 다양한 대분류(플레이 스타일, 분위기, 난이도, 환경 등)를 골고루 고려해서 게임의 매력이 입체적으로 드러나게 구성해.
+                4. [유연한 중복 허용]: 단, 게임의 핵심 매력을 완벽히 표현한다면 특정 대분류에서 여러 개를 중복 선택해도 좋아. (예: 플레이 스타일 카테고리에서 '#오픈월드'와 '#타격감원탑' 동시 선택 가능)
+                5. [응답 형식]: 응답은 무조건 마크다운(```json 등) 없이 순수한 JSON 배열 형태로만 반환해.
+                
+                [JSON 응답 예시]
+                [{"id": 게임ID, "summary": "한국어로 작성된 3줄 이내의 흥미진진한 요약...", "vibeTags": ["#태그1", "#태그2", "#태그3", "#태그4"]}]
                 
                 [대상 게임]
                 %s
-                """.formatted(ALLOWED_TAGS, gameListText);
+                """.formatted(allowedTags, gameListText);
 
             String responseJson = callGemini(prompt);
 
             if (responseJson != null) {
-                // 마크다운 백틱 제거 후 파싱
                 responseJson = responseJson.replace("```json", "").replace("```", "").trim();
                 return objectMapper.readValue(responseJson, new TypeReference<List<AiInsightDto>>() {});
             }
