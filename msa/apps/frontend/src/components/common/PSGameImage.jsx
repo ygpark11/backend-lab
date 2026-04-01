@@ -4,18 +4,17 @@ import { Triangle, Circle, X, Square } from 'lucide-react';
 const PSGameImage = ({ src, alt, className }) => {
     const [hasError, setHasError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const imgRef = useRef(null); // 🚀 1. useRef 추가
+    const imgRef = useRef(null);
 
     useEffect(() => {
         setHasError(false);
-        setIsLoaded(false);
-    }, [src]);
 
-    useEffect(() => {
         if (imgRef.current && imgRef.current.complete) {
             setIsLoaded(true);
+        } else {
+            setIsLoaded(false);
         }
-    }, []);
+    }, [src]);
 
     if (!src || hasError) {
         return (

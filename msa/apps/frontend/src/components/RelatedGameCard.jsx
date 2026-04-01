@@ -27,8 +27,16 @@ export default function RelatedGameCard({ game }) {
     };
 
     const handleClick = () => {
-        navigate(`/games/${game.id}`, { replace: true, state: location.state || { background: location } });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        navigate(`/games/${game.id}`, {
+            replace: true,
+            state: location.state || { background: location }
+        });
+        const modalContent = document.querySelector('.overflow-y-auto');
+        if (modalContent) {
+            modalContent.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
     return (
