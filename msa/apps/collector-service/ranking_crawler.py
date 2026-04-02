@@ -5,6 +5,8 @@ import logging
 import json
 import gc
 import requests
+import batch_crawler
+
 from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger("Ranking-Crawler")
@@ -43,7 +45,7 @@ class BrowserManager:
         self.request_count = 0
 
     def _create_browser(self):
-        logger.info("🌐 크롬 브라우저 시작 (메모리 최적화 + 랜덤 에이전트 적용)")
+        logger.info("크롬 브라우저 시작 (메모리 최적화 + 랜덤 에이전트 적용)")
         DESKTOP_USER_AGENTS = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -52,7 +54,13 @@ class BrowserManager:
 
         browser = self.p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-blink-features=AutomationControlled"]
+            args=[
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-blink-features=AutomationControlled",
+                "--js-flags=--max-old-space-size=256"
+            ]
         )
         context = browser.new_context(user_agent=user_agent, viewport={"width": 1920, "height": 1080})
         return browser, context
@@ -64,7 +72,11 @@ class BrowserManager:
             except: pass
             try: self.browser.close()
             except: pass
+
+            self.context = None
+            self.browser = None
             gc.collect()
+
             time.sleep(3)
             try: self.browser, self.context = self._create_browser()
             except:
@@ -76,6 +88,22 @@ class BrowserManager:
     def increment(self):
         self.request_count += 1
 
+def setup_page(context):
+    page = context.new_page()
+    page.set_default_timeout(30000)
+    page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
+
+    def route_intercept(route):
+        r_type = route.request.resource_type
+        # 이미지, 미디어, 폰트를 차단하여 25페이지 목록 로딩 속도 극대화 및 메모리 방어
+        if r_type in ["image", "media", "font"]:
+            route.abort()
+            return
+        route.continue_()
+
+    page.route("**/*", route_intercept)
+    return page
+
 def human_like_delay(min_sec=1.5, max_sec=3.5):
     time.sleep(random.uniform(min_sec, max_sec))
 
@@ -83,9 +111,7 @@ def human_like_delay(min_sec=1.5, max_sec=3.5):
 def fetch_product_id_from_concept(bm, concept_url):
     logger.info(f"신규 컨셉 발견! Product ID 탐색 중... ({concept_url})")
     context = bm.get_context()
-    page = context.new_page()
-
-    page.set_default_timeout(30000)
+    page = setup_page(context)
 
     product_id = None
     try:
@@ -151,6 +177,47 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
     ps_store_ids = []
 
     for page_num in range(1, MAX_PAGES + 1):
+
+        while not batch_crawler.urgent_queue.empty():
+            item = batch_crawler.urgent_queue.get()
+            req_id, ps_store_id = item['request_id'], item['ps_store_id']
+
+            logger.info(f"[VIP 새치기 발동-랭킹 수집 중!] 유저 요청 {ps_store_id} 즉시 수집 중...")
+
+            status = "FAIL"
+            error_msg = "Unknown"
+
+            # 랭킹 크롤러가 이미 띄워둔 브라우저 context를 그대로 재활용
+            context = bm.get_context()
+            vip_page = batch_crawler.setup_page(context)
+
+            try:
+                target_url = f"https://store.playstation.com/ko-kr/product/{ps_store_id}"
+                res = batch_crawler.crawl_detail_and_send(vip_page, target_url, verbose=True)
+                if res and not res.get("is_delisted"):
+                    status = "SUCCESS"
+                    error_msg = None
+                else:
+                    error_msg = "단종 또는 데이터 파싱 실패"
+            except Exception as e:
+                error_msg = str(e)
+            finally:
+                vip_page.close()
+                bm.increment()
+
+            # 콜백 전송 로직
+            callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
+            try:
+                requests.post(batch_crawler.INTERNAL_CALLBACK_URL, json=callback_payload,
+                              headers={"X-Internal-Secret": batch_crawler.CRAWLER_SECRET_KEY}, timeout=10)
+                logger.info(f"[VIP 콜백 완료] {status}")
+            except Exception as e:
+                logger.error(f"[VIP 콜백 실패] {e}")
+
+            # 완료된 요청 삭제
+            try: batch_crawler.active_requests.remove(req_id)
+            except: pass
+
         target_url = url_template.format(page_num)
         logger.info(f"{page_num}페이지 목록 탐색 중...")
 
@@ -158,8 +225,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
 
         # 1단계: 목록 페이지 열고 글씨만 빠르게 복사한 뒤 즉시 닫기!
         context = bm.get_context()
-        page = context.new_page()
-        page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
+        page = setup_page(context)
 
         try:
             page.goto(target_url, wait_until="domcontentloaded")

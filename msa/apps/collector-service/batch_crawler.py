@@ -77,9 +77,10 @@ logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Engine: Playwright (Manual S
 # [글로벌 상태 및 스레드 락]
 urgent_queue = queue.Queue()
 active_requests = set()
-crawler_lock = threading.Lock() # 절대반지 (창 2개 동시 실행 방지)
+crawler_lock = threading.Lock()
 is_batch_running = False
 is_vip_running = False
+is_ranking_running = False
 
 
 # --- [2. 브라우저 매니저 (1코어 1기가 메모리 최적화)] ---
@@ -772,7 +773,7 @@ def trigger_queue_crawl():
     request_id, ps_store_id = data.get('requestId'), data.get('psStoreId')
     if not request_id or not ps_store_id: return jsonify({"error": "Bad Request"}), 400
 
-    global is_vip_running, active_requests
+    global is_vip_running, is_batch_running, is_ranking_running, active_requests
 
     with crawler_lock:
         if request_id in active_requests:
@@ -781,12 +782,12 @@ def trigger_queue_crawl():
         active_requests.add(request_id)
         urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
-    if not is_batch_running and not is_vip_running:
+    if not is_batch_running and not is_vip_running and not is_ranking_running:
         threading.Thread(target=run_vip_only_logic, daemon=True).start()
         logger.info(f"[VIP Worker] 새치기 전담 스레드 즉시 출발!")
         return jsonify({"status": "accepted", "message": "VIP task started"}), 202
     else:
-        logger.info(f"[VIP Queue] 대기열 등록 (배치 중 새치기 대기)")
+        logger.info(f"[VIP Queue] 대기열 등록 (작업 중 새치기 대기)")
         return jsonify({"status": "accepted", "message": "Added to VIP queue"}), 202
 
 @app.route('/run', methods=['POST'])
@@ -801,19 +802,34 @@ def trigger_crawl():
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
 
+def run_ranking_wrapper():
+    global is_ranking_running
+    with crawler_lock:
+        is_ranking_running = True
+
+    try:
+        ranking_crawler.main() # 기존 랭킹 메인 로직 실행
+    finally:
+        with crawler_lock:
+            is_ranking_running = False
+        logger.info("[Ranking] 랭킹 수집 종료. 시스템 상태 초기화.")
+
 @app.route('/run-ranking', methods=['POST'])
 def trigger_ranking_crawl():
     data = request.json or {}
     if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
 
-    global is_batch_running
+    global is_batch_running, is_ranking_running
     with crawler_lock:
         if is_batch_running:
             logger.warning("메인 배치가 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
             return jsonify({"status": "error", "message": "Main batch is running"}), 409
+        if is_ranking_running:
+            return jsonify({"status": "running", "message": "Ranking is already running"}), 409
 
     logger.info("[API] 랭킹 크롤러 백그라운드 실행 요청 수신")
-    threading.Thread(target=ranking_crawler.main, daemon=True).start()
+
+    threading.Thread(target=run_ranking_wrapper, daemon=True).start()
 
     return jsonify({"status": "started", "message": "Ranking crawler triggered"}), 200
 
