@@ -8,12 +8,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 
 import java.text.Normalizer;
 import java.util.List;
-import java.util.regex.Pattern;
+
+import static org.springframework.util.StringUtils.hasText;
 
 @Slf4j
 @Component
@@ -33,17 +33,11 @@ public class IgdbApiClient {
     private String apiUrl;
 
     private final RestClient restClient = RestClient.create();
-    private String accessToken; // 메모리에 토큰 캐싱
+    private String accessToken;
 
-    // ID 추출 정규식
-    private static final Pattern PSN_ID_PATTERN = Pattern.compile("(PPSA|CUSA)\\d{5}_\\d{2}");
-
-    /**
-     * [Step 1] 트위치 서버에서 액세스 토큰 발급
-     */
     private void refreshAccessToken() {
         try {
-            log.info("🔑 Requesting new IGDB Access Token...");
+            log.debug("Requesting new IGDB Access Token...");
             IgdbAuthResponse response = restClient.post()
                     .uri(authUrl + "?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials",
                             clientId, clientSecret)
@@ -52,40 +46,44 @@ public class IgdbApiClient {
 
             if (response != null && response.accessToken() != null) {
                 this.accessToken = response.accessToken();
-                log.info("✅ IGDB Token acquired! Expires in: {}s", response.expiresIn());
+                log.info("IGDB Token acquired! Expires in: {}s", response.expiresIn());
             }
         } catch (Exception e) {
-            log.error("❌ Failed to get IGDB token", e);
+            log.error("Failed to get IGDB token", e);
             throw new RuntimeException("IGDB Auth Failed");
         }
     }
 
-    /**
-     * [Step 2] 게임 이름으로 평점 검색
-     */
     public IgdbGameResponse searchGame(String gameTitle) {
-        if (this.accessToken == null) {
-            refreshAccessToken();
-        }
-
+        if (this.accessToken == null) refreshAccessToken();
         IgdbGameResponse result = null;
 
-        // 1. 정규화된 이름으로 검색
-        String normalizedTitle = normalizeTitle(gameTitle);
-        if (StringUtils.hasText(normalizedTitle)) {
-            result = searchByName(normalizedTitle, "🔍 [1차] Normalized Search");
+        // 1. 인코딩 찌꺼기 및 구두점만 제거 (에디션 등 원본 유지)
+        String stage1Title = cleanMojibakeOnly(gameTitle);
+        if (hasText(stage1Title)) {
+            result = searchByName(stage1Title, "[Stage 1] Exact/Edition Search");
             if (result != null) return result;
         }
 
-        // 2. "핵심 키워드"만 잘라서 재검색 (부제, 에디션 불일치 해결용)
-        // 예: "Tales of Arise - Beyond the Dawn" -> "Tales of Arise"
-        String simpleTitle = extractMainTitle(gameTitle);
-        if (StringUtils.hasText(simpleTitle) && !simpleTitle.equals(normalizedTitle)) {
-            result = searchByName(simpleTitle, "🔥 [2차] Simple Keyword Search");
+        // 2. 2차 정규화 (에디션, 플랫폼, 마케팅 용어 제거)
+        String stage2Title = normalizeAggressive(stage1Title);
+        // Stage1과 결과가 다를 때만(무언가 잘려 나갔을 때만) 검색 시도 (네트워크 낭비 방지)
+        if (hasText(stage2Title) && !stage2Title.equals(stage1Title)) {
+            result = searchByName(stage2Title, "[Stage 2] Normalized Search");
+            if (result != null) return result;
+        }
+
+        // 3. 핵심 타이틀만 추출
+        String rawCoreTitle = extractCoreTitle(gameTitle);
+        // 잘라낸 뼈대 문자열을 다시 깨끗하게 정규화
+        String stage3Title = normalizeAggressive(cleanMojibakeOnly(rawCoreTitle));
+
+        if (hasText(stage3Title) && !stage3Title.equals(stage2Title)) {
+            result = searchByName(stage3Title, "[Stage 3] Core Keyword Search");
         }
 
         if (result == null) {
-            log.warn("❌ FAILED ALL: Raw='{}'", gameTitle);
+            log.warn("FAILED ALL 3 STAGES: Raw='{}', Stage3='{}'", gameTitle, stage3Title);
         }
 
         return result;
@@ -93,7 +91,6 @@ public class IgdbApiClient {
 
     private IgdbGameResponse searchByName(String title, String logPrefix) {
         String cleanTitle = title.replace("\"", "");
-        // 넉넉하게 10개 요청해서 '리뷰 수'로 정렬
         String query = String.format(
                 "fields name, aggregated_rating, aggregated_rating_count, rating, rating_count, summary, total_rating_count;" +
                         "search \"%s\";" +
@@ -103,9 +100,6 @@ public class IgdbApiClient {
         return executeQuery(query, logPrefix + ": " + cleanTitle);
     }
 
-    /**
-     * IGDB API 쿼리 실행 공통 로직
-     */
     private IgdbGameResponse executeQuery(String queryBody, String logPrefix) {
         try {
             List<IgdbGameResponse> responses = restClient.post()
@@ -118,89 +112,65 @@ public class IgdbApiClient {
                     .body(new ParameterizedTypeReference<>() {});
 
             if (responses != null && !responses.isEmpty()) {
-
-                // ... 기존 정렬 및 선택 로직 ...
-                IgdbGameResponse bestMatch = responses.stream()
+                return responses.stream()
                         .sorted((g1, g2) -> {
                             int count1 = (g1.totalRatingCount() == null) ? 0 : g1.totalRatingCount();
                             int count2 = (g2.totalRatingCount() == null) ? 0 : g2.totalRatingCount();
-
-                            // 2. 리뷰 수 내림차순 정렬 (298 > 11 > 10 > 0)
-                            return Integer.compare(count2, count1);
+                            return Integer.compare(count2, count1); // 리뷰 수 내림차순
                         })
                         .findFirst()
                         .orElse(responses.get(0));
-
-                return bestMatch;
             }
         } catch (Exception e) {
-            log.warn("⚠️ IGDB Error [{}]: {}", logPrefix, e.getMessage());
+            log.warn("IGDB Error [{}]: {}", logPrefix, e.getMessage());
         }
         return null;
     }
 
-    /**
-     * [제목 자르기] 콜론(:), 하이픈(-), 붙임표(–) 기준으로 제목을 자르고
-     * 메인 타이틀 부분만 반환합니다.
-     * 예: "Gran Turismo™ 7: Deluxe Edition" -> "Gran Turismo 7"
-     */
-    private String extractMainTitle(String rawTitle) {
-        if (!StringUtils.hasText(rawTitle)) return "";
-        // 콜론(:), 하이픈(-), 붙임표(–) 기준으로 자름
-        String[] parts = rawTitle.split("[:\\-–]");
-        if (parts.length > 0) {
-            String mainPart = parts[0].trim();
-            // 너무 짧으면(2글자 이하) 검색 위험하므로 제외 (예: "GT: Sport" -> "GT"는 위험)
-            if (mainPart.length() >= 3) {
-                return normalizeTitle(mainPart); // 자른 것도 정규화 한번 태움 (특문 제거)
-            }
-        }
-        return "";
-    }
-
-    /**
-     * [제목 정규화] 검색 정확도를 높이기 위해 불필요한 노이즈를 제거합니다.
-     * 예: "철권 8 (중국어(간체자), 한국어)" -> "철권 8"
-     * 예: "Gran Turismo™ 7" -> "Gran Turismo 7"
-     */
-    private String normalizeTitle(String rawTitle) {
-        if (!StringUtils.hasText(rawTitle)) return "";
-
-        String result = rawTitle.strip();
-
-        // 0. 악센트 제거 (Ragnarök -> Ragnarok)
-        result = Normalizer.normalize(result, Normalizer.Form.NFD)
-                .replaceAll("\\p{M}", "");
-
-        result = result
-                // 1. 인코딩/전각 문자 정리
+    private String cleanMojibakeOnly(String rawTitle) {
+        if (!hasText(rawTitle)) return "";
+        return rawTitle
+                .replaceAll("[Â„€“„€“]", " ") // 로그에 등장한 괴상한 문자들
+                .replaceAll("YEAH! YOU WANT \\\\", "")
                 .replaceAll("â€™", "'")
                 .replaceAll("â¢", "")
-                .replaceAll("[™®]", "")
+                .replaceAll("[™®©]", "")
                 .replaceAll("＆", "&")
+                .replaceAll("[:\\-,&\\+–]", " ")
+                .replaceAll("\\s+", " ").strip(); // 다중 공백을 단일 공백으로 압축
+    }
 
-                // 2. 괄호/대괄호 제거
-                .replaceAll("\\(.*?\\)", "")
+    private String normalizeAggressive(String title) {
+        if (!hasText(title)) return "";
+
+        // 악센트 제거 (Ragnarök -> Ragnarok)
+        String result = Normalizer.normalize(title, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+
+        result = result
+                .replaceAll("\\(.*?\\)", "") // (한국어판) 등 제거
                 .replaceAll("\\[.*?\\]", "")
-
-                // 3. 플랫폼/데모 제거
                 .replaceAll("(?i)\\b(PS4|PS5|PS\\s?VR2|PS\\s?VR)\\b", "")
                 .replaceAll("(?i)PlayStation\\s*Hits", "")
-                .replaceAll("(?i)\\b(demo|trial)\\b", "")
-
-                // 4. [업데이트] 에디션 키워드 추가 (sinful, ritual, rebuild, deadman)
-                // sinful, ritual 등이 추가되어 "Sinful Edition" 패턴이 삭제됩니다.
+                .replaceAll("(?i)\\b(demo|trial|full game|pack|bundle)\\b", "")
                 .replaceAll("(?i)\\b((standard|deluxe|ultimate|premium|collector's|complete|digital|director's|game of the year|goty|cross-gen|launch|special|anniversary|sound|anime|music|bgm|gold|silver|platinum|definitive|expanded|master|legacy|galactic|unlimited|championship|contribution|franchise|evolved|extras|year\\s*\\d+|ragnarok|valhalla|sinful|ritual|rebuild|deadman)\\s*)+(edition|cut|ver|version|bundle|pack|set|collection|anthology)\\b", "")
-
-                // 4-1. 잔여 형용사 정리
+                .replaceAll("(?i)\\b(remastered|remaster|collection)\\b", "")
                 .replaceAll("(?i)\\b(digital|deluxe|premium|standard|ultimate|anniversary|gold|silver|platinum|definitive|expanded|master|legacy|galactic|unlimited|championship|contribution|franchise|evolved|extras|sinful|ritual|rebuild|deadman)\\s*$", "")
-
-                // 5. 구두점 정리
                 .replaceAll("[:\\-,&\\+]", " ")
-
-                // 6. 공백 정리
                 .replaceAll("\\s+", " ").strip();
 
         return result;
+    }
+
+    private String extractCoreTitle(String title) {
+        if (!hasText(title)) return "";
+
+        String[] parts = title.split("[:\\-–]");
+        if (parts.length > 0) {
+            String mainPart = parts[0].trim();
+            if (mainPart.length() >= 3) {
+                return mainPart;
+            }
+        }
+        return title;
     }
 }

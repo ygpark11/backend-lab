@@ -8,47 +8,30 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-@SpringBootTest // application.yml의 진짜 IGDB Key를 읽어와서 실제 API를 호출합니다!
+@SpringBootTest
 class IgdbApiClientTest {
 
-    /*@Autowired
+    @Autowired
     private IgdbApiClient igdbApiClient;
 
-    @Test
-    @DisplayName("IGDB API 실제 연동 테스트: 위쳐 3 한글명 및 평점 추출 확인")
-    void testSearchGame_FinalFantasy() {
-        // Given (검색할 찐 영문 타이틀)
-        String targetGame = "The Witcher 3: Wild Hunt";
+    /*@Test
+    @DisplayName("IGDB 3단계 Fallback 검증: 용과 같이 히어로 에디션")
+    void testSearchGame_Yakuza() {
+        // Given: 아까 1차에서 Edition 날아가서 실패했던 그 악질 타이틀
+        String targetGame = "Yakuza: Like a Dragon";
 
-        // When (실제 IGDB API 호출)
+        // When: 3단계 로직이 적용된 searchGame 호출
         IgdbGameResponse response = igdbApiClient.searchGame(targetGame);
 
-        // Then (결과 출력 및 검증)
-        assertNotNull(response, "🚨 IGDB에서 응답을 받지 못했습니다! (API Key나 네트워크 확인)");
+        // Then
+        assertNotNull(response, "🚨 3단계 다 거쳤는데도 못 찾았습니다!");
 
         System.out.println("\n=================================================");
-        System.out.println("🎮 [검색된 게임 원본명] : " + response.name());
-        System.out.println("⭐ [IGDB 평점 / 리뷰수] : " + response.criticScore() + " / " + response.totalRatingCount());
-
-        boolean foundKorean = false;
-
-        if (response.alternativeNames() != null && !response.alternativeNames().isEmpty()) {
-            System.out.println("📝 [번역명 / 대체 이름 목록]");
-            for (var alt : response.alternativeNames()) {
-                System.out.println("   - " + alt.name() + " (비고: " + alt.comment() + ")");
-
-                // 한글 정규식으로 한글명이 포함되어 있는지 확인!
-                if (alt.name().matches(".*[ㄱ-ㅎㅏ-ㅣ가-힣]+.*")) {
-                    System.out.println("   🎉 [찾았다 요놈! 한글명 매칭 성공] -> " + alt.name());
-                    foundKorean = true;
-                }
-            }
-        } else {
-            System.out.println("❌ 대체 이름 데이터가 없습니다. (쿼리에 alternative_names 추가했는지 확인!)");
-        }
+        System.out.println("🎯 [입력한 검색어] : " + targetGame);
+        System.out.println("✅ [IGDB 매칭 결과] : " + response.name());
+        System.out.println("⭐ [IGDB 전문가 평점] : " + response.criticScore() + " (평가자: " + response.criticCount() + "명)");
+        System.out.println("👥 [IGDB 유저 평점]   : " + response.userScore() + " (평가자: " + response.userCount() + "명)");
+        System.out.println("📊 [총 리뷰 수 (통합)] : " + response.totalRatingCount() + "명");
         System.out.println("=================================================\n");
-
-        // (선택) 무조건 한글명을 하나 이상 가져와야만 테스트 성공으로 처리하고 싶다면 아래 주석 해제
-        // assertTrue(foundKorean, "한글 이름을 찾지 못했습니다!");
     }*/
 }

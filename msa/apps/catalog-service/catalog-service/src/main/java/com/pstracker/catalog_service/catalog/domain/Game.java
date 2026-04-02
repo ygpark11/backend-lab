@@ -255,7 +255,6 @@ public class Game {
      * @param userScore 유저 점수
      */
     public void updateRatings(Integer metaScore, Double userScore) {
-        // null이 아닐 때만 갱신 (기존 데이터 보존)
         if (metaScore != null) {
             this.metaScore = metaScore;
         }
