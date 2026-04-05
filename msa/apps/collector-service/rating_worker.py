@@ -151,7 +151,7 @@ def crawl_metacritic_single(game_title):
 
     return result
 
-def start_polling(base_url, secret_key):
+def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
     logger.info("[Stealth Worker] 메타크리틱 평점 수집 워커가 백그라운드에서 가동됩니다.")
 
     API_TARGET_URL = f"{base_url}/api/internal/scraping/ratings/target"
