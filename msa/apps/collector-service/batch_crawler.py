@@ -850,7 +850,16 @@ def run_ranking_wrapper():
         is_ranking_running = True
 
     try:
-        ranking_crawler.main()
+        vip_helpers = {
+            'queue': urgent_queue,
+            'active_requests': active_requests,
+            'setup_page': setup_page,
+            'crawl_detail_and_send': crawl_detail_and_send,
+            'callback_url': INTERNAL_CALLBACK_URL,
+            'secret_key': CRAWLER_SECRET_KEY
+        }
+
+        ranking_crawler.main(vip_helpers)
     finally:
         with crawler_lock:
             is_ranking_running = False
@@ -874,11 +883,14 @@ def trigger_ranking_crawl():
 def health_check():
     return jsonify({"status": "UP", "running": is_batch_running}), 200
 
+def check_if_busy():
+    return is_batch_running or is_ranking_running or is_vip_running or not urgent_queue.empty()
+
+def set_rating_running(state):
+    global is_rating_running
+    is_rating_running = state
+
 if __name__ == '__main__':
-    threading.Thread(
-            target=rating_worker.start_polling,
-            args=(BASE_URL, CRAWLER_SECRET_KEY),
-            daemon=True
-        ).start()
+    threading.Thread(target=rating_worker.start_polling, args=(BASE_URL, CRAWLER_SECRET_KEY, check_if_busy, set_rating_running), daemon=True).start()
 
     app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)

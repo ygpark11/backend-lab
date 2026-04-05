@@ -5,7 +5,6 @@ import random
 import logging
 import requests
 import gc
-import batch_crawler
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
@@ -153,7 +152,6 @@ def crawl_metacritic_single(game_title):
     return result
 
 def start_polling(base_url, secret_key):
-    """5분마다 깨어나서 1호기(Java)에 일거리가 있는지 물어보는 데몬 워커"""
     logger.info("[Stealth Worker] 메타크리틱 평점 수집 워커가 백그라운드에서 가동됩니다.")
 
     API_TARGET_URL = f"{base_url}/api/internal/scraping/ratings/target"
@@ -166,18 +164,18 @@ def start_polling(base_url, secret_key):
         # [VIP 새치기 절대 양보 로직]
         # 1. 메인 락이 잠겨있거나 (일배치, 랭킹 수집 중)
         # 2. 큐에 VIP(새치기) 요청이 단 1개라도 대기 중이면 워커는 절대 실행되지 않고 다시 잠듬
-        if batch_crawler.is_batch_running or batch_crawler.is_ranking_running or batch_crawler.is_vip_running or not batch_crawler.urgent_queue.empty():
+        if check_if_busy():
             logger.debug("메인 작업 또는 VIP 대기 중. 평점 워커는 턴을 넘깁니다.")
             continue
 
-        # 철통 방어 속에서 안전하게 락 획득
+        # 락 획득
         try:
-            batch_crawler.is_rating_running = True
+            set_rating_running(True)
 
             # 1. 1호기(Java)에 타겟 요청
             res = requests.get(API_TARGET_URL, headers=HEADERS, timeout=10)
 
-            # 1호기가 "일거리 없어!" 하고 204 No Content를 주면 조용히 다음 턴으로 넘김
+            # 1호기가 204 No Content를 주면 조용히 다음 턴으로 넘김
             if res.status_code == 204:
                 continue
 
@@ -216,4 +214,4 @@ def start_polling(base_url, secret_key):
         except Exception as e:
             logger.error(f"스텔스 워커 루프 에러: {e}")
         finally:
-            batch_crawler.is_rating_running = False
+            set_rating_running(False)

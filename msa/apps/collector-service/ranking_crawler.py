@@ -5,7 +5,6 @@ import logging
 import json
 import gc
 import requests
-import batch_crawler
 
 from playwright.sync_api import sync_playwright
 
@@ -178,7 +177,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
 
     for page_num in range(1, MAX_PAGES + 1):
 
-        while not batch_crawler.urgent_queue.empty():
+        while vip_helpers and not vip_helpers['queue'].empty():
             item = batch_crawler.urgent_queue.get()
             req_id, ps_store_id = item['request_id'], item['ps_store_id']
 
@@ -189,11 +188,11 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
 
             # 랭킹 크롤러가 이미 띄워둔 브라우저 context를 그대로 재활용
             context = bm.get_context()
-            vip_page = batch_crawler.setup_page(context)
+            vip_page = vip_helpers['setup_page'](context)
 
             try:
                 target_url = f"https://store.playstation.com/ko-kr/product/{ps_store_id}"
-                res = batch_crawler.crawl_detail_and_send(vip_page, target_url, verbose=True)
+                res = vip_helpers['crawl_detail_and_send'](vip_page, target_url, verbose=True)
                 if res and not res.get("is_delisted"):
                     status = "SUCCESS"
                     error_msg = None
@@ -208,8 +207,8 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
             # 콜백 전송 로직
             callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
             try:
-                requests.post(batch_crawler.INTERNAL_CALLBACK_URL, json=callback_payload,
-                              headers={"X-Internal-Secret": batch_crawler.CRAWLER_SECRET_KEY}, timeout=10)
+                requests.post(vip_helpers['callback_url'], json=callback_payload,
+                              headers={"X-Internal-Secret": vip_helpers['secret_key']}, timeout=10)
                 logger.info(f"[VIP 콜백 완료] {status}")
             except Exception as e:
                 logger.error(f"[VIP 콜백 실패] {e}")
@@ -274,7 +273,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
     return ps_store_ids
 
 # --- [6. 메인 실행 블록] ---
-def main():
+def main(vip_helpers=None):
     logger.info("랭킹 크롤러 시작")
     concept_cache = load_cache()
     logger.info(f"로컬 캐시(수첩) 로드 완료: 기존 저장된 컨셉 {len(concept_cache)}개")
@@ -283,13 +282,13 @@ def main():
         bm = BrowserManager(p)
 
         try:
-            best_seller_ids = collect_rankings("BEST_SELLER", TARGETS["BEST_SELLER"], bm, concept_cache)
+            best_seller_ids = collect_rankings("BEST_SELLER", TARGETS["BEST_SELLER"], bm, concept_cache, vip_helpers)
             send_to_backend("BEST_SELLER", best_seller_ids)
 
             logger.info("서버 휴식 (10초 대기)")
             time.sleep(10)
 
-            most_downloaded_ids = collect_rankings("MOST_DOWNLOADED", TARGETS["MOST_DOWNLOADED"], bm, concept_cache)
+            most_downloaded_ids = collect_rankings("MOST_DOWNLOADED", TARGETS["MOST_DOWNLOADED"], bm, concept_cache, vip_helpers)
             send_to_backend("MOST_DOWNLOADED", most_downloaded_ids)
 
         except Exception as e:
