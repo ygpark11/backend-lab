@@ -203,7 +203,7 @@ def check_and_run_vip(bm):
         item = urgent_queue.get()
         req_id, ps_store_id = item['request_id'], item['ps_store_id']
 
-        logger.info(f"🚨 [VIP 새치기 발동!] 유저 요청 {ps_store_id} 즉시 수집 중...")
+        logger.info(f"[VIP 새치기 발동!] 유저 요청 {ps_store_id} 즉시 수집 중...")
         context = bm.get_context()
         page = setup_page(context)
 
@@ -248,7 +248,7 @@ def run_vip_only_logic():
                 except: pass
         finally:
             is_vip_running = False
-            logger.info("🛑 [VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
+            logger.info("[VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
 
 
 # --- [5. Phase 0: 신작 탐사 ] ---
@@ -278,7 +278,7 @@ def crawl_phase0_new_releases(bm):
         logger.info(f"   👀 [Phase 0] 1페이지에서 {len(candidates)}개의 후보군 발굴 성공")
 
     except Exception as e:
-        logger.error(f"❌ [Phase 0] 최신 카테고리 로딩 실패: {e}")
+        logger.error(f"[Phase 0] 최신 카테고리 로딩 실패: {e}")
         return
     finally:
         page.close()
@@ -317,7 +317,7 @@ def crawl_phase0_new_releases(bm):
                 del html_content
 
                 if is_free_game:
-                    logger.info(f"   ⏭️ [Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
+                    logger.info(f"   [Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
                     continue
 
                 ps_store_id = None
@@ -400,7 +400,7 @@ def crawl_phase0_new_releases(bm):
                 }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
 
         except Exception as e:
-            logger.error(f"❌ [Phase 0] {url} 분석 실패: {e}")
+            logger.error(f"[Phase 0] {url} 분석 실패: {e}")
         finally:
             page.close()
             bm.increment()
@@ -600,7 +600,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         return payload
     except Exception as e:
-        logger.error(f"   🔥 Error: {target_url} -> {e}")
+        logger.error(f"   Error: {target_url} -> {e}")
         return None
 
 
@@ -613,7 +613,7 @@ def fetch_update_targets():
             logger.info(f"📥 Received {len(targets)} targets.")
             return targets
     except Exception as e:
-        logger.error(f"❌ Connection Error: {e}")
+        logger.error(f"Connection Error: {e}")
     return []
 
 def send_discord_summary(total_scanned, deals_list, delisted_games):
@@ -850,7 +850,7 @@ def run_ranking_wrapper():
         is_ranking_running = True
 
     try:
-        ranking_crawler.main() # 기존 랭킹 메인 로직 실행
+        ranking_crawler.main()
     finally:
         with crawler_lock:
             is_ranking_running = False
