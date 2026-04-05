@@ -39,6 +39,7 @@ public class CatalogService {
     private final WishlistRepository wishlistRepository;
     private final GenreRepository genreRepository;
     private final GameVoteRepository gameVoteRepository;
+    private final CrawlJobRepository crawlJobRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final IgdbApiClient igdbApiClient;
 
@@ -98,6 +99,10 @@ public class CatalogService {
         // 7. 모든 변경이 끝난 후 마지막에 캐시 삭제!
         // 다음 조회 시 최신 데이터로 다시 캐싱됨
         gameReadService.evictGameDetailCache(game.getId());
+
+        if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(3))) {
+            requeueRecentGameForRating(game.getId());
+        }
     }
 
     /**
@@ -196,15 +201,19 @@ public class CatalogService {
             String rawEnglishTitle = request.getEnglishTitle();
             String searchTitle = StringUtils.hasText(rawEnglishTitle) ? rawEnglishTitle : request.getTitle();
 
-            log.debug("🎯 Fetching IGDB ratings for: {}", searchTitle);
+            log.debug("Fetching IGDB ratings for: {}", searchTitle);
             IgdbGameResponse igdbInfo = igdbApiClient.searchGame(searchTitle);
 
             if (igdbInfo != null) {
-                Integer metaScore = (igdbInfo.criticScore() != null) ? (int) Math.round(igdbInfo.criticScore()) : null;
+                Integer criticScore = (igdbInfo.criticScore() != null) ? (int) Math.round(igdbInfo.criticScore()) : null;
+                Integer criticCount = igdbInfo.criticCount();
                 Double userScore = igdbInfo.userScore();
+                Integer userCount = igdbInfo.userCount();
 
-                game.updateRatings(metaScore, userScore);
-                log.debug("⭐ Ratings updated: Meta={}, User={}", metaScore, userScore);
+                game.updateIgdbRatings(criticScore, criticCount, userScore, userCount);
+
+                log.debug("⭐ IGDB Ratings updated: Critic={} ({}명), User={} ({}명)",
+                        criticScore, criticCount, userScore, userCount);
             } else {
                 log.debug("🌫️ IGDB Miss: {}", searchTitle);
             }
@@ -441,10 +450,36 @@ public class CatalogService {
                     .retrieve()
                     .body(String.class);
 
-            log.info("✅ Crawler Response: {}", response);
+            log.info("Crawler Response: {}", response);
         } catch (Exception e) {
-            log.error("❌ Crawler Trigger Failed: {}", e.getMessage());
+            log.error("Crawler Trigger Failed: {}", e.getMessage());
             throw new RuntimeException("크롤러 서버 연결 실패: " + e.getMessage());
+        }
+    }
+
+    private void requeueRecentGameForRating(Long gameId) {
+        String targetType = "METACRITIC";
+
+        // 1. 이미 큐에서 대기 중이거나 작업 중이면 무시
+        List<CrawlJob.JobStatus> activeStatuses = List.of(CrawlJob.JobStatus.PENDING, CrawlJob.JobStatus.PROCESSING);
+        if (crawlJobRepository.existsByGameIdAndTargetTypeAndStatusIn(gameId, targetType, activeStatuses)) {
+            return;
+        }
+
+        // 2. 예전에 수집된 이력(DONE, FAILED, NOT_FOUND)이 있다면 PENDING 으로 덮어쓰기
+        List<CrawlJob.JobStatus> finishedStatuses = List.of(CrawlJob.JobStatus.DONE, CrawlJob.JobStatus.FAILED, CrawlJob.JobStatus.NOT_FOUND);
+        int updatedRows = crawlJobRepository.requeueFinishedJob(
+                gameId,
+                targetType,
+                CrawlJob.JobStatus.PENDING,
+                finishedStatuses
+        );
+
+        // 3. 업데이트된 행이 0개라면 아예 DB에 없는 신규 게임이므로 create 메서드로 생성
+        if (updatedRows == 0) {
+            CrawlJob newJob = CrawlJob.create(gameId, targetType);
+            crawlJobRepository.save(newJob);
+            log.debug("[Rating-Queue] 신규 게임 평점 수집 대기열 등록 완료: {}", gameId);
         }
     }
 

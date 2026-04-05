@@ -60,6 +60,30 @@ public class Game {
     @Column(name = "user_score")
     private Double userScore;
 
+    @Column(name = "igdb_critic_score")
+    private Integer igdbCriticScore;
+
+    @Column(name = "igdb_critic_count")
+    private Integer igdbCriticCount;
+
+    @Column(name = "igdb_user_score")
+    private Double igdbUserScore;
+
+    @Column(name = "igdb_user_count")
+    private Integer igdbUserCount;
+
+    @Column(name = "mc_meta_score")
+    private Integer mcMetaScore;
+
+    @Column(name = "mc_meta_count")
+    private Integer mcMetaCount;
+
+    @Column(name = "mc_user_score")
+    private Double mcUserScore;
+
+    @Column(name = "mc_user_count")
+    private Integer mcUserCount;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -176,7 +200,7 @@ public class Game {
             this.chosungName = ChosungUtils.extract(name);
         }
 
-        if (hasText(englishName)) {
+        if (!hasText(this.englishName) && hasText(englishName)) {
             this.englishName = englishName;
         }
 
@@ -249,17 +273,40 @@ public class Game {
         }
     }
 
-    /**
-     * 메타크리틱 점수 및 유저 점수 업데이트
-     * @param metaScore 메타크리틱 점수
-     * @param userScore 유저 점수
-     */
-    public void updateRatings(Integer metaScore, Double userScore) {
-        if (metaScore != null) {
-            this.metaScore = metaScore;
+    public void updateIgdbRatings(Integer criticScore, Integer criticCount, Double userScore, Integer userCount) {
+        if(criticScore != null) {
+            this.igdbCriticScore = criticScore;
+        }
+        if(criticCount != null) {
+            this.igdbCriticCount = criticCount;
+        }
+        if(userScore != null) {
+            this.igdbUserScore = userScore;
+        }
+        if(userCount != null) {
+            this.igdbUserCount = userCount;
+        }
+
+        if (criticScore != null) {
+            this.metaScore = criticScore;
         }
         if (userScore != null) {
             this.userScore = userScore;
+        }
+    }
+
+    public void updateMetacriticRatings(Integer metaScore, Integer metaCount, Double userScore, Integer userCount) {
+        if (metaScore != null) {
+            this.mcMetaScore = metaScore;
+        }
+        if (metaCount != null) {
+            this.mcMetaCount = metaCount;
+        }
+        if (userScore != null) {
+            this.mcUserScore = userScore;
+        }
+        if (userCount != null) {
+            this.mcUserCount = userCount;
         }
     }
 

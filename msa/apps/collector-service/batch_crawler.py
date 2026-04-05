@@ -16,6 +16,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 from flask import Flask, jsonify, request
 import requests
 import ranking_crawler
+import rating_worker
 
 # --- [1. 설정 및 로깅 초기화] ---
 if not os.path.exists('logs'):
@@ -29,15 +30,24 @@ console_handler.setFormatter(log_formatter)
 
 logger = logging.getLogger("PS-Collector")
 logger.setLevel(logging.INFO)
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+if not logger.handlers:
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
 logger.propagate = False
 
 ranking_logger = logging.getLogger("Ranking-Crawler")
 ranking_logger.setLevel(logging.INFO)
-ranking_logger.addHandler(file_handler)
-ranking_logger.addHandler(console_handler)
+if not ranking_logger.handlers:
+    ranking_logger.addHandler(file_handler)
+    ranking_logger.addHandler(console_handler)
 ranking_logger.propagate = False
+
+rating_logger = logging.getLogger("Rating-Worker")
+rating_logger.setLevel(logging.INFO)
+if not rating_logger.handlers:
+    rating_logger.addHandler(file_handler)
+    rating_logger.addHandler(console_handler)
+rating_logger.propagate = False
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -81,6 +91,7 @@ crawler_lock = threading.Lock()
 is_batch_running = False
 is_vip_running = False
 is_ranking_running = False
+is_rating_running = False
 
 
 # --- [2. 브라우저 매니저 (1코어 1기가 메모리 최적화)] ---
@@ -396,18 +407,43 @@ def crawl_phase0_new_releases(bm):
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
 
 
-# --- [6. 메인 게임 파싱 (기존 완벽한 로직 유지)] ---
+# --- [6. 메인 게임 파싱 ] ---
 def mine_english_title(html_content):
     try:
+        # 1. 정규식 매칭 실패 시 즉시 종료
         match = re.search(r'"invariantName"\s*:\s*"([^"]+)"', html_content)
-        if match:
-            raw_title = match.group(1)
-            try: raw_title = raw_title.encode('utf-8').decode('unicode_escape')
-            except: pass
-            raw_title = raw_title.replace("’", "'").replace("‘", "'")
-            return re.sub(r'[™®â¢]', '', raw_title).strip()
-    except: return None
-    return None
+        if not match:
+            return None
+
+        raw_title = match.group(1)
+
+        # 2. 유니코드 이스케이프 복구 (예: \u0026 -> &)
+        try:
+            raw_title = raw_title.encode('utf-8').decode('unicode_escape')
+        except Exception:
+            pass # 디코딩 실패 시 원본 유지
+
+        # 3. 악성 인코딩(Mojibake) 및 스마트 따옴표 치환
+        raw_title = raw_title.replace("\u0080\u0099", "'").replace("â\u0080\u0099", "'")
+        raw_title = raw_title.replace("’", "'").replace("‘", "'")
+
+        # 특정 게임(YEAH! YOU WANT...) 백슬래시 찌꺼기 및 제어 문자 제거
+        raw_title = raw_title.replace("\u0084", " ")
+        raw_title = raw_title.replace("YEAH! YOU WANT \\", "")
+        raw_title = re.sub(r'[Â„€“”]', ' ', raw_title)
+
+        # 4. 검색에 방해되는 상표권 기호(™®©) 제거 및 숨은 탭(\t) 치환
+        raw_title = re.sub(r'[™®©â¢]', '', raw_title)
+        raw_title = raw_title.replace("＆", "&").replace("\t", " ")
+
+        # 5. 다중 공백을 단일 공백으로 압축 후 양끝 공백 제거
+        cleaned_title = re.sub(r'\s+', ' ', raw_title).strip()
+
+        return cleaned_title
+
+    except Exception:
+        # 예상치 못한 에러 발생 시 크롤러가 죽지 않도록 방어
+        return None
 
 def crawl_detail_and_send(page, target_url, verbose=False):
     try:
@@ -622,35 +658,90 @@ def refresh_java_server_cache():
 # --- [8. 메인 배치 로직] ---
 def run_batch_crawler_logic():
     global is_batch_running
+
     with crawler_lock:
+        if is_batch_running:
+            return
         is_batch_running = True
-        logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
 
-        total_processed_count = 0
-        collected_deals = []
-        delisted_games = []
-        visited_urls = set()
+    logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
 
-        try:
-            with sync_playwright() as p:
-                bm = BrowserManager(p)
+    total_processed_count = 0
+    collected_deals = []
+    delisted_games = []
+    visited_urls = set()
 
-                # [Phase 0] 신작 수집소
-                try: crawl_phase0_new_releases(bm)
-                except Exception as e: logger.error(f"🔥 Phase 0 Error: {e}")
+    try:
+        with sync_playwright() as p:
+            bm = BrowserManager(p)
 
-                targets = fetch_update_targets()
+            # [Phase 0] 신작 수집소
+            try: crawl_phase0_new_releases(bm)
+            except Exception as e: logger.error(f"🔥 Phase 0 Error: {e}")
 
-                # [Phase 1] 기존 타겟 갱신
-                if targets:
-                    logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
-                    for idx, url in enumerate(targets, 1):
-                        check_and_run_vip(bm) # 루프마다 VIP 새치기 확인
-                        logger.info(f"   ▶️ [Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
+            targets = fetch_update_targets()
 
-                        page = setup_page(bm.get_context())
+            # [Phase 1] 기존 타겟 갱신
+            if targets:
+                logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
+                for idx, url in enumerate(targets, 1):
+                    check_and_run_vip(bm) # 루프마다 VIP 새치기 확인
+                    logger.info(f"   ▶️ [Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
+
+                    page = setup_page(bm.get_context())
+                    try:
+                        res = crawl_detail_and_send(page, url)
+                        if res:
+                            if res.get("is_delisted"): delisted_games.append(res)
+                            else:
+                                total_processed_count += 1
+                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                        visited_urls.add(url)
+                    except Exception as e:
+                        logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
+                    finally:
+                        page.close()
+                        bm.increment()
+
+            # [Phase 2] 신규 게임 탐색
+            logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
+            base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
+            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+
+            for current_page in range(1, 11):
+                logger.info(f"   📖 Scanning Category Page {current_page}/10")
+                page_candidates = []
+
+                cat_page = setup_page(bm.get_context())
+                try:
+                    target_list_url = f"{base_category_path}/{current_page}{search_params}"
+                    cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
+                    try: cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                    except:
+                        cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
+                        cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+
+                    human_like_scroll(cat_page)
+
+                    for el in cat_page.locator("a[href*='/product/']").all():
+                        url = el.get_attribute("href")
+                        if url:
+                            full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
+                            if "/ko-kr/product/" in full_url and full_url not in visited_urls:
+                                if full_url not in page_candidates: page_candidates.append(full_url)
+                except Exception as e: logger.warning(f"   ⚠️ List load failed: {e}")
+                finally:
+                    cat_page.close()
+                    bm.increment()
+
+                if page_candidates:
+                    logger.info(f"      Found {len(page_candidates)} new candidates.")
+                    for url in page_candidates:
+                        check_and_run_vip(bm)
+
+                        detail_page = setup_page(bm.get_context())
                         try:
-                            res = crawl_detail_and_send(page, url)
+                            res = crawl_detail_and_send(detail_page, url)
                             if res:
                                 if res.get("is_delisted"): delisted_games.append(res)
                                 else:
@@ -660,70 +751,20 @@ def run_batch_crawler_logic():
                         except Exception as e:
                             logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
                         finally:
-                            page.close()
+                            detail_page.close()
                             bm.increment()
 
-                # [Phase 2] 신규 게임 탐색
-                logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
-                base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-                search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+        logger.info("   🏁 [System] Marathon finished. Sending reports...")
+        send_discord_summary(total_processed_count, collected_deals, delisted_games)
+        refresh_java_server_cache()
 
-                for current_page in range(1, 11):
-                    logger.info(f"   📖 Scanning Category Page {current_page}/10")
-                    page_candidates = []
-
-                    cat_page = setup_page(bm.get_context())
-                    try:
-                        target_list_url = f"{base_category_path}/{current_page}{search_params}"
-                        cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
-                        try: cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                        except:
-                            cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
-                            cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
-
-                        human_like_scroll(cat_page)
-
-                        for el in cat_page.locator("a[href*='/product/']").all():
-                            url = el.get_attribute("href")
-                            if url:
-                                full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
-                                if "/ko-kr/product/" in full_url and full_url not in visited_urls:
-                                    if full_url not in page_candidates: page_candidates.append(full_url)
-                    except Exception as e: logger.warning(f"   ⚠️ List load failed: {e}")
-                    finally:
-                        cat_page.close()
-                        bm.increment()
-
-                    if page_candidates:
-                        logger.info(f"      Found {len(page_candidates)} new candidates.")
-                        for url in page_candidates:
-                            check_and_run_vip(bm)
-
-                            detail_page = setup_page(bm.get_context())
-                            try:
-                                res = crawl_detail_and_send(detail_page, url)
-                                if res:
-                                    if res.get("is_delisted"): delisted_games.append(res)
-                                    else:
-                                        total_processed_count += 1
-                                        if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                                visited_urls.add(url)
-                            except Exception as e:
-                                logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
-                            finally:
-                                detail_page.close()
-                                bm.increment()
-
-            logger.info("   🏁 [System] Marathon finished. Sending reports...")
-            send_discord_summary(total_processed_count, collected_deals, delisted_games)
-            refresh_java_server_cache()
-
-        except Exception as e:
-            logger.error(f"Critical Error: {e}")
-            logger.error(traceback.format_exc())
-        finally:
+    except Exception as e:
+        logger.error(f"Critical Error: {e}")
+        logger.error(traceback.format_exc())
+    finally:
+        with crawler_lock:
             is_batch_running = False
-            logger.info("Crawler finished.")
+        logger.info("Crawler finished.")
 
 
 # --- [9. Flask API 라우팅] ---
@@ -736,8 +777,8 @@ def crawl_single_url():
     target_url = data.get('url')
     if not target_url: return jsonify({"error": "URL is required"}), 400
 
-    if is_batch_running:
-        return jsonify({"status": "error", "message": "현재 자정 배치가 실행 중입니다. 잠시 후 시도해주세요."}), 429
+    if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+        return jsonify({"status": "error", "message": "다른 수집 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
     logger.info(f"🎯 Single Crawl Request: {target_url}")
     result = None
@@ -782,7 +823,7 @@ def trigger_queue_crawl():
         active_requests.add(request_id)
         urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
-    if not is_batch_running and not is_vip_running and not is_ranking_running:
+    if not is_batch_running and not is_vip_running and not is_ranking_running and not is_rating_running:
         threading.Thread(target=run_vip_only_logic, daemon=True).start()
         logger.info(f"[VIP Worker] 새치기 전담 스레드 즉시 출발!")
         return jsonify({"status": "accepted", "message": "VIP task started"}), 202
@@ -795,15 +836,16 @@ def trigger_crawl():
     data = request.json or {}
     if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
 
-    global is_batch_running
     with crawler_lock:
-        if is_batch_running: return jsonify({"status": "running"}), 409
+        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+            return jsonify({"status": "running", "message": "다른 작업이 이미 실행 중입니다."}), 409
 
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
 
 def run_ranking_wrapper():
     global is_ranking_running
+
     with crawler_lock:
         is_ranking_running = True
 
@@ -819,18 +861,13 @@ def trigger_ranking_crawl():
     data = request.json or {}
     if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
 
-    global is_batch_running, is_ranking_running
     with crawler_lock:
-        if is_batch_running:
-            logger.warning("메인 배치가 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
-            return jsonify({"status": "error", "message": "Main batch is running"}), 409
-        if is_ranking_running:
-            return jsonify({"status": "running", "message": "Ranking is already running"}), 409
+        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+            logger.warning("다른 작업이 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
+            return jsonify({"status": "error", "message": "Other task is running"}), 409
 
     logger.info("[API] 랭킹 크롤러 백그라운드 실행 요청 수신")
-
     threading.Thread(target=run_ranking_wrapper, daemon=True).start()
-
     return jsonify({"status": "started", "message": "Ranking crawler triggered"}), 200
 
 @app.route('/health', methods=['GET'])
@@ -838,4 +875,10 @@ def health_check():
     return jsonify({"status": "UP", "running": is_batch_running}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    threading.Thread(
+            target=rating_worker.start_polling,
+            args=(BASE_URL, CRAWLER_SECRET_KEY),
+            daemon=True
+        ).start()
+
+    app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)

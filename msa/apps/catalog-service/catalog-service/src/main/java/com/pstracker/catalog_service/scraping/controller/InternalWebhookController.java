@@ -2,8 +2,11 @@ package com.pstracker.catalog_service.scraping.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CrawlerCallbackRequest;
 import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
+import com.pstracker.catalog_service.catalog.dto.RatingTargetResponse;
+import com.pstracker.catalog_service.catalog.dto.RatingUpdateDto;
 import com.pstracker.catalog_service.catalog.service.RankingService;
 import com.pstracker.catalog_service.scraping.dto.CandidateSyncRequest;
+import com.pstracker.catalog_service.scraping.service.RatingScrapingService;
 import com.pstracker.catalog_service.scraping.service.ScrapingWebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +27,7 @@ public class InternalWebhookController {
 
     private final ScrapingWebhookService scrapingWebhookService;
     private final RankingService rankingService;
+    private final RatingScrapingService ratingScrapingService;
 
     @PostMapping("/callback")
     @Transactional
@@ -76,4 +80,34 @@ public class InternalWebhookController {
         log.info("[Webhook] 랭킹 업데이트 수신 및 처리 완료 ({})", payload.getRankingType());
         return ResponseEntity.ok("Rankings processed");
     }
+
+    @GetMapping("/ratings/target")
+    public ResponseEntity<RatingTargetResponse> getRatingTarget(
+            @RequestHeader(value = "X-Internal-Secret", required = false) String secretHeader) {
+
+        if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        RatingTargetResponse target = ratingScrapingService.getPendingTarget();
+        if (target == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(target);
+    }
+
+    @PostMapping("/ratings/update")
+    public ResponseEntity<String> updateRatingResult(
+            @RequestHeader(value = "X-Internal-Secret", required = false) String secretHeader,
+            @RequestBody RatingUpdateDto request) {
+
+        if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Denied");
+        }
+
+        ratingScrapingService.updateRatingResult(request);
+        return ResponseEntity.ok("Result saved successfully");
+    }
+
 }
