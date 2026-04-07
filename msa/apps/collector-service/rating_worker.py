@@ -86,7 +86,7 @@ def crawl_metacritic_single(game_title):
                 response = page.reload(wait_until="commit", timeout=20000)
 
             if response and response.status == 404:
-                logger.warning(f"❌ [404] 게임을 찾을 수 없음: {game_title}")
+                logger.warning(f"[404] 게임을 찾을 수 없음: {game_title}")
                 result["status"] = "NOT_FOUND"
                 return result
 

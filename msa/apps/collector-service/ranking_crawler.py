@@ -94,7 +94,6 @@ def setup_page(context):
 
     def route_intercept(route):
         r_type = route.request.resource_type
-        # 이미지, 미디어, 폰트를 차단하여 25페이지 목록 로딩 속도 극대화 및 메모리 방어
         if r_type in ["image", "media", "font"]:
             route.abort()
             return
@@ -106,7 +105,6 @@ def setup_page(context):
 def human_like_delay(min_sec=1.5, max_sec=3.5):
     time.sleep(random.uniform(min_sec, max_sec))
 
-# --- [4. 단일 컨셉 -> 프로덕트 변환 로직] ---
 def fetch_product_id_from_concept(bm, concept_url):
     logger.info(f"신규 컨셉 발견! Product ID 탐색 중... ({concept_url})")
     context = bm.get_context()
@@ -117,7 +115,6 @@ def fetch_product_id_from_concept(bm, concept_url):
         page.goto("https://store.playstation.com" + concept_url, wait_until="domcontentloaded", timeout=15000)
         human_like_delay(1.5, 2.5)
 
-        # 기존 Phase 0 처럼 data-telemetry-meta 에서 추출 시도
         try:
             meta_loc = page.locator("a[data-telemetry-meta]").first
             if meta_loc.is_visible(timeout=3000):
@@ -126,7 +123,6 @@ def fetch_product_id_from_concept(bm, concept_url):
                 product_id = meta_json.get("productId")
         except: pass
 
-        # 실패 시 mfeCtaMain 버튼에서 추출 시도
         if not product_id:
             try:
                 btn_loc = page.locator("button[data-telemetry-meta]").first
@@ -170,7 +166,6 @@ def send_to_backend(ranking_type, ps_store_ids):
     except Exception as e:
         logger.error(f"백엔드 통신 실패: {e}")
 
-# --- [5. 핵심 수집 로직 (안전한 분리 버전)] ---
 def collect_rankings(ranking_type, url_template, bm, concept_cache):
     logger.info(f"[{ranking_type}] 랭킹 수집 시작 (목표: {MAX_PAGES}페이지)")
     ps_store_ids = []
@@ -178,7 +173,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
     for page_num in range(1, MAX_PAGES + 1):
 
         while vip_helpers and not vip_helpers['queue'].empty():
-            item = batch_crawler.urgent_queue.get()
+            item = vip_helpers['queue'].get()
             req_id, ps_store_id = item['request_id'], item['ps_store_id']
 
             logger.info(f"[VIP 새치기 발동-랭킹 수집 중!] 유저 요청 {ps_store_id} 즉시 수집 중...")
@@ -201,7 +196,8 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
             except Exception as e:
                 error_msg = str(e)
             finally:
-                vip_page.close()
+                try: vip_page.close()
+                except: pass
                 bm.increment()
 
             # 콜백 전송 로직
@@ -214,7 +210,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
                 logger.error(f"[VIP 콜백 실패] {e}")
 
             # 완료된 요청 삭제
-            try: batch_crawler.active_requests.remove(req_id)
+            try: vip_helpers['active_requests'].remove(req_id)
             except: pass
 
         target_url = url_template.format(page_num)
@@ -243,8 +239,9 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
             logger.error(f"{page_num}페이지 목록 로드 실패: {e}")
             continue
         finally:
-            page.close()
-            bm.increment() # 목록 페이지 닫았으니 카운트 1 증가
+            try: page.close()
+            except: pass
+            bm.increment()
 
         # 2단계: 복사해둔 글씨(URL)들을 하나씩 보면서 수첩 검사 및 심부름 보내기
         for href in extracted_hrefs:
@@ -254,7 +251,7 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
                 if concept_id in concept_cache:
                     actual_product_id = concept_cache[concept_id]
                 else:
-                    # 상세 페이지 심부름 (여기서 브라우저가 환생할 수 있음)
+                    # 상세 페이지 심부름
                     actual_product_id = fetch_product_id_from_concept(bm, href)
                     if actual_product_id:
                         concept_cache[concept_id] = actual_product_id
@@ -272,7 +269,6 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache):
 
     return ps_store_ids
 
-# --- [6. 메인 실행 블록] ---
 def main(vip_helpers=None):
     logger.info("랭킹 크롤러 시작")
     concept_cache = load_cache()

@@ -160,6 +160,9 @@ class BrowserManager:
         self.request_count += 1
 
 def setup_page(context):
+    if context is None:
+        raise RuntimeError("브라우저 컨텍스트가 존재하지 않습니다. (메모리 부족 의심)")
+
     page = context.new_page()
     page.set_default_timeout(CONF['timeout'])
 
@@ -220,7 +223,8 @@ def check_and_run_vip(bm):
         except Exception as e:
             error_msg = str(e)
         finally:
-            page.close()
+            try: page.close()
+            except: pass
             bm.increment()
 
         callback_payload = {"requestId": req_id, "status": status, "errorMessage": error_msg}
@@ -235,20 +239,24 @@ def check_and_run_vip(bm):
 
 def run_vip_only_logic():
     global is_vip_running
+
     with crawler_lock:
+        if is_vip_running: return
         is_vip_running = True
-        try:
-            with sync_playwright() as p:
-                bm = BrowserManager(p)
-                check_and_run_vip(bm)
-                time.sleep(1)
-                try: bm.context.close()
-                except: pass
-                try: bm.browser.close()
-                except: pass
-        finally:
+
+    try:
+        with sync_playwright() as p:
+            bm = BrowserManager(p)
+            check_and_run_vip(bm)
+            time.sleep(1)
+            try: bm.context.close()
+            except: pass
+            try: bm.browser.close()
+            except: pass
+    finally:
+        with crawler_lock:
             is_vip_running = False
-            logger.info("[VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
+        logger.info("[VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
 
 
 # --- [5. Phase 0: 신작 탐사 ] ---
@@ -281,7 +289,8 @@ def crawl_phase0_new_releases(bm):
         logger.error(f"[Phase 0] 최신 카테고리 로딩 실패: {e}")
         return
     finally:
-        page.close()
+        try: page.close()
+        except: pass
         bm.increment()
 
     for href in candidates:
@@ -317,7 +326,7 @@ def crawl_phase0_new_releases(bm):
                 del html_content
 
                 if is_free_game:
-                    logger.info(f"   [Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
+                    logger.info(f"[Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
                     continue
 
                 ps_store_id = None
@@ -368,7 +377,7 @@ def crawl_phase0_new_releases(bm):
                             if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
                     except: pass
 
-                    logger.info(f"   ✅ [Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
+                    logger.info(f"[Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
                     session.post(INTERNAL_SYNC_URL, json={
                         "psStoreId": ps_store_id,
                         "title": title,
@@ -392,7 +401,7 @@ def crawl_phase0_new_releases(bm):
                         if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
                 except: pass
 
-                logger.info(f"   ✅ [Phase 0 등록] {title} ({ps_store_id})")
+                logger.info(f"[Phase 0 등록] {title} ({ps_store_id})")
                 session.post(INTERNAL_SYNC_URL, json={
                     "psStoreId": ps_store_id,
                     "title": title,
@@ -402,7 +411,8 @@ def crawl_phase0_new_releases(bm):
         except Exception as e:
             logger.error(f"[Phase 0] {url} 분석 실패: {e}")
         finally:
-            page.close()
+            try: page.close()
+            except: pass
             bm.increment()
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
 
@@ -450,7 +460,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
 
         if "/error" in page.url:
-            logger.warning(f"🚨 단종 의심 (URL 리다이렉트): {target_url}")
+            logger.warning(f"단종 의심 (URL 리다이렉트): {target_url}")
             return {"is_delisted": True, "ps_store_id": target_url.split("/")[-1].split("?")[0]}
 
         try:
@@ -595,8 +605,8 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         try:
             res = session.post(JAVA_API_URL, json=payload, timeout=30)
             if res.status_code == 200: logger.info(f"   📤 Sent: {title} ({payload['currentPrice']} KRW)")
-            else: logger.error(f"   💥 Server Error ({res.status_code}): {title}")
-        except Exception as e: logger.error(f"   💥 Network Error sending {title}: {e}")
+            else: logger.error(f"Server Error ({res.status_code}): {title}")
+        except Exception as e: logger.error(f"Network Error sending {title}: {e}")
 
         return payload
     except Exception as e:
@@ -644,7 +654,7 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
 
         message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
         requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
-    except Exception as e: logger.error(f"❌ Failed to send Discord summary: {e}")
+    except Exception as e: logger.error(f"Failed to send Discord summary: {e}")
 
 def refresh_java_server_cache():
     if not CRAWLER_SECRET_KEY: return
@@ -652,7 +662,7 @@ def refresh_java_server_cache():
         headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
         res = requests.post(INSIGHT_REFRESH_API_URL, headers=headers, timeout=10)
         if res.status_code == 200: logger.info("🧹 Java Server Insights Cache cleared successfully!")
-    except Exception as e: logger.error(f"❌ Network Error while clearing cache: {e}")
+    except Exception as e: logger.error(f"Network Error while clearing cache: {e}")
 
 
 # --- [8. 메인 배치 로직] ---
@@ -677,16 +687,16 @@ def run_batch_crawler_logic():
 
             # [Phase 0] 신작 수집소
             try: crawl_phase0_new_releases(bm)
-            except Exception as e: logger.error(f"🔥 Phase 0 Error: {e}")
+            except Exception as e: logger.error(f"Phase 0 Error: {e}")
 
             targets = fetch_update_targets()
 
             # [Phase 1] 기존 타겟 갱신
             if targets:
-                logger.info(f"🔄 [Phase 1] Updating {len(targets)} tracked games...")
+                logger.info(f"[Phase 1] Updating {len(targets)} tracked games...")
                 for idx, url in enumerate(targets, 1):
                     check_and_run_vip(bm) # 루프마다 VIP 새치기 확인
-                    logger.info(f"   ▶️ [Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
+                    logger.info(f"[Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
 
                     page = setup_page(bm.get_context())
                     try:
@@ -698,9 +708,10 @@ def run_batch_crawler_logic():
                                 if res.get('discountRate', 0) > 0: collected_deals.append(res)
                         visited_urls.add(url)
                     except Exception as e:
-                        logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
+                        logger.error(f"Page Crawl Error for {url}: {e}")
                     finally:
-                        page.close()
+                        try: page.close()
+                        except: pass
                         bm.increment()
 
             # [Phase 2] 신규 게임 탐색
@@ -709,7 +720,7 @@ def run_batch_crawler_logic():
             search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
 
             for current_page in range(1, 11):
-                logger.info(f"   📖 Scanning Category Page {current_page}/10")
+                logger.info(f"Scanning Category Page {current_page}/10")
                 page_candidates = []
 
                 cat_page = setup_page(bm.get_context())
@@ -731,7 +742,8 @@ def run_batch_crawler_logic():
                                 if full_url not in page_candidates: page_candidates.append(full_url)
                 except Exception as e: logger.warning(f"   ⚠️ List load failed: {e}")
                 finally:
-                    cat_page.close()
+                    try: cat_page.close()
+                    except: pass
                     bm.increment()
 
                 if page_candidates:
@@ -749,9 +761,10 @@ def run_batch_crawler_logic():
                                     if res.get('discountRate', 0) > 0: collected_deals.append(res)
                             visited_urls.add(url)
                         except Exception as e:
-                            logger.error(f"   🔥 Page Crawl Error for {url}: {e}")
+                            logger.error(f"Page Crawl Error for {url}: {e}")
                         finally:
-                            detail_page.close()
+                            try: detail_page.close()
+                            except: pass
                             bm.increment()
 
         logger.info("   🏁 [System] Marathon finished. Sending reports...")
@@ -780,7 +793,7 @@ def crawl_single_url():
     if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
         return jsonify({"status": "error", "message": "다른 수집 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
-    logger.info(f"🎯 Single Crawl Request: {target_url}")
+    logger.info(f"Single Crawl Request: {target_url}")
     result = None
 
     try:
@@ -790,7 +803,8 @@ def crawl_single_url():
             try:
                 result = crawl_detail_and_send(page, target_url, verbose=True)
             finally:
-                page.close()
+                try: page.close()
+                except: pass
                 try: bm.context.close()
                 except: pass
                 try: bm.browser.close()
