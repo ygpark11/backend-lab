@@ -6,10 +6,14 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum MainCategory {
-    PLAY_STYLE("플레이 스타일"),
-    VIBE_STORY("분위기 & 스토리"),
-    DIFFICULTY("난이도"),
-    ENVIRONMENT("환경 & 가성비");
+    ACTION("액션", "#F59E0B"),
+    EXPLORATION("탐험", "#3B82F6"),
+    CHALLENGE("도전", "#EF4444"),
+    STORY("스토리", "#A855F7"),
+    VIBE("예술/테마", "#06B6D4"),
+    RELAXATION("힐링", "#10B981"),
+    SOCIAL("소셜", "#EC4899");
 
     private final String description;
+    private final String color;
 }

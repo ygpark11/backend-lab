@@ -466,8 +466,8 @@ public class CatalogService {
             return;
         }
 
-        // 2. 예전에 수집된 이력(DONE, FAILED, NOT_FOUND)이 있다면 PENDING 으로 덮어쓰기
-        List<CrawlJob.JobStatus> finishedStatuses = List.of(CrawlJob.JobStatus.DONE, CrawlJob.JobStatus.FAILED, CrawlJob.JobStatus.NOT_FOUND);
+        // 2. 예전에 수집된 이력(DONE, FAILED)이 있다면 PENDING 으로 덮어쓰기
+        List<CrawlJob.JobStatus> finishedStatuses = List.of(CrawlJob.JobStatus.DONE, CrawlJob.JobStatus.FAILED);
         int updatedRows = crawlJobRepository.requeueFinishedJob(
                 gameId,
                 targetType,

@@ -16,6 +16,7 @@ public enum VibeTag {
     OPEN_WORLD("#오픈월드", SubCategory.EXPLORATION),
     COLLECTIBLE("#수집요소", SubCategory.EXPLORATION),
     HIGH_FREEDOM("#자유도최상", SubCategory.EXPLORATION),
+    SURVIVAL_CRAFT("#생존과크래프팅", SubCategory.EXPLORATION),
 
     // [두뇌 퍼즐] 하위
     TURN_BASED("#턴제전투", SubCategory.PUZZLE),
@@ -27,12 +28,14 @@ public enum VibeTag {
     LIKE_A_MOVIE("#한편의영화", SubCategory.EMOTIONAL_STORY),
     CHOICE_MATTERS("#선택과결과", SubCategory.EMOTIONAL_STORY),
     PLOT_TWIST("#충격적반전", SubCategory.EMOTIONAL_STORY),
+    DEEP_LORE("#세계관맛집", SubCategory.EMOTIONAL_STORY),
 
     // [톤앤매너] 하위
     DARK_FANTASY("#다크판타지", SubCategory.VIBE),
     CYBERPUNK("#사이버펑크", SubCategory.VIBE),
     POST_APOCALYPTIC("#포스트아포칼립스", SubCategory.VIBE),
     CHEERFUL("#유쾌발랄", SubCategory.VIBE),
+    ANIME_STYLE("#애니메이션풍", SubCategory.VIBE),
 
     // [공포 스릴러] 하위
     DIAPER_NEEDED("#기저귀필수", SubCategory.HORROR),
@@ -48,6 +51,7 @@ public enum VibeTag {
     NO_BRAINER("#뇌빼고가능", SubCategory.CASUAL),
     NOOB_FRIENDLY("#똥손환영", SubCategory.CASUAL),
     HEALING("#힐링테라피", SubCategory.CASUAL),
+    FAMILY_FRIENDLY("#가족과함께", SubCategory.CASUAL),
 
     // [플레이 타임] 하위
     SHORT_AND_SWEET("#플탐짧고굵음", SubCategory.PLAYTIME),
@@ -62,7 +66,8 @@ public enum VibeTag {
 
     // [PS 기기 특화] 하위
     HAPTIC_FEEDBACK("#패드진동찰짐", SubCategory.HARDWARE),
-    EYE_CANDY("#눈호강그래픽", SubCategory.HARDWARE);
+    EYE_CANDY("#눈호강그래픽", SubCategory.HARDWARE),
+    EAR_CANDY("#명품OST", SubCategory.HARDWARE);
 
     private final String tagName;
     private final SubCategory parent;
