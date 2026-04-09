@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -112,18 +113,43 @@ public class AiService {
     }
 
     private String callGemini(String prompt) {
+        int maxRetries = 3;
+        long waitTime = 30_000;
+
         RestClient restClient = RestClient.create();
         GeminiRequest request = new GeminiRequest(List.of(new Content(List.of(new Part(prompt)))));
 
-        GeminiResponse response = restClient.post()
-                .uri(GEMINI_API_URL + "?key=" + apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(GeminiResponse.class);
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                GeminiResponse response = restClient.post()
+                        .uri(GEMINI_API_URL + "?key=" + apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(request)
+                        .retrieve()
+                        .body(GeminiResponse.class);
 
-        if (response != null && response.candidates() != null && !response.candidates().isEmpty()) {
-            return response.candidates().get(0).content().parts().get(0).text();
+                if (response != null && response.candidates() != null && !response.candidates().isEmpty()) {
+                    return response.candidates().get(0).content().parts().get(0).text();
+                }
+                return null;
+
+            } catch (HttpServerErrorException.ServiceUnavailable e) {
+                // 503 에러 발생 시
+                log.warn("Gemini 서버 503 과부하. {}ms 후 재시도 (시도: {}/{})", waitTime, attempt, maxRetries);
+                if (attempt == maxRetries) throw e; // 끝까지 안되면 에러 던짐
+
+                try {
+                    Thread.sleep(waitTime);
+                    waitTime *= 2;
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    return null;
+                }
+            } catch (Exception e) {
+                // 400 등 다른 에러는 즉시 중단
+                log.error("Gemini API 일반 오류", e);
+                return null;
+            }
         }
         return null;
     }
