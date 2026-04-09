@@ -1,7 +1,6 @@
 package com.pstracker.catalog_service.catalog.api;
 
 import com.pstracker.catalog_service.catalog.controller.AdminController;
-import com.pstracker.catalog_service.catalog.scheduler.AiDescriptionScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.global.config.SecurityConfig;
 import com.pstracker.catalog_service.global.security.CustomAccessDeniedHandler;
@@ -39,9 +38,6 @@ public class AdminControllerTest {
 
     @MockitoBean
     private InsightsService insightsService;
-
-    @MockitoBean
-    private AiDescriptionScheduler aiDescriptionScheduler;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
