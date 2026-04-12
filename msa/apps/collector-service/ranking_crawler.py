@@ -166,7 +166,7 @@ def send_to_backend(ranking_type, ps_store_ids):
     except Exception as e:
         logger.error(f"백엔드 통신 실패: {e}")
 
-def collect_rankings(ranking_type, url_template, bm, concept_cache):
+def collect_rankings(ranking_type, url_template, bm, concept_cache, vip_helpers=None):
     logger.info(f"[{ranking_type}] 랭킹 수집 시작 (목표: {MAX_PAGES}페이지)")
     ps_store_ids = []
 

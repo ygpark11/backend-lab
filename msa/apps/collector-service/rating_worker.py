@@ -159,7 +159,7 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
     HEADERS = {"X-Internal-Secret": secret_key}
 
     while True:
-        sleep_time = random.randint(120, 180)
+        sleep_time = random.randint(150, 180)
         time.sleep(sleep_time)
 
         # [VIP 새치기 절대 양보 로직]
