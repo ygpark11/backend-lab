@@ -7,14 +7,17 @@ import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertTriangle,
+    CheckSquare,
     ExternalLink,
     Gamepad2,
     Heart,
     Mail,
     Pickaxe,
     PiggyBank,
+    Scale,
     Server,
     Sparkles,
+    Square,
     Timer,
     Trash2,
     TrendingDown,
@@ -24,10 +27,14 @@ import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import DonationModal from '../components/DonationModal';
+import {useCompareStore} from '../store/useCompareStore';
+import CompareModal from '../components/CompareModal';
 
 const WishlistPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
+
+    const { compareList, addToCompare, removeFromCompare, clearCompare } = useCompareStore();
 
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -36,6 +43,9 @@ const WishlistPage = () => {
     const [totalElements, setTotalElements] = useState(0);
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
+
+    const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
     const lastScrollYRef = useRef(0);
 
@@ -162,6 +172,24 @@ const WishlistPage = () => {
         }
     };
 
+    const handleToggleCompare = (e, game) => {
+        e.stopPropagation();
+        const realGameId = game.gameId || game.id;
+        const isSelected = compareList.some(item => (item.gameId || item.id) === realGameId);
+
+        if (isSelected) {
+            removeFromCompare(realGameId);
+        } else {
+            const result = addToCompare(game);
+            if (result === 'MAX') {
+                toast.error("결승전(VS)은 딱 2개까지만 고를 수 있습니다!", {
+                    duration: 3000,
+                    style: { background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-default)' }
+                });
+            }
+        }
+    };
+
     const handleGenreClick = (e, genre) => {
         e.stopPropagation();
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -237,13 +265,16 @@ const WishlistPage = () => {
                         const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                         const isClosing = !isLastCall && daysLeft <= 3;
                         const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
+                        const isSelectedForCompare = compareList.some(item => (item.gameId || item.id) === realGameId);
 
                         return (
                             <div
                                 key={realGameId}
                                 ref={isLastElement ? lastGameElementRef : null}
                                 onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
-                                className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${isPlatinum ? 'border-[color:var(--bento-yellow-border-hover)] shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
+                                className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full 
+                                    ${isSelectedForCompare ? 'ring-2 ring-ps-blue shadow-[0_0_20px_rgba(0,67,156,0.6)] border-ps-blue' :
+                                    isPlatinum ? 'border-[color:var(--bento-yellow-border-hover)] shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                             >
                                 <div
                                     className="aspect-[3/4] overflow-hidden relative shrink-0"
@@ -257,8 +288,16 @@ const WishlistPage = () => {
                                     {isLastCall && <span className="absolute top-2 right-10 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
                                     {isClosing && <span className="absolute top-2 right-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
 
-                                    {/* 💡 삭제 버튼은 이미지 위에 겹치므로 시인성을 위해 bg-black/60 유지 */}
                                     <button onClick={(e) => handleRemove(e, realGameId, game.name)} className="absolute top-2 right-2 p-2 rounded-full bg-black/60 hover:bg-red-600 text-gray-300 hover:text-white transition-all transform hover:scale-110 shadow-lg z-20"><Trash2 className="w-4 h-4" /></button>
+
+                                    <button
+                                        onClick={(e) => handleToggleCompare(e, game)}
+                                        className={`absolute bottom-10 right-2 p-2 rounded-full transition-all transform hover:scale-110 shadow-lg z-20 backdrop-blur-sm border
+                                            ${isSelectedForCompare ? 'bg-ps-blue text-white border-ps-blue shadow-[0_0_15px_rgba(0,67,156,0.8)]' : 'bg-black/60 text-gray-300 border-gray-500/50 hover:bg-ps-blue/80 hover:text-white hover:border-ps-blue'}`}
+                                        title="VS 비교함에 담기"
+                                    >
+                                        {isSelectedForCompare ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                                    </button>
 
                                     {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
                                     {game.inCatalog ? (
@@ -305,10 +344,26 @@ const WishlistPage = () => {
                                                 {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
                                                 <span className="text-xs sm:text-sm font-medium ml-0.5">원</span>
                                             </p>
-                                            {game.metaScore > 0 && (
-                                                <span className={`shrink-0 text-[10px] sm:text-xs font-black px-1.5 py-0.5 sm:px-2 rounded shadow-sm border ${game.metaScore >= 80 ? 'bg-score-green-bg text-score-green-text border-green-500/30' : 'bg-score-yellow-bg text-score-yellow-text border-yellow-500/30'}`}>
-                                                    {game.metaScore}
-                                                </span>
+
+                                            {game.displayScore && (
+                                                <div className="shrink-0 flex items-center shadow-sm rounded border border-divider overflow-hidden bg-surface">
+
+                                                    <div className={`px-1.5 py-0.5 text-[10px] font-black flex items-center justify-center
+                                                        ${game.scoreSource === 'MC'
+                                                        ? 'bg-black text-white dark:bg-white dark:text-black'
+                                                        : 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300'}`}>
+                                                        {game.scoreSource === 'MC' ? 'M' : 'I'}
+                                                    </div>
+
+                                                    <span className={`px-1.5 py-0.5 text-[11px] font-black tracking-tight
+                                                        ${game.scoreSource === 'MC'
+                                                        ? (game.displayScore >= 75 ? 'text-green-600 dark:text-green-400 bg-green-500/10'
+                                                            : game.displayScore >= 50 ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10'
+                                                                : 'text-red-600 dark:text-red-400 bg-red-500/10')
+                                                        : 'text-primary'}`}>
+                                                        {game.displayScore}
+                                                    </span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -343,8 +398,8 @@ const WishlistPage = () => {
                 )}
 
                 {/* 하단 플로팅 버튼 영역 */}
-                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
-                    <div className="flex items-center gap-2 bg-glass backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
+                <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${(isFloatingVisible && compareList.length === 0) ? 'translate-y-0' : 'translate-y-32'}`}>
+                    <div className="flex items-center gap-2 bg-glass backdrop-blur-md md:backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
 
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all" title="맨 위로">
                             <Triangle className="w-5 h-5 text-green-500 fill-green-500 drop-shadow-[0_0_5px_rgba(74,222,128,0.5)] group-hover:-translate-y-1 transition-transform" />
@@ -379,8 +434,55 @@ const WishlistPage = () => {
                     </div>
                 </div>
 
+                <div className={`fixed inset-x-0 bottom-0 z-50 transition-transform duration-500 ease-in-out ${compareList.length > 0 ? 'translate-y-0' : 'translate-y-full'}`}>
+                    <div className="bg-base/85 dark:bg-black/70 backdrop-blur-md md:backdrop-blur-xl border-t border-[color:var(--bento-blue-border)] shadow-[0_-10px_30px_rgba(0,0,0,0.3)] pb-safe pt-4 px-6 md:px-10">
+                        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 pb-4">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <Scale className="w-5 h-5 text-ps-blue animate-pulse" />
+                                    <span className="font-black text-primary text-sm tracking-widest uppercase">VS Mode</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    {[0, 1].map((index) => {
+                                        const slotGame = compareList[index];
+                                        return (
+                                            <div key={index} className={`w-12 h-12 rounded-lg border-2 overflow-hidden flex items-center justify-center transition-all ${slotGame ? 'border-ps-blue shadow-[0_0_10px_rgba(0,67,156,0.5)]' : 'border-dashed border-divider-strong bg-surface'}`}>
+                                                {slotGame ? (
+                                                    <img src={slotGame.imageUrl} alt="slot" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-muted text-xs font-bold">{index + 1}</span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="flex w-full md:w-auto gap-3">
+                                <button onClick={clearCompare} className="px-4 py-3 bg-surface hover:bg-surface-hover border border-divider text-secondary text-sm font-bold rounded-xl transition-colors">
+                                    비우기
+                                </button>
+                                <button
+                                    onClick={() => setIsCompareModalOpen(true)}
+                                    disabled={compareList.length < 2}
+                                    className={`flex-1 md:w-48 py-3 rounded-xl font-black text-sm transition-all shadow-lg flex items-center justify-center gap-2
+                                        ${compareList.length === 2 ? 'bg-ps-blue text-white hover:bg-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:-translate-y-1' : 'bg-surface border border-divider text-muted cursor-not-allowed'}`}
+                                >
+                                    <Scale className="w-4 h-4" />
+                                    {compareList.length < 2 ? '1개 더 선택 필요' : `VS 스펙 비교하기`}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
+
+            <CompareModal
+                isOpen={isCompareModalOpen}
+                onClose={() => setIsCompareModalOpen(false)}
+            />
         </div>
     );
 };

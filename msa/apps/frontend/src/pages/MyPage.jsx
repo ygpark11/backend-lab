@@ -1,28 +1,8 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {
-    Award,
-    Bell,
-    CheckCircle2,
-    Circle,
-    Copy,
-    Crown,
-    Edit3,
-    Gamepad2,
-    Loader2,
-    Lock,
-    Mail,
-    Medal,
-    MessageSquare,
-    Moon,
-    Pickaxe,
-    Settings,
-    Shield,
-    Square,
-    Sun,
-    Triangle,
-    Trophy,
-    X as XIcon,
-    Zap
+    Award, Bell, CheckCircle2, Circle, Copy, Crown, Edit3, Gamepad2, Loader2,
+    Lock, Mail, Medal, MessageSquare, Moon, Pickaxe, Settings, Shield,
+    Square, Sun, Triangle, Trophy, X as XIcon, Zap
 } from 'lucide-react';
 import PSGameImage from '../components/common/PSGameImage';
 import client from '../api/client';
@@ -107,7 +87,7 @@ export default function MyPage() {
                 ), { duration: 3000, position: 'top-center' });
             }
         } catch (error) {
-            setSettings(settings);
+            setSettings(settings); // 롤백
             toast.error("설정 변경에 실패했습니다.");
         }
     };
@@ -166,13 +146,13 @@ export default function MyPage() {
 
     return (
         <div className="min-h-screen p-4 sm:p-8 pt-20 sm:pt-24 relative overflow-hidden bg-base text-primary transition-colors duration-500">
-            <div className="absolute top-0 left-1/4 w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-ps-blue/10 transition-colors duration-500"></div>
-            <div className="absolute bottom-0 right-1/4 w-[30%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-pink-500/05 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute top-0 left-1/4 w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-ps-blue/10 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute bottom-0 right-1/4 w-[30%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-pink-500/05 transition-colors duration-500"></div>
+
             <div className="max-w-4xl mx-auto relative z-10">
 
-                {/* 프로필 카드 */}
-                <div className="relative p-5 sm:p-8 rounded-2xl border backdrop-blur-xl mb-6 overflow-hidden group transition-all duration-500 bg-glass border-divider shadow-xl mt-4">
-                    {/* 최고 업적 기반 배경 오로라 (라이트 모드에선 숨김 처리) */}
+                <div className="relative p-5 sm:p-8 rounded-2xl border backdrop-blur-md mb-6 overflow-hidden group transition-all duration-500 bg-glass border-divider shadow-xl mt-4">
+                    {/* 최고 업적 기반 배경 오로라 */}
                     {highestTrophy && <div className={`absolute inset-0 opacity-0 dark:opacity-10 group-hover:dark:opacity-20 transition-opacity duration-700 blur-3xl ${avatarStyle.bgClass}`}></div>}
 
                     <div className="absolute -right-10 -bottom-10 pointer-events-none flex gap-4 rotate-12 scale-150 opacity-[0.02] text-primary">
@@ -207,7 +187,11 @@ export default function MyPage() {
                                             maxLength={10}
                                             className="border px-3 py-1 rounded-lg outline-none focus:ring-2 focus:ring-ps-blue/50 text-xl sm:text-2xl font-black w-32 sm:w-48 transition-all bg-base border-ps-blue text-primary shadow-inner"
                                             autoFocus
-                                            onKeyDown={(e) => e.key === 'Enter' && handleUpdateNickname()}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                                                    handleUpdateNickname();
+                                                }
+                                            }}
                                         />
                                         <button onClick={handleUpdateNickname} className="p-1.5 bg-[#166534]/30 text-[#4ade80] hover:bg-[#166534]/50 rounded-md transition-colors border border-[#4ade80]/30">
                                             <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -236,16 +220,16 @@ export default function MyPage() {
 
                             <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 w-full">
                                 {[
-                                    { icon: Triangle, color: '#00A39D', bgClass: 'bg-[#00A39D]/05', label: '절약 대기', value: `₩${(profile.totalSavedAmount / 1000).toFixed(0)}K`, valSize: 'text-sm sm:text-lg' },
-                                    { icon: XIcon, color: '#4E6CBB', bgClass: 'bg-[#4E6CBB]/05', label: '발굴 데이터', value: `${profile.pioneeredCount}EA`, valSize: 'text-sm sm:text-lg' },
-                                    { icon: Square, color: '#E8789C', bgClass: 'bg-[#E8789C]/05', label: '합류 일자', value: profile.joinDate.replace(/-/g, '.').substring(2), valSize: 'text-xs sm:text-base mt-auto sm:mt-0' }
+                                    { icon: Triangle, textClass: 'text-[#00A39D]', bgClass: 'bg-[#00A39D]/05', label: '절약 대기', value: `₩${(profile.totalSavedAmount / 1000).toFixed(0)}K`, valSize: 'text-sm sm:text-lg' },
+                                    { icon: XIcon, textClass: 'text-[#4E6CBB]', bgClass: 'bg-[#4E6CBB]/05', label: '발굴 데이터', value: `${profile.pioneeredCount}EA`, valSize: 'text-sm sm:text-lg' },
+                                    { icon: Square, textClass: 'text-[#E8789C]', bgClass: 'bg-[#E8789C]/05', label: '합류 일자', value: profile.joinDate.replace(/-/g, '.').substring(2), valSize: 'text-xs sm:text-base mt-auto sm:mt-0' }
                                 ].map((stat, i) => (
                                     <div key={i} className="p-2 sm:p-3 rounded-lg flex flex-col items-center sm:items-start relative overflow-hidden group transition-colors duration-300 border shadow-sm bg-surface border-divider hover:border-divider-strong">
                                         <div className={`absolute -bottom-4 -right-4 w-14 h-14 rounded-full blur-xl ${stat.bgClass} opacity-0 dark:opacity-80 group-hover:dark:opacity-100 transition-opacity`}></div>
-                                        <stat.icon style={{ color: stat.color }} className="absolute -bottom-2 -right-2 w-10 h-10 stroke-[3px] transition-colors opacity-10 dark:opacity-30" />
+                                        <stat.icon className={`absolute -bottom-2 -right-2 w-10 h-10 stroke-[3px] transition-colors opacity-10 dark:opacity-30 ${stat.textClass}`} />
 
                                         <p className="text-secondary text-[9px] sm:text-[10px] font-bold uppercase mb-1 whitespace-nowrap relative z-10">{stat.label}</p>
-                                        <p style={{ color: stat.color }} className={`${stat.valSize} font-black tracking-tight relative z-10 drop-shadow-sm`}>{stat.value}</p>
+                                        <p className={`${stat.valSize} ${stat.textClass} font-black tracking-tight relative z-10 drop-shadow-sm`}>{stat.value}</p>
                                     </div>
                                 ))}
                             </div>
@@ -333,7 +317,6 @@ export default function MyPage() {
                                                 <PSGameImage src={game.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none"></div>
 
-                                                {/* 발굴 왕관 */}
                                                 <div className="absolute top-1.5 right-1.5 bg-glass backdrop-blur-sm p-1 rounded-md border border-divider shadow-sm">
                                                     <Crown className="w-3 h-3 sm:w-3.5 h-3.5 text-yellow-500 drop-shadow-sm" />
                                                 </div>
@@ -349,7 +332,6 @@ export default function MyPage() {
 
                     {activeTab === 'settings' && (
                         <div className="animate-fadeIn max-w-xl mx-auto sm:mx-0">
-
                             {/* 설정 제어판 */}
                             <div className="rounded-xl p-4 sm:p-5 mb-6 border transition-colors duration-500 bg-surface border-divider shadow-sm">
                                 <h3 className="text-xs font-bold mb-4 flex items-center gap-1.5 uppercase tracking-widest text-secondary">
@@ -357,35 +339,39 @@ export default function MyPage() {
                                 </h3>
 
                                 <div className="space-y-2.5">
-                                    {[
-                                        { id: 'priceAlert', icon: Bell, hexColor: '#00A39D', title: '위시리스트 가격 하락 알림', desc: '찜한 게임이 할인하면 푸시 수신', active: settings.priceAlert },
-                                        { id: 'nightMode', icon: Moon, hexColor: '#E8789C', title: '야간 스텔스 모드', desc: '22시~08시 사이에는 알림 무음', active: settings.nightMode }
-                                    ].map(item => (
-                                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer bg-base border-divider hover:border-divider-strong" onClick={() => handleToggleSetting(item.id)}>
-                                            <div className="flex items-center gap-3 pr-2">
-                                                <div
-                                                    className={`p-1.5 sm:p-2 rounded-md shrink-0 transition-colors border ${item.active ? 'border-transparent' : 'border-divider bg-surface'}`}
-                                                    style={{ backgroundColor: item.active ? `${item.hexColor}20` : undefined }}
-                                                >
-                                                    <item.icon
-                                                        className={`w-4 h-4 sm:w-5 sm:h-5 drop-shadow-sm ${item.active ? '' : 'text-secondary'}`}
-                                                        style={{ color: item.active ? item.hexColor : undefined }}
-                                                    />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-bold text-xs sm:text-sm truncate text-primary">{item.title}</h4>
-                                                    <p className="text-[9px] sm:text-[10px] mt-0.5 truncate text-secondary">{item.desc}</p>
-                                                </div>
+                                    {/* 1. 가격 하락 알림 */}
+                                    <div className="flex items-center justify-between p-3 rounded-lg border cursor-pointer bg-base border-divider hover:border-divider-strong" onClick={() => handleToggleSetting('priceAlert')}>
+                                        <div className="flex items-center gap-3 pr-2">
+                                            <div className={`p-1.5 sm:p-2 rounded-md shrink-0 border ${settings.priceAlert ? 'border-transparent bg-[#00A39D]/20' : 'border-divider bg-surface'}`}>
+                                                <Bell className={`w-4 h-4 sm:w-5 sm:h-5 drop-shadow-sm ${settings.priceAlert ? 'text-[#00A39D]' : 'text-secondary'}`} />
                                             </div>
-                                            <div
-                                                className={`w-10 sm:w-11 h-5 sm:h-6 rounded-full p-0.5 sm:p-1 transition-colors duration-300 shrink-0 ${item.active ? '' : 'bg-divider-strong'}`}
-                                                style={{ backgroundColor: item.active ? item.hexColor : undefined }}
-                                            >
-                                                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${item.active ? 'translate-x-5 sm:translate-x-5' : 'translate-x-0'}`}></div>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-xs sm:text-sm truncate text-primary">위시리스트 가격 하락 알림</h4>
+                                                <p className="text-[9px] sm:text-[10px] mt-0.5 truncate text-secondary">찜한 게임이 할인하면 푸시 수신</p>
                                             </div>
                                         </div>
-                                    ))}
+                                        <div className={`w-10 sm:w-11 h-5 sm:h-6 rounded-full p-0.5 sm:p-1 transition-colors duration-300 shrink-0 ${settings.priceAlert ? 'bg-[#00A39D]' : 'bg-divider-strong'}`}>
+                                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${settings.priceAlert ? 'translate-x-5 sm:translate-x-5' : 'translate-x-0'}`}></div>
+                                        </div>
+                                    </div>
 
+                                    {/* 2. 야간 스텔스 모드 */}
+                                    <div className="flex items-center justify-between p-3 rounded-lg border cursor-pointer bg-base border-divider hover:border-divider-strong" onClick={() => handleToggleSetting('nightMode')}>
+                                        <div className="flex items-center gap-3 pr-2">
+                                            <div className={`p-1.5 sm:p-2 rounded-md shrink-0 border ${settings.nightMode ? 'border-transparent bg-[#E8789C]/20' : 'border-divider bg-surface'}`}>
+                                                <Moon className={`w-4 h-4 sm:w-5 sm:h-5 drop-shadow-sm ${settings.nightMode ? 'text-[#E8789C]' : 'text-secondary'}`} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-xs sm:text-sm truncate text-primary">야간 스텔스 모드</h4>
+                                                <p className="text-[9px] sm:text-[10px] mt-0.5 truncate text-secondary">22시~08시 사이에는 알림 무음</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-10 sm:w-11 h-5 sm:h-6 rounded-full p-0.5 sm:p-1 transition-colors duration-300 shrink-0 ${settings.nightMode ? 'bg-[#E8789C]' : 'bg-divider-strong'}`}>
+                                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-300 ${settings.nightMode ? 'translate-x-5 sm:translate-x-5' : 'translate-x-0'}`}></div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. 기기 로그아웃 */}
                                     <div className="flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer group mt-4 bg-base border-divider hover:border-[#FF3E3E]/50 hover:bg-[#FF3E3E]/5"
                                          onClick={async () => {
                                              try { await client.post('/api/v1/auth/logout'); }
@@ -395,10 +381,10 @@ export default function MyPage() {
                                     >
                                         <div className="flex items-center gap-3 pr-2">
                                             <div className="p-1.5 sm:p-2 rounded-md shrink-0 bg-[#FF3E3E]/10 border border-[#FF3E3E]/20 group-hover:bg-[#FF3E3E]/20 transition-colors">
-                                                <Circle className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px] drop-shadow-sm group-hover:animate-pulse" style={{ color: '#FF3E3E' }} />
+                                                <Circle className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3px] drop-shadow-sm group-hover:animate-pulse text-[#FF3E3E]" />
                                             </div>
                                             <div className="min-w-0">
-                                                <h4 className="font-bold text-xs sm:text-sm truncate" style={{ color: '#FF3E3E' }}>기기 로그아웃</h4>
+                                                <h4 className="font-bold text-xs sm:text-sm truncate text-[#FF3E3E]">기기 로그아웃</h4>
                                                 <p className="text-[9px] sm:text-[10px] mt-0.5 truncate text-secondary">현재 브라우저에서 안전하게 연결 해제</p>
                                             </div>
                                         </div>

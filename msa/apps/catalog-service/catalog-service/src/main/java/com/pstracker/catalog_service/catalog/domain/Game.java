@@ -54,12 +54,6 @@ public class Game {
 
     private String currency = "KRW"; // 기본값
 
-    @Column(name = "metacritic_score")
-    private Integer metaScore;
-
-    @Column(name = "user_score")
-    private Double userScore;
-
     @Column(name = "igdb_critic_score")
     private Integer igdbCriticScore;
 
@@ -285,13 +279,6 @@ public class Game {
         }
         if(userCount != null) {
             this.igdbUserCount = userCount;
-        }
-
-        if (criticScore != null) {
-            this.metaScore = criticScore;
-        }
-        if (userScore != null) {
-            this.userScore = userScore;
         }
     }
 

@@ -441,10 +441,10 @@ const GameListPage = () => {
             <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" />
 
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
-                <div className="absolute inset-0 z-20 mix-blend-screen dark:mix-blend-screen opacity-40 dark:opacity-50">
-                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
-                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
-                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[100px] sm:blur-[120px] animate-[pulse_12s_ease-in-out_infinite]"></div>
+                <div className="absolute inset-0 z-20 md:mix-blend-screen md:dark:mix-blend-screen opacity-40 md:opacity-50">
+                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_12s_ease-in-out_infinite]"></div>
                 </div>
             </div>
 
@@ -622,7 +622,7 @@ const GameListPage = () => {
                     </div>
                 )}
 
-                <div className="relative z-40 bg-glass backdrop-blur-xl p-6 rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
+                <div className="relative z-40 bg-glass backdrop-blur-md md:backdrop-blur-xl p-6 rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="relative flex-1">
                             <input
@@ -745,7 +745,7 @@ const GameListPage = () => {
                             </div>
 
                             <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>IGDB스코어</label>
+                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>전문가 평점</label>
                                 <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'metaScore' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
                                     <span className="truncate">{metaScoreOptions.find(o => o.value === filter.minMetaScore)?.label}</span>
                                     <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'metaScore' ? 'rotate-180' : ''}`} />
@@ -910,10 +910,26 @@ const GameListPage = () => {
                                                     {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
                                                     <span className="text-xs sm:text-sm font-medium ml-0.5">원</span>
                                                 </p>
-                                                {game.metaScore > 0 && (
-                                                    <span className={`shrink-0 text-[10px] sm:text-xs font-black px-1.5 py-0.5 sm:px-2 rounded shadow-sm border ${game.metaScore >= 80 ? 'bg-score-green-bg text-score-green-text border-green-500/30' : 'bg-score-yellow-bg text-score-yellow-text border-yellow-500/30'}`}>
-                                                        {game.metaScore}
+
+                                                {game.displayScore && (
+                                                    <div className="shrink-0 flex items-center shadow-sm rounded border border-divider overflow-hidden bg-surface">
+
+                                                        <div className={`px-1.5 py-0.5 text-[10px] font-black flex items-center justify-center
+                                                        ${game.scoreSource === 'MC'
+                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                                                            : 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300'}`}>
+                                                            {game.scoreSource === 'MC' ? 'M' : 'I'}
+                                                        </div>
+
+                                                        <span className={`px-1.5 py-0.5 text-[11px] font-black tracking-tight
+                                                        ${game.scoreSource === 'MC'
+                                                            ? (game.displayScore >= 75 ? 'text-green-600 dark:text-green-400 bg-green-500/10'
+                                                                : game.displayScore >= 50 ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10'
+                                                                    : 'text-red-600 dark:text-red-400 bg-red-500/10')
+                                                            : 'text-primary'}`}>
+                                                        {game.displayScore}
                                                     </span>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
@@ -943,7 +959,7 @@ const GameListPage = () => {
 
                 {/* 스마트 플로팅 바 */}
                 <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
-                    <div className="flex items-center gap-2 bg-glass backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
+                    <div className="flex items-center gap-2 bg-glass backdrop-blur-md md:backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
                         <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="빠른 검색"><Search className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" /></button>
 
                         <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="맨 위로"><Triangle className="w-5 h-5 text-green-500 fill-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] group-hover:-translate-y-1 transition-transform" /></button>
@@ -1022,7 +1038,7 @@ const GameListPage = () => {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-secondary mb-3">IGDB 스코어</label>
+                                    <label className="block text-sm font-bold text-secondary mb-3">전문가 평점</label>
                                     <div className="flex flex-wrap gap-2">
                                         {metaScoreOptions.map((opt) => (
                                             <button key={opt.value} onClick={() => handleQuickSelect('minMetaScore', opt.value)} className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minMetaScore === opt.value ? 'bg-[var(--bento-purple-from)] border-[color:var(--bento-purple-border)] text-purple-500 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>

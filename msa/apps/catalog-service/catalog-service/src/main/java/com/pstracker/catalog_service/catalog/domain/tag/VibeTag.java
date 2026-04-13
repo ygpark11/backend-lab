@@ -3,6 +3,9 @@ package com.pstracker.catalog_service.catalog.domain.tag;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Getter
 @RequiredArgsConstructor
 public enum VibeTag {
@@ -71,4 +74,20 @@ public enum VibeTag {
 
     private final String tagName;
     private final SubCategory parent;
+
+    private static final Map<String, VibeTag> CODE_VALUE_MAP = new HashMap<>();
+
+    static {
+        for (VibeTag tag : values()) {
+            CODE_VALUE_MAP.put(tag.getTagName(), tag);
+        }
+    }
+
+    public static VibeTag fromTagName(String tagName) {
+        VibeTag vibeTag = CODE_VALUE_MAP.get(tagName);
+        if (vibeTag == null) {
+            throw new IllegalArgumentException("Unknown tagName in VibeTag: " + tagName);
+        }
+        return vibeTag;
+    }
 }

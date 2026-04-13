@@ -100,7 +100,7 @@ public class CatalogService {
         // 다음 조회 시 최신 데이터로 다시 캐싱됨
         gameReadService.evictGameDetailCache(game.getId());
 
-        if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(3))) {
+        if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1))) {
             requeueRecentGameForRating(game.getId());
         }
     }

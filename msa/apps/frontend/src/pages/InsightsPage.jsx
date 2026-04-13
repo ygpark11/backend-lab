@@ -118,7 +118,7 @@ const InsightsPage = () => {
             </div>
 
             {/* 벤토 박스 UI (Grid) */}
-            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-[160px]">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 grid-flow-dense gap-4 md:gap-6 auto-rows-[160px]">
 
                 {/* 1. 역대 최저가 갱신 (RED) */}
                 <div
@@ -126,7 +126,7 @@ const InsightsPage = () => {
                     className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-red-border)] p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-red-border-hover)] hover:[box-shadow:var(--bento-red-shadow)] transition-all duration-300 flex flex-col justify-between"
                 >
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-red-from), transparent 70%)' }}></div>
-                    <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-red-border-hover)', opacity: 0.15 }}></div>
+                    <div className="hidden md:block absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-red-border-hover)', opacity: 0.15 }}></div>
 
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-2">
@@ -200,7 +200,7 @@ const InsightsPage = () => {
                     className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-amber-border)] p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-amber-border-hover)] hover:[box-shadow:var(--bento-amber-shadow)] transition-all duration-300"
                 >
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-amber-from), transparent 70%)' }}></div>
-                    <div className="absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-amber-border-hover)', opacity: 0.15 }}></div>
+                    <div className="hidden md:block absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-amber-border-hover)', opacity: 0.15 }}></div>
                     <div className="relative z-10 h-full flex flex-col justify-between">
                         <div className="flex justify-between items-start">
                             <div>
@@ -226,7 +226,7 @@ const InsightsPage = () => {
                     className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-cyan-border)] p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-cyan-border-hover)] hover:[box-shadow:var(--bento-cyan-shadow)] transition-all duration-300"
                 >
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-cyan-from), transparent 70%)' }}></div>
-                    <div className="absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-cyan-border-hover)', opacity: 0.15 }}></div>
+                    <div className="hidden md:block absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-cyan-border-hover)', opacity: 0.15 }}></div>
                     <div className="relative z-10 h-full flex flex-col justify-between">
                         <div className="flex justify-between items-start">
                             <div>
@@ -249,7 +249,7 @@ const InsightsPage = () => {
                 {/* 5. 누적 찜 횟수 (PINK) */}
                 <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-pink-border)] hover:border-[color:var(--bento-pink-border-hover)] hover:[box-shadow:var(--bento-pink-shadow)] p-5 md:p-6 flex items-center justify-between relative overflow-hidden group transition-all duration-300">
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-pink-from), transparent 60%)' }}></div>
-                    <div className="absolute left-0 top-0 w-48 h-full rounded-full blur-3xl transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-pink-border-hover)', opacity: 0.1 }}></div>
+                    <div className="hidden md:block absolute left-0 top-0 w-48 h-full rounded-full blur-3xl transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-pink-border-hover)', opacity: 0.1 }}></div>
 
                     <div className="flex items-center gap-3 md:gap-4 relative z-10 flex-1 min-w-0">
                         <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
@@ -270,7 +270,7 @@ const InsightsPage = () => {
                 {/* 6 & 7. 트래커 시스템 현황 (EMERALD) */}
                 <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-emerald-border)] hover:border-[color:var(--bento-emerald-border-hover)] hover:[box-shadow:var(--bento-emerald-shadow)] p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group transition-all duration-300">
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-emerald-from), transparent 60%)' }}></div>
-                    <div className="absolute left-1/2 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-emerald-border-hover)', opacity: 0.1 }}></div>
+                    <div className="hidden md:block absolute left-1/2 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-emerald-border-hover)', opacity: 0.1 }}></div>
 
                     <div className="flex items-center gap-3 md:gap-4 relative z-10 mb-4 md:mb-0 w-full md:w-auto">
                         <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -317,7 +317,7 @@ const InsightsPage = () => {
                     className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-yellow-border)] hover:border-[color:var(--bento-yellow-border-hover)] hover:[box-shadow:var(--bento-yellow-shadow)] p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group cursor-pointer transition-all duration-300"
                 >
                     <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-yellow-from), transparent 60%)' }}></div>
-                    <div className="absolute right-0 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-yellow-border-hover)', opacity: 0.1 }}></div>
+                    <div className="hidden md:block absolute right-0 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-yellow-border-hover)', opacity: 0.1 }}></div>
 
                     <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full md:w-auto flex-1">
                         <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 group-hover:-rotate-12 transition-transform">

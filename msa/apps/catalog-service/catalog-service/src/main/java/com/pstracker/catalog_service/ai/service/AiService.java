@@ -106,6 +106,8 @@ public class AiService {
                 responseJson = responseJson.replace("```json", "").replace("```", "").trim();
                 return objectMapper.readValue(responseJson, new TypeReference<List<AiInsightDto>>() {});
             }
+        } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+            throw e;
         } catch (Exception e) {
             log.error("❌ AI 배치 처리 실패", e);
         }
@@ -133,6 +135,9 @@ public class AiService {
                 }
                 return null;
 
+            } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+                log.error("Gemini API 일일 할당량(Quota) 초과. 더 이상 호출할 수 없습니다.");
+                throw e;
             } catch (HttpServerErrorException.ServiceUnavailable e) {
                 // 503 에러 발생 시
                 log.warn("Gemini 서버 503 과부하. {}ms 후 재시도 (시도: {}/{})", waitTime, attempt, maxRetries);

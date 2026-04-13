@@ -49,7 +49,13 @@ public class AiDescriptionScheduler {
             log.debug("처리 중... (Call {}/{})", i + 1, MAX_API_CALLS_PER_DAY);
 
             // 2. 5개 묶어서 API 호출
-            List<AiService.AiInsightDto> insights = aiService.generateBatchInsights(targetGames);
+            List<AiService.AiInsightDto> insights;
+            try {
+                insights = aiService.generateBatchInsights(targetGames);
+            } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests e) {
+                log.warn("API 일일 무료 할당량(Quota)이 초과되었습니다. 오늘의 배치를 즉시 종료합니다.");
+                break;
+            }
 
             if (insights.isEmpty()) {
                 log.warn("AI 응답 파싱 실패 또는 빈 응답. 잠시 대기 후 재시도합니다.");

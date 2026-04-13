@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 import com.pstracker.catalog_service.catalog.domain.VoteType;
+import com.pstracker.catalog_service.catalog.domain.tag.VibeTag;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -34,9 +35,16 @@ public record GameDetailResponse(
 
         String pioneerName,
 
-        // [평점 정보]
-        Integer metaScore,
-        Double userScore,
+        Integer mcMetaScore,
+        Integer mcMetaCount,
+        Double mcUserScore,
+        Integer mcUserCount,
+        Integer igdbCriticScore,
+        Integer igdbCriticCount,
+        Double igdbUserScore,
+        Integer igdbUserCount,
+
+        List<VibeTagDto> vibeTags,
 
         // [투표 정보]
         Integer likeCount,
@@ -80,7 +88,10 @@ public record GameDetailResponse(
                 this.imageUrl, this.description, this.psStoreId,
                 this.currentPrice, this.originalPrice, this.lowestPrice,
                 this.discountRate, this.isPlusExclusive, this.isPs5ProEnhanced,
-                this.saleEndDate, this.releaseDate, this.pioneerName, this.metaScore, this.userScore,
+                this.saleEndDate, this.releaseDate, this.pioneerName,
+                this.mcMetaScore, this.mcMetaCount, this.mcUserScore, this.mcUserCount,
+                this.igdbCriticScore, this.igdbCriticCount, this.igdbUserScore, this.igdbUserCount,
+                this.vibeTags,
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
                 this.verdictMessage, this.priceHistory,
@@ -119,7 +130,6 @@ public record GameDetailResponse(
         Integer discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
         Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
 
-        // 🚀 분리된 유틸리티 메서드를 사용하여 현재 상태 판정
         PriceVerdict verdict = calculateVerdict(currentPrice, originalPrice, lowestPrice, history.size());
         String verdictMsg;
 
@@ -143,11 +153,26 @@ public record GameDetailResponse(
                 .map(gg -> gg.getGenre().getName())
                 .toList();
 
+        List<VibeTagDto> vibeTags;
+        if(game.getVibeTags() == null || game.getVibeTags().isEmpty()) {
+            vibeTags = List.of();
+        } else {
+            vibeTags = game.getVibeTags().stream()
+                    .map(tag -> {
+                        String color = VibeTag.fromTagName(tag).getParent().getParent().getColor();
+                        return new VibeTagDto(tag, color);
+                    })
+                    .toList();
+        }
+
         return new GameDetailResponse(
                 game.getId(), game.getName(), game.getEnglishName(), game.getPublisher(),
                 game.getImageUrl(), game.getDescription(), game.getPsStoreId(),
                 currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(), game.isPs5ProEnhanced(),
-                game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(), game.getMetaScore(), game.getUserScore(),
+                game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(),
+                game.getMcMetaScore(), game.getMcMetaCount(), game.getMcUserScore(), game.getMcUserCount(),
+                game.getIgdbCriticScore(), game.getIgdbCriticCount(), game.getIgdbUserScore(), game.getIgdbUserCount(),
+                vibeTags,
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, null, game.getCreatedAt(), verdict, verdictMsg, history,
                 0, null, null ,null,
@@ -171,5 +196,10 @@ public record GameDetailResponse(
             Integer price,
             Integer discountRate,
             PriceVerdict verdict
+    )implements Serializable {}
+
+    public record VibeTagDto(
+            String name,
+            String color
     )implements Serializable {}
 }

@@ -25,10 +25,13 @@ public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
                 .select(new QWishlistDto(
                         wishlist.id, game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
+                        game.allTimeLowPrice,
                         game.isPlusExclusive, game.saleEndDate,
-                        game.metaScore, game.inCatalog, game.pioneerName,
+                        game.mcMetaScore, game.mcUserScore,
+                        game.igdbCriticScore, game.igdbUserScore,
+                        game.inCatalog, game.pioneerName,
                         game.createdAt, wishlist.createdAt,
-                        game.isPs5ProEnhanced
+                        game.isPs5ProEnhanced, game.vibeTags
                 ))
                 .from(wishlist)
                 .join(wishlist.game, game)

@@ -36,7 +36,6 @@ import {
     ShieldAlert,
     Sparkles,
     Square,
-    Star,
     Timer,
     Trash2,
     TrendingDown,
@@ -87,9 +86,9 @@ const BackgroundHero = ({ imageUrl }) => (
         <div className="absolute inset-0 bg-gradient-to-t from-base via-base/80 to-transparent"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-base/80 via-base/40 to-transparent"></div>
 
-        <div className="absolute inset-0 z-20 mix-blend-screen dark:mix-blend-screen opacity-50">
-            <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/20 rounded-full blur-[60px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
-            <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[60px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
+        <div className="absolute inset-0 z-20 md:mix-blend-screen md:dark:mix-blend-screen opacity-40 md:opacity-50">
+            <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
+            <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
         </div>
     </div>
 );
@@ -321,6 +320,24 @@ export default function GameDetailPage() {
     const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
     const hasDescription = game.description && game.description !== "Full Data Crawler";
 
+    const formatCount = (count) => {
+        if (!count) return '0';
+        return count >= 1000 ? (count / 1000).toFixed(1) + 'k' : count.toLocaleString();
+    };
+
+    const mcDiff = (game.mcMetaScore && game.mcUserScore) ? Math.abs(game.mcMetaScore - (game.mcUserScore * 10)) : 0;
+    const igdbDiff = (game.igdbCriticScore && game.igdbUserScore) ? Math.abs(game.igdbCriticScore - (game.igdbUserScore * 10)) : 0;
+    const isDiscrepancyWarning = mcDiff >= 15 || igdbDiff >= 15;
+
+    // 감성 태그 고유 색상 매핑 (네온 사이버펑크 감성)
+    const tagStyles = [
+        "text-cyan-400 border-cyan-500/40 hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]",
+        "text-pink-400 border-pink-500/40 hover:shadow-[0_0_15px_rgba(236,72,153,0.6)]",
+        "text-purple-400 border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.6)]",
+        "text-yellow-400 border-yellow-500/40 hover:shadow-[0_0_15px_rgba(234,179,8,0.6)]",
+        "text-green-400 border-green-500/40 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)]"
+    ];
+
     // 3. 가격 신호등 배경
     const glowStyle = {
         'BUY_NOW': 'border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.15)]',
@@ -367,22 +384,28 @@ export default function GameDetailPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-2 mb-3 items-center">
                             {game.isPs5ProEnhanced && (
-                                <span className="px-3 py-1 rounded text-xs font-black border transition-all bg-surface text-primary border-divider shadow-sm flex items-center gap-1.5">
+                                <span className="px-3 py-1 rounded-md text-xs font-black border border-divider bg-surface text-primary shadow-sm flex items-center gap-1.5">
                                     <Sparkles className="w-3.5 h-3.5 text-primary" /> PS5 Pro Enhanced
                                 </span>
                             )}
+
                             {game.genres && game.genres.length > 0 ? game.genres.map(g => (
-                                <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded text-xs font-bold border transition-all hover:scale-105 active:scale-95 bg-surface backdrop-blur-sm ${getGenreBadgeStyle(g)}`}>
+                                <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded-md text-xs font-bold border shadow-sm transition-all hover:opacity-80 ${getGenreBadgeStyle(g)}`}>
                                     {g}
                                 </button>
-                            )) : <span className="px-3 py-1 rounded text-xs font-bold border bg-surface text-secondary border-divider backdrop-blur-sm">미분류</span>}
-                            {game.platforms && game.platforms.map(p => <span key={p} className="bg-[rgba(59,130,246,0.1)] text-ps-blue border border-[rgba(59,130,246,0.3)] px-2 py-1 rounded text-xs font-bold cursor-default backdrop-blur-sm">{p}</span>)}
+                            )) : <span className="px-3 py-1 rounded-md text-xs font-bold border border-divider bg-surface text-secondary shadow-sm">미분류</span>}
+
+                            {game.platforms && game.platforms.map(p => (
+                                <span key={p} className="px-2.5 py-1 rounded-md text-xs font-bold border border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm cursor-default">
+                                    {p}
+                                </span>
+                            ))}
                         </div>
 
-                        <div className="flex justify-between items-start gap-4 mb-2">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary drop-shadow-2xl flex-1 break-keep break-words">{game.title}</h1>
+                        <div className="flex justify-between items-start gap-4 mb-3">
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary drop-shadow-sm flex-1 break-keep break-words">{game.title}</h1>
                             {isAdmin && (
                                 <div className="flex gap-2 shrink-0 pt-1">
                                     <button onClick={handleRefresh} className="p-2 sm:p-3 rounded-full bg-[var(--bento-blue-from)] text-ps-blue hover:bg-[var(--bento-blue-border)] border border-[color:var(--bento-blue-border)] transition-all shadow-sm backdrop-blur-md group" title="정보 갱신"><RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-700" /></button>
@@ -390,6 +413,24 @@ export default function GameDetailPage() {
                                 </div>
                             )}
                         </div>
+
+                        {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-6 mt-1">
+                                {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 5).map((tag, idx) => (
+                                    <span
+                                        key={idx}
+                                        style={{ '--tag-color': tag.color }}
+
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-surface border border-divider shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_0_10px_var(--tag-color)] cursor-default group"
+                                    >
+                                        <span className="w-2 h-2 rounded-full bg-[color:var(--tag-color)] shadow-[0_0_5px_var(--tag-color)] opacity-80 group-hover:opacity-100 transition-opacity"></span>
+                                        <span className="text-secondary group-hover:text-primary transition-colors tracking-wide">
+                                            {tag.name}
+                                        </span>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
                             {game.isPs5ProEnhanced && (
@@ -424,7 +465,7 @@ export default function GameDetailPage() {
                         </div>
 
                         {/* 5. 가격 신호등 영역 */}
-                        <div className={`p-5 sm:p-6 rounded-xl border-2 backdrop-blur-xl mb-8 transition-all duration-300 relative overflow-hidden group bg-base/90 dark:bg-base/80 ${glowStyle}`}>
+                        <div className={`p-5 sm:p-6 rounded-xl border-2 backdrop-blur-md md:backdrop-blur-xl mb-8 transition-all duration-300 relative overflow-hidden group bg-base/90 dark:bg-base/80 ${glowStyle}`}>
                             <div className="absolute inset-0 bg-gradient-to-r from-base to-transparent z-0 pointer-events-none"></div>
                             <div className="relative z-10 flex items-start gap-4 sm:gap-5">
                                 <div className="shrink-0 scale-100 sm:scale-105">{renderVerdictIcon(game.priceVerdict)}</div>
@@ -668,43 +709,115 @@ export default function GameDetailPage() {
                     </div>
                     <div className="space-y-4 sm:space-y-5">
 
-                        {game.metaScore > 0 && (
-                            <div className="relative group overflow-hidden bg-surface border border-divider p-4 sm:p-5 rounded-2xl backdrop-blur-xl shadow-md transition-all hover:border-purple-500/50">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none group-hover:bg-purple-500/20 transition-colors"></div>
-                                <div className="flex items-center gap-4 relative z-10">
-                                    <div className="bg-gradient-to-br from-purple-500 to-indigo-600 p-3 sm:p-3.5 rounded-xl shadow-[0_0_15px_rgba(168,85,247,0.3)]">
-                                        <Star className="w-5 h-5 sm:w-6 h-6 text-white fill-current animate-pulse-slow drop-shadow-sm" />
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-secondary text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-0.5">IGDB Score</span>
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className={`font-black text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-md ${game.metaScore >= 80 ? 'text-green-500' : 'text-yellow-500'}`}>{game.metaScore}</span>
-                                            <span className="text-muted font-bold text-xs ml-0.5">/ 100</span>
-                                        </div>
-                                    </div>
-                                </div>
+                        {isDiscrepancyWarning && (
+                            <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse">
+                                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                                <span className="text-red-500 font-bold text-[11px] sm:text-xs leading-tight">
+                                    주의: 전문가와 유저의 평가가 크게 엇갈리는 게임입니다.
+                                </span>
                             </div>
                         )}
 
-                        {game.userScore > 0 && (
-                            <div className="relative group overflow-hidden bg-surface border border-divider p-4 sm:p-5 rounded-2xl backdrop-blur-xl shadow-md transition-all hover:border-ps-blue/50">
-                                <div className="absolute top-0 right-0 w-24 h-24 bg-ps-blue/10 rounded-full blur-2xl -mr-8 -mt-8 pointer-events-none group-hover:bg-ps-blue/20 transition-colors"></div>
-                                <div className="flex items-center gap-4 relative z-10">
-                                    <div className="bg-gradient-to-br from-blue-400 to-blue-600 p-3 sm:p-3.5 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-                                        <Users className="w-5 h-5 sm:w-6 h-6 text-white drop-shadow-sm" />
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+
+                            {/* [카드 1: Metacritic] */}
+                            {(game.mcMetaScore > 0 || game.mcUserScore > 0) ? (
+                                <div className={`relative group bg-surface border border-divider p-3 sm:p-4 rounded-xl backdrop-blur-md md:backdrop-blur-xl shadow-md transition-all 
+                                    ${game.mcMetaScore >= 75 ? 'hover:border-green-500/50' : game.mcMetaScore >= 50 ? 'hover:border-yellow-500/50' : 'hover:border-red-500/50'}`}>
+
+                                    {/* 출처 로고 */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="bg-black dark:bg-white text-white dark:text-black font-black text-[10px] px-1.5 py-0.5 rounded shadow-sm border border-divider">
+                                            M
+                                        </span>
+                                        <span className="text-[10px] font-bold text-secondary">Metacritic</span>
                                     </div>
-                                    <div className="flex flex-col">
-                                        <span className="text-secondary text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-0.5">User Score</span>
-                                        <div className="flex items-baseline gap-1.5">
-                                            <span className={`font-black text-2xl sm:text-3xl tracking-tight leading-none drop-shadow-md ${game.userScore >= 7.0 ? 'text-ps-blue' : 'text-primary'}`}>{Number(game.userScore).toFixed(1)}</span>
-                                            <span className="text-muted font-bold text-xs ml-0.5">/ 10</span>
+
+                                    {/* 전문가 점수 (Main) */}
+                                    <div className="mb-2 relative group/tooltip cursor-help">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className={`font-black text-3xl sm:text-4xl tracking-tight leading-none drop-shadow-md 
+                                                ${game.mcMetaScore >= 75 ? 'text-green-600 dark:text-green-400' : game.mcMetaScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {game.mcMetaScore || '-'}
+                                            </span>
+                                            <span className="text-muted font-bold text-[10px] sm:text-xs">/100</span>
+                                            <span className="text-muted text-[9px] sm:hidden ml-1">({formatCount(game.mcMetaCount)})</span>
+                                        </div>
+                                        {/* Count Tooltip */}
+                                        <div className="absolute bottom-full left-0 mb-2 w-max px-2 py-1 bg-black/90 text-white text-[10px] font-bold rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 shadow-lg border border-divider">
+                                            총 {game.mcMetaCount?.toLocaleString() || 0}명의 전문가 평가
+                                        </div>
+                                    </div>
+
+                                    {/* 유저 점수 (Sub) */}
+                                    <div className="border-t border-divider pt-2 relative group/tooltip cursor-help">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-secondary text-[10px] font-bold uppercase">User</span>
+                                            <span className={`font-black text-xs sm:text-sm 
+                                                ${game.mcUserScore >= 7.5 ? 'text-green-600 dark:text-green-400' : game.mcUserScore >= 5.0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                                                {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
+                                            </span>
+                                        </div>
+                                        <span className="text-muted text-[9px] sm:hidden block text-right mt-0.5">({formatCount(game.mcUserCount)})</span>
+                                        {/* Count Tooltip */}
+                                        <div className="absolute top-full left-0 mt-2 w-max px-2 py-1 bg-black/90 text-white text-[10px] font-bold rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 shadow-lg border border-divider">
+                                            총 {game.mcUserCount?.toLocaleString() || 0}명의 유저 평가
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[100px] transition-colors hover:border-divider-strong overflow-hidden">
+                                    <span className="text-[11px] sm:text-xs font-bold text-secondary whitespace-nowrap">메타크리틱 평가 없음</span>
+                                </div>
+                            )}
 
-                        <div className="bg-surface border border-divider p-5 sm:p-6 rounded-2xl backdrop-blur-xl shadow-md relative overflow-hidden group/verdict mt-4">
+                            {/* [카드 2: IGDB] */}
+                            {(game.igdbCriticScore > 0 || game.igdbUserScore > 0) ? (
+                                <div className="relative group bg-surface border border-divider p-3 sm:p-4 rounded-xl backdrop-blur-md md:backdrop-blur-xl shadow-md transition-all hover:border-[color:var(--bento-purple-border)]">
+
+                                    {/* 출처 로고 */}
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-[10px] px-1.5 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm">IGDB</span>
+                                        <span className="text-[10px] font-bold text-secondary">Community</span>
+                                    </div>
+
+                                    {/* 전문가 점수 (Main) */}
+                                    <div className="mb-2 relative group/tooltip cursor-help">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-black text-3xl sm:text-4xl tracking-tight leading-none drop-shadow-md text-purple-400">
+                                                {game.igdbCriticScore || '-'}
+                                            </span>
+                                            <span className="text-muted font-bold text-[10px] sm:text-xs">/100</span>
+                                            <span className="text-muted text-[9px] sm:hidden ml-1">({formatCount(game.igdbCriticCount)})</span>
+                                        </div>
+                                        {/* Count Tooltip (PC Only) */}
+                                        <div className="absolute bottom-full left-0 mb-2 w-max px-2 py-1 bg-black/90 text-white text-[10px] font-bold rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 shadow-lg border border-divider">
+                                            총 {game.igdbCriticCount?.toLocaleString() || 0}명의 전문가 평가
+                                        </div>
+                                    </div>
+
+                                    {/* 유저 점수 (Sub) */}
+                                    <div className="border-t border-divider pt-2 relative group/tooltip cursor-help">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-secondary text-[10px] font-bold uppercase">User</span>
+                                            <span className="font-black text-primary text-xs sm:text-sm">{game.igdbUserScore > 0 ? (game.igdbUserScore * 10).toFixed(0) : '-'}</span>
+                                        </div>
+                                        <span className="text-muted text-[9px] sm:hidden block text-right mt-0.5">({formatCount(game.igdbUserCount)})</span>
+                                        {/* Count Tooltip (PC Only) */}
+                                        <div className="absolute top-full left-0 mt-2 w-max px-2 py-1 bg-black/90 text-white text-[10px] font-bold rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all z-50 shadow-lg border border-divider">
+                                            총 {game.igdbUserCount?.toLocaleString() || 0}명의 유저 평가
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[100px] transition-colors hover:border-divider-strong overflow-hidden">
+                                    <span className="text-[11px] sm:text-xs font-bold text-secondary whitespace-nowrap">IGDB 평가 없음</span>
+                                </div>
+                            )}
+
+                        </div>
+
+                        <div className="bg-surface border border-divider p-5 sm:p-6 rounded-2xl backdrop-blur-md md:backdrop-blur-xl shadow-md relative overflow-hidden group/verdict mt-4">
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-secondary to-transparent blur-[1px]"></div>
                             <h4 className="text-secondary text-xs font-bold mb-5 flex items-center justify-between">
                                 <span className="flex items-center gap-1.5 uppercase tracking-widest"><Users className="w-3.5 h-3.5"/> Community Verdict</span>

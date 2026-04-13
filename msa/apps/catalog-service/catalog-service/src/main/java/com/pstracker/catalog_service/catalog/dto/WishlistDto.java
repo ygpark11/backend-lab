@@ -1,18 +1,12 @@
 package com.pstracker.catalog_service.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import com.querydsl.core.annotations.QueryProjection;
 import lombok.Data;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import static com.pstracker.catalog_service.catalog.domain.QGame.game;
 
 @Data
 public class WishlistDto {
@@ -23,16 +17,15 @@ public class WishlistDto {
 
     private Integer currentPrice;
     private Integer originalPrice;
+    private Integer lowestPrice;
     private int discountRate;
     private boolean isOnSale;
 
-    private LocalDateTime createdAt; // 게임 생성일 (NEW 뱃지용)
-    private LocalDate saleEndDate;   // 할인 종료일 (마감임박 뱃지용)
-    private List<String> genres;     // 장르 이모지용
+    private LocalDateTime createdAt;
+    private LocalDate saleEndDate;
+    private List<String> genres;
 
-    private LocalDateTime wishedAt; // 언제 찜했는지
-
-    private Integer metaScore;
+    private LocalDateTime wishedAt;
 
     @JsonProperty("isPlusExclusive")
     boolean isPlusExclusive;
@@ -45,22 +38,34 @@ public class WishlistDto {
 
     private String pioneerName;
 
+    private Integer displayScore;
+    private String scoreSource;
+    private String topVibeTag;
+
+    private Integer mcMetaScore;
+    private Double mcUserScore;
+    private Integer igdbCriticScore;
+    private Double igdbUserScore;
+
     @QueryProjection
     public WishlistDto(Long id, Long gameId, String gameName, String gameImgUrl,
                        Integer originalPrice, Integer currentPrice, Integer discountRate,
+                       Integer lowestPrice,
                        boolean isPlusExclusive, LocalDate saleEndDate,
-                       Integer metaScore, boolean inCatalog, String pioneerName,
+                       Integer mcMetaScore, Double mcUserScore,
+                       Integer igdbCriticScore, Double igdbUserScore,
+                       boolean inCatalog, String pioneerName,
                        LocalDateTime createdAt, LocalDateTime wishedAt,
-                       boolean isPs5ProEnhanced) {
+                       boolean isPs5ProEnhanced, List<String> vibeTags) {
         this.id = id;
         this.gameId = gameId;
         this.name = gameName;
         this.imageUrl = gameImgUrl;
         this.wishedAt = wishedAt;
         this.createdAt = createdAt;
-        this.metaScore = metaScore;
         this.currentPrice = currentPrice != null ? currentPrice : 0;
         this.originalPrice = originalPrice != null ? originalPrice : 0;
+        this.lowestPrice = lowestPrice != null ? lowestPrice : 0;
         this.discountRate = discountRate != null ? discountRate : 0;
         this.isOnSale = this.discountRate > 0;
         this.saleEndDate = saleEndDate;
@@ -68,5 +73,25 @@ public class WishlistDto {
         this.inCatalog = inCatalog;
         this.pioneerName = pioneerName;
         this.isPs5ProEnhanced = isPs5ProEnhanced;
+
+        this.mcMetaScore = mcMetaScore;
+        this.mcUserScore = mcUserScore;
+        this.igdbCriticScore = igdbCriticScore;
+        this.igdbUserScore = igdbUserScore;
+
+        if (mcMetaScore != null && mcMetaScore > 0) {
+            this.displayScore = mcMetaScore;
+            this.scoreSource = "MC";
+        } else if (igdbCriticScore != null && igdbCriticScore > 0) {
+            this.displayScore = igdbCriticScore;
+            this.scoreSource = "IGDB";
+        } else {
+            this.displayScore = null;
+            this.scoreSource = null;
+        }
+
+        if (vibeTags != null && !vibeTags.isEmpty()) {
+            this.topVibeTag = vibeTags.get(0);
+        }
     }
 }

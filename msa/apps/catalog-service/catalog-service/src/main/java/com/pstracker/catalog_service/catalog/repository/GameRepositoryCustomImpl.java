@@ -8,6 +8,7 @@ import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -34,10 +35,10 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate, game.pioneerName,
-                        game.metaScore, game.userScore,
                         game.inCatalog, game.createdAt,
                         game.isPs5ProEnhanced,
-                        game.bestSellerRank, game.mostDownloadedRank
+                        game.bestSellerRank, game.mostDownloadedRank,
+                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags
                 ))
                 .from(game)
                 .where(
@@ -84,18 +85,19 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
+        NumberExpression<Integer> fallbackScore = game.mcMetaScore.coalesce(game.igdbCriticScore);
+
         // 1. 쿼리 실행
         List<Game> games = queryFactory
                 .selectFrom(game)
                 .where(
                         game.id.ne(excludeGameId),
                         game.gameGenres.any().genre.id.in(genreIds),
-                        // 메타스코어 75점 이상이거나, 평점이 없는 신작
-                        game.metaScore.goe(75).or(game.metaScore.isNull())
+                        fallbackScore.goe(75).or(fallbackScore.isNull())
                 )
                 .orderBy(
                         game.discountRate.desc(),
-                        game.metaScore.desc().nullsLast(),
+                        fallbackScore.desc().nullsLast(),
                         game.lastUpdated.desc()
                 )
                 .limit(limit)
@@ -116,8 +118,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                     g.getId(), g.getName(), g.getImageUrl(),
                     g.getOriginalPrice(), g.getCurrentPrice(), g.getDiscountRate(),
                     g.isPlusExclusive(), g.getSaleEndDate(), g.getPioneerName(),
-                    g.getMetaScore(), g.getUserScore(), g.isInCatalog(), g.getCreatedAt(),
-                    g.isPs5ProEnhanced(), g.getBestSellerRank(), g.getMostDownloadedRank()
+                    g.isInCatalog(), g.getCreatedAt(),
+                    g.isPs5ProEnhanced(), g.getBestSellerRank(), g.getMostDownloadedRank(),
+                    g.getMcMetaScore(), g.getIgdbCriticScore(), g.getVibeTags()
             );
 
             // 장르 이름 매핑
@@ -151,11 +154,15 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression metaScoreGoe(Integer minMetaScore) {
-        return minMetaScore != null ? game.metaScore.goe(minMetaScore) : null;
+        if (minMetaScore == null) return null;
+        return game.mcMetaScore.goe(minMetaScore)
+                .or(game.mcMetaScore.isNull().and(game.igdbCriticScore.goe(minMetaScore)));
     }
 
     private BooleanExpression userScoreGoe(Double minUserScore) {
-        return minUserScore != null ? game.userScore.goe(minUserScore) : null;
+        if (minUserScore == null) return null;
+        return game.mcUserScore.goe(minUserScore)
+                .or(game.mcUserScore.isNull().and(game.igdbUserScore.goe(minUserScore)));
     }
 
     private BooleanExpression platformEq(Platform platform) {
@@ -216,7 +223,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             switch (order.getProperty()) {
                 case "price" -> orders.add(new OrderSpecifier<>(direction, game.currentPrice));
                 case "discountRate" -> orders.add(new OrderSpecifier<>(direction, game.discountRate));
-                case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.metaScore));
+                case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.mcMetaScore.coalesce(game.igdbCriticScore)));
                 case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate, OrderSpecifier.NullHandling.NullsLast));
                 case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, game.releaseDate));
                 default ->orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
@@ -231,8 +238,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .select(game.count())
                 .from(game)
                 .where(
-                        game.metaScore.goe(85), // IGDB 85 이상
-                        game.discountRate.goe(50) // 50% 이상 할인
+                        game.mcMetaScore.goe(85).or(game.mcMetaScore.isNull().and(game.igdbCriticScore.goe(85))),
+                        game.discountRate.goe(50)
                 )
                 .fetchOne();
         return count != null ? count : 0L;
