@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { X as XIcon, Circle, Square, Triangle, X, Sparkles, TrendingUp } from 'lucide-react';
-import { useCompareStore } from '../store/useCompareStore';
+import React, {useEffect, useState} from 'react';
+import {Circle, Sparkles, Square, TrendingUp, Triangle, X as XIcon, X} from 'lucide-react';
+import {useCompareStore} from '../store/useCompareStore';
 import PSGameImage from './common/PSGameImage';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
-import { useLocation } from 'react-router-dom';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
+import {useLocation} from 'react-router-dom';
 
 export default function CompareModal({ isOpen, onClose }) {
     const { compareList } = useCompareStore();
@@ -27,15 +27,15 @@ export default function CompareModal({ isOpen, onClose }) {
     const [gameA, gameB] = compareList;
 
     const getCritic = (g) => {
-        if (g.mcMetaScore > 0) return { val: g.mcMetaScore, calcVal: g.mcMetaScore, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbCriticScore > 0) return { val: g.igdbCriticScore, calcVal: g.igdbCriticScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
-        return { val: null, calcVal: null, src: null };
+        if (g.mcMetaScore > 0) return { val: g.mcMetaScore, calcVal: g.mcMetaScore, scale: 100, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
+        if (g.igdbCriticScore > 0) return { val: g.igdbCriticScore, calcVal: g.igdbCriticScore, scale: 100, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
+        return { val: null, calcVal: null, scale: null, src: null };
     };
 
     const getUser = (g) => {
-        if (g.mcUserScore > 0) return { val: g.mcUserScore, calcVal: g.mcUserScore * 10, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbUserScore > 0) return { val: g.igdbUserScore, calcVal: g.igdbUserScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
-        return { val: null, calcVal: null, src: null };
+        if (g.mcUserScore > 0) return { val: g.mcUserScore, calcVal: g.mcUserScore * 10, scale: 10, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
+        if (g.igdbUserScore > 0) return { val: Math.round(g.igdbUserScore), calcVal: g.igdbUserScore, scale: 100, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
+        return { val: null, calcVal: null, scale: null, src: null };
     };
 
     const criticA = getCritic(gameA);
@@ -145,23 +145,39 @@ export default function CompareModal({ isOpen, onClose }) {
                 </h4>
 
                 <div className="flex items-start justify-between px-2 sm:px-6 mb-3">
+                    {/* 좌측 게임 (Game A) */}
                     <div className={`flex flex-col items-start transition-all duration-700 ${winner === 'A' ? 'scale-110 drop-shadow-md z-10' : 'scale-95'}`}>
                         <div className="flex items-center gap-2">
                             {winner === 'A' && psIcon}
-                            <span className={`font-black text-xl sm:text-3xl tracking-tight ${winner === 'A' ? 'text-primary' : (!valA ? 'text-muted' : 'text-secondary')}`}>
-                                {valA ? (isLowerBetter ? `${valA.toLocaleString()}원` : formatVal(valA)) : '-'}
-                            </span>
-                            {srcA && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcA.bg}`}>{srcA.src}</span>}
+                            <div className={`flex items-baseline gap-0.5 font-black text-xl sm:text-3xl tracking-tight ${winner === 'A' ? 'text-primary' : (!valA ? 'text-muted' : 'text-secondary')}`}>
+                                {valA ? (
+                                    isLowerBetter ? `${valA.toLocaleString()}원` : (
+                                        <>
+                                            <span>{formatVal(valA)}</span>
+                                            {srcA?.scale && <span className="text-[11px] sm:text-sm font-bold opacity-50">/{srcA.scale}</span>}
+                                        </>
+                                    )
+                                ) : '-'}
+                            </div>
+                            {srcA?.src && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcA.bg}`}>{srcA.src}</span>}
                         </div>
                         {isLowerBetter && renderPriceBadges(gameAData)}
                     </div>
 
+                    {/* 우측 게임 (Game B) */}
                     <div className={`flex flex-col items-end transition-all duration-700 ${winner === 'B' ? 'scale-110 drop-shadow-md z-10' : 'scale-95'}`}>
                         <div className="flex items-center gap-2">
-                            {srcB && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcB.bg}`}>{srcB.src}</span>}
-                            <span className={`font-black text-xl sm:text-3xl tracking-tight ${winner === 'B' ? 'text-primary' : (!valB ? 'text-muted' : 'text-secondary')}`}>
-                                {valB ? (isLowerBetter ? `${valB.toLocaleString()}원` : formatVal(valB)) : '-'}
-                            </span>
+                            {srcB?.src && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcB.bg}`}>{srcB.src}</span>}
+                            <div className={`flex items-baseline gap-0.5 font-black text-xl sm:text-3xl tracking-tight ${winner === 'B' ? 'text-primary' : (!valB ? 'text-muted' : 'text-secondary')}`}>
+                                {valB ? (
+                                    isLowerBetter ? `${valB.toLocaleString()}원` : (
+                                        <>
+                                            <span>{formatVal(valB)}</span>
+                                            {srcB?.scale && <span className="text-[11px] sm:text-sm font-bold opacity-50">/{srcB.scale}</span>}
+                                        </>
+                                    )
+                                ) : '-'}
+                            </div>
                             {winner === 'B' && psIcon}
                         </div>
                         {isLowerBetter && renderPriceBadges(gameBData)}
