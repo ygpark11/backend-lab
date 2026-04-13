@@ -27,15 +27,15 @@ export default function CompareModal({ isOpen, onClose }) {
     const [gameA, gameB] = compareList;
 
     const getCritic = (g) => {
-        if (g.mcMetaScore > 0) return { val: g.mcMetaScore, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbCriticScore > 0) return { val: g.igdbCriticScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
-        return { val: null, src: null };
+        if (g.mcMetaScore > 0) return { val: g.mcMetaScore, calcVal: g.mcMetaScore, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
+        if (g.igdbCriticScore > 0) return { val: g.igdbCriticScore, calcVal: g.igdbCriticScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
+        return { val: null, calcVal: null, src: null };
     };
 
     const getUser = (g) => {
-        if (g.mcUserScore > 0) return { val: g.mcUserScore, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbUserScore > 0) return { val: g.igdbUserScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
-        return { val: null, src: null };
+        if (g.mcUserScore > 0) return { val: g.mcUserScore, calcVal: g.mcUserScore * 10, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
+        if (g.igdbUserScore > 0) return { val: g.igdbUserScore, calcVal: g.igdbUserScore, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
+        return { val: null, calcVal: null, src: null };
     };
 
     const criticA = getCritic(gameA);
@@ -52,8 +52,8 @@ export default function CompareModal({ isOpen, onClose }) {
 
     const winners = {
         price: calcWinner(gameA.currentPrice, gameB.currentPrice, true),
-        meta: calcWinner(criticA.val, criticB.val),
-        userVote: calcWinner(userA.val, userB.val)
+        meta: calcWinner(criticA.calcVal, criticB.calcVal),
+        userVote: calcWinner(userA.calcVal, userB.calcVal)
     };
 
     const getVerdictText = () => {
@@ -64,14 +64,18 @@ export default function CompareModal({ isOpen, onClose }) {
         if (winners.meta === 'A') scoreA++; else if (winners.meta === 'B') scoreB++;
         if (winners.userVote === 'A') scoreA++; else if (winners.userVote === 'B') scoreB++;
 
-        const isALowest = gameA.lowestPrice > 0 && gameA.currentPrice <= gameA.lowestPrice;
-        const isBLowest = gameB.lowestPrice > 0 && gameB.currentPrice <= gameB.lowestPrice;
+        const isALowest = gameA.discountRate > 0 && gameA.lowestPrice > 0 && gameA.currentPrice <= gameA.lowestPrice;
+        const isBLowest = gameB.discountRate > 0 && gameB.lowestPrice > 0 && gameB.currentPrice <= gameB.lowestPrice;
 
         if (isALowest && isBLowest) {
+            const priceText = gameA.currentPrice === gameB.currentPrice
+                ? "가격이 동일하므로"
+                : `예산 차이(${Math.min(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원 vs ${Math.max(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원)와`;
+
             return (
                 <>
                     <span className="text-green-500 font-black drop-shadow-md">양쪽 모두 역대 최저가</span>를 달성한 엄청난 타이밍입니다!
-                    예산 차이<span className="text-muted text-[10px] mx-1">({Math.min(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원 vs {Math.max(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원)</span>와 장르를 고려하여 기분 좋게 선택하세요.
+                    {priceText} 장르를 고려하여 기분 좋게 선택하세요.
                 </>
             );
         }
@@ -88,26 +92,34 @@ export default function CompareModal({ isOpen, onClose }) {
         return <>양쪽 모두 장단점이 비등합니다. <span className="text-green-500 font-bold">할인율</span>과 <span className="text-purple-500 font-bold">평가 출처</span>를 고려하여 취향에 맞게 선택하세요.</>;
     };
 
-    // 💡 2. 가독성 및 톤앤매너 개선
-    const TensionBar = ({ label, valA, valB, winner, isLowerBetter = false, psIcon, srcA, srcB, gameAData, gameBData }) => {
+    // 💡 3번 버그 해결: 텐션 바 내부 비율 계산용 calcA, calcB 프롭스 추가
+    const TensionBar = ({ label, valA, valB, calcA, calcB, winner, isLowerBetter = false, psIcon, srcA, srcB, gameAData, gameBData }) => {
         let ratioA = 50, ratioB = 50;
         const hasMissingData = !valA || !valB;
 
+        const formatVal = (val) => {
+            if (typeof val !== 'number') return val;
+            return Number.isInteger(val) ? val : val.toFixed(1);
+        };
+
         if (!hasMissingData && valA !== valB) {
+            const activeCalcA = calcA !== undefined ? calcA : valA;
+            const activeCalcB = calcB !== undefined ? calcB : valB;
+
             if (isLowerBetter) {
-                const total = valA + valB;
-                ratioA = (valB / total) * 100;
-                ratioB = (valA / total) * 100;
+                const total = activeCalcA + activeCalcB;
+                ratioA = (activeCalcB / total) * 100;
+                ratioB = (activeCalcA / total) * 100;
             } else {
-                const total = valA + valB;
-                ratioA = (valA / total) * 100;
-                ratioB = (valB / total) * 100;
+                const total = activeCalcA + activeCalcB;
+                ratioA = (activeCalcA / total) * 100;
+                ratioB = (activeCalcB / total) * 100;
             }
         }
 
         const renderPriceBadges = (game) => {
             if (!game) return null;
-            const isLowest = game.lowestPrice > 0 && game.currentPrice <= game.lowestPrice;
+            const isLowest = game.discountRate > 0 && game.lowestPrice > 0 && game.currentPrice <= game.lowestPrice;
             return (
                 <div className="flex items-center gap-1.5 mt-1">
                     {game.discountRate > 0 && (
@@ -137,7 +149,7 @@ export default function CompareModal({ isOpen, onClose }) {
                         <div className="flex items-center gap-2">
                             {winner === 'A' && psIcon}
                             <span className={`font-black text-xl sm:text-3xl tracking-tight ${winner === 'A' ? 'text-primary' : (!valA ? 'text-muted' : 'text-secondary')}`}>
-                                {valA ? (isLowerBetter ? `${valA.toLocaleString()}원` : valA) : '-'}
+                                {valA ? (isLowerBetter ? `${valA.toLocaleString()}원` : formatVal(valA)) : '-'}
                             </span>
                             {srcA && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcA.bg}`}>{srcA.src}</span>}
                         </div>
@@ -148,7 +160,7 @@ export default function CompareModal({ isOpen, onClose }) {
                         <div className="flex items-center gap-2">
                             {srcB && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcB.bg}`}>{srcB.src}</span>}
                             <span className={`font-black text-xl sm:text-3xl tracking-tight ${winner === 'B' ? 'text-primary' : (!valB ? 'text-muted' : 'text-secondary')}`}>
-                                {valB ? (isLowerBetter ? `${valB.toLocaleString()}원` : valB) : '-'}
+                                {valB ? (isLowerBetter ? `${valB.toLocaleString()}원` : formatVal(valB)) : '-'}
                             </span>
                             {winner === 'B' && psIcon}
                         </div>
@@ -179,7 +191,7 @@ export default function CompareModal({ isOpen, onClose }) {
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-6 md:p-10">
-            <div className={`absolute inset-0 bg-backdrop/90 backdrop-blur-md transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}></div>
+            <div className={`absolute inset-0 bg-backdrop/90 backdrop-blur-xl transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}></div>
 
             <div className={`relative w-full h-full sm:h-auto max-w-5xl bg-base border-x-0 sm:border border-divider sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${animateIn ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-20 opacity-0 scale-95'}`}>
 
@@ -215,13 +227,13 @@ export default function CompareModal({ isOpen, onClose }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-base/98 custom-scrollbar relative z-30 border-t border-divider">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface/90 backdrop-blur-2xl custom-scrollbar relative z-30 border-t border-divider">
                     <TensionBar label="현재 결제가 (최저가)" valA={gameA.currentPrice} valB={gameB.currentPrice} winner={winners.price} isLowerBetter={true} gameAData={gameA} gameBData={gameB} psIcon={<Triangle className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A39D] stroke-[3px] animate-[bounce_1s_infinite_-0.3s] drop-shadow-[0_0_8px_rgba(0,163,157,0.5)]" />} />
-                    <TensionBar label="전문가 평점 (MC/IGDB)" valA={criticA.val} valB={criticB.val} srcA={criticA} srcB={criticB} winner={winners.meta} psIcon={<Circle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF3E3E] stroke-[3px] animate-[bounce_1s_infinite_-0.15s] drop-shadow-[0_0_8px_rgba(255,62,62,0.5)]" />} />
-                    <TensionBar label="유저 평점 (MC/IGDB)" valA={userA.val} valB={userB.val} srcA={userA} srcB={userB} winner={winners.userVote} psIcon={<X className="w-5 h-5 sm:w-6 sm:h-6 text-[#4E6CBB] stroke-[4px] animate-[bounce_1s_infinite_0s] drop-shadow-[0_0_8px_rgba(78,108,187,0.5)]" />} />
+                    <TensionBar label="전문가 평점 (MC/IGDB)" valA={criticA.val} valB={criticB.val} calcA={criticA.calcVal} calcB={criticB.calcVal} srcA={criticA} srcB={criticB} winner={winners.meta} psIcon={<Circle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF3E3E] stroke-[3px] animate-[bounce_1s_infinite_-0.15s] drop-shadow-[0_0_8px_rgba(255,62,62,0.5)]" />} />
+                    <TensionBar label="유저 평점 (MC/IGDB)" valA={userA.val} valB={userB.val} calcA={userA.calcVal} calcB={userB.calcVal} srcA={userA} srcB={userB} winner={winners.userVote} psIcon={<X className="w-5 h-5 sm:w-6 sm:h-6 text-[#4E6CBB] stroke-[4px] animate-[bounce_1s_infinite_0s] drop-shadow-[0_0_8px_rgba(78,108,187,0.5)]" />} />
                 </div>
 
-                <div className="p-4 sm:p-6 bg-surface border-t border-divider shrink-0 z-40 relative">
+                <div className="p-4 sm:p-6 bg-surface border-t border-divider shrink-0 z-40 relative backdrop-blur-xl">
                     <Square className="absolute top-4 right-6 w-12 h-12 text-[#E8789C] stroke-[2px] opacity-10 animate-[spin_10s_linear_infinite]" />
 
                     <div className="text-center text-xs sm:text-sm text-secondary font-bold mb-5 leading-relaxed bg-base/50 p-3 rounded-xl border border-divider-strong inline-block w-full shadow-inner">
