@@ -604,7 +604,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         # 오리지널 API(JAVA_API_URL)로 데이터 전송
         try:
             res = session.post(JAVA_API_URL, json=payload, timeout=30)
-            if res.status_code == 200: logger.info(f"   📤 Sent: {title} ({payload['currentPrice']} KRW)")
+            if res.status_code == 200: logger.info(f"Sent: {title} ({payload['currentPrice']} KRW)")
             else: logger.error(f"Server Error ({res.status_code}): {title}")
         except Exception as e: logger.error(f"Network Error sending {title}: {e}")
 
