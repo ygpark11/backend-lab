@@ -692,99 +692,97 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        {/* 💡 새로운 벤토 스타일 점수 카드 UI (모바일 완벽 대응) */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-stretch">
 
                             {/* [카드 1: Metacritic] */}
                             {(game.mcMetaScore > 0 || game.mcUserScore > 0) ? (
-                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-divider-strong flex flex-col justify-between">
+                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-divider-strong flex flex-col justify-between h-full">
                                     <div className="flex items-center justify-between mb-4">
                                         <span className="bg-black dark:bg-white text-white dark:text-black font-black text-[10px] px-2 py-0.5 rounded shadow-sm border border-divider">
                                             M
                                         </span>
-                                        <span className="text-[10px] font-bold text-secondary">Metacritic</span>
+                                        <span className="text-[10px] font-bold text-primary opacity-80">Metacritic</span>
                                     </div>
 
                                     <div className="flex flex-col gap-3">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] sm:text-xs font-black text-secondary tracking-wider">CRITIC</span>
-                                                <span className="text-[9px] sm:text-[10px] text-muted">{formatCount(game.mcMetaCount)} reviews</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex flex-col shrink-0">
+                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">CRITIC</span>
+                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.mcMetaCount)} reviews</span>
                                             </div>
-                                            <div className="flex items-baseline gap-0.5">
+                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
                                                 <span className={`text-2xl sm:text-3xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
                                                     {game.mcMetaScore || '-'}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted">/100</span>
+                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
                                             </div>
                                         </div>
 
                                         <div className="w-full h-[1px] bg-divider"></div>
 
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] sm:text-xs font-black text-secondary tracking-wider">USER</span>
-                                                <span className="text-[9px] sm:text-[10px] text-muted">{formatCount(game.mcUserCount)} ratings</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex flex-col shrink-0">
+                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">USER</span>
+                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.mcUserCount)} ratings</span>
                                             </div>
-                                            <div className="flex items-baseline gap-0.5">
+                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
                                                 <span className={`text-xl sm:text-2xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
                                                     {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted">/10</span>
+                                                <span className="text-[10px] font-bold text-primary opacity-50">/10</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[120px] transition-colors hover:border-divider-strong overflow-hidden">
-                                    <span className="text-[11px] sm:text-xs font-bold text-secondary whitespace-nowrap">메타크리틱 평가 없음</span>
+                                    <span className="text-[11px] sm:text-xs font-bold text-primary opacity-60 whitespace-nowrap">메타크리틱 평가 없음</span>
                                 </div>
                             )}
 
                             {/* [카드 2: IGDB] */}
                             {(game.igdbCriticScore > 0 || game.igdbUserScore > 0) ? (
-                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-[color:var(--bento-purple-border)] flex flex-col justify-between">
+                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-[color:var(--bento-purple-border)] flex flex-col justify-between h-full">
                                     <div className="flex items-center justify-between mb-4">
                                         <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-[10px] px-2 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm">
                                             IGDB
                                         </span>
-                                        <span className="text-[10px] font-bold text-secondary">Community</span>
+                                        <span className="text-[10px] font-bold text-primary opacity-80">Community</span>
                                     </div>
 
                                     <div className="flex flex-col gap-3">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] sm:text-xs font-black text-secondary tracking-wider">CRITIC</span>
-                                                <span className="text-[9px] sm:text-[10px] text-muted">{formatCount(game.igdbCriticCount)} reviews</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex flex-col shrink-0">
+                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">CRITIC</span>
+                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.igdbCriticCount)} reviews</span>
                                             </div>
-                                            <div className="flex items-baseline gap-0.5">
+                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
                                                 <span className={`text-2xl sm:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
                                                     {game.igdbCriticScore || '-'}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted">/100</span>
+                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
                                             </div>
                                         </div>
 
                                         <div className="w-full h-[1px] bg-divider"></div>
 
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] sm:text-xs font-black text-secondary tracking-wider">USER</span>
-                                                <span className="text-[9px] sm:text-[10px] text-muted">{formatCount(game.igdbUserCount)} ratings</span>
+                                        <div className="flex justify-between items-center gap-2">
+                                            <div className="flex flex-col shrink-0">
+                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">USER</span>
+                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.igdbUserCount)} ratings</span>
                                             </div>
-                                            <div className="flex items-baseline gap-0.5">
-                                                {/* 💡 3번 버그 해결: 84.818 -> 85 점(100점 만점 기준)으로 변환 */}
+                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
                                                 <span className={`text-xl sm:text-2xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
                                                     {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
                                                 </span>
-                                                <span className="text-[10px] font-bold text-muted">/100</span>
+                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[120px] transition-colors hover:border-divider-strong overflow-hidden">
-                                    <span className="text-[11px] sm:text-xs font-bold text-secondary whitespace-nowrap">IGDB 평가 없음</span>
+                                    <span className="text-[11px] sm:text-xs font-bold text-primary opacity-60 whitespace-nowrap">IGDB 평가 없음</span>
                                 </div>
                             )}
 
