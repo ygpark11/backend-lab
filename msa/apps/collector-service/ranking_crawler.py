@@ -76,7 +76,9 @@ class BrowserManager:
             self.browser = None
             gc.collect()
 
-            time.sleep(3)
+            logger.info("OS 메모리 반환 대기 중... (10초 숨고르기)")
+            time.sleep(10)
+
             try: self.browser, self.context = self._create_browser()
             except:
                 time.sleep(5)

@@ -102,7 +102,7 @@ class BrowserManager:
         self.request_count = 0
 
     def _create_browser(self):
-        logger.info("🌐 크롬 브라우저 시작 (메모리 최적화 + 스텔스 옵션)")
+        logger.info("크롬 브라우저 시작 (메모리 최적화 + 스텔스 옵션)")
         DESKTOP_USER_AGENTS = [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
@@ -143,7 +143,8 @@ class BrowserManager:
             self.browser = None
             gc.collect()
 
-            time.sleep(3)
+            logger.info("OS 메모리 반환 대기 중... (10초 숨고르기)")
+            time.sleep(10)
 
             try:
                 self.browser, self.context = self._create_browser()
