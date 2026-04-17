@@ -5,7 +5,6 @@ import com.pstracker.catalog_service.global.security.JwtToken;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
 import com.pstracker.catalog_service.member.dto.MemberLoginDto;
 import com.pstracker.catalog_service.member.service.MemberService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

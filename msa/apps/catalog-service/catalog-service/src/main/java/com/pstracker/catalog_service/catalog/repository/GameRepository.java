@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,14 @@ import java.util.Optional;
 
 public interface GameRepository extends JpaRepository<Game, Long>, GameRepositoryCustom {
     Optional<Game> findByPsStoreId(String psStoreId);
+
+    /**
+     * 게임 상세 조회 시 gameGenres → genre 까지 한 번에 fetch join
+     * default_batch_fetch_size 의존 없이 SELECT 1방으로 처리
+     */
+    @EntityGraph(attributePaths = {"gameGenres", "gameGenres.genre"})
+    @Query("SELECT g FROM Game g WHERE g.id = :gameId")
+    Optional<Game> findByIdWithGenres(@Param("gameId") Long gameId);
 
     /**
      * [수집 원칙 제1조 - 효율성 및 기간 존중 (완전판)]
@@ -63,6 +72,14 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     void clearMostDownloadedRanks();
 
     List<Game> findByPsStoreIdIn(List<String> psStoreIds);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.bestSellerRank = :rank WHERE g.psStoreId = :psStoreId")
+    int updateBestSellerRank(@Param("psStoreId") String psStoreId, @Param("rank") Integer rank);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.mostDownloadedRank = :rank WHERE g.psStoreId = :psStoreId")
+    int updateMostDownloadedRank(@Param("psStoreId") String psStoreId, @Param("rank") Integer rank);
 
     List<Game> findTop5ByDescriptionEqualsOrVibeTagsIsNull(String description);
 }

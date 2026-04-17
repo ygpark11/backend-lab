@@ -173,10 +173,10 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
         try:
             set_rating_running(True)
 
-            # 1. 1호기(Java)에 타겟 요청
+            # 1. 수집 타겟 요청
             res = requests.get(API_TARGET_URL, headers=HEADERS, timeout=10)
 
-            # 1호기가 204 No Content를 주면 조용히 다음 턴으로 넘김
+            # 1호기가 204 No Content를 주면 조용히 다음으로 넘김
             if res.status_code == 204:
                 continue
 
@@ -194,7 +194,7 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
             # 2. 메타크리틱 수집
             result = crawl_metacritic_single(game_title)
 
-            # 3. 1호기(Java)에 결과 전송
+            # 3. 결과 전송
             payload = {
                 "jobId": job_id,
                 "gameId": game_id,

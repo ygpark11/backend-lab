@@ -7,10 +7,9 @@ import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 
@@ -24,8 +23,7 @@ public class ScrapingEventListener {
     private final FcmTokenRepository  fcmTokenRepository;
 
     @Async
-    @Transactional
-    @EventListener
+    @TransactionalEventListener
     public void handlePioneerScrapingCompletedEvent(PioneerScrapingCompletedEvent event) {
         log.info("[이벤트 수신] 개척자 수집 완료 처리 시작 - psStoreId: {}, member: {}",
                 event.getPsStoreId(), event.getMember().getNickname());
@@ -58,7 +56,7 @@ public class ScrapingEventListener {
     }
 
     @Async
-    @EventListener
+    @TransactionalEventListener
     public void handleCrawlerErrorEvent(CrawlerErrorEvent event) {
         log.error("[이벤트 수신] 크롤러 수집 실패 알림 - Source: {}, Message: {}",
                 event.getSource(), event.getErrorMessage());

@@ -23,7 +23,7 @@ import static org.springframework.util.StringUtils.hasText;
         @Index(name = "idx_game_name", columnList = "name"),
         @Index(name = "idx_game_price", columnList = "current_price"),
         @Index(name = "idx_game_discount", columnList = "discount_rate"),
-        @Index(name = "idx_game_meta", columnList = "metacritic_score"),
+        @Index(name = "idx_game_mc_meta", columnList = "mc_meta_score"),
         @Index(name = "idx_game_updated", columnList = "last_updated_at"),
         @Index(name = "idx_game_family", columnList = "family_id")
 })

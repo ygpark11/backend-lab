@@ -60,7 +60,7 @@ public class JwtTokenProvider {
         // Access Token 생성
         String accessToken = Jwts.builder()
                 .subject(authentication.getName())          // payload "sub": "user@email.com"
-                .claim("auth", authorities)           // payload "auth": "ROLE_USER"
+                .claim(AUTHORITIES_KEY, authorities)   // payload "auth": "ROLE_USER"
                 .claim(MEMBER_ID_KEY, memberId)
                 .expiration(new Date(now + accessTokenValidityTime)) // 유효기간
                 .signWith(key)                              // 서명 (Header + Payload + SecretKey)

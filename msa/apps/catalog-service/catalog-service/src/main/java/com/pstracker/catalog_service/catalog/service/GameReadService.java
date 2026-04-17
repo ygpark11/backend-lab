@@ -50,7 +50,8 @@ public class GameReadService {
      */
     @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
     public GameDetailResponse getBaseGameDetail(Long gameId) {
-        Game game = gameRepository.findById(gameId)
+        // gameGenres → genre 까지 한 번의 JOIN으로 조회 (Lazy 로딩 쿼리 제거)
+        Game game = gameRepository.findByIdWithGenres(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
         // 가격 이력 조회

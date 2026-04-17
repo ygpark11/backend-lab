@@ -43,7 +43,6 @@ public class MemberService {
     /**
      * 로그인 -> 토큰 발급
      */
-    @Transactional
     public JwtToken login(MemberLoginDto request) {
         // 1. Login ID/PW를 기반으로 Authentication 객체 생성
         UsernamePasswordAuthenticationToken authenticationToken =
@@ -56,7 +55,7 @@ public class MemberService {
         // 3. 인증 정보를 기반으로 JWT 토큰 생성
         JwtToken jwtToken = jwtTokenProvider.generateToken(authentication);
 
-        log.info("🔑 Login Success: {}", request.getEmail());
+        log.debug("Login Success: {}", request.getEmail());
         return jwtToken;
     }
 

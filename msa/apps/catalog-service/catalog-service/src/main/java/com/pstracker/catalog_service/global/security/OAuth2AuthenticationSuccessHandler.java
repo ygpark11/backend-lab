@@ -50,7 +50,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         Map<String, Object> attributes = oAuth2User.getAttributes();
         String email = (String) attributes.get("email");
 
-        log.info("🎉 Google Login Success: {}", email);
+        log.debug("Google Login Success: {}", email);
 
         // 2. DB에서 Member 정보 조회 (ID를 얻기 위해)
         // (CustomOAuth2UserService에서 이미 저장/갱신했으므로 무조건 있음)

@@ -22,7 +22,7 @@ public class GameVoteService {
 
     @Transactional
     public GameVoteResponseDto toggleVote(Long gameId, Long memberId, VoteType requestedVoteType) {
-        if(memberId == null) {;
+        if(memberId == null) {
             throw new IllegalArgumentException("회원 ID는 필수입니다.");
         }
 

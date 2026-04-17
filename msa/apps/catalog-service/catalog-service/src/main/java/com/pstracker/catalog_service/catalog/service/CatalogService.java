@@ -107,26 +107,45 @@ public class CatalogService {
 
     /**
      * 장르 문자열 파싱 및 엔티티 매핑
+     * - 1번의 IN절 SELECT로 기존 장르를 한꺼번에 조회하고, 없는 장르만 saveAll()로 배치 저장
      * @param genreIds 콤마 구분 장르 문자열
      * @return 장르 엔티티 집합
      */
     private Set<Genre> resolveGenres(String genreIds) {
-        Set<Genre> genreEntities = new HashSet<>();
-        if (!StringUtils.hasText(genreIds)) {
-            return genreEntities;
+        if (!StringUtils.hasText(genreIds)) return new HashSet<>();
+
+        List<String> names = Arrays.stream(genreIds.split(","))
+                .map(String::strip)
+                .filter(s -> !s.isBlank())
+                .distinct()
+                .toList();
+
+        if (names.isEmpty()) return new HashSet<>();
+
+        // 1번의 IN절 SELECT로 기존 장르 모두 조회
+        Map<String, Genre> existingByName = genreRepository.findByNameIn(names)
+                .stream()
+                .collect(Collectors.toMap(Genre::getName, g -> g));
+
+        // 없는 장르만 골라서 saveAll()로 배치 저장 (jdbc.batch_size 설정이 적용됨)
+        List<Genre> toSave = names.stream()
+                .filter(name -> !existingByName.containsKey(name))
+                .map(Genre::new)
+                .toList();
+
+        if (!toSave.isEmpty()) {
+            try {
+                genreRepository.saveAll(toSave)
+                        .forEach(g -> existingByName.put(g.getName(), g));
+            } catch (Exception e) {
+                // 동시 수집 시 unique 충돌 가능 → 재조회로 마무리
+                log.warn("장르 저장 중 충돌 감지, 재조회합니다: {}", e.getMessage());
+                genreRepository.findByNameIn(toSave.stream().map(Genre::getName).toList())
+                        .forEach(g -> existingByName.put(g.getName(), g));
+            }
         }
 
-        String[] genreNames = genreIds.split(",");
-        for (String name : genreNames) {
-            String cleanName = name.strip();
-            if (cleanName.isBlank()) continue;
-
-            // 캐싱 도입 시 성능 최적화 포인트 (현재는 DB 조회)
-            Genre genre = genreRepository.findByName(cleanName)
-                    .orElseGet(() -> genreRepository.save(new Genre(cleanName)));
-            genreEntities.add(genre);
-        }
-        return genreEntities;
+        return new HashSet<>(existingByName.values());
     }
 
     /**

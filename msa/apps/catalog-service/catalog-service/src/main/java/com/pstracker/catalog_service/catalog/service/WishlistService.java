@@ -42,6 +42,10 @@ public class WishlistService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 게임을 찾을 수 없습니다."));
 
+        if (targetPrice != null && targetPrice <= 0) {
+            throw new IllegalArgumentException("목표가는 0원보다 커야 합니다.");
+        }
+
         if (targetPrice != null && targetPrice >= game.getOriginalPrice()) {
             throw new IllegalArgumentException("목표가는 정가(" + game.getOriginalPrice() + "원)보다 낮아야 합니다.");
         }
@@ -54,7 +58,7 @@ public class WishlistService {
             // 1. 이미 찜한 상태인데 새로운 목표가를 보냈다 -> '수정'
             if (targetPrice != null) {
                 wishlist.updateTargetPrice(targetPrice);
-                return "목표가가 설정되었습니다. 🎯";
+                return "목표가가 설정되었습니다.";
             } else {
                 // 2. 목표가 없이 다시 하트를 눌렀다 -> 기존 찜 '취소'
                 wishlistRepository.delete(wishlist);
@@ -84,7 +88,7 @@ public class WishlistService {
     public Page<WishlistDto> getMyWishlist(Long memberId, Pageable pageable) {
         Page<WishlistDto> result = wishlistRepository.findAllByMemberId(memberId, pageable);
 
-        if (memberId != null && !result.isEmpty()) {
+        if (!result.isEmpty()) {
             markGameGenre(result.getContent());
         }
 

@@ -1,6 +1,5 @@
 package com.pstracker.catalog_service.catalog.service;
 
-import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
@@ -8,27 +7,27 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class RankingService {
 
     private final GameRepository gameRepository;
 
+    /**
+     * 랭킹 일괄 업데이트
+     * - 엔티티를 메모리에 로드하지 않고 벌크 UPDATE로 처리하여 메모리·쿼리 수 최소화
+     */
     @Transactional
     public void updateRankings(RankingUpdateRequestDto request) {
         String type = request.getRankingType();
         List<String> psStoreIds = request.getPsStoreIds();
 
-        log.info("🏆 [Ranking Update] Type: {}, Target Count: {}", type, psStoreIds.size());
+        log.info("[Ranking Update] Type: {}, Target Count: {}", type, psStoreIds.size());
 
-        // 1. 기존 랭킹 NULL 로 초기화 (UPDATE 1방)
+        // 1. 기존 랭킹 전체 초기화 (UPDATE 1방)
         if ("BEST_SELLER".equals(type)) {
             gameRepository.clearBestSellerRanks();
         } else if ("MOST_DOWNLOADED".equals(type)) {
@@ -38,25 +37,20 @@ public class RankingService {
             return;
         }
 
-        List<Game> targetGames = new ArrayList<>();
-        int chunkSize = 100;
-        for (int i = 0; i < psStoreIds.size(); i += chunkSize) {
-            List<String> chunk = psStoreIds.subList(i, Math.min(psStoreIds.size(), i + chunkSize));
-            targetGames.addAll(gameRepository.findByPsStoreIdIn(chunk));
-        }
-
-        Map<String, Game> gameMap = targetGames.stream()
-                .collect(Collectors.toMap(Game::getPsStoreId, game -> game));
-
+        // 2. 순위별 벌크 UPDATE (엔티티 로딩 없이 psStoreId → rank 직접 업데이트)
         int successCount = 0;
         for (int i = 0; i < psStoreIds.size(); i++) {
             String psStoreId = psStoreIds.get(i);
-            int currentRank = i + 1;
+            int rank = i + 1;
+            int updated;
 
-            Game game = gameMap.get(psStoreId);
+            if ("BEST_SELLER".equals(type)) {
+                updated = gameRepository.updateBestSellerRank(psStoreId, rank);
+            } else {
+                updated = gameRepository.updateMostDownloadedRank(psStoreId, rank);
+            }
 
-            if (game != null) {
-                game.updateRank(type, currentRank);
+            if (updated > 0) {
                 successCount++;
             } else {
                 log.debug("DB 미존재 게임 스킵 (PS_STORE_ID: {})", psStoreId);

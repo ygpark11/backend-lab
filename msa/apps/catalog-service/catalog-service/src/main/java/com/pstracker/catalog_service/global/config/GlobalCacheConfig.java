@@ -29,11 +29,11 @@ public class GlobalCacheConfig {
     public CacheManager cacheManager() {
         SimpleCacheManager simpleCacheManager = new SimpleCacheManager();
 
-        // 1. 게임 상세 캐시
+        // 1. 게임 상세 캐시 (전체 게임 수 ~2,000개 기준, 1GB 서버 메모리 고려)
         CaffeineCache gameDetailCache = new CaffeineCache(GAME_DETAIL_CACHE,
                 Caffeine.newBuilder()
                         .expireAfterWrite(24, TimeUnit.HOURS)
-                        .maximumSize(1_000)
+                        .maximumSize(2_000)
                         .recordStats()
                         .build());
 
