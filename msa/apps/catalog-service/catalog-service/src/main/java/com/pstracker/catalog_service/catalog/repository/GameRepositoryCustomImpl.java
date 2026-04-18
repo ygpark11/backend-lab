@@ -1,9 +1,10 @@
 package com.pstracker.catalog_service.catalog.repository;
 
-import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Platform;
+import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.QGameGenreResultDto;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -19,9 +20,14 @@ import org.springframework.data.support.PageableExecutionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
+import static com.pstracker.catalog_service.catalog.domain.QGameGenre.gameGenre;
+import static com.pstracker.catalog_service.catalog.domain.QGenre.genre;
 import static org.springframework.util.StringUtils.hasText;
+
 
 @RequiredArgsConstructor
 public class GameRepositoryCustomImpl implements GameRepositoryCustom {
@@ -87,9 +93,18 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     public List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
         NumberExpression<Integer> fallbackScore = game.mcMetaScore.coalesce(game.igdbCriticScore);
 
-        // 1. 쿼리 실행
-        List<Game> games = queryFactory
-                .selectFrom(game)
+        // 1단계: DTO 프로젝션으로 직접 조회 (엔티티 로딩 없음, LIMIT 정확히 적용)
+        List<GameSearchResultDto> dtos = queryFactory
+                .select(new QGameSearchResultDto(
+                        game.id, game.name, game.imageUrl,
+                        game.originalPrice, game.currentPrice, game.discountRate,
+                        game.isPlusExclusive, game.saleEndDate, game.pioneerName,
+                        game.inCatalog, game.createdAt,
+                        game.isPs5ProEnhanced,
+                        game.bestSellerRank, game.mostDownloadedRank,
+                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags
+                ))
+                .from(game)
                 .where(
                         game.id.ne(excludeGameId),
                         game.gameGenres.any().genre.id.in(genreIds),
@@ -103,33 +118,25 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .limit(limit)
                 .fetch();
 
-        // DTO 변환
-        return convertToDtos(games);
-    }
+        if (dtos.isEmpty()) return List.of();
 
-    /**
-     * 엔티티 리스트를 DTO 리스트로 변환
-     * @param games 게임 엔티티 리스트
-     * @return 게임 DTO 리스트
-     */
-    private List<GameSearchResultDto> convertToDtos(List<Game> games) {
-        return games.stream().map(g -> {
-            GameSearchResultDto dto = new GameSearchResultDto(
-                    g.getId(), g.getName(), g.getImageUrl(),
-                    g.getOriginalPrice(), g.getCurrentPrice(), g.getDiscountRate(),
-                    g.isPlusExclusive(), g.getSaleEndDate(), g.getPioneerName(),
-                    g.isInCatalog(), g.getCreatedAt(),
-                    g.isPs5ProEnhanced(), g.getBestSellerRank(), g.getMostDownloadedRank(),
-                    g.getMcMetaScore(), g.getIgdbCriticScore(), g.getVibeTags()
-            );
+        // 2단계: 장르 일괄 조회 후 매핑 (IN절 한 번으로 N+1 없음)
+        List<Long> gameIds = dtos.stream().map(GameSearchResultDto::getId).toList();
+        Map<Long, List<String>> genreMap = queryFactory
+                .select(new QGameGenreResultDto(gameGenre.game.id, genre.name))
+                .from(gameGenre)
+                .join(gameGenre.genre, genre)
+                .where(gameGenre.game.id.in(gameIds))
+                .fetch()
+                .stream()
+                .collect(Collectors.groupingBy(
+                        GameGenreResultDto::getGameId,
+                        Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())
+                ));
 
-            // 장르 이름 매핑
-            dto.setGenres(g.getGameGenres().stream()
-                    .map(gg -> gg.getGenre().getName())
-                    .toList());
+        dtos.forEach(dto -> dto.setGenres(genreMap.getOrDefault(dto.getId(), List.of())));
 
-            return dto;
-        }).toList();
+        return dtos;
     }
 
     private BooleanExpression nameContains(String keyword) {

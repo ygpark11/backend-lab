@@ -2,6 +2,10 @@ spring:
   application:
     name: catalog-service
 
+  threads:
+    virtual:
+      enabled: true
+
   messages:
     basename: errors
 
@@ -11,6 +15,11 @@ spring:
   profiles:
     active: local
     include: secret
+
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
 
   jpa:
     open-in-view: false

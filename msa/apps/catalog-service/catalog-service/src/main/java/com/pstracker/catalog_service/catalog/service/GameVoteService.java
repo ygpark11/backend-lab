@@ -38,20 +38,16 @@ public class GameVoteService {
             if (existingVote.getVoteType() == requestedVoteType) {
                 // 동일한 버튼을 다시 누름 -> 투표 기록 삭제
                 gameVoteRepository.delete(existingVote);
-                if (requestedVoteType == VoteType.LIKE) {
-                    game.removeLike();
-                } else {
-                    game.removeDislike();
+                switch (requestedVoteType) {
+                    case LIKE    -> game.removeLike();
+                    case DISLIKE -> game.removeDislike();
                 }
             } else {
                 // 반대 버튼을 누름 -> 기존 상태 변경
                 existingVote.changeVote(requestedVoteType);
-                if (requestedVoteType == VoteType.LIKE) {
-                    game.removeDislike(); // 기존 싫어요 취소
-                    game.addLike();       // 새로운 좋아요 추가
-                } else {
-                    game.removeLike();    // 기존 좋아요 취소
-                    game.addDislike();    // 새로운 싫어요 추가
+                switch (requestedVoteType) {
+                    case LIKE    -> { game.removeDislike(); game.addLike(); }
+                    case DISLIKE -> { game.removeLike();    game.addDislike(); }
                 }
                 finalUserVote = requestedVoteType;
             }
@@ -60,10 +56,9 @@ public class GameVoteService {
             GameVote newVote = GameVote.create(memberId, game, requestedVoteType);
             gameVoteRepository.save(newVote);
 
-            if (requestedVoteType == VoteType.LIKE) {
-                game.addLike();
-            } else {
-                game.addDislike();
+            switch (requestedVoteType) {
+                case LIKE    -> game.addLike();
+                case DISLIKE -> game.addDislike();
             }
             finalUserVote = requestedVoteType;
         }

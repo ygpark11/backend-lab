@@ -21,6 +21,7 @@ public class AiService {
     private final String apiKey;
     private final ObjectMapper objectMapper;
     private final TagTaxonomyRegistry taxonomyRegistry;
+    private final RestClient restClient = RestClient.create();
 
     private static final String MODEL_NAME = "gemini-2.5-flash";
     private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent";
@@ -118,7 +119,6 @@ public class AiService {
         int maxRetries = 3;
         long waitTime = 30_000;
 
-        RestClient restClient = RestClient.create();
         GeminiRequest request = new GeminiRequest(List.of(new Content(List.of(new Part(prompt)))));
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
@@ -131,7 +131,7 @@ public class AiService {
                         .body(GeminiResponse.class);
 
                 if (response != null && response.candidates() != null && !response.candidates().isEmpty()) {
-                    return response.candidates().get(0).content().parts().get(0).text();
+                    return response.candidates().getFirst().content().parts().getFirst().text();
                 }
                 return null;
 

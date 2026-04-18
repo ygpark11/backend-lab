@@ -28,13 +28,13 @@ public class RankingService {
         log.info("[Ranking Update] Type: {}, Target Count: {}", type, psStoreIds.size());
 
         // 1. 기존 랭킹 전체 초기화 (UPDATE 1방)
-        if ("BEST_SELLER".equals(type)) {
-            gameRepository.clearBestSellerRanks();
-        } else if ("MOST_DOWNLOADED".equals(type)) {
-            gameRepository.clearMostDownloadedRanks();
-        } else {
-            log.error("알 수 없는 랭킹 타입입니다: {}", type);
-            return;
+        switch (type) {
+            case "BEST_SELLER"      -> gameRepository.clearBestSellerRanks();
+            case "MOST_DOWNLOADED"  -> gameRepository.clearMostDownloadedRanks();
+            default -> {
+                log.error("알 수 없는 랭킹 타입입니다: {}", type);
+                return;
+            }
         }
 
         // 2. 순위별 벌크 UPDATE (엔티티 로딩 없이 psStoreId → rank 직접 업데이트)
@@ -42,13 +42,10 @@ public class RankingService {
         for (int i = 0; i < psStoreIds.size(); i++) {
             String psStoreId = psStoreIds.get(i);
             int rank = i + 1;
-            int updated;
-
-            if ("BEST_SELLER".equals(type)) {
-                updated = gameRepository.updateBestSellerRank(psStoreId, rank);
-            } else {
-                updated = gameRepository.updateMostDownloadedRank(psStoreId, rank);
-            }
+            int updated = switch (type) {
+                case "BEST_SELLER"  -> gameRepository.updateBestSellerRank(psStoreId, rank);
+                default             -> gameRepository.updateMostDownloadedRank(psStoreId, rank);
+            };
 
             if (updated > 0) {
                 successCount++;

@@ -20,6 +20,8 @@ import org.springframework.web.client.RestClient;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,6 +47,8 @@ public class CatalogService {
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
+    private final ExecutorService virtualThreadExecutor;
+    private final RestClient restClient = RestClient.create();
 
     /**
      * 게임 데이터 수집 및 저장 (Upsert)
@@ -55,7 +59,7 @@ public class CatalogService {
 
         // 가격 정보가 없거나 0원이면 아예 로직을 시작하지 않음
         if (request.getCurrentPrice() == null || request.getCurrentPrice() == 0) {
-            log.warn("⚠️ Invalid price data (0 or null). Skipping upsert for: {}", request.getTitle());
+            log.warn("Invalid price data (0 or null). Skipping upsert for: {}", request.getTitle());
             return;
         }
 
@@ -204,7 +208,7 @@ public class CatalogService {
             try {
                 platforms.add(Platform.valueOf(name.toUpperCase().trim()));
             } catch (IllegalArgumentException e) {
-                log.warn("⚠️ Unknown Platform detected: {}", name);
+                log.warn("Unknown Platform detected: {}", name);
             }
         }
         return platforms;
@@ -359,28 +363,30 @@ public class CatalogService {
         // 1. 순수 게임 정보 가져오기 (캐시 적용됨)
         GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
-        boolean isLiked = false;
-        Integer myTargetPrice = null;
-        VoteType userVote = null;
+        // 2. 유저별 동적 데이터 + 스카우터 통계를 가상 스레드로 병렬 조회
+        CompletableFuture<Optional<Wishlist>> wishFuture = memberId != null
+                ? CompletableFuture.supplyAsync(() -> wishlistRepository.findByMemberIdAndGameId(memberId, gameId), virtualThreadExecutor)
+                : CompletableFuture.completedFuture(Optional.empty());
 
-        // 2. 유저별 동적 데이터(찜 여부, 투표 상태)는 실시간 DB 조회 (비로그인이면 Pass)
-        if (memberId != null) {
-            Optional<Wishlist> myWish = wishlistRepository.findByMemberIdAndGameId(memberId, gameId);
-            if (myWish.isPresent()) {
-                isLiked = true;
-                myTargetPrice = myWish.get().getTargetPrice();
-            }
-            userVote = gameVoteRepository.findByMemberIdAndGameId(memberId, gameId)
-                    .map(GameVote::getVoteType)
-                    .orElse(null);
-        }
+        CompletableFuture<Optional<GameVote>> voteFuture = memberId != null
+                ? CompletableFuture.supplyAsync(() -> gameVoteRepository.findByMemberIdAndGameId(memberId, gameId), virtualThreadExecutor)
+                : CompletableFuture.completedFuture(Optional.empty());
 
-        // 3. 스카우터 통계 조회 (총 인원, 평균가)
-        int totalWatchers = wishlistRepository.countByGameId(gameId);
-        Integer avgTargetPrice = null;
-        if (totalWatchers >= 2) { // 2명 이상일 때만 평균가 계산
-            avgTargetPrice = wishlistRepository.getAverageTargetPriceByGameId(gameId);
-        }
+        CompletableFuture<Integer> watcherFuture =
+                CompletableFuture.supplyAsync(() -> wishlistRepository.countByGameId(gameId), virtualThreadExecutor);
+
+        CompletableFuture.allOf(wishFuture, voteFuture, watcherFuture).join();
+
+        // 3. 결과 조합
+        Optional<Wishlist> myWish = wishFuture.join();
+        boolean isLiked = myWish.isPresent();
+        Integer myTargetPrice = myWish.map(Wishlist::getTargetPrice).orElse(null);
+        VoteType userVote = voteFuture.join().map(GameVote::getVoteType).orElse(null);
+
+        int totalWatchers = watcherFuture.join();
+        Integer avgTargetPrice = (totalWatchers >= 2)
+                ? wishlistRepository.getAverageTargetPriceByGameId(gameId)
+                : null;
 
         // 4. 방어력 티어 계산 (캐시된 이력 데이터 활용)
         String[] defenseInfo = gameScouterService.calculateDefenseTier(
@@ -457,7 +463,6 @@ public class CatalogService {
 
         log.info("🚀 Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
 
-        RestClient restClient = RestClient.create();
         try {
             String response = restClient.post()
                     .uri(CRAWLER_URL)

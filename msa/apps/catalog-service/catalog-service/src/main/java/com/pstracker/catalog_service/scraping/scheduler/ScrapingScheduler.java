@@ -27,6 +27,8 @@ public class ScrapingScheduler {
     @Value("${crawler.secret-key}")
     private String internalSecretKey;
 
+    private final RestClient restClient = RestClient.create();
+
     @Scheduled(fixedDelay = 10000)
     public void processQueue() {
         // DB 트랜잭션 최소화를 위해 상태 변경 로직만 따로 뺌
@@ -35,8 +37,6 @@ public class ScrapingScheduler {
 
         try {
             log.debug("Hand(Python) 서버로 크롤링 지시 전송: {}", request.getPsStoreId());
-
-            RestClient restClient = RestClient.create();
 
             // 파이썬은 요청을 받으면 즉시 202 Accepted를 반환하고 백그라운드 작업 시작
             String response = restClient.post()

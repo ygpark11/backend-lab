@@ -24,6 +24,8 @@ public class CrawlerScheduler {
     @Value("${crawler.secret-key}")
     private String internalSecretKey;
 
+    private final RestClient restClient = RestClient.create();
+
     /**
      * 매일 자정(00시 00분 00초)에 실행
      * cron = "초 분 시 일 월 요일"
@@ -42,8 +44,6 @@ public class CrawlerScheduler {
 
     public void triggerCrawler() {
         log.info("Triggering daily batch crawl...");
-
-        RestClient restClient = RestClient.create();
         try {
             String response = restClient.post()
                     .uri(crawlerUrl)
@@ -60,8 +60,6 @@ public class CrawlerScheduler {
 
     private void triggerCrawler(String targetUrl, String crawlerName) {
         log.info("Triggering {}...", crawlerName);
-
-        RestClient restClient = RestClient.create();
         try {
             String response = restClient.post()
                     .uri(targetUrl)

@@ -1,5 +1,5 @@
 # 1단계: 빌드 환경 (Builder)
-FROM eclipse-temurin:17-jdk-jammy AS builder
+FROM eclipse-temurin:21-jdk-jammy AS builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ COPY src src
 RUN ./gradlew clean build --no-daemon -Duser.timezone=Asia/Seoul
 
 # 2단계: 실행 환경 (Runner)
-FROM eclipse-temurin:17-jre-jammy
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
