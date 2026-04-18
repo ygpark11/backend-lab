@@ -43,7 +43,7 @@ GOOGLE_AI_KEY=your_gemini_api_key
 
 ### 📋 사전 준비 (Prerequisites)
 - Docker Desktop & Docker Compose 설치
-- Java 17+ (IntelliJ 로컬 디버깅용)
+- Java 21+ (IntelliJ 로컬 디버깅용)
 - Node.js 20+ (프론트엔드 로컬 실행용)
 
 ### 🚀 실행 명령어 (Run Command)

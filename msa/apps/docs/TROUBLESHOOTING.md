@@ -155,6 +155,14 @@
 * **문제 발생:** 런칭 초기, 게임이 수집될 때마다 Gemini API(요약)를 실시간으로 호출하다 보니 무료 티어의 일일 호출 한도(RPM/RPD 제한)를 초과하여 의도한 기능 동작이 안됨.
 * **해결 방안:** 실시간 처리를 포기하고, 일 단위 배치(Daily Batch) 시스템으로 전환. 매일 새벽 할당량 이내의 건수(20건)만 끊어서 순차적으로 요약본을 생성하도록 정책을 선회.
 
+### 🧵 Case 32. JDK 21 가상 스레드 도입 시 JPA LazyInitializationException
+* **문제 발생:** `CompletableFuture.supplyAsync()`를 활용해 게임 상세 조회 내 연관 게임 추천 쿼리를 가상 스레드로 병렬 처리하도록 리팩토링 후, `LazyInitializationException: could not initialize proxy - no Session` 오류 발생.
+* **원인 분석:** 가상 스레드는 **부모 스레드의 `ThreadLocal`을 상속하지 않는다.** JPA 세션은 `ThreadLocal`에 바인딩되므로, 메인 스레드의 `@Transactional(readOnly = true)` 세션이 가상 스레드에 전파되지 않음. 이 상태에서 QueryDSL이 조회한 `Game` 엔티티의 `gameGenres` (Lazy 컬렉션)에 접근하는 시점에 활성 세션이 없어 예외 발생.
+* **해결 방안:** 가상 스레드 전환을 계기로 엔티티 로딩 방식 자체를 재검토.
+  * **DTO 프로젝션 전환:** `Game` 엔티티 대신 `QGameSearchResultDto`를 사용하는 QueryDSL 프로젝션으로 변경하여 Lazy 로딩 의존을 원천 제거.
+  * **2-Query 패턴 적용:** (1) DTO 프로젝션으로 `LIMIT`이 정확히 적용된 목록 조회 → (2) 조회된 ID 목록에 대한 장르 배치 `IN` 쿼리로 분리. `fetch join + limit` 조합 시 Hibernate가 LIMIT을 무시하고 전체 로우를 메모리에 올리는 N+1 파생 문제도 함께 방지.
+* **교훈:** 가상 스레드 전환 시 `ThreadLocal` 비상속 특성을 반드시 검토해야 한다. 특히 JPA 세션, Security Context 등 `ThreadLocal` 기반 컨텍스트에 의존하는 코드는 단순 `supplyAsync` 이관만으로는 동작하지 않을 수 있다.
+
 ### 🔔 Case 20. 브라우저 푸시 알림 권한 동기화
 * **문제 발생:** 사용자가 알림 수신에 동의했음에도 FCM 알림이 수신되지 않음.
 * **원인 분석:** 알림 권한은 DB의 계정 정보가 아니라 현재 접속 중인 '브라우저 기기' 단위로 관리됨.

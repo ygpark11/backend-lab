@@ -135,7 +135,7 @@ graph TD
 | :--- | :--- | :--- |
 | **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 리소스 집약적 작업(Headless Browser), 랭킹 수집 |
 | **IP 주소** | `10.0.0.161` (Private) | `10.0.0.61` (Private) |
-| **Tech Stack** | Java 17 (Spring Boot), MySQL 8.0, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) |
+| **Tech Stack** | Java 21 (Spring Boot), MySQL 8.0, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) |
 | **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000/4444` (Private Only, 외부 접근 차단) |
 
 > **💡 핵심 전략: 리소스 격리 (Resource Isolation)**
@@ -179,7 +179,13 @@ graph TD
 * **동적 복합 검색 (Complex Search):** 가격 범위, IGDB스코어, 장르 등 N개의 복합 필터링 조건을 처리하기 위해 `BooleanBuilder` 기반의 동적 쿼리 구현.
 * **조인 비용 제로화:** B2C 카탈로그 서비스 특성상 트래픽이 가장 집중되는 '할인 게임 목록' 조회 시, 1:N 관계인 가격 이력 테이블을 매번 조인하여 '최근 가격'과 '역대 최저가'를 계산하는 것은 DB 부하를 유발. 이를 해결하기 위해 메인 엔티티에 필수 검색 필드를 역정규화하여 무거운 조인 연산을 완전히 제거하고 읽기(Read) 성능을 극대화했으며, 데이터 갱신 시점의 도메인 로직을 통해 엔티티간 데이터 정합성을 보장.
 
-**4. 리소스 제약과 데이터 특성을 고려한 2-Tier 로컬 캐싱 및 파이프라인 연동 (Local Cache & Event-Driven Eviction)**
+**4. JDK 21 가상 스레드 기반 I/O 병렬 처리 (Virtual Thread Parallelism)**
+* **Context:** 게임 상세 조회 시 '연관 게임 추천(DB)', '가격 이력 변환(In-Memory)', '패밀리 게임 목록(DB)' 등 독립적인 작업이 순차적으로 실행되어 불필요한 대기 시간 발생.
+* **Solution:** JDK 21의 가상 스레드와 `CompletableFuture.allOf()`를 조합한 Fan-out 패턴으로 독립적인 I/O 작업을 병렬 처리.
+  * **1GB RAM 환경에서의 선택 이유:** 기존 Tomcat 플랫폼 스레드(기본 200개)는 스레드당 수백 KB~1MB 수준의 스택 메모리를 점유하여 스레드 자체가 무시할 수 없는 메모리 부담이 되는 반면, 가상 스레드는 수십 KB 단위로 생성되어 스레드 메모리 부담이 실질적으로 제거됨. I/O 대기 중 캐리어 스레드를 반납하는 구조로 1개 코어의 처리 효율도 향상.
+  * **ThreadLocal 비상속 문제 해결:** 가상 스레드는 부모의 `ThreadLocal`(JPA 세션)을 상속하지 않음을 확인하고, 엔티티 대신 **QueryDSL DTO 프로젝션**으로 전환하여 세션 의존 자체를 제거. `fetch join + limit` 시 Hibernate가 LIMIT을 무시하고 전체 로우를 메모리에 올리는 문제도 **2-Query 패턴(목록 조회 → 장르 배치 IN 쿼리)** 으로 함께 해결.
+
+**5. 리소스 제약과 데이터 특성을 고려한 2-Tier 로컬 캐싱 및 파이프라인 연동 (Local Cache & Event-Driven Eviction)**
 * **Problem:** B2C 카탈로그 서비스 특성상 메인 페이지와 통계(Insights) 페이지는 읽기(Read) 요청이 가장 빈번하지만, 1GB RAM 환경에서는 별도의 외부 캐시 서버(Redis)를 구축하는 것이 불가능(OOM 위험)함. 또한, 게임의 기본 정보는 '일 단위'로 변하지만, 유저의 찜/투표 여부는 '실시간'으로 변하기 때문에 단순한 전체 캐싱(Full Caching)은 데이터 정합성을 훼손함.
 * **Solution:** 외부 인프라 의존도를 낮추고 데이터 생명주기(Lifecycle)에 맞춘 하이브리드 캐싱 전략 구축.
   * **초경량 로컬 캐시 (Caffeine Cache):** Spring Boot 내부에 L1 로컬 캐시를 도입하여 DB I/O를 획기적으로 최소화.
@@ -270,7 +276,7 @@ graph TD
 
 | 구분 | 기술 스택                                                                             |
 | :--- |:----------------------------------------------------------------------------------|
-| **Backend** | Java 17, Spring Boot 3.5, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito |
+| **Backend** | Java 21, Spring Boot 3.5, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito |
 | **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios                                   |
 | **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)                            |
 | **Database** | MySQL 8.0 (Prod/Local 분리)                                                         |
@@ -285,7 +291,7 @@ graph TD
 
 ### Prerequisites
 * Docker & Docker Compose
-* Java 17+ (for local logic dev)
+* Java 21+ (for local logic dev)
 * Node.js 20+ (for frontend dev)
 
 환경에 따라 **로컬 개발(통합)** 모드와 **운영 서버(분산)** 모드로 나누어 실행
