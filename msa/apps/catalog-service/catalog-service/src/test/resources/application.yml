@@ -43,9 +43,7 @@ app:
     cookie-secure: false
 
 crawler:
-  url: http://collector-service:5000/run
-  queue-url: http://collector-service:5000/api/crawler/trigger
-  single-url: http://collector-service:5000/crawl/single
+  base-url: http://collector-service:5000
   secret-key: "test-crawler-secret-key"
 
 igdb:

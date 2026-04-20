@@ -6,6 +6,8 @@ import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.*;
+import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
+import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -30,8 +31,6 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class CatalogService {
 
-    @Value("${crawler.single-url}")
-    private String CRAWLER_URL;
     @Value("${crawler.secret-key}")
     private String internalSecretKey;
 
@@ -48,7 +47,7 @@ public class CatalogService {
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
     private final ExecutorService virtualThreadExecutor;
-    private final RestClient restClient = RestClient.create();
+    private final CollectorApiClient collectorApiClient;
 
     /**
      * 게임 데이터 수집 및 저장 (Upsert)
@@ -464,16 +463,7 @@ public class CatalogService {
         log.info("🚀 Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
 
         try {
-            String response = restClient.post()
-                    .uri(CRAWLER_URL)
-                    .header("Content-Type", "application/json")
-                    .body(Map.of(
-                            "url", targetUrl,
-                            "secretKey", internalSecretKey
-                    ))
-                    .retrieve()
-                    .body(String.class);
-
+            String response = collectorApiClient.triggerSingleCrawl(new SingleCrawlRequest(targetUrl, internalSecretKey));
             log.info("Crawler Response: {}", response);
         } catch (Exception e) {
             log.error("Crawler Trigger Failed: {}", e.getMessage());

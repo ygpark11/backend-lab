@@ -4,35 +4,31 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.tag.TagTaxonomyRegistry;
+import com.pstracker.catalog_service.global.client.gemini.GeminiApiClient;
+import com.pstracker.catalog_service.global.client.gemini.dto.GeminiContent;
+import com.pstracker.catalog_service.global.client.gemini.dto.GeminiPart;
+import com.pstracker.catalog_service.global.client.gemini.dto.GeminiRequest;
+import com.pstracker.catalog_service.global.client.gemini.dto.GeminiResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AiService {
 
-    private final String apiKey;
+    @Value("${spring.ai.openai.api-key}")
+    private String apiKey;
+
     private final ObjectMapper objectMapper;
     private final TagTaxonomyRegistry taxonomyRegistry;
-    private final RestClient restClient = RestClient.create();
-
-    private static final String MODEL_NAME = "gemini-2.5-flash";
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/" + MODEL_NAME + ":generateContent";
-
-    public AiService(@Value("${spring.ai.openai.api-key}") String apiKey,
-                     ObjectMapper objectMapper,
-                     TagTaxonomyRegistry taxonomyRegistry) {
-        this.apiKey = apiKey;
-        this.objectMapper = objectMapper;
-        this.taxonomyRegistry = taxonomyRegistry;
-    }
+    private final GeminiApiClient geminiApiClient;
 
     /**
      * [Feature A] 게임 3줄 요약
@@ -77,17 +73,17 @@ public class AiService {
             String prompt = """
                 너는 수많은 게임의 본질을 꿰뚫어보는 트렌디한 전문 게임 큐레이터야.
                 다음 게임들의 상세 정보를 바탕으로 유저의 구매욕을 자극하는 '3줄 요약(summary)'과 핵심 '감성 태그(vibeTags)'를 추출해 줘.
-                
+
                 [조건]
                 1. [태그 풀 엄수]: 태그는 반드시 아래 제공된 카테고리별 목록에서만 골라야 해. 임의로 새로운 태그나 기호를 창작하면 절대 안 돼.
                 %s
-                
+
                 2. [태그 개수]: 너무 지엽적인 특징은 버리고, 유저가 이 게임을 플레이하며 느낄 '핵심 감성' 위주로 최소 3개에서 최대 5개의 태그만 골라줘.
                 3. [입체적 밸런스]: 한쪽 카테고리에 쏠리지 않도록 주의해. (액션, 탐험, 도전, 스토리, 예술, 힐링, 소셜) 등 다양한 관점을 골고루 고려해서 게임의 매력이 입체적으로 드러나게 구성해.
                 4. [중복 허용]: 단, 게임의 핵심 매력을 완벽히 표현한다면 특정 대분류에서 2개 이상 중복 선택해도 좋아.
                 5. [요약 퀄리티]: 'summary'는 기계적인 사실 나열을 피하고, 게이머의 호기심을 자극하는 매력적인 문투로 3문장(약 150자 내외)으로 작성해 줘.
                 6. [응답 형식]: 응답은 마크다운(```json 등) 없이 순수한 JSON 배열 형태로만 반환해.
-                
+
                 [JSON 응답 예시]
                 [
                   {
@@ -96,7 +92,7 @@ public class AiService {
                     "vibeTags": ["#사이버펑크", "#눈호강그래픽", "#타격감원탑", "#시간순삭"]
                   }
                 ]
-                
+
                 [대상 게임]
                 %s
                 """.formatted(allowedTags, gameListText);
@@ -119,16 +115,11 @@ public class AiService {
         int maxRetries = 3;
         long waitTime = 30_000;
 
-        GeminiRequest request = new GeminiRequest(List.of(new Content(List.of(new Part(prompt)))));
+        GeminiRequest request = new GeminiRequest(List.of(new GeminiContent(List.of(new GeminiPart(prompt)))));
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                GeminiResponse response = restClient.post()
-                        .uri(GEMINI_API_URL + "?key=" + apiKey)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(request)
-                        .retrieve()
-                        .body(GeminiResponse.class);
+                GeminiResponse response = geminiApiClient.generateContent(apiKey, request);
 
                 if (response != null && response.candidates() != null && !response.candidates().isEmpty()) {
                     return response.candidates().getFirst().content().parts().getFirst().text();
@@ -160,9 +151,4 @@ public class AiService {
     }
 
     public record AiInsightDto(Long id, String summary, List<String> vibeTags) {}
-    record GeminiRequest(List<Content> contents) {}
-    record Content(List<Part> parts) {}
-    record Part(String text) {}
-    record GeminiResponse(List<Candidate> candidates) {}
-    record Candidate(Content content) {}
 }

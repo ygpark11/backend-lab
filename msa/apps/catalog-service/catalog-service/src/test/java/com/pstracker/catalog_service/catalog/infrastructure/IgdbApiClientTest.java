@@ -14,7 +14,7 @@ class IgdbApiClientTest {
     @Autowired
     private IgdbApiClient igdbApiClient;
 
-    /*@Test
+    @Test
     @DisplayName("IGDB 3단계 Fallback 검증: 용과 같이 히어로 에디션")
     void testSearchGame_Yakuza() {
         // Given: 아까 1차에서 Edition 날아가서 실패했던 그 악질 타이틀
@@ -33,5 +33,5 @@ class IgdbApiClientTest {
         System.out.println("👥 [IGDB 유저 평점]   : " + response.userScore() + " (평가자: " + response.userCount() + "명)");
         System.out.println("📊 [총 리뷰 수 (통합)] : " + response.totalRatingCount() + "명");
         System.out.println("=================================================\n");
-    }*/
+    }
 }

@@ -2,14 +2,13 @@ package com.pstracker.catalog_service.catalog.infrastructure;
 
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbAuthResponse;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
+import com.pstracker.catalog_service.global.client.igdb.IgdbAuthClient;
+import com.pstracker.catalog_service.global.client.igdb.IgdbGameClient;
 import com.pstracker.catalog_service.global.util.GameTitleNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
@@ -26,23 +25,15 @@ public class IgdbApiClient {
     @Value("${igdb.client-secret}")
     private String clientSecret;
 
-    @Value("${igdb.auth-url}")
-    private String authUrl;
+    private final IgdbAuthClient igdbAuthClient;
+    private final IgdbGameClient igdbGameClient;
 
-    @Value("${igdb.api-url}")
-    private String apiUrl;
-
-    private final RestClient restClient = RestClient.create();
     private String accessToken;
 
     private void refreshAccessToken() {
         try {
             log.debug("Requesting new IGDB Access Token...");
-            IgdbAuthResponse response = restClient.post()
-                    .uri(authUrl + "?client_id={clientId}&client_secret={clientSecret}&grant_type=client_credentials",
-                            clientId, clientSecret)
-                    .retrieve()
-                    .body(IgdbAuthResponse.class);
+            IgdbAuthResponse response = igdbAuthClient.getAccessToken(clientId, clientSecret, "client_credentials");
 
             if (response != null && response.accessToken() != null) {
                 this.accessToken = response.accessToken();
@@ -101,14 +92,7 @@ public class IgdbApiClient {
 
     private IgdbGameResponse executeQuery(String queryBody, String logPrefix) {
         try {
-            List<IgdbGameResponse> responses = restClient.post()
-                    .uri(apiUrl + "/games")
-                    .header("Client-ID", clientId)
-                    .header("Authorization", "Bearer " + accessToken)
-                    .contentType(MediaType.TEXT_PLAIN)
-                    .body(queryBody)
-                    .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+            List<IgdbGameResponse> responses = igdbGameClient.search(clientId, "Bearer " + accessToken, queryBody);
 
             if (responses != null && !responses.isEmpty()) {
                 return responses.stream()
@@ -125,5 +109,4 @@ public class IgdbApiClient {
         }
         return null;
     }
-
 }

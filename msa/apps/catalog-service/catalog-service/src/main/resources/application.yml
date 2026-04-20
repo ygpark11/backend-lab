@@ -58,6 +58,7 @@ jwt:
     refresh: 1209600000
 
 crawler:
+  base-url: ${CRAWLER_BASE_URL:http://collector-service:5000}
   secret-key: ${CRAWLER_SECRET_KEY}
 
 management:
