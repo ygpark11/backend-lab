@@ -54,6 +54,6 @@ public class LoggingAndRetryInterceptor implements ClientHttpRequestInterceptor 
             }
         }
 
-        throw lastException != null ? lastException : new IOException("API 호출 실패: " + url);
+        throw lastException;
     }
 }
