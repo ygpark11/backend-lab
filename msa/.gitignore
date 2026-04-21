@@ -38,3 +38,7 @@ firebase-service-account.json
 
 # Crawler Cache
 concept_map.json
+
+# 클로드 관련 파일
+.claudeignore
+CLAUDE.md
