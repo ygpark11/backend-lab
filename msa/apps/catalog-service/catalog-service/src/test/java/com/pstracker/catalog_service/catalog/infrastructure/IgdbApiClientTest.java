@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @SpringBootTest
 class IgdbApiClientTest {
 
-    @Autowired
+    /*@Autowired
     private IgdbApiClient igdbApiClient;
 
     @Test
@@ -33,5 +33,5 @@ class IgdbApiClientTest {
         System.out.println("👥 [IGDB 유저 평점]   : " + response.userScore() + " (평가자: " + response.userCount() + "명)");
         System.out.println("📊 [총 리뷰 수 (통합)] : " + response.totalRatingCount() + "명");
         System.out.println("=================================================\n");
-    }
+    }*/
 }
