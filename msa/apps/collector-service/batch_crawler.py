@@ -8,6 +8,7 @@ import logging
 import traceback
 import gc
 import json
+import subprocess
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
@@ -225,11 +226,19 @@ def run_with_watchdog(bm, url):
         if not done.wait(timeout=CRAWL_WATCHDOG_SEC):
             logger.error(
                 f"[Watchdog] {CRAWL_WATCHDOG_SEC}s 초과! 이벤트 루프 교착 의심 → "
-                f"브라우저 강제 종료: {url.split('/')[-1][:20]}"
+                f"브라우저 강제 종료 시도: {url.split('/')[-1][:20]}"
             )
             watchdog_fired.set()
+
+            # 1단계: Playwright API로 컨텍스트 graceful 종료
             try: bm.context.close()
             except: pass
+
+            # 2단계: 10초 후에도 main thread가 안 깨어나면 → Chromium 프로세스 SIGKILL
+            # (이벤트 루프 자체가 완전 교착된 경우 context.close()도 블로킹됨)
+            if not done.wait(timeout=10):
+                logger.error("[Watchdog] context 종료 실패 → Chromium SIGKILL 실행")
+                subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
 
     threading.Thread(target=_watchdog, daemon=True).start()
 
