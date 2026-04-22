@@ -151,7 +151,7 @@ def crawl_metacritic_single(game_title):
 
     return result
 
-def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
+def start_polling(base_url, secret_key, check_if_busy, set_rating_running, crawler_lock):
     logger.info("[Stealth Worker] 메타크리틱 평점 수집 워커가 백그라운드에서 가동됩니다.")
 
     API_TARGET_URL = f"{base_url}/api/internal/scraping/ratings/target"
@@ -162,16 +162,15 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running):
         sleep_time = random.randint(150, 180)
         time.sleep(sleep_time)
 
-        # [VIP 새치기 절대 양보 로직]
-        # 1. 메인 락이 잠겨있거나 (일배치, 랭킹 수집 중)
-        # 2. 큐에 VIP(새치기) 요청이 단 1개라도 대기 중이면 워커는 절대 실행되지 않고 다시 잠듬
-        if check_if_busy():
-            logger.debug("메인 작업 또는 VIP 대기 중. 평점 워커는 턴을 넘깁니다.")
-            continue
-
-        # 락 획득
-        try:
+        # check_if_busy()와 set_rating_running(True)을 같은 락 안에서 원자적으로 처리
+        # → 체크 후 설정 사이에 배치/랭킹 트리거가 끼어드는 레이스 컨디션 방지
+        with crawler_lock:
+            if check_if_busy():
+                logger.debug("메인 작업 또는 VIP 대기 중. 평점 워커는 턴을 넘깁니다.")
+                continue
             set_rating_running(True)
+
+        try:
 
             # 1. 수집 타겟 요청
             res = requests.get(API_TARGET_URL, headers=HEADERS, timeout=10)

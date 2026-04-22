@@ -67,10 +67,10 @@ CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 CONFIG = {
     "LOW": {
-        "restart_interval": 10,
-        "timeout": 60000,
-        "sleep_min": 3.0,
-        "sleep_max": 6.0,
+        "restart_interval": 15,
+        "timeout": 40000,
+        "sleep_min": 2.0,
+        "sleep_max": 4.0,
         "block_fonts": True,
     },
     "HIGH": {
@@ -200,7 +200,69 @@ def verify_secret(req_data):
     return req_data.get('secretKey') == CRAWLER_SECRET_KEY
 
 
-# --- [4. VIP 새치기 로직 (안전한 콜백 처리)] ---
+# --- [4. Python 레벨 워치독 (Playwright 이벤트 루프 교착 안전망)] ---
+# Playwright timeout(40s) + 1회 재시도(40s) + 여유(20s) = 100s
+CRAWL_WATCHDOG_SEC = 100
+
+def run_with_watchdog(bm, url):
+    """
+    page.route("**/*") 핸들러가 분석/추적 서버의 무응답으로 인해
+    asyncio 이벤트 루프가 포화되면 Playwright 내부 timeout이 전달되지 않음
+    이 함수는 CRAWL_WATCHDOG_SEC 초 후 별도 스레드에서 브라우저 컨텍스트를
+    강제 종료함으로써 이벤트 루프 교착을 외부에서 깨뜨림
+    """
+    try:
+        page = setup_page(bm.get_context())
+    except Exception as e:
+        logger.error(f"[Watchdog] 페이지 생성 실패: {e}")
+        return None
+
+    result = [None]
+    done = threading.Event()
+    watchdog_fired = threading.Event()
+
+    def _watchdog():
+        if not done.wait(timeout=CRAWL_WATCHDOG_SEC):
+            logger.error(
+                f"[Watchdog] {CRAWL_WATCHDOG_SEC}s 초과! 이벤트 루프 교착 의심 → "
+                f"브라우저 강제 종료: {url.split('/')[-1][:20]}"
+            )
+            watchdog_fired.set()
+            try: bm.context.close()
+            except: pass
+
+    threading.Thread(target=_watchdog, daemon=True).start()
+
+    try:
+        result[0] = crawl_detail_and_send(page, url)
+    except Exception as e:
+        logger.error(f"Crawl error {url}: {e}")
+    finally:
+        done.set()
+        try: page.close()
+        except: pass
+
+        if watchdog_fired.is_set():
+            logger.warning("[Watchdog] 브라우저 재시작 중...")
+            try: bm.browser.close()
+            except: pass
+            bm.browser = None
+            bm.context = None
+            gc.collect()
+            time.sleep(3)
+            try:
+                bm.browser, bm.context = bm._create_browser()
+                bm.request_count = 0
+                logger.info("[Watchdog] 브라우저 재시작 완료.")
+            except Exception as e:
+                logger.error(f"[Watchdog] 브라우저 재시작 실패: {e}")
+
+        bm.increment()
+
+    return result[0]
+
+
+# --- [5. VIP 새치기 로직 (안전한 콜백 처리)] ---
 def check_and_run_vip(bm):
     global active_requests
     while not urgent_queue.empty():
@@ -302,13 +364,15 @@ def crawl_phase0_new_releases(bm):
         page = setup_page(context)
 
         try:
-            page.goto(url, timeout=60000, wait_until="domcontentloaded")
+            page.goto(url, timeout=CONF['timeout'], wait_until="domcontentloaded")
             human_like_delay(1, 2)
             human_like_scroll(page)
 
             if "/concept/" in url:
                 html_content = page.content()
                 is_free_game = False
+                img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_content)
+                image_url_from_html = img_match.group(1).split("?")[0] if img_match else ""
 
                 if '"isFree":true' in html_content or '"basePrice":"무료"' in html_content:
                     is_free_game = True
@@ -366,17 +430,12 @@ def crawl_phase0_new_releases(bm):
                     page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=25000)
                     title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
 
-                    image_url = ""
-                    try:
-                        temp_html_img = page.content()
-                        match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
-                        if match: image_url = match.group(1).split("?")[0]
-                        del temp_html_img
-
-                        if not image_url:
+                    image_url = image_url_from_html
+                    if not image_url:
+                        try:
                             img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                             if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
-                    except: pass
+                        except: pass
 
                     logger.info(f"[Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
                     session.post(INTERNAL_SYNC_URL, json={
@@ -475,9 +534,12 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
 
-        temp_html_title = page.content()
-        english_title = mine_english_title(temp_html_title)
-        del temp_html_title
+        # HTML 한 번만 가져와서 영문 제목 + 이미지 URL 동시 추출
+        html_snapshot = page.content()
+        english_title = mine_english_title(html_snapshot)
+        img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_snapshot)
+        image_url = img_match.group(1).split("?")[0] if img_match else ""
+        del html_snapshot
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
@@ -486,28 +548,30 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         try: page.wait_for_selector("[data-qa^='mfeCtaMain#offer']", timeout=15000)
         except: pass
 
+        product_tags = page.locator("[data-qa^='mfe-game-title#productTag']").all()
         platform_set = set()
-        for el in page.locator("[data-qa^='mfe-game-title#productTag']").all():
+        is_ps5_pro_enhanced = False
+        for el in product_tags:
             raw_text = el.text_content().strip().upper()
             if "PS5" in raw_text: platform_set.add("PS5")
             if "PS4" in raw_text: platform_set.add("PS4")
             if "VR2" in raw_text: platform_set.add("PS_VR2")
             elif "VR" in raw_text: platform_set.add("PS_VR")
+            if not is_ps5_pro_enhanced:
+                try:
+                    inner = el.inner_text()
+                    if "PS5 Pro 성능 향상" in inner or "PS5 Pro Enhanced" in inner:
+                        is_ps5_pro_enhanced = True
+                except: pass
         platforms = list(platform_set)
 
-        is_ps5_pro_enhanced = False
-        try:
-            for el in page.locator("[data-qa^='mfe-game-title#productTag']").all():
-                if "PS5 Pro 성능 향상" in el.inner_text() or "PS5 Pro Enhanced" in el.inner_text():
-                    is_ps5_pro_enhanced = True
-                    break
-
-            if not is_ps5_pro_enhanced:
+        if not is_ps5_pro_enhanced:
+            try:
                 for el in page.locator("[data-qa^='mfe-compatibility-notices#notices']").all():
                     if "PS5 Pro 성능 향상" in el.inner_text() or "PS5 Pro Enhanced" in el.inner_text():
                         is_ps5_pro_enhanced = True
                         break
-        except: pass
+            except: pass
 
         genre_ids = ""
         try: genre_ids = page.locator("[data-qa='gameInfo#releaseInformation#genre-value']").inner_text()
@@ -579,17 +643,11 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         if not best_offer_data: return None
 
-        image_url = ""
-        try:
-            temp_html_img = page.content()
-            match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
-            if match: image_url = match.group(1).split("?")[0]
-            del temp_html_img
-
-            if not image_url:
+        if not image_url:
+            try:
                 img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                 if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
-        except: pass
+            except: pass
 
         ps_store_id = target_url.split("/")[-1].split("?")[0]
 
@@ -654,7 +712,7 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
             if total_deals > 5: message += f"외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
 
         message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": message})
+        requests.post(DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10)
     except Exception as e: logger.error(f"Failed to send Discord summary: {e}")
 
 def refresh_java_server_cache():
@@ -669,11 +727,7 @@ def refresh_java_server_cache():
 # --- [8. 메인 배치 로직] ---
 def run_batch_crawler_logic():
     global is_batch_running
-
-    with crawler_lock:
-        if is_batch_running:
-            return
-        is_batch_running = True
+    # is_batch_running은 trigger_crawl()의 락 안에서 이미 True로 선점됨
 
     logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Safe Process Reset)")
 
@@ -699,21 +753,13 @@ def run_batch_crawler_logic():
                     check_and_run_vip(bm) # 루프마다 VIP 새치기 확인
                     logger.info(f"[Phase 1] ({idx}/{len(targets)}) Scraping: {url.split('/')[-1][:15]}...")
 
-                    page = setup_page(bm.get_context())
-                    try:
-                        res = crawl_detail_and_send(page, url)
-                        if res:
-                            if res.get("is_delisted"): delisted_games.append(res)
-                            else:
-                                total_processed_count += 1
-                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                        visited_urls.add(url)
-                    except Exception as e:
-                        logger.error(f"Page Crawl Error for {url}: {e}")
-                    finally:
-                        try: page.close()
-                        except: pass
-                        bm.increment()
+                    res = run_with_watchdog(bm, url)
+                    if res:
+                        if res.get("is_delisted"): delisted_games.append(res)
+                        else:
+                            total_processed_count += 1
+                            if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                    visited_urls.add(url)
 
             # [Phase 2] 신규 게임 탐색
             logger.info(f"🔭 [Phase 2] Starting Deep Discovery ...")
@@ -752,21 +798,13 @@ def run_batch_crawler_logic():
                     for url in page_candidates:
                         check_and_run_vip(bm)
 
-                        detail_page = setup_page(bm.get_context())
-                        try:
-                            res = crawl_detail_and_send(detail_page, url)
-                            if res:
-                                if res.get("is_delisted"): delisted_games.append(res)
-                                else:
-                                    total_processed_count += 1
-                                    if res.get('discountRate', 0) > 0: collected_deals.append(res)
-                            visited_urls.add(url)
-                        except Exception as e:
-                            logger.error(f"Page Crawl Error for {url}: {e}")
-                        finally:
-                            try: detail_page.close()
-                            except: pass
-                            bm.increment()
+                        res = run_with_watchdog(bm, url)
+                        if res:
+                            if res.get("is_delisted"): delisted_games.append(res)
+                            else:
+                                total_processed_count += 1
+                                if res.get('discountRate', 0) > 0: collected_deals.append(res)
+                        visited_urls.add(url)
 
         logger.info("   🏁 [System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
@@ -851,18 +889,18 @@ def trigger_crawl():
     data = request.json or {}
     if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
 
+    global is_batch_running
     with crawler_lock:
         if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
             return jsonify({"status": "running", "message": "다른 작업이 이미 실행 중입니다."}), 409
+        is_batch_running = True  # 락 안에서 선점 설정 → 공백 제거
 
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
 
 def run_ranking_wrapper():
     global is_ranking_running
-
-    with crawler_lock:
-        is_ranking_running = True
+    # is_ranking_running은 trigger_ranking_crawl()의 락 안에서 이미 True로 선점됨
 
     try:
         vip_helpers = {
@@ -885,10 +923,12 @@ def trigger_ranking_crawl():
     data = request.json or {}
     if not verify_secret(data): return jsonify({"error": "Unauthorized"}), 403
 
+    global is_ranking_running
     with crawler_lock:
         if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
             logger.warning("다른 작업이 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
             return jsonify({"status": "error", "message": "Other task is running"}), 409
+        is_ranking_running = True  # 락 안에서 선점 설정 → 공백 제거
 
     logger.info("[API] 랭킹 크롤러 백그라운드 실행 요청 수신")
     threading.Thread(target=run_ranking_wrapper, daemon=True).start()
@@ -906,6 +946,6 @@ def set_rating_running(state):
     is_rating_running = state
 
 if __name__ == '__main__':
-    threading.Thread(target=rating_worker.start_polling, args=(BASE_URL, CRAWLER_SECRET_KEY, check_if_busy, set_rating_running), daemon=True).start()
+    threading.Thread(target=rating_worker.start_polling, args=(BASE_URL, CRAWLER_SECRET_KEY, check_if_busy, set_rating_running, crawler_lock), daemon=True).start()
 
     app.run(host='0.0.0.0', port=5000, threaded=True, use_reloader=False)

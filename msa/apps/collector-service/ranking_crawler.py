@@ -15,6 +15,8 @@ JAVA_RANKING_API_URL = f"{BASE_URL}/api/internal/scraping/rankings/update"
 CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
 
 MAX_PAGES = 25
+CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
+RESTART_INTERVAL = {"LOW": 15, "HIGH": 200}.get(CURRENT_MODE, 15)
 
 TARGETS = {
     "BEST_SELLER": "https://store.playstation.com/ko-kr/pages/browse/{}?sortBy=sales30&sortOrder=desc",
@@ -65,7 +67,7 @@ class BrowserManager:
         return browser, context
 
     def get_context(self):
-        if self.request_count >= 50:
+        if self.request_count >= RESTART_INTERVAL:
             logger.info("[메모리 관리] 브라우저 강제 환생! 🧹")
             try: self.context.close()
             except: pass
