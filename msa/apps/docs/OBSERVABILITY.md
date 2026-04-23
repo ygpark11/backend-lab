@@ -139,6 +139,19 @@ Grafana 대시보드에서 중점적으로 보는 지표들입니다.
 1. JVM Heap Usage: 힙 메모리가 256MB 한계선에 근접하는지 감시.
 2. HikariCP Connections: DB 커넥션 풀이 고갈되지 않는지 체크.
 3. Log Error Rate: ERROR 레벨 로그 발생 빈도 추적.
+4. **Caffeine Cache (로컬 캐시 성능)**
+
+   `GlobalCacheConfig`의 `recordStats()` + Micrometer 수동 바인딩(`CaffeineCacheMetrics.monitor()`)으로 아래 지표를 Prometheus에 노출합니다.
+
+   | 패널 | PromQL | 정상 기준 |
+   |------|--------|---------|
+   | Hit Rate | `rate(cache_gets_total{result="hit"}[5m]) / rate(cache_gets_total[5m])` | 서비스 안정 후 70% 이상 |
+   | Cache Size | `cache_size{cache="gameDetailCache"}` | 0 ~ 2,000 (설정 상한) |
+   | Evictions | `rate(cache_evictions_total[5m])` | 배치 직후 스파이크 → 정상, 상시 발생 → 점검 |
+
+   **운영 판단 기준**
+   - Hit Rate가 배포 직후 낮은 것은 콜드 스타트로 정상. 하루 이후에도 50% 미만이면 TTL 또는 `maximumSize` 조정 검토.
+   - Evictions이 크롤러 배치 완료 시간대에 맞춰 스파이크가 뜨면 캐시 무효화 정상 동작. 배치 이후에도 0이면 `evictGameDetailCache()` 미호출 버그 의심.
 
 ---
 
