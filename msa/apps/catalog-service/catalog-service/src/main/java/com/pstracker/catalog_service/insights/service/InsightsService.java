@@ -10,7 +10,9 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 import static com.pstracker.catalog_service.global.config.GlobalCacheConfig.*;
 
@@ -70,7 +72,7 @@ public class InsightsService {
         var cache = cacheManager.getCache(INSIGHTS_CACHE);
         if (cache != null) {
             cache.clear();
-            log.info("🧹 Insights 로컬 캐시(Caffeine) 전체 초기화 완료.");
+            log.info("Insights 로컬 캐시(Caffeine) 전체 초기화 완료.");
         }
     }
 
@@ -83,5 +85,24 @@ public class InsightsService {
     @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_TOTAL_WISHED)
     public long getTotalWishlistCount() {
         return wishlistRepository.count();
+    }
+
+    /**
+     * 마감 임박(오늘 또는 내일 할인 종료) 게임 수 조회
+     */
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_CLOSING_SOON)
+    public long getClosingSoonCount() {
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        return gameRepository.countClosingSoonGames(tomorrow);
+    }
+
+    /**
+     * 오늘 새롭게 할인이 시작된 게임 수 조회
+     */
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_NEW_DISCOUNT)
+    public long getNewDiscountCount() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
+        return gameRepository.countNewDiscountGames(startOfDay, endOfDay);
     }
 }

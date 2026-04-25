@@ -5,6 +5,7 @@ import com.pstracker.catalog_service.insights.service.InsightsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,6 +46,18 @@ public class InsightsController {
         // 7. 총 찜한 게임 수
         response.put("totalWishlistCount", insightsService.getTotalWishlistCount());
 
+        // 8. 마감 임박 게임 수
+        response.put("closingSoonCount", insightsService.getClosingSoonCount());
+
+        // 9. 신규 할인 게임 수
+        response.put("newDiscountCount", insightsService.getNewDiscountCount());
+
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Void> refreshInsightsCache() {
+        insightsService.refreshInsightsCache();
+        return ResponseEntity.ok().build();
     }
 }

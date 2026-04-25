@@ -27,6 +27,8 @@ public class GlobalCacheConfig {
     public static final String INSIGHT_KEY_DISCOUNT_SUMMARY = "'discountSummary'";
     public static final String INSIGHT_KEY_LAST_SYNC = "'lastSync'";
     public static final String INSIGHT_KEY_TOTAL_WISHED = "'totalWished'";
+    public static final String INSIGHT_KEY_CLOSING_SOON = "'closingSoon'";
+    public static final String INSIGHT_KEY_NEW_DISCOUNT = "'newDiscount'";
 
     @Bean
     public CacheManager cacheManager(MeterRegistry meterRegistry) {
@@ -40,6 +42,7 @@ public class GlobalCacheConfig {
                 .recordStats()
                 .build();
         CaffeineCacheMetrics.monitor(meterRegistry, gameDetailNative, GAME_DETAIL_CACHE);
+        CaffeineCache gameDetailCache = new CaffeineCache(GAME_DETAIL_CACHE, gameDetailNative);
 
         // 2. 인사이트 통계 캐시
         Cache<Object, Object> insightsNative = Caffeine.newBuilder()
@@ -48,12 +51,10 @@ public class GlobalCacheConfig {
                 .recordStats()
                 .build();
         CaffeineCacheMetrics.monitor(meterRegistry, insightsNative, INSIGHTS_CACHE);
+        CaffeineCache insightsCache = new CaffeineCache(INSIGHTS_CACHE, insightsNative);
 
         SimpleCacheManager manager = new SimpleCacheManager();
-        manager.setCaches(List.of(
-                new CaffeineCache(GAME_DETAIL_CACHE, gameDetailNative),
-                new CaffeineCache(INSIGHTS_CACHE, insightsNative)
-        ));
+        manager.setCaches(List.of(gameDetailCache, insightsCache));
         return manager;
     }
 }

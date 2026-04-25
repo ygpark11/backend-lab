@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Flame, Star, TrendingDown, Activity, Database, Clock,
     ChevronRight, Heart, CircleDollarSign, RefreshCw,
-    AlertTriangle, Server, Trophy, Download
+    AlertTriangle, Server, Trophy, Download, Timer, Zap,
+    Triangle, Circle, X as XIcon, Square, BarChart3, Radio
 } from 'lucide-react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import client from '../api/client';
@@ -105,237 +106,278 @@ const InsightsPage = () => {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-base text-primary pt-24 pb-12 px-4 sm:px-6 lg:px-8 font-sans selection:bg-ps-blue selection:text-white transition-colors duration-500">
+    const hasClosingSoon = stats.closingSoonCount > 0;
+    const hasNewDeals = stats.newDiscountCount > 0;
 
-            {/* 헤더 영역 */}
-            <div className="max-w-6xl mx-auto mb-8 animate-fadeIn">
-                <h1 className="text-3xl md:text-4xl font-black mb-2 flex items-center gap-3">
-                    <Activity className="w-8 h-8 text-ps-blue" />
-                    PS Tracker Insights
-                </h1>
-                <p className="text-secondary font-bold">실시간으로 수집되는 PlayStation 스토어의 숨겨진 데이터들</p>
+    return (
+        <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
+            <div className="hidden md:block absolute top-[10%] left-[5%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-cyan-500/10 dark:bg-cyan-500/5 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute bottom-[10%] right-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-emerald-500/10 dark:bg-emerald-500/5 transition-colors duration-500"></div>
+
+            <div className="absolute top-20 right-10 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
+                <Triangle className="w-40 h-40 stroke-[2px]" />
+                <Circle className="w-40 h-40 stroke-[2px]" />
+                <XIcon className="w-40 h-40 stroke-[2px]" />
+                <Square className="w-40 h-40 stroke-[2px]" />
             </div>
 
-            {/* 벤토 박스 UI (Grid) */}
-            <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 grid-flow-dense gap-4 md:gap-6 auto-rows-[160px]">
-
-                {/* 1. 역대 최저가 갱신 (RED) */}
-                <div
-                    onClick={() => navigate('/games?isAllTimeLow=true')}
-                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-2 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-red-border)] p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-red-border-hover)] hover:[box-shadow:var(--bento-red-shadow)] transition-all duration-300 flex flex-col justify-between"
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-red-from), transparent 70%)' }}></div>
-                    <div className="hidden md:block absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mt-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-red-border-hover)', opacity: 0.15 }}></div>
-
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Flame className="w-6 h-6 text-red-600 dark:text-red-500 animate-pulse" />
-                            <h2 className="text-red-600 dark:text-red-500 font-bold text-sm tracking-wider">ALL-TIME LOW</h2>
-                        </div>
-                        <h3 className="text-2xl md:text-3xl font-black text-primary leading-tight mt-2">
-                            지금 안 사면 손해!<br/>
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-orange-600 dark:from-red-500 dark:to-orange-500">역대 최저가</span> 갱신
-                        </h3>
-                    </div>
-                    <div className="flex items-end justify-between relative z-10">
-                        <div className="text-6xl md:text-7xl font-black text-primary tracking-tighter drop-shadow-sm">
-                            {stats.allTimeLowCount?.toLocaleString()}<span className="text-2xl text-red-600 dark:text-red-500 ml-1">개</span>
-                        </div>
-                        <div className="w-10 h-10 rounded-full bg-[var(--bento-card-bg)] border border-[color:var(--bento-red-border)] flex items-center justify-center group-hover:bg-red-500 group-hover:border-red-500 transition-colors shadow-sm">
-                            <ChevronRight className="w-5 h-5 text-secondary group-hover:text-white transition-colors" />
-                        </div>
-                    </div>
+            <div className="max-w-5xl mx-auto relative z-10">
+                {/* 헤더 영역 */}
+                <div className="mb-10 animate-fadeIn">
+                    <h1 className="text-3xl md:text-4xl font-black mb-2 flex items-center gap-3">
+                        <BarChart3 className="w-8 h-8 text-ps-blue" />
+                        PS Tracker Insights
+                    </h1>
+                    <p className="text-secondary font-bold">플레이스테이션 스토어의 흐름을 한눈에 파악하세요.</p>
                 </div>
 
-                {/* 2. 갓겜 할인 레이더 (PURPLE) */}
-                <div
-                    onClick={() => navigate('/games?minMetaScore=85&minDiscountRate=50')}
-                    className="col-span-1 md:col-span-1 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-purple-border)] p-6 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-purple-border-hover)] hover:[box-shadow:var(--bento-purple-shadow)] transition-all duration-300 flex items-center justify-between"
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-purple-from), transparent 80%)' }}></div>
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Star className="w-4 h-4 text-yellow-600 dark:text-yellow-500" />
-                            <h2 className="text-purple-600 dark:text-purple-500 font-bold text-xs tracking-wider">MUST PLAY (IGDB 85+ & 50%↓)</h2>
-                        </div>
-                        <h3 className="text-xl font-black text-primary mt-1">인증된 명작 갓겜</h3>
-                    </div>
-                    <div className="relative z-10 text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-500 dark:to-pink-500 drop-shadow-sm">
-                        {stats.mustPlayCount?.toLocaleString()}
-                    </div>
-                </div>
+                <div className="space-y-12">
 
-                {/* 3. 진행 중인 총 할인 (GREEN) */}
-                <div className="col-span-1 md:col-span-1 lg:col-span-1 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-green-border)] p-6 flex flex-col justify-center cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)] transition-all duration-300 relative overflow-hidden"
-                     onClick={() => navigate('/games?minDiscountRate=1')}
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-green-from), transparent 70%)' }}></div>
-                    <div className="relative z-10">
-                        <h2 className="text-secondary font-bold text-xs flex items-center gap-2 mb-2 group-hover:text-green-600 dark:group-hover:text-green-500 transition-colors">
-                            <TrendingDown className="w-4 h-4 text-green-600 dark:text-green-500" /> 진행 중인 총 할인
+                    {/* ==========================================
+                        Section 1: Market Radar (시장 동향)
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
+                            <Radio className="w-4 h-4 text-ps-blue" /> Market Radar
                         </h2>
-                        <div className="text-3xl font-black text-primary">
-                            {stats.totalDiscountedGames?.toLocaleString()}<span className="text-sm text-secondary ml-1">개</span>
-                        </div>
-                    </div>
-                </div>
 
-                {/* 4. 쏟아지는 총 할인액 (BLUE) */}
-                <div className="col-span-1 md:col-span-1 lg:col-span-1 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-blue-border)] p-6 flex flex-col justify-center group hover:-translate-y-1 hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)] transition-all duration-300 relative overflow-hidden">
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-blue-from), transparent 70%)' }}></div>
-                    <div className="relative z-10">
-                        <h2 className="text-secondary font-bold text-xs flex items-center gap-2 mb-2 group-hover:text-ps-blue transition-colors">
-                            <CircleDollarSign className="w-4 h-4 text-ps-blue"/> 쏟아지는 총 할인액
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* 역대 최저가 */}
+                            <div onClick={() => navigate('/games?isAllTimeLow=true')} className="col-span-1 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(239,68,68,0.1)] transition-all duration-300">
+                                <Triangle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-red-500" />
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-red-500 to-transparent"></div>
+
+                                <div className="relative z-10 h-full flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Flame className="w-4 h-4 text-red-500 animate-pulse" />
+                                            <span className="text-red-500 font-bold text-[10px] tracking-wider uppercase">All-Time Low</span>
+                                        </div>
+                                        <h3 className="text-xl md:text-2xl font-black text-primary leading-tight">역대 최저가 갱신</h3>
+                                    </div>
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-5xl font-black text-primary tracking-tighter">
+                                            {stats.allTimeLowCount?.toLocaleString()}<span className="text-lg text-red-500 ml-1">개</span>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-base border border-divider flex items-center justify-center group-hover:bg-red-500 group-hover:border-red-500 group-hover:text-white text-secondary transition-colors">
+                                            <ChevronRight className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 마감 임박 */}
+                            <div onClick={() => navigate('/games?isClosingSoon=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group transition-all duration-300 ${hasClosingSoon ? 'hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
+                                <Circle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-orange-500" />
+                                <div className={`absolute inset-0 opacity-0 transition-opacity bg-gradient-to-br from-orange-500 to-transparent ${hasClosingSoon ? 'group-hover:opacity-10' : ''}`}></div>
+
+                                <div className="relative z-10 h-full flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Timer className={`w-4 h-4 ${hasClosingSoon ? 'text-orange-500' : 'text-secondary'}`} />
+                                            <span className={`font-bold text-[10px] tracking-wider uppercase ${hasClosingSoon ? 'text-orange-500' : 'text-secondary'}`}>Closing Soon</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-primary leading-tight">할인 마감 임박</h3>
+                                    </div>
+                                    <div className="flex items-end justify-between mt-4">
+                                        <div className={`text-4xl font-black tracking-tighter ${hasClosingSoon ? 'text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500' : 'text-secondary'}`}>
+                                            {stats.closingSoonCount?.toLocaleString() || 0}
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 신규 할인 (Zero State 적용) */}
+                            <div onClick={() => navigate('/games?isNewDiscount=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group transition-all duration-300 ${hasNewDeals ? 'hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
+                                <XIcon className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-blue-500" />
+                                <div className={`absolute inset-0 opacity-0 transition-opacity bg-gradient-to-br from-blue-500 to-transparent ${hasNewDeals ? 'group-hover:opacity-10' : ''}`}></div>
+
+                                <div className="relative z-10 h-full flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Zap className={`w-4 h-4 ${hasNewDeals ? 'text-blue-500' : 'text-secondary'}`} />
+                                            <span className={`font-bold text-[10px] tracking-wider uppercase ${hasNewDeals ? 'text-blue-500' : 'text-secondary'}`}>New Deals</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-primary leading-tight">따끈한 신규 할인</h3>
+                                    </div>
+                                    <div className="flex items-end justify-between mt-4">
+                                        <div className={`text-4xl font-black tracking-tighter ${hasNewDeals ? 'text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500' : 'text-secondary'}`}>
+                                            {stats.newDiscountCount?.toLocaleString() || 0}
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 총 할인 규모 (통합) */}
+                            <div onClick={() => navigate('/games?minDiscountRate=1')} className="col-span-1 md:col-span-2 lg:col-span-4 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group hover:border-green-500/50 hover:shadow-[0_0_20px_rgba(34,197,94,0.1)] transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-gradient-to-r from-green-500 to-transparent"></div>
+
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-base border border-divider flex items-center justify-center group-hover:border-green-500/50 transition-colors">
+                                        <TrendingDown className="w-6 h-6 text-green-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-secondary uppercase tracking-wider mb-0.5">Market Volume</h3>
+                                        <p className="text-lg font-black text-primary">진행 중인 스토어 할인 규모</p>
+                                    </div>
+                                </div>
+
+                                <div className="relative z-10 flex items-center gap-6 md:gap-10 w-full md:w-auto bg-base md:bg-transparent p-4 md:p-0 rounded-xl border border-divider md:border-0">
+                                    <div>
+                                        <p className="text-[10px] text-secondary font-bold uppercase mb-1">할인 중인 타이틀</p>
+                                        <p className="text-2xl font-black text-primary">{stats.totalDiscountedGames?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span></p>
+                                    </div>
+                                    <div className="w-[1px] h-10 bg-divider"></div>
+                                    <div>
+                                        <p className="text-[10px] text-secondary font-bold uppercase mb-1">쏟아지는 총 할인액</p>
+                                        <p className="text-2xl font-black text-primary">{formatCurrency(stats.totalDiscountAmount)}<span className="text-xs text-secondary font-medium ml-1">원</span></p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors ml-auto md:ml-0" />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+
+                    {/* ==========================================
+                        Section 2: PlayStation Charts (랭킹 보드)
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-ps-blue" /> PlayStation Charts
                         </h2>
-                        <div className="text-2xl font-black text-primary truncate">
-                            {formatCurrency(stats.totalDiscountAmount)}<span className="text-sm text-secondary ml-1">원</span>
-                        </div>
-                    </div>
-                </div>
 
-                {/* 베스트셀러 랭킹 진입점 (AMBER) */}
-                <div
-                    onClick={() => navigate('/games?isBestSeller=true')}
-                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-amber-border)] p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-amber-border-hover)] hover:[box-shadow:var(--bento-amber-shadow)] transition-all duration-300"
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-amber-from), transparent 70%)' }}></div>
-                    <div className="hidden md:block absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-amber-border-hover)', opacity: 0.15 }}></div>
-                    <div className="relative z-10 h-full flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-500" />
-                                    <h2 className="text-amber-600 dark:text-amber-500 font-bold text-sm tracking-wider uppercase">TOP SELLERS</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* 갓겜 레이더 */}
+                            <div onClick={() => navigate('/games?minMetaScore=85&minDiscountRate=50')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] transition-all duration-300">
+                                <Square className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-purple-500" />
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-purple-500 to-transparent"></div>
+
+                                <div className="relative z-10 flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Star className="w-4 h-4 text-purple-500" />
+                                            <span className="text-purple-500 font-bold text-[10px] tracking-wider uppercase">Must Play</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-primary leading-tight">망설일 필요 없는<br/>인증된 갓겜</h3>
+                                    </div>
+                                    <div className="flex items-end justify-between mt-4">
+                                        <div className="text-4xl font-black text-primary tracking-tighter">
+                                            {stats.mustPlayCount?.toLocaleString()}
+                                        </div>
+                                        <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
+                                    </div>
                                 </div>
-                                <h3 className="text-2xl md:text-3xl font-black text-primary leading-tight mt-1 drop-shadow-sm">
-                                    지갑이 열리는 중!<br/>
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-amber-500 dark:from-amber-500 dark:to-yellow-500">실시간 베스트셀러</span>
-                                </h3>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-[var(--bento-card-bg)] border border-[color:var(--bento-amber-border)] flex items-center justify-center group-hover:bg-amber-500 group-hover:border-amber-500 transition-colors shrink-0 shadow-sm">
-                                <ChevronRight className="w-5 h-5 text-secondary group-hover:text-white transition-colors" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* 최다 다운로드 랭킹 진입점 (CYAN) */}
-                <div
-                    onClick={() => navigate('/games?isMostDownloaded=true')}
-                    className="col-span-1 md:col-span-2 lg:col-span-2 row-span-1 relative overflow-hidden rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-cyan-border)] p-6 md:p-8 cursor-pointer group hover:-translate-y-1 hover:border-[color:var(--bento-cyan-border-hover)] hover:[box-shadow:var(--bento-cyan-shadow)] transition-all duration-300"
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to bottom right, var(--bento-cyan-from), transparent 70%)' }}></div>
-                    <div className="hidden md:block absolute right-0 bottom-0 w-64 h-64 rounded-full blur-3xl -mr-20 -mb-20 transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-cyan-border-hover)', opacity: 0.15 }}></div>
-                    <div className="relative z-10 h-full flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Download className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                                    <h2 className="text-cyan-600 dark:text-cyan-400 font-bold text-sm tracking-wider uppercase">MOST DOWNLOADED</h2>
+                            {/* 베스트셀러 */}
+                            <div onClick={() => navigate('/games?isBestSeller=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-amber-500/50 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all duration-300">
+                                <Triangle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-amber-500" />
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-amber-500 to-transparent"></div>
+
+                                <div className="relative z-10 flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Trophy className="w-4 h-4 text-amber-500" />
+                                            <span className="text-amber-500 font-bold text-[10px] tracking-wider uppercase">Top Sellers</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-primary leading-tight">지갑이 열리는 중!<br/>베스트셀러</h3>
+                                    </div>
+                                    <div className="flex items-end justify-end mt-4">
+                                        <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
+                                    </div>
                                 </div>
-                                <h3 className="text-2xl md:text-3xl font-black text-primary leading-tight mt-1 drop-shadow-sm">
-                                    지금 제일 핫한 게임<br/>
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-500">실시간 최다 다운로드</span>
-                                </h3>
                             </div>
-                            <div className="w-10 h-10 rounded-full bg-[var(--bento-card-bg)] border border-[color:var(--bento-cyan-border)] flex items-center justify-center group-hover:bg-cyan-500 group-hover:border-cyan-500 transition-colors shrink-0 shadow-sm">
-                                <ChevronRight className="w-5 h-5 text-secondary group-hover:text-white transition-colors" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* 5. 누적 찜 횟수 (PINK) */}
-                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-pink-border)] hover:border-[color:var(--bento-pink-border-hover)] hover:[box-shadow:var(--bento-pink-shadow)] p-5 md:p-6 flex items-center justify-between relative overflow-hidden group transition-all duration-300">
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-pink-from), transparent 60%)' }}></div>
-                    <div className="hidden md:block absolute left-0 top-0 w-48 h-full rounded-full blur-3xl transition-transform group-hover:scale-110 pointer-events-none" style={{ backgroundColor: 'var(--bento-pink-border-hover)', opacity: 0.1 }}></div>
+                            {/* 최다 다운로드 */}
+                            <div onClick={() => navigate('/games?isMostDownloaded=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] transition-all duration-300">
+                                <Circle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-cyan-500" />
+                                <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-cyan-500 to-transparent"></div>
 
-                    <div className="flex items-center gap-3 md:gap-4 relative z-10 flex-1 min-w-0">
-                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
-                            <Heart className="w-5 h-5 md:w-6 md:h-6 text-pink-600 dark:text-pink-500 fill-pink-600 dark:fill-pink-500 animate-pulse" />
-                        </div>
-                        <div className="min-w-0">
-                            <h2 className="text-pink-600 dark:text-pink-500 font-bold text-[10px] md:text-xs tracking-wider mb-0.5 md:mb-1 uppercase">USER ACTIVITY</h2>
-                            <h3 className="text-sm md:text-xl font-black text-primary truncate leading-tight">
-                                우리 사이트에서 찜한 총 횟수
-                            </h3>
-                        </div>
-                    </div>
-                    <div className="relative z-10 text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-500 dark:to-purple-500 drop-shadow-sm shrink-0 ml-2">
-                        {stats.totalWishlistCount?.toLocaleString()} <span className="text-xs md:text-lg text-secondary font-bold uppercase">번</span>
-                    </div>
-                </div>
-
-                {/* 6 & 7. 트래커 시스템 현황 (EMERALD) */}
-                <div className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-emerald-border)] hover:border-[color:var(--bento-emerald-border-hover)] hover:[box-shadow:var(--bento-emerald-shadow)] p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group transition-all duration-300">
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-emerald-from), transparent 60%)' }}></div>
-                    <div className="hidden md:block absolute left-1/2 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-emerald-border-hover)', opacity: 0.1 }}></div>
-
-                    <div className="flex items-center gap-3 md:gap-4 relative z-10 mb-4 md:mb-0 w-full md:w-auto">
-                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                            <Database className="w-5 h-5 md:w-6 md:h-6 text-emerald-600 dark:text-emerald-500" />
-                        </div>
-                        <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5 md:mb-1">
-                                <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-600 dark:bg-emerald-500 animate-pulse shadow-sm"></span>
-                                <h2 className="text-emerald-600 dark:text-emerald-500 font-bold text-[10px] md:text-xs tracking-wider uppercase">SYSTEM ONLINE</h2>
-                            </div>
-                            <h3 className="text-primary font-black text-xs md:text-base tracking-wide truncate">PS Tracker Daemon v2.4.1</h3>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-between items-center gap-3 sm:gap-10 relative z-10 w-full md:w-auto bg-surface md:bg-transparent p-3.5 md:p-0 rounded-2xl md:rounded-none border md:border-0 border-divider">
-                        <div className="flex-1 sm:flex-none">
-                            <p className="text-secondary text-[9px] md:text-xs font-bold tracking-wider mb-0.5 md:mb-1 uppercase">TRACKED TITLES</p>
-                            <p className="text-primary font-black text-lg md:text-2xl drop-shadow-sm">
-                                {stats.totalTrackedCount?.toLocaleString()}<span className="text-xs text-secondary ml-1 font-bold">개</span>
-                            </p>
-                        </div>
-
-                        <div className="w-[1px] h-8 bg-divider hidden sm:block"></div>
-
-                        <div className="flex-1 sm:flex-none text-right sm:text-left">
-                            <p className="text-secondary text-[9px] md:text-xs font-bold tracking-wider mb-0.5 md:mb-1 uppercase">LAST SYNC</p>
-                            <div className="flex items-center justify-end sm:justify-start gap-1.5 md:gap-2">
-                                <p className="text-primary font-black text-xs md:text-lg flex items-center gap-1 md:gap-1.5 drop-shadow-sm">
-                                    <Clock className="w-3 h-3 md:w-4 md:h-4 text-emerald-600 dark:text-emerald-500" /> {formatDate(stats.lastSyncTime)}
-                                </p>
-                                {isAdmin && (
-                                    <button onClick={handleRefreshCache} disabled={isRefreshing} className="p-1 md:p-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-500 transition-colors border border-emerald-600/30 dark:border-emerald-500/30 ml-1">
-                                        <RefreshCw className={`w-3 h-3 md:w-3.5 md:h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                    </button>
-                                )}
+                                <div className="relative z-10 flex flex-col justify-between min-h-[140px]">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <Download className="w-4 h-4 text-cyan-500" />
+                                            <span className="text-cyan-500 font-bold text-[10px] tracking-wider uppercase">Most Downloaded</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-primary leading-tight">지금 제일 핫한<br/>최다 다운로드</h3>
+                                    </div>
+                                    <div className="flex items-end justify-end mt-4">
+                                        <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
+                    </section>
 
-                {/* 서버 밥주기 후원 (YELLOW) */}
-                <div
-                    onClick={() => setIsDonationOpen(true)}
-                    className="col-span-1 md:col-span-3 lg:col-span-4 row-span-1 rounded-3xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-yellow-border)] hover:border-[color:var(--bento-yellow-border-hover)] hover:[box-shadow:var(--bento-yellow-shadow)] p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between relative overflow-hidden group cursor-pointer transition-all duration-300"
-                >
-                    <div className="absolute inset-0 pointer-events-none transition-colors duration-500" style={{ background: 'linear-gradient(to right, var(--bento-yellow-from), transparent 60%)' }}></div>
-                    <div className="hidden md:block absolute right-0 top-0 w-48 h-full rounded-full blur-3xl pointer-events-none" style={{ backgroundColor: 'var(--bento-yellow-border-hover)', opacity: 0.1 }}></div>
 
-                    <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full md:w-auto flex-1">
-                        <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 group-hover:-rotate-12 transition-transform">
-                            <Server className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-500 drop-shadow-sm" />
+                    {/* ==========================================
+                        Section 3: System Matrix (시스템 현황)
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
+                            <Database className="w-4 h-4 text-ps-blue" /> System Matrix
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* 누적 찜 횟수 */}
+                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 hover:border-pink-500/30 transition-all duration-300 flex items-center justify-between">
+                                <div className="relative z-10 flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
+                                        <Heart className="w-4 h-4 text-pink-500 fill-pink-500 animate-pulse" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-[10px] font-bold text-secondary uppercase tracking-wider mb-0.5">User Activity</h3>
+                                        <p className="text-sm font-bold text-primary">우리 사이트 누적 찜 횟수</p>
+                                    </div>
+                                </div>
+                                <div className="relative z-10 text-2xl font-black text-primary tracking-tighter">
+                                    {stats.totalWishlistCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">번</span>
+                                </div>
+                            </div>
+
+                            {/* 시스템 현황 */}
+                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 hover:border-emerald-500/30 transition-all duration-300 flex items-center justify-between">
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                                        <h3 className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">System Online</h3>
+                                    </div>
+                                    <p className="text-sm font-bold text-primary">PS Tracker Daemon v2.4.1</p>
+                                </div>
+                                <div className="relative z-10 text-right">
+                                    <p className="text-[10px] text-secondary font-bold uppercase mb-0.5">Tracked Titles</p>
+                                    <p className="text-lg font-black text-primary">{stats.totalTrackedCount?.toLocaleString()}</p>
+                                    <p className="text-[10px] text-secondary flex items-center justify-end gap-1 mt-1">
+                                        <Clock className="w-3 h-3" /> {formatDate(stats.lastSyncTime)}
+                                        {isAdmin && (
+                                            <button onClick={handleRefreshCache} disabled={isRefreshing} className="p-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 transition-colors ml-1 border border-emerald-500/20">
+                                                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                            </button>
+                                        )}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* 감자 서버 후원 (Full Width) */}
+                            <div onClick={() => setIsDonationOpen(true)} className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div className="relative z-10 flex items-center gap-4 w-full md:w-auto">
+                                    <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 group-hover:-rotate-12 transition-transform">
+                                        <Server className="w-5 h-5 text-yellow-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-[10px] font-bold text-yellow-500 uppercase tracking-wider mb-0.5">Support Potato Server</h3>
+                                        <p className="text-sm font-bold text-primary">PS Tracker로 게임값을 아끼셨다면 감자 서버에게 밥을 주세요!</p>
+                                    </div>
+                                </div>
+                                <div className="relative z-10 w-full md:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-base border border-divider rounded-xl group-hover:bg-yellow-500 group-hover:border-yellow-500 group-hover:text-black font-bold text-xs transition-colors">
+                                    밥 주기 (후원) <ChevronRight className="w-4 h-4" />
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <h2 className="text-yellow-600 dark:text-yellow-500 font-bold text-[10px] md:text-xs tracking-wider mb-0.5 md:mb-1 uppercase">SUPPORT POTATO SERVER</h2>
-                            <h3 className="text-primary font-black text-sm md:text-lg lg:text-xl leading-tight truncate md:whitespace-normal">
-                                PS Tracker로 게임값 아끼셨나요? <br className="hidden md:block" />
-                                <span className="text-yellow-600 dark:text-yellow-500">열일하는 감자 서버에게 밥주기</span>
-                            </h3>
-                        </div>
-                    </div>
-
-                    <div className="flex w-full md:w-auto md:min-w-[140px] justify-between md:justify-center items-center gap-2 mt-4 md:mt-0 relative z-10 bg-[var(--bento-card-bg)] px-4 py-2.5 md:py-2.5 md:px-6 rounded-xl md:rounded-full border border-[color:var(--bento-yellow-border)] group-hover:bg-yellow-500 group-hover:border-yellow-500 transition-all shrink-0">
-                        <span className="text-xs font-bold text-secondary group-hover:text-black whitespace-nowrap transition-colors">밥 주기 (후원)</span>
-                        <ChevronRight className="w-4 h-4 text-secondary group-hover:text-black group-hover:translate-x-1 transition-all" />
-                    </div>
+                    </section>
                 </div>
             </div>
 

@@ -34,4 +34,10 @@ public class GameSearchCondition {
 
     private Boolean isBestSeller;
     private Boolean isMostDownloaded;
+
+    // 신규 할인 시작
+    private Boolean isNewDiscount;
+
+    // 마감 임박
+    private Boolean isClosingSoon;
 }

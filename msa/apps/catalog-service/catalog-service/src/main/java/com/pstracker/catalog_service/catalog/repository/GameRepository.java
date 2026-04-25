@@ -82,4 +82,13 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     int updateMostDownloadedRank(@Param("psStoreId") String psStoreId, @Param("rank") Integer rank);
 
     List<Game> findTop5ByDescriptionEqualsOrVibeTagsIsNull(String description);
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.saleEndDate BETWEEN CURRENT_DATE AND :tomorrow")
+    long countClosingSoonGames(@Param("tomorrow") LocalDate tomorrow);
+
+    @Query("SELECT COUNT(DISTINCT h.game.id) FROM GamePriceHistory h " +
+            "WHERE h.discountRate > 0 " +
+            "AND h.recordedAt BETWEEN :startOfDay AND :endOfDay")
+    long countNewDiscountGames(@Param("startOfDay") LocalDateTime startOfDay,
+                               @Param("endOfDay") LocalDateTime endOfDay);
 }

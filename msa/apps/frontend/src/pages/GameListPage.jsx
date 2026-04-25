@@ -36,7 +36,8 @@ import {
     Triangle,
     Trophy,
     Waves,
-    X
+    X,
+    Zap
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -81,7 +82,9 @@ const GameListPage = () => {
         isAllTimeLow: searchParams.get('isAllTimeLow') === 'true',
         isPs5ProEnhanced: searchParams.get('isPs5ProEnhanced') === 'true',
         isBestSeller: searchParams.get('isBestSeller') === 'true',
-        isMostDownloaded: searchParams.get('isMostDownloaded') === 'true'
+        isMostDownloaded: searchParams.get('isMostDownloaded') === 'true',
+        isClosingSoon: searchParams.get('isClosingSoon') === 'true',
+        isNewDiscount: searchParams.get('isNewDiscount') === 'true'
     }));
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
@@ -103,6 +106,8 @@ const GameListPage = () => {
                 ...(currentFilter.isPs5ProEnhanced && { isPs5ProEnhanced: true }),
                 ...(currentFilter.isBestSeller && { isBestSeller: true }),
                 ...(currentFilter.isMostDownloaded && { isMostDownloaded: true }),
+                ...(currentFilter.isClosingSoon && { isClosingSoon: true }),
+                ...(currentFilter.isNewDiscount && { isNewDiscount: true }),
             };
             const response = await client.get('/api/v1/games/search', { params });
 
@@ -291,7 +296,9 @@ const GameListPage = () => {
                     !prev.isAllTimeLow &&
                     !prev.isPs5ProEnhanced &&
                     !prev.isBestSeller &&
-                    !prev.isMostDownloaded;
+                    !prev.isMostDownloaded &&
+                    !prev.isClosingSoon &&
+                    !prev.isNewDiscount;
 
                 if (isAlreadyDefault) return prev;
 
@@ -305,7 +312,9 @@ const GameListPage = () => {
                     isAllTimeLow: false,
                     isPs5ProEnhanced: false,
                     isBestSeller: false,
-                    isMostDownloaded: false
+                    isMostDownloaded: false,
+                    isClosingSoon: false,
+                    isNewDiscount: false
                 };
             });
         } else {
@@ -323,6 +332,8 @@ const GameListPage = () => {
             const urlIsPs5ProEnhanced = searchParams.get('isPs5ProEnhanced') === 'true';
             const urlIsBestSeller = searchParams.get('isBestSeller') === 'true';
             const urlIsMostDownloaded = searchParams.get('isMostDownloaded') === 'true';
+            const urlIsClosingSoon = searchParams.get('isClosingSoon') === 'true';
+            const urlIsNewDiscount = searchParams.get('isNewDiscount') === 'true';
 
             setFilter(prev => {
                 if (
@@ -339,7 +350,9 @@ const GameListPage = () => {
                     prev.isAllTimeLow === urlIsAllTimeLow &&
                     prev.isPs5ProEnhanced === urlIsPs5ProEnhanced &&
                     prev.isBestSeller === urlIsBestSeller &&
-                    prev.isMostDownloaded === urlIsMostDownloaded
+                    prev.isMostDownloaded === urlIsMostDownloaded &&
+                    prev.isClosingSoon === urlIsClosingSoon &&
+                    prev.isNewDiscount === urlIsNewDiscount
                 ) {
                     return prev;
                 }
@@ -355,7 +368,9 @@ const GameListPage = () => {
                     maxPrice: urlMaxPrice, isAllTimeLow: urlIsAllTimeLow,
                     isPs5ProEnhanced: urlIsPs5ProEnhanced,
                     isBestSeller: urlIsBestSeller,
-                    isMostDownloaded: urlIsMostDownloaded
+                    isMostDownloaded: urlIsMostDownloaded,
+                    isClosingSoon: urlIsClosingSoon,
+                    isNewDiscount: urlIsNewDiscount
                 };
             });
         }
@@ -377,6 +392,8 @@ const GameListPage = () => {
         if (filter.isPs5ProEnhanced) params.isPs5ProEnhanced = 'true';
         if (filter.isBestSeller) params.isBestSeller = 'true';
         if (filter.isMostDownloaded) params.isMostDownloaded = 'true';
+        if (filter.isClosingSoon) params.isClosingSoon = 'true';
+        if (filter.isNewDiscount) params.isNewDiscount = 'true';
 
         const currentParamsStr = searchParams.toString();
         const newParamsStr = new URLSearchParams(params).toString();
@@ -403,7 +420,9 @@ const GameListPage = () => {
         filter.keyword,
         filter.isPs5ProEnhanced,
         filter.isBestSeller,
-        filter.isMostDownloaded
+        filter.isMostDownloaded,
+        filter.isClosingSoon,
+        filter.isNewDiscount
     ]);
 
     const sortOptions = [
@@ -566,6 +585,46 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                ) : filter.isClosingSoon ? (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-rose-500/30 dark:border-rose-500/20 p-4 sm:p-5 flex items-center justify-between hover:border-rose-500/60 dark:hover:border-rose-500/50 hover:shadow-[0_0_25px_rgba(225,29,72,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-rose-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-rose-500/10 dark:bg-rose-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center border border-rose-500/30 animate-[pulse_1.5s_ease-in-out_infinite]">
+                                <Timer className="w-6 h-6 text-rose-600 dark:text-rose-500" />
+                            </div>
+                            <div>
+                                <div className="text-rose-600 dark:text-rose-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Timer className="w-3 h-3"/> CLOSING SOON</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    놓치면 후회할 <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-red-500 dark:from-rose-400 dark:to-red-400">할인 마감 임박</span> 모아보기!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isClosingSoon: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+
+                ) : filter.isNewDiscount ? (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-blue-500/30 dark:border-blue-500/20 p-4 sm:p-5 flex items-center justify-between hover:border-blue-500/60 dark:hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-blue-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-blue-500/10 dark:bg-blue-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/30">
+                                <Zap className="w-6 h-6 text-blue-600 dark:text-blue-400 drop-shadow-sm" />
+                            </div>
+                            <div>
+                                <div className="text-blue-600 dark:text-blue-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Zap className="w-3 h-3"/> NEW DEALS</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    오늘 시작된 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500 dark:from-blue-400 dark:to-indigo-400">따끈한 신규 할인</span> 모아보기!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isNewDiscount: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+
                 ) : (
                     /* ⚪ 상태 6: 아무 필터도 없을 때 기본 배너 */
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-divider flex flex-col md:flex-row shadow-sm transition-all hover:shadow-md">

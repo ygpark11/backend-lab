@@ -10,6 +10,7 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.support.PageableExecutionUtils;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,7 @@ import java.util.stream.Collectors;
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
 import static com.pstracker.catalog_service.catalog.domain.QGameGenre.gameGenre;
 import static com.pstracker.catalog_service.catalog.domain.QGenre.genre;
+import static com.pstracker.catalog_service.catalog.domain.QGamePriceHistory.gamePriceHistory;
 import static org.springframework.util.StringUtils.hasText;
 
 
@@ -60,7 +63,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         isAllTimeLow(condition.getIsAllTimeLow()),
                         ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
                         bestSellerEq(condition.getIsBestSeller()),
-                        mostDownloadedEq(condition.getIsMostDownloaded())
+                        mostDownloadedEq(condition.getIsMostDownloaded()),
+                        isClosingSoon(condition.getIsClosingSoon()),
+                        isNewDiscount(condition.getIsNewDiscount())
                 )
                 .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
                 .offset(pageable.getOffset())
@@ -83,7 +88,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         isAllTimeLow(condition.getIsAllTimeLow()),
                         ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
                         bestSellerEq(condition.getIsBestSeller()),
-                        mostDownloadedEq(condition.getIsMostDownloaded())
+                        mostDownloadedEq(condition.getIsMostDownloaded()),
+                        isClosingSoon(condition.getIsClosingSoon()),
+                        isNewDiscount(condition.getIsNewDiscount())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -210,6 +217,33 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     private BooleanExpression mostDownloadedEq(Boolean isMostDownloaded) {
         return Boolean.TRUE.equals(isMostDownloaded) ? game.mostDownloadedRank.isNotNull() : null;
+    }
+
+    private BooleanExpression isClosingSoon(Boolean isClosingSoon) {
+        if (isClosingSoon == null || !isClosingSoon) {
+            return null;
+        }
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
+        return game.saleEndDate.between(today, tomorrow);
+    }
+
+    private BooleanExpression isNewDiscount(Boolean isNewDiscount) {
+        if (isNewDiscount == null || !isNewDiscount) {
+            return null;
+        }
+        LocalDate today = LocalDate.now();
+        
+        return JPAExpressions.selectOne()
+                .from(gamePriceHistory)
+                .where(
+                        gamePriceHistory.game.id.eq(game.id),
+                        gamePriceHistory.discountRate.gt(0),
+                        // QueryDSL에서 LocalDateTime 컬럼의 날짜 부분만 비교할 수 없으므로 
+                        // 오늘 시작(00:00:00)부터 끝(23:59:59) 사이에 기록된 이력을 찾습니다.
+                        gamePriceHistory.recordedAt.goe(today.atStartOfDay()),
+                        gamePriceHistory.recordedAt.lt(today.plusDays(1).atStartOfDay())
+                ).exists();
     }
 
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort, GameSearchCondition condition) {
