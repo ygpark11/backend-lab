@@ -105,4 +105,28 @@ public class InsightsService {
         LocalDateTime endOfDay = LocalDate.now().atTime(LocalTime.MAX);
         return gameRepository.countNewDiscountGames(startOfDay, endOfDay);
     }
+
+    /**
+     * 할인 중인 PS5 Pro 향상 게임 수 조회
+     */
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PS5_PRO)
+    public long getPs5ProEnhancedCount() {
+        return gameRepository.countPs5ProEnhancedDeals();
+    }
+
+    /**
+     * 할인 중인 스페셜 카탈로그 게임 수 조회
+     */
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_IN_CATALOG)
+    public long getInCatalogCount() {
+        return gameRepository.countInCatalogDeals();
+    }
+
+    /**
+     * PLUS 전용 할인 게임 수 조회
+     */
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PLUS_EXCLUSIVE)
+    public long getPlusExclusiveCount() {
+        return gameRepository.countPlusExclusiveDeals();
+    }
 }

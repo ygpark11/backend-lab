@@ -1,16 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, {useEffect, useState} from 'react';
 import {
-    Flame, Star, TrendingDown, Activity, Database, Clock,
-    ChevronRight, Heart, CircleDollarSign, RefreshCw,
-    AlertTriangle, Server, Trophy, Download, Timer, Zap,
-    Triangle, Circle, X as XIcon, Square, BarChart3, Radio
+    AlertTriangle,
+    BarChart3,
+    ChevronRight,
+    Circle,
+    Clock,
+    Database,
+    Download,
+    Flame,
+    Gamepad2,
+    Globe,
+    Heart,
+    Plus,
+    Radio,
+    RefreshCw,
+    Server,
+    Sparkles,
+    Square,
+    Star,
+    Timer,
+    TrendingDown,
+    Triangle,
+    Trophy,
+    X as XIcon,
+    Zap
 } from 'lucide-react';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
 import toast from 'react-hot-toast';
-import { useCurrentUser } from '../hooks/useCurrentUser';
-import { adminApi } from '../api/adminApi';
+import {useCurrentUser} from '../hooks/useCurrentUser';
+import {adminApi} from '../api/adminApi';
 import DonationModal from '../components/DonationModal';
 
 const formatCurrency = (amount) => {
@@ -143,7 +163,7 @@ const InsightsPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* 역대 최저가 */}
-                            <div onClick={() => navigate('/games?isAllTimeLow=true')} className="col-span-1 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(239,68,68,0.1)] transition-all duration-300">
+                            <div onClick={() => navigate('/games?isAllTimeLow=true')} className="col-span-1 md:col-span-2 lg:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 cursor-pointer group hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(239,68,68,0.1)] transition-all duration-300">
                                 <Triangle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-red-500" />
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-red-500 to-transparent"></div>
 
@@ -167,7 +187,7 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 마감 임박 */}
-                            <div onClick={() => navigate('/games?isClosingSoon=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group transition-all duration-300 ${hasClosingSoon ? 'hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
+                            <div onClick={() => navigate('/games?isClosingSoon=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group transition-all duration-300 ${hasClosingSoon ? 'hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
                                 <Circle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-orange-500" />
                                 <div className={`absolute inset-0 opacity-0 transition-opacity bg-gradient-to-br from-orange-500 to-transparent ${hasClosingSoon ? 'group-hover:opacity-10' : ''}`}></div>
 
@@ -188,8 +208,8 @@ const InsightsPage = () => {
                                 </div>
                             </div>
 
-                            {/* 신규 할인 (Zero State 적용) */}
-                            <div onClick={() => navigate('/games?isNewDiscount=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group transition-all duration-300 ${hasNewDeals ? 'hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
+                            {/* 신규 할인 */}
+                            <div onClick={() => navigate('/games?isNewDiscount=true')} className={`col-span-1 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group transition-all duration-300 ${hasNewDeals ? 'hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]' : 'opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:border-ps-blue/30'}`}>
                                 <XIcon className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-blue-500" />
                                 <div className={`absolute inset-0 opacity-0 transition-opacity bg-gradient-to-br from-blue-500 to-transparent ${hasNewDeals ? 'group-hover:opacity-10' : ''}`}></div>
 
@@ -210,8 +230,8 @@ const InsightsPage = () => {
                                 </div>
                             </div>
 
-                            {/* 총 할인 규모 (통합) */}
-                            <div onClick={() => navigate('/games?minDiscountRate=1')} className="col-span-1 md:col-span-2 lg:col-span-4 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group hover:border-green-500/50 hover:shadow-[0_0_20px_rgba(34,197,94,0.1)] transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                            {/* 총 할인 규모 */}
+                            <div onClick={() => navigate('/games?minDiscountRate=1')} className="col-span-1 md:col-span-2 lg:col-span-4 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-green-500/50 hover:shadow-[0_0_20px_rgba(34,197,94,0.1)] transition-all duration-300 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity bg-gradient-to-r from-green-500 to-transparent"></div>
 
                                 <div className="relative z-10 flex items-center gap-4">
@@ -251,7 +271,7 @@ const InsightsPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* 갓겜 레이더 */}
-                            <div onClick={() => navigate('/games?minMetaScore=85&minDiscountRate=50')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] transition-all duration-300">
+                            <div onClick={() => navigate('/games?minMetaScore=85&minDiscountRate=50')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 cursor-pointer group hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] transition-all duration-300">
                                 <Square className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-purple-500" />
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-purple-500 to-transparent"></div>
 
@@ -273,7 +293,7 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 베스트셀러 */}
-                            <div onClick={() => navigate('/games?isBestSeller=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-amber-500/50 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all duration-300">
+                            <div onClick={() => navigate('/games?isBestSeller=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 cursor-pointer group hover:border-amber-500/50 hover:shadow-[0_0_20px_rgba(245,158,11,0.1)] transition-all duration-300">
                                 <Triangle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-amber-500" />
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-amber-500 to-transparent"></div>
 
@@ -292,7 +312,7 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 최다 다운로드 */}
-                            <div onClick={() => navigate('/games?isMostDownloaded=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] transition-all duration-300">
+                            <div onClick={() => navigate('/games?isMostDownloaded=true')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 cursor-pointer group hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(6,182,212,0.1)] transition-all duration-300">
                                 <Circle className="absolute -right-4 -bottom-4 w-32 h-32 stroke-[2px] opacity-[0.03] dark:opacity-[0.02] text-primary rotate-12 transition-transform group-hover:scale-110 group-hover:text-cyan-500" />
                                 <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br from-cyan-500 to-transparent"></div>
 
@@ -314,7 +334,69 @@ const InsightsPage = () => {
 
 
                     {/* ==========================================
-                        Section 3: System Matrix (시스템 현황)
+                        Section 3: PlayStation Ecosystem
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
+                            <Globe className="w-4 h-4 text-ps-blue" /> PlayStation Ecosystem
+                        </h2>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* PS5 Pro 향상 */}
+                            <div onClick={() => navigate('/games?isPs5ProEnhanced=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-gray-400/50 dark:hover:border-gray-500/50 hover:shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-300 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors shadow-sm">
+                                        <Sparkles className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">PS5 Pro Enhanced</p>
+                                        <h3 className="text-sm font-black text-primary">Pro 향상 꿀딜</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-black text-primary">{stats.ps5ProCount?.toLocaleString() || 0}</span>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+
+                            {/* 스페셜 카탈로그 무료 (옐로우/골드 아이덴티티 적용) */}
+                            <div onClick={() => navigate('/games?inCatalog=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-yellow-500/50 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] dark:hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] transition-all duration-300 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-white dark:bg-black border border-yellow-500 text-yellow-600 dark:text-yellow-500 group-hover:bg-yellow-50 dark:group-hover:bg-yellow-500 dark:group-hover:text-black transition-colors shadow-sm">
+                                        <Gamepad2 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-0.5">PS Plus Extra / Premium</p>
+                                        <h3 className="text-sm font-black text-primary">구독자 무료 혜택</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-black text-primary">{stats.inCatalogCount?.toLocaleString() || 0}</span>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+
+                            {/* PLUS 전용 할인 */}
+                            <div onClick={() => navigate('/games?isPlusExclusive=true')} className="relative overflow-hidden rounded-xl bg-yellow-50/50 dark:bg-yellow-500/5 backdrop-blur-md border border-yellow-200 dark:border-yellow-500/20 p-4 cursor-pointer group hover:border-yellow-300 dark:hover:border-yellow-500/60 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 hover:shadow-[0_0_15px_rgba(234,179,8,0.1)] dark:hover:shadow-[0_0_15px_rgba(234,179,8,0.2)] transition-all duration-300 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-yellow-400 dark:bg-yellow-500 text-black shadow-sm group-hover:scale-110 transition-transform">
+                                        <Plus className="w-5 h-5" strokeWidth={3} />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-yellow-700 dark:text-yellow-400 font-black uppercase tracking-wider mb-0.5">PS Plus Exclusive</p>
+                                        <h3 className="text-sm font-black text-primary">PLUS 전용 혜택</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xl font-black text-primary">{stats.plusExclusiveCount?.toLocaleString() || 0}</span>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ==========================================
+                        Section 4: System Matrix (시스템 현황)
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
                         <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
@@ -323,7 +405,7 @@ const InsightsPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* 누적 찜 횟수 */}
-                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 hover:border-pink-500/30 transition-all duration-300 flex items-center justify-between">
+                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-pink-500/30 transition-all duration-300 flex items-center justify-between">
                                 <div className="relative z-10 flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-full bg-pink-500/10 flex items-center justify-center border border-pink-500/20">
                                         <Heart className="w-4 h-4 text-pink-500 fill-pink-500 animate-pulse" />
@@ -339,7 +421,7 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 시스템 현황 */}
-                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 hover:border-emerald-500/30 transition-all duration-300 flex items-center justify-between">
+                            <div className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-6 group hover:border-emerald-500/30 transition-all duration-300 flex items-center justify-between">
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
@@ -362,7 +444,7 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 감자 서버 후원 (Full Width) */}
-                            <div onClick={() => setIsDonationOpen(true)} className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 group hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div onClick={() => setIsDonationOpen(true)} className="col-span-1 md:col-span-2 relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-yellow-500/50 hover:bg-yellow-500/5 transition-all duration-300 flex flex-col md:flex-row items-center justify-between gap-4">
                                 <div className="relative z-10 flex items-center gap-4 w-full md:w-auto">
                                     <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 group-hover:scale-110 group-hover:-rotate-12 transition-transform">
                                         <Server className="w-5 h-5 text-yellow-500" />

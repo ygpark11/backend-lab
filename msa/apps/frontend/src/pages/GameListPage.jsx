@@ -7,37 +7,12 @@ import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {useLocation, useSearchParams} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {
-    Activity,
-    Banknote,
-    CalendarDays,
-    Check,
-    ChevronDown,
-    ChevronRight,
-    CircleDollarSign,
-    Clock,
-    Download,
-    Filter,
-    Flame,
-    Gamepad2,
-    Heart,
-    Layers,
-    Lock,
-    Mail,
-    MonitorPlay,
-    Percent,
-    Pickaxe,
-    Search,
-    Server,
-    Sparkles,
-    Star,
-    Timer,
-    TrendingDown,
-    TrendingUp,
-    Triangle,
-    Trophy,
-    Waves,
-    X,
-    Zap
+    Activity, Banknote, CalendarDays, Check, ChevronDown, ChevronRight,
+    CircleDollarSign, Clock, Download, Filter, Flame, Gamepad2, Heart,
+    Layers, Lock, Mail, MonitorPlay, Percent, Pickaxe, Search, Server,
+    Sparkles, Star, Timer, TrendingDown, TrendingUp, Triangle, Trophy,
+    Waves, X, Zap,
+    Plus
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -453,41 +428,143 @@ const GameListPage = () => {
         { value: 'PS4', label: 'PS4 호환' }
     ];
 
-    if (loading && page === 0 && isInitialLoad) return <div className="min-h-screen pt-20 flex justify-center bg-base transition-colors duration-500"><PSLoader /></div>;
+    const getActiveSpecialFilters = () => {
+        const active = [];
+        if (filter.isAllTimeLow) active.push('isAllTimeLow');
+        if (filter.minMetaScore === '85' && filter.minDiscountRate === '50') active.push('mustPlay');
 
-    return (
-        <div className="min-h-screen text-primary relative transition-colors duration-500">
-            <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" />
+        // '전체 할인' 배너는 다른 특수 필터가 아예 없을 때만 표시되도록 방어
+        if (filter.minDiscountRate === '1' && filter.minMetaScore === '' &&
+            !filter.isBestSeller && !filter.isMostDownloaded && !filter.isClosingSoon &&
+            !filter.isNewDiscount && !filter.isPs5ProEnhanced && !filter.inCatalog && !filter.isPlusExclusive) {
+            active.push('allDiscounts');
+        }
 
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
-                <div className="absolute inset-0 z-20 md:mix-blend-screen md:dark:mix-blend-screen opacity-40 md:opacity-50">
-                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
-                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
-                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_12s_ease-in-out_infinite]"></div>
-                </div>
-            </div>
+        if (filter.isBestSeller) active.push('isBestSeller');
+        if (filter.isMostDownloaded) active.push('isMostDownloaded');
+        if (filter.isClosingSoon) active.push('isClosingSoon');
+        if (filter.isNewDiscount) active.push('isNewDiscount');
+        if (filter.isPs5ProEnhanced) active.push('isPs5ProEnhanced');
+        if (filter.inCatalog) active.push('inCatalog');
+        if (filter.isPlusExclusive) active.push('isPlusExclusive');
 
-            {/* 메인 컨텐츠 영역 */}
-            <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">
+        return active;
+    };
 
-                {/* 장르 파도타기 배너 */}
-                {filter.genre && (
-                    <div className="mb-6 relative overflow-hidden rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-card-bg)] shadow-[var(--bento-blue-shadow)] group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--bento-blue-from)] to-transparent animate-pulse"></div>
-                        <div className="relative p-5 flex items-center justify-between z-10">
-                            <div className="flex items-center gap-4">
-                                <div>
-                                    <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1"><Waves className="w-3 h-3" /> Genre Surfing</p>
-                                    <h2 className="text-xl font-black text-primary tracking-tight">'{filter.genre}' 게임 모아보기</h2>
-                                </div>
+    // 2. 복합 필터 '전체 해제' 함수
+    const handleClearSpecialFilters = () => {
+        setFilter(prev => ({
+            ...prev,
+            isAllTimeLow: false, isBestSeller: false, isMostDownloaded: false,
+            isClosingSoon: false, isNewDiscount: false, isPs5ProEnhanced: false,
+            inCatalog: false, isPlusExclusive: false,
+            // 갓겜 세팅이나 전체 할인 세팅이었을 경우에만 초기화
+            minMetaScore: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : prev.minMetaScore,
+            minDiscountRate: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : (prev.minDiscountRate === '1' ? '' : prev.minDiscountRate)
+        }));
+        setPage(0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const activeBanners = getActiveSpecialFilters();
+
+    // 3. 다이내믹 인사이트 액션 배너 렌더링 함수 (기존 삼항 연산자 대체)
+    const renderActionBanner = () => {
+        // [방어코드] 복합 조건 (2개 이상의 액션 배너 조건이 겹쳤을 때)
+        if (activeBanners.length > 1) {
+            return (
+                <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-gray-500/30 p-4 sm:p-5 flex items-center justify-between hover:border-gray-500/60 hover:shadow-[0_0_20px_rgba(156,163,175,0.15)] group transition-all">
+                    <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-gray-500/10 to-transparent"></div>
+                    <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 rounded-full bg-gray-500/10 flex items-center justify-center border border-gray-500/30">
+                            <Layers className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <div>
+                            <div className="text-gray-400 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Filter className="w-3 h-3"/> MULTI FILTER</div>
+                            <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                현재 <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-white">{activeBanners.length}개의 조건이 조합된</span> 맞춤 필터 적용 중!
                             </div>
-                            <button onClick={clearGenreFilter} className="flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-4 py-2 rounded-lg transition-all text-sm font-bold text-secondary hover:text-primary"><X className="w-4 h-4" /> 필터 해제</button>
                         </div>
                     </div>
-                )}
+                    <button onClick={handleClearSpecialFilters} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                        <X className="w-4 h-4" /> <span className="hidden sm:inline">전체 해제</span>
+                    </button>
+                </div>
+            );
+        }
 
-                {/* 다이내믹 인사이트 배너 */}
-                {filter.isAllTimeLow ? (
+        // 단일 조건일 경우 해당 배너 출력
+        const currentBanner = activeBanners[0];
+
+        switch (currentBanner) {
+            case 'isPs5ProEnhanced':
+                return (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-gray-300 dark:border-gray-500/30 p-4 sm:p-5 flex items-center justify-between hover:border-gray-400 dark:hover:border-gray-400/50 hover:shadow-[0_0_25px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_0_25px_rgba(255,255,255,0.1)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-gray-200/60 dark:from-gray-500/20 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-gray-200/60 dark:bg-gray-500/20 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-500/20 flex items-center justify-center border border-gray-300 dark:border-gray-400/40 shadow-sm">
+                                <Sparkles className="w-6 h-6 text-gray-600 dark:text-gray-100 drop-shadow-sm" />
+                            </div>
+                            <div>
+                                <div className="text-gray-500 dark:text-gray-300 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Sparkles className="w-3 h-3"/> PRO ENHANCED</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    기기 성능 풀가동! <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-600 to-gray-900 dark:from-gray-200 dark:to-white">PS5 Pro 향상 꿀딜</span> 모아보기
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isPs5ProEnhanced: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+                );
+
+            case 'inCatalog':
+                return (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-yellow-400/60 dark:border-yellow-500/30 p-4 sm:p-5 flex items-center justify-between hover:border-yellow-500 dark:hover:border-yellow-500/60 hover:shadow-[0_0_25px_rgba(250,204,21,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-yellow-100/80 dark:from-yellow-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-yellow-100/80 dark:bg-yellow-500/10 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-white dark:bg-black flex items-center justify-center border border-yellow-500 shadow-sm">
+                                <Gamepad2 className="w-6 h-6 text-yellow-500 dark:text-yellow-400 drop-shadow-sm" />
+                            </div>
+                            <div>
+                                <div className="text-yellow-600 dark:text-yellow-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Gamepad2 className="w-3 h-3"/> PS PLUS EXTRA</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    지갑 지킴이! <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-yellow-500 dark:from-yellow-400 dark:to-yellow-200">구독자 스페셜(무료) 혜택</span> 모아보기
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, inCatalog: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+                );
+
+            case 'isPlusExclusive':
+                return (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-yellow-50/50 dark:bg-yellow-500/5 border border-yellow-300/50 dark:border-yellow-500/30 p-4 sm:p-5 flex items-center justify-between hover:border-yellow-400/80 dark:hover:border-yellow-500/60 hover:bg-yellow-100/50 dark:hover:bg-yellow-500/10 hover:shadow-[0_0_25px_rgba(234,179,8,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-yellow-200/60 dark:from-yellow-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-yellow-200/60 dark:bg-yellow-500/10 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-yellow-400 dark:bg-yellow-500 flex items-center justify-center shadow-md">
+                                <Plus className="w-6 h-6 text-black drop-shadow-sm" strokeWidth={3} />
+                            </div>
+                            <div>
+                                <div className="text-yellow-700 dark:text-yellow-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Star className="w-3 h-3"/> EXCLUSIVE DEAL</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    본전 뽑는 시간! <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-amber-600 dark:from-yellow-500 dark:to-amber-500">PLUS 전용 추가 할인</span> 모아보기
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({...prev, isPlusExclusive: false})); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+                );
+
+            case 'isAllTimeLow':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-red-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-red-border-hover)] hover:[box-shadow:var(--bento-red-shadow)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-red-from)] to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-red-from)] blur-3xl transform -skew-x-12"></div>
@@ -506,8 +583,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                );
 
-                ) : (filter.minMetaScore === '85' && filter.minDiscountRate === '50') ? (
+            case 'mustPlay':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-purple-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-purple-border-hover)] hover:[box-shadow:var(--bento-purple-shadow)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-purple-from)] to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-purple-from)] blur-3xl transform -skew-x-12"></div>
@@ -526,8 +605,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                );
 
-                ) : (filter.minDiscountRate === '1' && filter.minMetaScore === '') ? (
+            case 'allDiscounts':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-green-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-green-from)] to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-green-from)] blur-3xl transform -skew-x-12"></div>
@@ -546,7 +627,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
-                ) : filter.isBestSeller ? (
+                );
+
+            case 'isBestSeller':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-amber-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-amber-border-hover)] hover:[box-shadow:var(--bento-amber-shadow)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-amber-from)] to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-amber-from)] blur-3xl transform -skew-x-12"></div>
@@ -565,8 +649,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                );
 
-                ) : filter.isMostDownloaded ? (
+            case 'isMostDownloaded':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-cyan-border)] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-cyan-border-hover)] hover:[box-shadow:var(--bento-cyan-shadow)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-[var(--bento-cyan-from)] to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-[var(--bento-cyan-from)] blur-3xl transform -skew-x-12"></div>
@@ -585,7 +671,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
-                ) : filter.isClosingSoon ? (
+                );
+
+            case 'isClosingSoon':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-rose-500/30 dark:border-rose-500/20 p-4 sm:p-5 flex items-center justify-between hover:border-rose-500/60 dark:hover:border-rose-500/50 hover:shadow-[0_0_25px_rgba(225,29,72,0.15)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-rose-500/10 to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-rose-500/10 dark:bg-rose-500/20 blur-3xl transform -skew-x-12"></div>
@@ -604,8 +693,10 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                );
 
-                ) : filter.isNewDiscount ? (
+            case 'isNewDiscount':
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-blue-500/30 dark:border-blue-500/20 p-4 sm:p-5 flex items-center justify-between hover:border-blue-500/60 dark:hover:border-blue-500/50 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-blue-500/10 to-transparent"></div>
                         <div className="absolute top-0 left-0 w-48 h-full bg-blue-500/10 dark:bg-blue-500/20 blur-3xl transform -skew-x-12"></div>
@@ -624,9 +715,11 @@ const GameListPage = () => {
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
+                );
 
-                ) : (
-                    /* ⚪ 상태 6: 아무 필터도 없을 때 기본 배너 */
+            default:
+                // 특수 필터가 하나도 없을 때 (기본 배너)
+                return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-divider flex flex-col md:flex-row shadow-sm transition-all hover:shadow-md">
                         <div
                             onClick={() => {
@@ -679,7 +772,45 @@ const GameListPage = () => {
                             </div>
                         </div>
                     </div>
+                );
+        }
+    };
+
+    if (loading && page === 0 && isInitialLoad) return <div className="min-h-screen pt-20 flex justify-center bg-base transition-colors duration-500"><PSLoader /></div>;
+
+    return (
+        <div className="min-h-screen text-primary relative transition-colors duration-500">
+            <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" />
+
+            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
+                <div className="absolute inset-0 z-20 md:mix-blend-screen md:dark:mix-blend-screen opacity-40 md:opacity-50">
+                    <div className="absolute -top-[20%] -right-[10%] w-[60%] h-[60%] bg-purple-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-[20%] -left-[10%] w-[50%] h-[50%] bg-blue-500/30 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[-10%] left-[20%] w-[40%] h-[40%] bg-indigo-500/20 rounded-full blur-[80px] md:blur-[120px] md:animate-[pulse_12s_ease-in-out_infinite]"></div>
+                </div>
+            </div>
+
+            {/* 메인 컨텐츠 영역 */}
+            <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">
+
+                {/* 장르 파도타기 배너 */}
+                {filter.genre && (
+                    <div className="mb-6 relative overflow-hidden rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-card-bg)] shadow-[var(--bento-blue-shadow)] group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-[var(--bento-blue-from)] to-transparent animate-pulse"></div>
+                        <div className="relative p-5 flex items-center justify-between z-10">
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <p className="text-xs text-blue-500 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1"><Waves className="w-3 h-3" /> Genre Surfing</p>
+                                    <h2 className="text-xl font-black text-primary tracking-tight">'{filter.genre}' 게임 모아보기</h2>
+                                </div>
+                            </div>
+                            <button onClick={clearGenreFilter} className="flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-4 py-2 rounded-lg transition-all text-sm font-bold text-secondary hover:text-primary"><X className="w-4 h-4" /> 필터 해제</button>
+                        </div>
+                    </div>
                 )}
+
+                {/* 다이내믹 인사이트 배너 */}
+                {renderActionBanner()}
 
                 <div className="relative z-40 bg-glass backdrop-blur-md md:backdrop-blur-xl p-6 rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
                     <div className="flex flex-col md:flex-row gap-4">

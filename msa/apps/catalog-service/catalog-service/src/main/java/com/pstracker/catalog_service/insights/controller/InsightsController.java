@@ -52,6 +52,15 @@ public class InsightsController {
         // 9. 신규 할인 게임 수
         response.put("newDiscountCount", insightsService.getNewDiscountCount());
 
+        // 10. PS5 Pro 향상 게임 수
+        response.put("ps5ProCount", insightsService.getPs5ProEnhancedCount());
+
+        // 11. 스페셜 카탈로그 게임 수
+        response.put("inCatalogCount", insightsService.getInCatalogCount());
+
+        // 12. PLUS 전용 할인 게임 수
+        response.put("plusExclusiveCount", insightsService.getPlusExclusiveCount());
+
         return ResponseEntity.ok(response);
     }
 

@@ -29,6 +29,9 @@ public class GlobalCacheConfig {
     public static final String INSIGHT_KEY_TOTAL_WISHED = "'totalWished'";
     public static final String INSIGHT_KEY_CLOSING_SOON = "'closingSoon'";
     public static final String INSIGHT_KEY_NEW_DISCOUNT = "'newDiscount'";
+    public static final String INSIGHT_KEY_PS5_PRO = "'insight_ps5_pro'";
+    public static final String INSIGHT_KEY_IN_CATALOG = "'insight_in_catalog'";
+    public static final String INSIGHT_KEY_PLUS_EXCLUSIVE = "'insight_plus_exclusive'";
 
     @Bean
     public CacheManager cacheManager(MeterRegistry meterRegistry) {
