@@ -29,8 +29,6 @@ public class CatalogServiceTest {
     @Mock
     private GameRepository gameRepository;
 
-    // ❌ CacheManager 모킹 삭제: CatalogService의 의존성이 아닙니다!
-
     @Test
     @DisplayName("게임 삭제 성공: 존재하는 ID 요청 시 삭제 및 캐시 초기화 메서드가 호출된다")
     void deleteGame_Success() {
@@ -47,7 +45,7 @@ public class CatalogServiceTest {
         // 1. 해당 게임 객체를 정확히 DB에서 지웠는지 검증
         verify(gameRepository, times(1)).delete(mockGame);
 
-        // 2. 🚀 삭제 후 캐시 제거 로직이 호출되었는지 완벽하게 검증!
+        // 2. 삭제 후 캐시 제거 로직이 호출되었는지 완벽하게 검증!
         verify(gameReadService, times(1)).evictGameDetailCache(gameId);
     }
 

@@ -7,6 +7,7 @@ import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -23,6 +25,9 @@ public class ScrapingEventListener {
     private final GameRepository gameRepository;
     private final FcmService fcmService;
     private final FcmTokenRepository  fcmTokenRepository;
+
+    @Value("${app.auth.redirect-uri}")
+    private String redirectUri;
 
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -50,7 +55,9 @@ public class ScrapingEventListener {
                 return;
             }
 
-            fcmService.sendMulticastMessage(tokens, title, body);
+            Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+
+            fcmService.sendMulticastMessage(tokens, title, body, fcmData);
             log.debug("개척자({})에게 FCM 알림 발송 완료", event.getMember().getNickname());
 
         } catch (Exception e) {

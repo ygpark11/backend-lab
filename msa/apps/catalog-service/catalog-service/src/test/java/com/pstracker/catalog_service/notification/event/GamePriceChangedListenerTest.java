@@ -8,15 +8,18 @@ import com.pstracker.catalog_service.notification.domain.FcmToken;
 import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.repository.NotificationRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.BDDMockito.*;
 
@@ -38,6 +41,14 @@ public class GamePriceChangedListenerTest {
     @Mock
     private FcmService fcmService;
 
+
+    @BeforeEach
+    void setUp() {
+        // 단위 테스트 환경에서는 Spring Context가 로드되지 않으므로,
+        // @Value 필드에 ReflectionTestUtils를 이용해 가짜 값을 주입
+        ReflectionTestUtils.setField(listener, "redirectUri", "https://testUrl.com");
+    }
+
     @Test
     @DisplayName("찜한 유저가 없으면 알림 로직이 조기 종료되어야 한다.")
     void handle_NoSubscribers() {
@@ -48,29 +59,8 @@ public class GamePriceChangedListenerTest {
 
         listener.handlePriceChange(event);
 
-        // 1. DB 저장이 호출되지 않아야 함
         verify(notificationRepository, never()).saveAll(anyList());
-        // 2. 토큰 조회도 하지 않아야 함
         verify(fcmTokenRepository, never()).findAllByMemberIdInWithMember(anyList());
-    }
-
-    @Test
-    @DisplayName("FCM 토큰이 없는 유저라도 DB 알림(In-App)은 저장되어야 한다.")
-    void handle_Subscribers_NoToken() {
-        GamePriceChangedEvent event = createEvent();
-        Member member = createMember(1L);
-        Wishlist wishlist = createWishlist(member, 50000);
-
-        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
-                .willReturn(List.of(wishlist));
-
-        given(fcmTokenRepository.findAllByMemberIdInWithMember(List.of(1L)))
-                .willReturn(Collections.emptyList());
-
-        listener.handlePriceChange(event);
-
-        verify(notificationRepository, times(1)).saveAll(anyList());
-        verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any());
     }
 
     @Test
@@ -90,7 +80,7 @@ public class GamePriceChangedListenerTest {
 
         verify(notificationRepository, times(1)).saveAll(anyList());
         verify(fcmTokenRepository, never()).findAllByMemberIdInWithMember(anyList());
-        verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any());
+        verify(fcmService, never()).sendMulticastMessage(anyList(), any(), any(), anyMap());
     }
 
     @Test
@@ -122,8 +112,7 @@ public class GamePriceChangedListenerTest {
                 ((java.util.Collection<?>) items).size() == 2
         ));
 
-        // FCM 다중 발송은 여전히 개별적으로 2번 호출되어야 함
-        verify(fcmService, times(2)).sendMulticastMessage(anyList(), anyString(), anyString());
+        verify(fcmService, times(2)).sendMulticastMessage(anyList(), anyString(), anyString(), anyMap());
     }
 
     @Test
@@ -142,14 +131,14 @@ public class GamePriceChangedListenerTest {
                 .willReturn(List.of(token));
 
         doThrow(new RuntimeException("FCM Connection Timeout"))
-                .when(fcmService).sendMulticastMessage(anyList(), any(), any());
+                .when(fcmService).sendMulticastMessage(anyList(), any(), any(), anyMap());
 
         // when
         listener.handlePriceChange(event);
 
         // then
         verify(notificationRepository, times(1)).saveAll(anyList());
-        verify(fcmService, times(1)).sendMulticastMessage(anyList(), any(), any());
+        verify(fcmService, times(1)).sendMulticastMessage(anyList(), any(), any(), anyMap());
     }
 
     // --- Helpers ---

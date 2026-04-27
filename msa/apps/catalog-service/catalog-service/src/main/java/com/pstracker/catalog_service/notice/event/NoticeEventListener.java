@@ -5,12 +5,14 @@ import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -19,6 +21,9 @@ public class NoticeEventListener {
 
     private final FcmTokenRepository fcmTokenRepository;
     private final FcmService fcmService;
+
+    @Value("${app.auth.redirect-uri}")
+    private String redirectUri;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -35,6 +40,8 @@ public class NoticeEventListener {
         String pushTitle = "[공지] " + event.getTitle();
         String pushBody = "공지가 등록되었습니다. 자세한 내용은 공지사항에서 확인해주세요.";
 
-        fcmService.sendMulticastMessage(allTokens, pushTitle, pushBody);
+        Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+
+        fcmService.sendMulticastMessage(allTokens, pushTitle, pushBody, fcmData);
     }
 }

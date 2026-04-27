@@ -11,6 +11,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @Slf4j
@@ -39,7 +40,7 @@ public class FcmService {
         }
     }
 
-    public void sendMulticastMessage(List<FcmToken> fcmTokens, String title, String body) {
+    public void sendMulticastMessage(List<FcmToken> fcmTokens, String title, String body, Map<String, String> fcmData) {
         if (fcmTokens == null || fcmTokens.isEmpty()) return;
 
         // 현재 한국 시간 기준으로 야간 시간대(22:00 ~ 08:00)인지 판별
@@ -71,16 +72,17 @@ public class FcmService {
             List<FcmToken> batchFcmTokens = targetTokens.subList(i, endIndex); // targetTokens 사용
 
             MulticastMessage message = MulticastMessage.builder()
-                    .addAllTokens(batchTokens)
                     .setNotification(com.google.firebase.messaging.Notification.builder()
                             .setTitle(title)
                             .setBody(body)
                             .build())
+                    .putAllData(fcmData)
+                    .addAllTokens(batchTokens)
                     .build();
 
             try {
                 BatchResponse response = FirebaseMessaging.getInstance().sendEachForMulticast(message);
-                log.info("📨 [FCM Batch] 발송 성공: {}, 실패: {}", response.getSuccessCount(), response.getFailureCount());
+                log.info("[FCM Batch] 발송 성공: {}, 실패: {}", response.getSuccessCount(), response.getFailureCount());
 
                 if (response.getFailureCount() > 0) {
                     List<SendResponse> responses = response.getResponses();
@@ -94,14 +96,14 @@ public class FcmService {
                     }
                 }
             } catch (Exception e) {
-                log.error("❌ FCM Multicast 전송 실패", e);
+                log.error("FCM Multicast 전송 실패", e);
             }
         }
 
         // 수명이 다한 좀비 토큰 DB에서 일괄 삭제
         if (!deadTokens.isEmpty()) {
             fcmTokenRepository.deleteAll(deadTokens);
-            log.debug("🧹 수명이 다한 FCM 토큰 {}개를 DB에서 삭제했습니다.", deadTokens.size());
+            log.debug("수명이 다한 FCM 토큰 {}개를 DB에서 삭제했습니다.", deadTokens.size());
         }
     }
 }

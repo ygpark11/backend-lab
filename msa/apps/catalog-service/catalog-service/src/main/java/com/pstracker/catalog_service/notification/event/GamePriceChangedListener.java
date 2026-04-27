@@ -11,6 +11,7 @@ import com.pstracker.catalog_service.notification.repository.NotificationReposit
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -31,6 +32,9 @@ public class GamePriceChangedListener {
     private final NotificationRepository notificationRepository;
     private final FcmTokenRepository fcmTokenRepository;
     private final FcmService fcmService;
+
+    @Value("${app.auth.redirect-uri}")
+    private String redirectUri;
 
     /**
      * 가격 하락 이벤트 수신 -> 찜한 유저들에게 알림 발송
@@ -113,7 +117,9 @@ public class GamePriceChangedListener {
 
                 if (!memberTokens.isEmpty()) {
                     try {
-                        fcmService.sendMulticastMessage(memberTokens, fcmTitles.get(i), fcmBodies.get(i));
+                        Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+
+                        fcmService.sendMulticastMessage(memberTokens, fcmTitles.get(i), fcmBodies.get(i), fcmData);
                     } catch (Exception e) {
                         log.error("❌ Failed to send FCM for Member {}: {}", member.getId(), e.getMessage());
                     }
