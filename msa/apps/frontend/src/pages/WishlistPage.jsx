@@ -11,6 +11,7 @@ import {
     ExternalLink,
     Gamepad2,
     Heart,
+    Info,
     Mail,
     Pickaxe,
     PiggyBank,
@@ -29,6 +30,7 @@ import SEO from '../components/common/SEO';
 import DonationModal from '../components/DonationModal';
 import {useCompareStore} from '../store/useCompareStore';
 import CompareModal from '../components/CompareModal';
+import HelpModal from '../components/common/HelpModal';
 
 const WishlistPage = () => {
     const navigate = useTransitionNavigate();
@@ -45,6 +47,8 @@ const WishlistPage = () => {
     const [isDonationOpen, setIsDonationOpen] = useState(false);
 
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+
+    const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
 
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
     const lastScrollYRef = useRef(0);
@@ -220,6 +224,12 @@ const WishlistPage = () => {
                             <div className="flex flex-col">
                                     <span className="text-pink-600 dark:text-pink-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-0.5">
                                         <Gamepad2 className="w-3.5 h-3.5" /> My Wishlist
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'WISH_NOTI' }); }}
+                                            className="text-pink-500 hover:text-pink-700 dark:hover:text-pink-300 transition-colors p-0.5 ml-1"
+                                        >
+                                            <Info className="w-4 h-4" />
+                                        </button>
                                     </span>
                                 <div className="flex items-baseline gap-1.5">
                                         <span className="text-primary font-black text-4xl tracking-tight leading-none drop-shadow-md">
@@ -482,6 +492,12 @@ const WishlistPage = () => {
             <CompareModal
                 isOpen={isCompareModalOpen}
                 onClose={() => setIsCompareModalOpen(false)}
+            />
+
+            <HelpModal
+                isOpen={helpInfo.isOpen}
+                type={helpInfo.type}
+                onClose={() => setHelpInfo({ isOpen: false, type: null })}
             />
         </div>
     );

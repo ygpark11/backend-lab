@@ -10,12 +10,43 @@ import {getTrafficLight} from '../utils/priceUtils';
 import TargetPriceModal from '../components/TargetPriceModal';
 import StealthPanel from '../components/StealthPanel';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
+import HelpModal from '../components/common/HelpModal';
 import {
-    AlertCircle, AlertTriangle, ArrowLeft, ArrowUpRight, Building2, Calendar,
-    CalendarDays, Check, Circle, Crosshair, ExternalLink, Gamepad2, Heart,
-    HelpCircle, Layers, Link, MonitorPlay, Pickaxe, Plus, RefreshCw, Search,
-    Server, ShieldAlert, Sparkles, Square, Timer, Trash2, TrendingDown,
-    TrendingUp, Triangle, Users, X, Youtube
+    AlertCircle,
+    AlertTriangle,
+    ArrowLeft,
+    ArrowUpRight,
+    Building2,
+    Calendar,
+    CalendarDays,
+    Check,
+    Circle,
+    Crosshair,
+    ExternalLink,
+    Gamepad2,
+    Heart,
+    HelpCircle,
+    Info,
+    Layers,
+    Link,
+    MonitorPlay,
+    Pickaxe,
+    Plus,
+    RefreshCw,
+    Search,
+    Server,
+    ShieldAlert,
+    Sparkles,
+    Square,
+    Star,
+    Timer,
+    Trash2,
+    TrendingDown,
+    TrendingUp,
+    Triangle,
+    Users,
+    X,
+    Youtube
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -78,6 +109,8 @@ export default function GameDetailPage() {
 
     const [voteCounts, setVoteCounts] = useState({ likes: 0, dislikes: 0 });
     const [userVote, setUserVote] = useState(null);
+
+    const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
 
     useEffect(() => {
         if (isModal) {
@@ -342,11 +375,18 @@ export default function GameDetailPage() {
                                     ? 'border-red-500/30'
                                     : 'border-green-500/30'
                             }`}>
-                                <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 flex items-center justify-center gap-1 ${
+                                <div className={`flex items-center justify-center gap-1.5 mb-1 ${
                                     game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'
                                 }`}>
-                                    <ShieldAlert className="w-3 h-3" /> 할인 방어력
-                                </p>
+                                    <ShieldAlert className="w-3 h-3" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">할인 방어력</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'DEFENSE' }); }}
+                                        className="opacity-60 hover:opacity-100 transition-opacity p-1"
+                                    >
+                                        <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                                 <div className={`text-xl font-black mt-2 transition-all ${
                                     game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'
                                 }`}>
@@ -389,20 +429,31 @@ export default function GameDetailPage() {
                         </div>
 
                         {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-6 mt-1">
-                                {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 5).map((tag, idx) => (
-                                    <span
-                                        key={idx}
-                                        style={{ '--tag-color': tag.color }}
-
-                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-surface border border-divider shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_0_10px_var(--tag-color)] cursor-default group"
+                            <div className="mb-6 mt-1">
+                                <div className="flex items-center gap-1.5 mb-2.5 ml-1">
+                                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+                                    <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">AI Vibe Tags</span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'VIBE' }); }}
+                                        className="text-muted hover:text-primary transition-colors p-0.5"
                                     >
-                                        <span className="w-2 h-2 rounded-full bg-[color:var(--tag-color)] shadow-[0_0_5px_var(--tag-color)] opacity-80 group-hover:opacity-100 transition-opacity"></span>
-                                        <span className="text-secondary group-hover:text-primary transition-colors tracking-wide">
-                                            {tag.name}
+                                        <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                    {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 5).map((tag, idx) => (
+                                        <span
+                                            key={idx}
+                                            style={{ '--tag-color': tag.color }}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-surface border border-divider shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-[0_0_10px_var(--tag-color)] cursor-default group"
+                                        >
+                                            <span className="w-2 h-2 rounded-full bg-[color:var(--tag-color)] shadow-[0_0_5px_var(--tag-color)] opacity-80 group-hover:opacity-100 transition-opacity"></span>
+                                            <span className="text-secondary group-hover:text-primary transition-colors tracking-wide">
+                                                {tag.name}
+                                            </span>
                                         </span>
-                                    </span>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         )}
 
@@ -683,6 +734,18 @@ export default function GameDetailPage() {
                     </div>
                     <div className="space-y-4 sm:space-y-5">
 
+                        <div className="flex items-center justify-between px-1 mb-2">
+                            <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                                <Star className="w-4 h-4 text-yellow-500" /> 종합 평가 지표
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'SCORE' }); }}
+                                    className="text-muted hover:text-primary transition-colors ml-1 p-0.5"
+                                >
+                                    <Info className="w-4 h-4" />
+                                </button>
+                            </h3>
+                        </div>
+
                         {isDiscrepancyWarning && (
                             <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse">
                                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
@@ -897,6 +960,12 @@ export default function GameDetailPage() {
                 game={game}
                 defenseTier={game.defenseTier}
                 onSubmit={(price) => handleTargetSubmit(price)}
+            />
+
+            <HelpModal
+                isOpen={helpInfo.isOpen}
+                type={helpInfo.type}
+                onClose={() => setHelpInfo({ isOpen: false, type: null })}
             />
         </div>
     );

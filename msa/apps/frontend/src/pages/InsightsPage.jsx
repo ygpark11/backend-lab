@@ -11,6 +11,7 @@ import {
     Gamepad2,
     Globe,
     Heart,
+    Info,
     Plus,
     Radio,
     RefreshCw,
@@ -32,6 +33,7 @@ import toast from 'react-hot-toast';
 import {useCurrentUser} from '../hooks/useCurrentUser';
 import {adminApi} from '../api/adminApi';
 import DonationModal from '../components/DonationModal';
+import HelpModal from '../components/common/HelpModal';
 
 const formatCurrency = (amount) => {
     if (!amount) return '0';
@@ -60,6 +62,8 @@ const InsightsPage = () => {
     const [loading, setLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isDonationOpen, setIsDonationOpen] = useState(false);
+
+    const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
 
     const handleRefreshCache = (e) => {
         e.stopPropagation();
@@ -157,9 +161,14 @@ const InsightsPage = () => {
                         Section 1: Market Radar (시장 동향)
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
-                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
-                            <Radio className="w-4 h-4 text-ps-blue" /> Market Radar
-                        </h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Radio className="w-4 h-4 text-ps-blue" /> Market Radar
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'RADAR' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* 역대 최저가 */}
@@ -265,9 +274,14 @@ const InsightsPage = () => {
                         Section 2: PlayStation Charts (랭킹 보드)
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
-                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
-                            <Trophy className="w-4 h-4 text-ps-blue" /> PlayStation Charts
-                        </h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Trophy className="w-4 h-4 text-ps-blue" /> PlayStation Charts
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'CHARTS' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* 갓겜 레이더 */}
@@ -337,9 +351,14 @@ const InsightsPage = () => {
                         Section 3: PlayStation Ecosystem
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
-                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
-                            <Globe className="w-4 h-4 text-ps-blue" /> PlayStation Ecosystem
-                        </h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Globe className="w-4 h-4 text-ps-blue" /> PlayStation Ecosystem
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'ECOSYSTEM' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* PS5 Pro 향상 */}
@@ -399,9 +418,14 @@ const InsightsPage = () => {
                         Section 4: System Matrix (시스템 현황)
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
-                        <h2 className="text-sm font-bold tracking-widest uppercase text-secondary mb-4 flex items-center gap-2">
-                            <Database className="w-4 h-4 text-ps-blue" /> System Matrix
-                        </h2>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Database className="w-4 h-4 text-ps-blue" /> System Matrix
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'MATRIX' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* 누적 찜 횟수 */}
@@ -464,6 +488,12 @@ const InsightsPage = () => {
             </div>
 
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
+
+            <HelpModal
+                isOpen={helpInfo.isOpen}
+                type={helpInfo.type}
+                onClose={() => setHelpInfo({ isOpen: false, type: null })}
+            />
         </div>
     );
 };

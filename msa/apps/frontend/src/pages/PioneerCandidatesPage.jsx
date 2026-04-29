@@ -3,8 +3,9 @@ import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import {Circle, Cpu, Gamepad2, Lock, Pickaxe, RefreshCw, Square, Triangle, Unlock, X as XIcon} from 'lucide-react';
+import {Circle, Cpu, Gamepad2, Lock, Pickaxe, RefreshCw, Square, Triangle, Unlock, X as XIcon, Info} from 'lucide-react';
 import PSLoader from '../components/PSLoader';
+import HelpModal from '../components/common/HelpModal';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import {useAuth} from '../contexts/AuthContext';
@@ -163,6 +164,8 @@ const PioneerCandidatesPage = () => {
     const [isFactoryModalOpen, setIsFactoryModalOpen] = useState(false);
     const [extractingGame, setExtractingGame] = useState(null);
 
+    const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
+
     const fetchCandidates = async () => {
         setLoading(true); setError(null);
         try {
@@ -230,9 +233,14 @@ const PioneerCandidatesPage = () => {
                             <Pickaxe className="w-6 h-6 sm:w-8 sm:h-8 text-blue-700 dark:text-blue-500 drop-shadow-sm group-hover:scale-110 transition-transform" />
                         </div>
                         <div>
-                            {/* 🚀 라이트/다크 텍스트 컬러 분리 (text-blue-700 dark:text-blue-500) */}
                             <h2 className="text-blue-700 dark:text-blue-500 font-bold text-xs sm:text-sm tracking-wider flex items-center gap-1.5 mb-1 sm:mb-2">
                                 <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> NEW ARRIVALS
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'PIONEER' }); }}
+                                    className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors p-0.5 ml-1"
+                                >
+                                    <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                                </button>
                             </h2>
                             <h3 className="text-primary font-black text-xl sm:text-2xl lg:text-3xl leading-tight mt-1">
                                 진열장에 방금 입고된 따끈따끈한<br/>
@@ -289,6 +297,12 @@ const PioneerCandidatesPage = () => {
                     )
                 )}
             </div>
+
+            <HelpModal
+                isOpen={helpInfo.isOpen}
+                type={helpInfo.type}
+                onClose={() => setHelpInfo({ isOpen: false, type: null })}
+            />
         </div>
     );
 };
