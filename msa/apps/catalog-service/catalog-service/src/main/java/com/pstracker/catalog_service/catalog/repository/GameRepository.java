@@ -92,10 +92,10 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     long countNewDiscountGames(@Param("startOfDay") LocalDateTime startOfDay,
                                @Param("endOfDay") LocalDateTime endOfDay);
 
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPs5ProEnhanced = true AND g.discountRate > 0")
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPs5ProEnhanced = true")
     long countPs5ProEnhancedDeals();
 
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.inCatalog = true AND g.discountRate > 0")
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.inCatalog = true")
     long countInCatalogDeals();
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPlusExclusive = true AND g.discountRate > 0")
