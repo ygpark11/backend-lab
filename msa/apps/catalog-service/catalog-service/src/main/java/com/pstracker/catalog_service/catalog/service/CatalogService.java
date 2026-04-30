@@ -21,8 +21,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,7 +44,6 @@ public class CatalogService {
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
-    private final ExecutorService virtualThreadExecutor;
     private final CollectorApiClient collectorApiClient;
 
     /**
@@ -362,27 +359,20 @@ public class CatalogService {
         // 1. 순수 게임 정보 가져오기 (캐시 적용됨)
         GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
-        // 2. 유저별 동적 데이터 + 스카우터 통계를 가상 스레드로 병렬 조회
-        CompletableFuture<Optional<Wishlist>> wishFuture = memberId != null
-                ? CompletableFuture.supplyAsync(() -> wishlistRepository.findByMemberIdAndGameId(memberId, gameId), virtualThreadExecutor)
-                : CompletableFuture.completedFuture(Optional.empty());
-
-        CompletableFuture<Optional<GameVote>> voteFuture = memberId != null
-                ? CompletableFuture.supplyAsync(() -> gameVoteRepository.findByMemberIdAndGameId(memberId, gameId), virtualThreadExecutor)
-                : CompletableFuture.completedFuture(Optional.empty());
-
-        CompletableFuture<Integer> watcherFuture =
-                CompletableFuture.supplyAsync(() -> wishlistRepository.countByGameId(gameId), virtualThreadExecutor);
-
-        CompletableFuture.allOf(wishFuture, voteFuture, watcherFuture).join();
+        // 2. 유저별 동적 데이터 순차 조회 (단순 인덱스 조회 3개, 커넥션 1개로 처리)
+        Optional<Wishlist> myWish = memberId != null
+                ? wishlistRepository.findByMemberIdAndGameId(memberId, gameId)
+                : Optional.empty();
+        Optional<GameVote> myVote = memberId != null
+                ? gameVoteRepository.findByMemberIdAndGameId(memberId, gameId)
+                : Optional.empty();
+        int totalWatchers = wishlistRepository.countByGameId(gameId);
 
         // 3. 결과 조합
-        Optional<Wishlist> myWish = wishFuture.join();
         boolean isLiked = myWish.isPresent();
         Integer myTargetPrice = myWish.map(Wishlist::getTargetPrice).orElse(null);
-        VoteType userVote = voteFuture.join().map(GameVote::getVoteType).orElse(null);
+        VoteType userVote = myVote.map(GameVote::getVoteType).orElse(null);
 
-        int totalWatchers = watcherFuture.join();
         Integer avgTargetPrice = (totalWatchers >= 2)
                 ? wishlistRepository.getAverageTargetPriceByGameId(gameId)
                 : null;

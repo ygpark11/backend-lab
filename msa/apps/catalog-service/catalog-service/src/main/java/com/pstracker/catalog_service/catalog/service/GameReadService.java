@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 @Slf4j
 @Service
@@ -30,7 +28,6 @@ public class GameReadService {
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final CacheManager cacheManager;
-    private final ExecutorService virtualThreadExecutor;
 
     /**
      * 게임 상세 캐시 삭제
@@ -53,50 +50,42 @@ public class GameReadService {
      */
     @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
     public GameDetailResponse getBaseGameDetail(Long gameId) {
-        // gameGenres → genre 까지 한 번의 JOIN으로 조회 (Lazy 로딩 쿼리 제거)
         Game game = gameRepository.findByIdWithGenres(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
-        // 가격 이력 조회
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
 
         Integer originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
         Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
         int historySize = histories.size();
 
-        // familyGames(DB), historyDtos(in-memory), relatedGames(DB)를 가상 스레드로 병렬 처리
-        CompletableFuture<List<GameDetailResponse.FamilyGameDto>> familyFuture =
-                CompletableFuture.supplyAsync(() ->
-                        gameRepository.findByFamilyIdOrderByOriginalPriceAsc(game.getFamilyId())
-                                .stream()
-                                .map(g -> {
-                                    int approxHistorySize = (g.getAllTimeLowPrice() != null && g.getAllTimeLowPrice() > 0) ? 2 : 1;
-                                    PriceVerdict verdict = GameDetailResponse.calculateVerdict(
-                                            g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(), approxHistorySize
-                                    );
-                                    return new GameDetailResponse.FamilyGameDto(
-                                            g.getId(), g.getName(), g.getOriginalPrice(),
-                                            g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
-                                            verdict
-                                    );
-                                }).toList(), virtualThreadExecutor);
+        List<GameDetailResponse.FamilyGameDto> familyGames =
+                gameRepository.findByFamilyIdOrderByOriginalPriceAsc(game.getFamilyId())
+                        .stream()
+                        .map(g -> {
+                            int approxHistorySize = (g.getAllTimeLowPrice() != null && g.getAllTimeLowPrice() > 0) ? 2 : 1;
+                            PriceVerdict verdict = GameDetailResponse.calculateVerdict(
+                                    g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(), approxHistorySize
+                            );
+                            return new GameDetailResponse.FamilyGameDto(
+                                    g.getId(), g.getName(), g.getOriginalPrice(),
+                                    g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
+                                    verdict
+                            );
+                        }).toList();
 
-        CompletableFuture<List<GameDetailResponse.PriceHistoryDto>> historyFuture =
-                CompletableFuture.supplyAsync(() -> histories.stream()
-                        .map(h -> new GameDetailResponse.PriceHistoryDto(
-                                h.getRecordedAt().toLocalDate(),
-                                h.getPrice(),
-                                h.getDiscountRate(),
-                                GameDetailResponse.calculateVerdict(h.getPrice(), originalPrice, lowestPrice, historySize)
-                        ))
-                        .toList(), virtualThreadExecutor);
+        List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
+                .map(h -> new GameDetailResponse.PriceHistoryDto(
+                        h.getRecordedAt().toLocalDate(),
+                        h.getPrice(),
+                        h.getDiscountRate(),
+                        GameDetailResponse.calculateVerdict(h.getPrice(), originalPrice, lowestPrice, historySize)
+                ))
+                .toList();
 
-        CompletableFuture<List<GameSearchResultDto>> relatedFuture =
-                CompletableFuture.supplyAsync(() -> getRelatedGames(game), virtualThreadExecutor);
+        List<GameSearchResultDto> relatedGames = getRelatedGames(game);
 
-        CompletableFuture.allOf(familyFuture, historyFuture, relatedFuture).join();
-
-        return GameDetailResponse.from(game, historyFuture.join(), false, familyFuture.join(), relatedFuture.join());
+        return GameDetailResponse.from(game, historyDtos, false, familyGames, relatedGames);
     }
 
     /**
