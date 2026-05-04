@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.global.config;
 import com.pstracker.catalog_service.global.security.*;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -32,6 +33,9 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
+    @Value("${crawler.secret-key}")
+    private String internalSecretKey;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -39,6 +43,9 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        InternalSecurityFilter internalSecurityFilter = new InternalSecurityFilter(internalSecretKey);
+
         http
                 // 1. CSRF 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
@@ -79,6 +86,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/games/**",
                                 "/api/internal/**",
+                                "/api/v1/subscriptions/ps-plus/collect",
                                 "/api/v1/members/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue",
@@ -88,8 +96,6 @@ public class SecurityConfig {
                                 "/login/**",
                                 "/oauth2/**"
                         ).permitAll()
-                        // 관리자 전용 (수동 크롤링)
-                        .requestMatchers("/api/v1/games/manual-crawl").hasRole("ADMIN")
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )
@@ -100,6 +106,7 @@ public class SecurityConfig {
                         .successHandler(oAuth2AuthenticationSuccessHandler) // 2. 로그인 성공 시 토큰 발급
                 )
                 // JWT 필터를 ID/PW 필터 앞에 배치
+                .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

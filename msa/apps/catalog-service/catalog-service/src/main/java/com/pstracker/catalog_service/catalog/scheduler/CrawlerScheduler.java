@@ -24,7 +24,15 @@ public class CrawlerScheduler {
      */
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void scheduleCrawling() {
-        log.info("Scheduled Task: Triggering Batch Crawler...");
+        log.info("Task Phase 1: Triggering PS Plus Crawler...");
+        try {
+            String response = collectorApiClient.triggerPsPlusCrawl(new CrawlTriggerRequest(internalSecretKey));
+            log.info("PS Plus Crawler Triggered Successfully! Response: {}", response);
+        } catch (Exception e) {
+            log.error("Failed to trigger PS Plus crawler (Proceeding to Phase 2): {}", e.getMessage());
+        }
+
+        log.info("Task Phase 2: Triggering Main Batch Crawler...");
         triggerCrawler();
     }
 

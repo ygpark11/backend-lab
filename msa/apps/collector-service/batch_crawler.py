@@ -93,6 +93,7 @@ is_batch_running = False
 is_vip_running = False
 is_ranking_running = False
 is_rating_running = False
+is_psplus_running = False
 
 
 # --- [2. 브라우저 매니저 (1코어 1기가 메모리 최적화)] ---
@@ -485,8 +486,65 @@ def crawl_phase0_new_releases(bm):
             bm.increment()
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
 
+def crawl_ps_plus_prices_no_click(bm):
+    logger.info("[PS-Plus] 구독권 가격 수집 시작")
+    target_url = "https://www.playstation.com/ko-kr/ps-plus/"
 
-# --- [6. 메인 게임 파싱 ] ---
+    result_data = {}
+
+    try:
+        context = bm.get_context()
+        page = setup_page(context)
+
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+        page.wait_for_selector(".service-hub-tier-selector", state="attached", timeout=15000)
+
+        tiers = {"ESSENTIAL": "TIER_10", "SPECIAL": "TIER_20", "DELUXE": "TIER_30"}
+        durations = {
+            "price1Month": "1_MONTH",
+            "price3Month": "3_MONTH",
+            "price12Month": "12_MONTH"
+        }
+
+        for tier_key, tier_code in tiers.items():
+            tier_prices = {}
+            for duration_key, duration_code in durations.items():
+                label_loc = page.locator(f"label:has(input[name='tier-selector-offer-switcher-{tier_code}'][value='{duration_code}'])")
+                price_loc = label_loc.locator("[data-qa$='#price']")
+
+                if price_loc.count() > 0:
+                    raw_text = price_loc.first.text_content().strip()
+                    clean_price = int(re.sub(r'[^0-9]', '', raw_text))
+                    tier_prices[duration_key] = clean_price
+                else:
+                    logger.warning(f"   ⚠️ {tier_key} - {duration_key} 가격을 찾을 수 없습니다.")
+
+            result_data[tier_key] = tier_prices
+
+        logger.info(f"🎉 구독권 파싱 완료: {result_data}")
+
+        # Java 서버(1호기)의 SubscriptionController 로 POST 전송
+        api_url = f"{BASE_URL}/api/v1/subscriptions/ps-plus/collect"
+        res = session.post(
+            api_url,
+            json={"data": result_data},
+            headers={"X-Internal-Secret": CRAWLER_SECRET_KEY},
+            timeout=15
+        )
+
+        if res.status_code == 200:
+            logger.info("   📤 PS Plus 가격 백엔드 전송 완료!")
+        else:
+            logger.error(f"   💥 백엔드 전송 실패 ({res.status_code}): {res.text}")
+
+    except Exception as e:
+        logger.error(f"🔥 PS-Plus 파싱 중 에러 발생: {e}")
+    finally:
+        try: page.close()
+        except: pass
+        # 브라우저 카운트 증가 (일정 횟수 후 재시작되도록)
+        bm.increment()
+
 def mine_english_title(html_content):
     try:
         # 1. 정규식 매칭 실패 시 즉시 종료
@@ -838,7 +896,7 @@ def crawl_single_url():
     target_url = data.get('url')
     if not target_url: return jsonify({"error": "URL is required"}), 400
 
-    if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+    if is_batch_running or is_ranking_running or is_vip_running or is_rating_running or is_psplus_running:
         return jsonify({"status": "error", "message": "다른 수집 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
     logger.info(f"Single Crawl Request: {target_url}")
@@ -885,7 +943,7 @@ def trigger_queue_crawl():
         active_requests.add(request_id)
         urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
-    if not is_batch_running and not is_vip_running and not is_ranking_running and not is_rating_running:
+    if not is_batch_running and not is_vip_running and not is_ranking_running and not is_rating_running and not is_psplus_running:
         threading.Thread(target=run_vip_only_logic, daemon=True).start()
         logger.info(f"[VIP Worker] 새치기 전담 스레드 즉시 출발!")
         return jsonify({"status": "accepted", "message": "VIP task started"}), 202
@@ -900,16 +958,52 @@ def trigger_crawl():
 
     global is_batch_running
     with crawler_lock:
-        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running or is_psplus_running:
             return jsonify({"status": "running", "message": "다른 작업이 이미 실행 중입니다."}), 409
         is_batch_running = True  # 락 안에서 선점 설정 → 공백 제거
 
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
 
+@app.route('/crawl/ps-plus', methods=['POST'])
+def trigger_ps_plus_crawl():
+    data = request.json or {}
+    if not verify_secret(data):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    global is_psplus_running
+
+    with crawler_lock:
+        if check_if_busy() or is_rating_running:
+            logger.warning("다른 작업 실행 중, PS Plus 수집을 거절합니다.")
+            return jsonify({"status": "running", "message": "다른 작업이 이미 실행 중입니다."}), 409
+
+        is_psplus_running = True
+
+    logger.info("PS-Plus 크롤링 요청 수신 및 자원 선점 완료")
+
+    try:
+        with sync_playwright() as p:
+            bm = BrowserManager(p)
+            crawl_ps_plus_prices_no_click(bm)
+
+            try: bm.context.close()
+            except: pass
+            try: bm.browser.close()
+            except: pass
+            gc.collect()
+
+        return jsonify({"status": "success", "message": "PS Plus prices collected"}), 200
+
+    except Exception as e:
+        logger.error(f"🔥 PS-Plus 수집 중 치명적 에러: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        with crawler_lock:
+            is_psplus_running = False
+
 def run_ranking_wrapper():
     global is_ranking_running
-    # is_ranking_running은 trigger_ranking_crawl()의 락 안에서 이미 True로 선점됨
 
     try:
         vip_helpers = {
@@ -934,7 +1028,7 @@ def trigger_ranking_crawl():
 
     global is_ranking_running
     with crawler_lock:
-        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
+        if is_batch_running or is_ranking_running or is_vip_running or is_rating_running or is_psplus_running:
             logger.warning("다른 작업이 실행 중이라 랭킹 업데이트 요청을 거절합니다.")
             return jsonify({"status": "error", "message": "Other task is running"}), 409
         is_ranking_running = True  # 락 안에서 선점 설정 → 공백 제거
@@ -945,10 +1039,10 @@ def trigger_ranking_crawl():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "UP", "running": is_batch_running}), 200
+    return jsonify({"status": "UP", "running": is_batch_running or is_ranking_running or is_vip_running or is_psplus_running or is_rating_running}), 200
 
 def check_if_busy():
-    return is_batch_running or is_ranking_running or is_vip_running or not urgent_queue.empty()
+    return is_batch_running or is_ranking_running or is_vip_running or is_psplus_running or not urgent_queue.empty()
 
 def set_rating_running(state):
     global is_rating_running
