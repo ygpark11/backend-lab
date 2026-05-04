@@ -729,8 +729,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         # 오리지널 API(JAVA_API_URL)로 데이터 전송
         try:
-            headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-            res = session.post(JAVA_API_URL, json=payload, headers=headers, timeout=30)
+            res = session.post(JAVA_API_URL, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
             if res.status_code == 200: logger.info(f"Sent: {title} ({payload['currentPrice']} KRW)")
             else: logger.error(f"Server Error ({res.status_code}): {title}")
         except Exception as e: logger.error(f"Network Error sending {title}: {e}")
@@ -744,8 +743,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
 def fetch_update_targets():
     try:
-        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-        res = session.get(TARGET_API_URL, headers=headers, timeout=10)
+        res = session.get(TARGET_API_URL, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
         if res.status_code == 200:
             targets = res.json()
             logger.info(f"📥 Received {len(targets)} targets.")
@@ -787,8 +785,7 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
 def refresh_java_server_cache():
     if not CRAWLER_SECRET_KEY: return
     try:
-        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
-        res = requests.post(INSIGHT_REFRESH_API_URL, headers=headers, timeout=10)
+        res = requests.post(INSIGHT_REFRESH_API_URL, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
         if res.status_code == 200: logger.info("🧹 Java Server Insights Cache cleared successfully!")
     except Exception as e: logger.error(f"Network Error while clearing cache: {e}")
 
@@ -856,14 +853,14 @@ def run_batch_crawler_logic():
                             full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
                             if "/ko-kr/product/" in full_url and full_url not in visited_urls:
                                 if full_url not in page_candidates: page_candidates.append(full_url)
-                except Exception as e: logger.warning(f"   ⚠️ List load failed: {e}")
+                except Exception as e: logger.warning(f"List load failed: {e}")
                 finally:
                     try: cat_page.close()
                     except: pass
                     bm.increment()
 
                 if page_candidates:
-                    logger.info(f"      Found {len(page_candidates)} new candidates.")
+                    logger.info(f"Found {len(page_candidates)} new candidates.")
                     for url in page_candidates:
                         check_and_run_vip(bm)
 
@@ -875,7 +872,7 @@ def run_batch_crawler_logic():
                                 if res.get('discountRate', 0) > 0: collected_deals.append(res)
                         visited_urls.add(url)
 
-        logger.info("   🏁 [System] Marathon finished. Sending reports...")
+        logger.info("[System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
         refresh_java_server_cache()
 
