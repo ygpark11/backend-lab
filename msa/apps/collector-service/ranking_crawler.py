@@ -161,7 +161,7 @@ def send_to_backend(ranking_type, ps_store_ids):
 
     try:
         logger.info(f"백엔드로 [{ranking_type}] 전송 시작... (총 {len(ps_store_ids)}개)")
-        res = requests.post(JAVA_RANKING_API_URL, json=payload, headers=headers, timeout=10)
+        res = requests.post(JAVA_RANKING_API_URL, json=payload, headers=headers, timeout=30)
 
         if res.status_code == 200:
             logger.info(f"[{ranking_type}] 백엔드 DB 업데이트 대성공!")

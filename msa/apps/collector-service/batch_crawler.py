@@ -729,7 +729,8 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         # 오리지널 API(JAVA_API_URL)로 데이터 전송
         try:
-            res = session.post(JAVA_API_URL, json=payload, timeout=30)
+            headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+            res = session.post(JAVA_API_URL, json=payload, headers=headers, timeout=30)
             if res.status_code == 200: logger.info(f"Sent: {title} ({payload['currentPrice']} KRW)")
             else: logger.error(f"Server Error ({res.status_code}): {title}")
         except Exception as e: logger.error(f"Network Error sending {title}: {e}")
@@ -743,7 +744,8 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
 def fetch_update_targets():
     try:
-        res = session.get(TARGET_API_URL, timeout=10)
+        headers = {"X-Internal-Secret": CRAWLER_SECRET_KEY}
+        res = session.get(TARGET_API_URL, headers=headers, timeout=10)
         if res.status_code == 200:
             targets = res.json()
             logger.info(f"📥 Received {len(targets)} targets.")
