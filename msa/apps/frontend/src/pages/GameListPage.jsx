@@ -42,6 +42,19 @@ const GameListPage = () => {
     const [totalElements, setTotalElements] = useState(0);
     const [priceRange, setPriceRange] = useState({ min: '', max: '' });
     const [searchInput, setSearchInput] = useState(searchParams.get('keyword') || '');
+    const [psPlusDiscount, setPsPlusDiscount] = useState(null);
+    const [isPsPlusBannerDismissed, setIsPsPlusBannerDismissed] = useState(() => {
+        const dismissedDate = localStorage.getItem('psPlusBannerDismissedDate');
+        const today = new Date().toDateString();
+        return dismissedDate === today;
+    });
+
+    const handleDismissBanner = (e) => {
+        e.stopPropagation();
+        setIsPsPlusBannerDismissed(true);
+        const today = new Date().toDateString();
+        localStorage.setItem('psPlusBannerDismissedDate', today);
+    };
 
     const [filter, setFilter] = useState(() => ({
         keyword: searchParams.get('keyword') || '',
@@ -377,6 +390,24 @@ const GameListPage = () => {
             setSearchParams(params, { replace: true });
         }
     }, [filter]);
+
+    useEffect(() => {
+        const checkPsPlusDeal = async () => {
+            try {
+                const res = await client.get('/api/v1/subscriptions/ps-plus/pricing');
+
+                if (res.data?.isPromotionActive) {
+                    setPsPlusDiscount({
+                        discountRate: res.data.promotionDiscountRate || 0
+                    });
+                }
+            } catch (error) {
+                // 에러 나도 조용히 무시 (메인 화면 로딩에 영향 없음)
+            }
+        };
+
+        checkPsPlusDeal();
+    }, []);
 
     useEffect(() => {
         fetchGames(page);
@@ -806,6 +837,45 @@ const GameListPage = () => {
                             </div>
                             <button onClick={clearGenreFilter} className="flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-4 py-2 rounded-lg transition-all text-sm font-bold text-secondary hover:text-primary"><X className="w-4 h-4" /> 필터 해제</button>
                         </div>
+                    </div>
+                )}
+
+                {/* PS Plus 핫딜 프로모션 배너 */}
+                {psPlusDiscount && !isPsPlusBannerDismissed && (
+                    <div
+                        onClick={() => navigate('/ps-plus')}
+                        className="mb-8 relative overflow-hidden rounded-xl bg-yellow-400 dark:bg-yellow-500 text-black p-4 sm:p-5 flex items-center justify-between shadow-[0_0_20px_rgba(250,204,21,0.25)] animate-slideDown group cursor-pointer border border-yellow-300 dark:border-yellow-400 transition-all hover:scale-[1.01]"
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+
+                        <div className="flex items-center gap-4 relative z-10 w-full pr-8">
+                            <div className="shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/10 flex items-center justify-center border border-black/20 shadow-inner group-hover:bg-black/20 transition-colors">
+                                <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-black drop-shadow-sm" strokeWidth={4} />
+                            </div>
+
+                            {/* 중앙 텍스트 영역 */}
+                            <div className="flex flex-col">
+                                <div className="font-black text-[10px] sm:text-xs mb-0.5 tracking-widest flex items-center gap-1 opacity-80">
+                                    <Sparkles className="w-3 h-3"/> SPECIAL PROMOTION
+                                </div>
+                                <div className="font-black text-sm sm:text-base lg:text-lg leading-tight flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span>놓치지 마세요! PS Plus 12개월</span>
+                                    <span className="inline-flex items-center text-white bg-black/85 px-2 py-0.5 rounded shadow-sm">
+                                        <TrendingDown className="w-3.5 h-3.5 mr-1 animate-pulse" />
+                                        최대 {psPlusDiscount.discountRate}% 할인 중
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 닫기 버튼 */}
+                        <button
+                            onClick={handleDismissBanner}
+                            className="absolute right-4 z-20 p-2 bg-black/10 hover:bg-black/20 rounded-full transition-colors backdrop-blur-sm"
+                            aria-label="배너 닫기"
+                        >
+                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+                        </button>
                     </div>
                 )}
 

@@ -9,7 +9,6 @@ import com.pstracker.catalog_service.insights.service.InsightsService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -25,9 +24,6 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class CatalogController {
-
-    @Value("${crawler.secret-key}")
-    private String internalSecretKey;
 
     private final CatalogService catalogService;
     private final CrawlerScheduler scheduler;

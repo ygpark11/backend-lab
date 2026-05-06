@@ -1,18 +1,33 @@
 import React, {useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router-dom';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
-import { requestFcmToken, isSupported } from '../utils/fcm';
+import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
+import {isSupported, requestFcmToken} from '../utils/fcm';
 
 import {
-    AlertTriangle, Bell, BellOff, Gamepad2, Heart, HelpCircle, LogOut, Shield, X, UserCircle, Megaphone, Menu,
-    Sparkles, Activity, Sun, Moon
+    Activity,
+    AlertTriangle,
+    Bell,
+    BellOff,
+    Gamepad2,
+    Heart,
+    HelpCircle,
+    LogOut,
+    Megaphone,
+    Menu,
+    Moon,
+    Plus,
+    Shield,
+    Sparkles,
+    Sun,
+    UserCircle,
+    X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
 import LegalModal from './LegalModal';
 import NoticeModal from './NoticeModal';
-import { useAuth } from '../contexts/AuthContext';
+import {useAuth} from '../contexts/AuthContext';
 
 const Navbar = () => {
     const navigate = useTransitionNavigate();
@@ -254,6 +269,20 @@ const Navbar = () => {
                 {/* 우측 유틸리티 영역 */}
                 <div className="flex items-center gap-0.5 sm:gap-3 shrink-0">
 
+                    <button
+                        onClick={() => { navigate('/ps-plus'); window.scrollTo(0,0); }}
+                        className={`hidden md:flex relative p-2 rounded-full transition-colors group ${
+                            location.pathname.includes('/ps-plus')
+                                ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
+                                : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
+                        }`}
+                        title="PS Plus 구독권 가격"
+                    >
+                        <Plus className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-active:scale-95" strokeWidth={2.5} />
+                    </button>
+
+                    <div className="hidden md:block w-[1px] h-4 bg-divider mx-1"></div>
+
                     <button onClick={() => setIsLightMode(!isLightMode)} className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="테마 변경">
                         {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     </button>
@@ -354,6 +383,15 @@ const Navbar = () => {
 
                                     <button onClick={() => { navigate('/insights'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/insights') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-amber-from)] p-1.5 rounded-lg border border-[color:var(--bento-amber-border)] shadow-sm"><Activity className="w-4 h-4 text-amber-500" /></div> 통계 인사이트
+                                    </button>
+                                </div>
+
+                                <div className="p-2 border-b border-divider bg-base">
+                                    <button onClick={() => { navigate('/ps-plus'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/ps-plus') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                        <div className="bg-yellow-400 rounded p-0.5 text-black">
+                                            <Plus className="w-3.5 h-3.5" strokeWidth={4} />
+                                        </div>
+                                        PS Plus 구독권
                                     </button>
                                 </div>
 

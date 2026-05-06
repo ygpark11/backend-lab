@@ -86,7 +86,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/games/**",
                                 "/api/internal/**",
-                                "/api/v1/subscriptions/ps-plus/collect",
+                                "/api/v1/subscriptions/**",
                                 "/api/v1/members/signup",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/reissue",

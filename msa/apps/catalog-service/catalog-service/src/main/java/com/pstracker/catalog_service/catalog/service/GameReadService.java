@@ -2,12 +2,13 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
-import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
+import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -64,7 +65,7 @@ public class GameReadService {
                         .stream()
                         .map(g -> {
                             int approxHistorySize = (g.getAllTimeLowPrice() != null && g.getAllTimeLowPrice() > 0) ? 2 : 1;
-                            PriceVerdict verdict = GameDetailResponse.calculateVerdict(
+                            PriceVerdict verdict = PriceVerdictCalculator.forGame(
                                     g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(), approxHistorySize
                             );
                             return new GameDetailResponse.FamilyGameDto(
@@ -79,7 +80,7 @@ public class GameReadService {
                         h.getRecordedAt().toLocalDate(),
                         h.getPrice(),
                         h.getDiscountRate(),
-                        GameDetailResponse.calculateVerdict(h.getPrice(), originalPrice, lowestPrice, historySize)
+                        PriceVerdictCalculator.forGame(h.getPrice(), originalPrice, lowestPrice, historySize)
                 ))
                 .toList();
 

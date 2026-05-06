@@ -2,9 +2,10 @@ package com.pstracker.catalog_service.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.domain.PriceVerdict;
 import com.pstracker.catalog_service.catalog.domain.VoteType;
 import com.pstracker.catalog_service.catalog.domain.tag.VibeTag;
+import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -100,23 +101,6 @@ public record GameDetailResponse(
         );
     }
 
-    public static PriceVerdict calculateVerdict(Integer targetPrice, Integer originalPrice, Integer lowestPrice, int historySize) {
-        if (targetPrice == null || targetPrice == 0 || historySize == 0) return PriceVerdict.TRACKING;
-
-        if (historySize == 1) {
-            return (targetPrice < originalPrice) ? PriceVerdict.TRACKING : PriceVerdict.WAIT;
-        }
-
-        int safeLowest = (lowestPrice == null || lowestPrice == 0) ? targetPrice : lowestPrice;
-
-        if (targetPrice > 0 && targetPrice <= safeLowest) return PriceVerdict.BUY_NOW;
-        if (targetPrice < originalPrice) {
-            double diffPercent = (double) (targetPrice - safeLowest) / safeLowest * 100;
-            return (diffPercent <= 20.0) ? PriceVerdict.GOOD_OFFER : PriceVerdict.WAIT;
-        }
-        return PriceVerdict.WAIT;
-    }
-
     public static GameDetailResponse from(
             Game game,
             List<PriceHistoryDto> history,
@@ -130,7 +114,7 @@ public record GameDetailResponse(
         Integer discountRate = (game.getDiscountRate() != null) ? game.getDiscountRate() : 0;
         Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
 
-        PriceVerdict verdict = calculateVerdict(currentPrice, originalPrice, lowestPrice, history.size());
+        PriceVerdict verdict = PriceVerdictCalculator.forGame(currentPrice, originalPrice, lowestPrice, history.size());
         String verdictMsg;
 
         if (verdict == PriceVerdict.TRACKING) {
