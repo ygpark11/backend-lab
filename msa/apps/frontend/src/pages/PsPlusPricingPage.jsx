@@ -1,20 +1,12 @@
-import React, {useEffect, useState} from 'react';
-import {
-    ArrowRight,
-    Check,
-    X,
-    ChevronDown,
-    Plus,
-    ShieldCheck,
-    Gamepad2,
-    Sparkles
-} from 'lucide-react';
+import React, {useCallback, useEffect, useState} from 'react';
+import {ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X} from 'lucide-react';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
 import SEO from '../components/common/SEO';
 import toast from 'react-hot-toast';
 import PriceChart from '../components/PriceChart';
+import HelpModal from '../components/common/HelpModal';
 
 const PS_PLUS_BENEFITS = {
     // ... (기존과 완벽히 동일하므로 생략 없이 풀버전 유지)
@@ -61,6 +53,16 @@ const PsPlusPricingPage = () => {
     const [loading, setLoading] = useState(true);
     const [pricingData, setPricingData] = useState(null);
     const [selectedDuration, setSelectedDuration] = useState('price12Month');
+    const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
+
+    const handleOpenHelp = useCallback((e, type) => {
+        e.stopPropagation(); // 이벤트 버블링 방지
+        setHelpInfo({ isOpen: true, type });
+    }, []);
+
+    const handleCloseHelp = useCallback(() => {
+        setHelpInfo({ isOpen: false, type: null });
+    }, []);
 
     useEffect(() => {
         const fetchPricing = async () => {
@@ -77,9 +79,7 @@ const PsPlusPricingPage = () => {
         fetchPricing();
     }, []);
 
-    if (loading) {
-        return <div className="min-h-screen bg-base pt-24 flex justify-center"><PSLoader /></div>;
-    }
+    if (loading) return <div className="min-h-screen bg-base pt-24 flex justify-center"><PSLoader /></div>;
 
     if (!pricingData || !pricingData.pricingData || Object.keys(pricingData.pricingData).length === 0) {
         return (
@@ -111,9 +111,19 @@ const PsPlusPricingPage = () => {
                         <Plus className="w-8 h-8 sm:w-10 sm:h-10" strokeWidth={2.5} />
                     </div>
 
-                    <h1 className="text-3xl md:text-4xl font-black mb-4 tracking-tight">
-                        어떤 <span className="text-yellow-600 dark:text-yellow-400">플랜</span>이 적합할까요?
-                    </h1>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <h1 className="text-3xl md:text-4xl font-black tracking-tight">
+                            어떤 <span className="text-yellow-600 dark:text-yellow-400">플랜</span>이 적합할까요?
+                        </h1>
+                        <button
+                            onClick={(e) => handleOpenHelp(e, 'PS_PLUS')}
+                            className="p-1.5 rounded-full text-secondary hover:text-primary hover:bg-surface-hover transition-colors"
+                            aria-label="요금제 가이드 보기"
+                        >
+                            <Info className="w-6 h-6 md:w-7 md:h-7" strokeWidth={2.5} />
+                        </button>
+                    </div>
+
                     <p className="text-secondary font-bold mb-8">모든 혜택을 한눈에 비교하고 결정하세요.</p>
 
                     <div className="inline-flex bg-surface border border-divider p-1.5 rounded-full shadow-inner">
@@ -181,9 +191,14 @@ const PsPlusPricingPage = () => {
                             onExclusiveClick={() => navigate('/games?isPlusExclusive=true')}
                         />
                     </div>
-
                 </div>
             </div>
+
+            <HelpModal
+                isOpen={helpInfo.isOpen}
+                type={helpInfo.type}
+                onClose={handleCloseHelp}
+            />
         </div>
     );
 };

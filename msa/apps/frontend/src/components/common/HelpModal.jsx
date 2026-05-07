@@ -1,5 +1,5 @@
 import React from 'react';
-import {Bell, Database, Globe, Pickaxe, Radio, ShieldAlert, Sparkles, Star, Trophy, X} from 'lucide-react';
+import {Bell, Database, Globe, Pickaxe, Radio, ShieldAlert, ShieldCheck, Sparkles, Star, Trophy, X} from 'lucide-react';
 
 const HELP_CONTENT = {
     DEFENSE: {
@@ -101,6 +101,44 @@ const HELP_CONTENT = {
             </div>
         ),
         icon: <Database className="w-5 h-5 text-ps-blue" />
+    },
+    PS_PLUS: {
+        title: "PS Plus 구독 가이드",
+        content: (
+            <div className="text-sm text-secondary space-y-4">
+                <p className="font-bold text-primary mb-2">어떤 요금제를 선택해야 할까요?</p>
+                <ul className="space-y-3 bg-surface p-4 rounded-xl border border-divider">
+                    <li className="flex gap-2 items-start">
+                        <ShieldCheck className="w-4 h-4 mt-0.5 text-gray-400 shrink-0" />
+                        <span>
+                            <strong className="text-primary">에센셜:</strong> 매월 주어지는 <b>무료 게임(라이브러리 추가 시 영구 소장)</b>과 <b>독점 추가 할인</b>이 목적이라면 합리적인 선택입니다.
+                        </span>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                        <Gamepad2 className="w-4 h-4 mt-0.5 text-yellow-500 shrink-0" />
+                        <span>
+                            <strong className="text-yellow-500">스페셜:</strong> 수백 개의 대작 <b>게임 카탈로그를 무제한</b>으로 즐길 수 있는 가장 대중적인 플랜입니다.
+                        </span>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                        <Sparkles className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                        <span>
+                            <strong className="text-amber-500">디럭스:</strong> 고전 클래식 게임 카탈로그와 최신작 게임 체험판까지 모든 혜택을 제공하는 프리미엄 플랜입니다.
+                        </span>
+                    </li>
+                </ul>
+                <div className="pt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                        <BarChart3 className="w-4 h-4 text-primary" />
+                        <p className="font-bold text-primary">역대 가격 추이 활용법</p>
+                    </div>
+                    <p className="leading-relaxed">
+                        소니는 정기적인 이벤트(데이즈 오브 플레이, 블랙 프라이데이 등)를 통해 구독권 할인을 진행합니다. 하단의 <b>역대 가격 추이 차트</b>를 통해 현재 가격이 <b>'역대 최저가'</b>에 근접했는지 확인 후 구독을 갱신하는 것을 추천합니다.
+                    </p>
+                </div>
+            </div>
+        ),
+        icon: <Gamepad2 className="w-5 h-5 text-primary" />
     }
 };
 
