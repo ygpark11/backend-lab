@@ -1,5 +1,18 @@
 import React from 'react';
-import {Bell, Database, Globe, Pickaxe, Radio, ShieldAlert, ShieldCheck, Sparkles, Star, Trophy, X} from 'lucide-react';
+import {
+    Bell,
+    Database,
+    Gamepad2,
+    Globe,
+    Pickaxe,
+    Radio,
+    ShieldAlert,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    Trophy,
+    X
+} from 'lucide-react';
 
 const HELP_CONTENT = {
     DEFENSE: {
