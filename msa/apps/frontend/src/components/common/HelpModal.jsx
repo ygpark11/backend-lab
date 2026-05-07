@@ -1,6 +1,7 @@
 import React from 'react';
 import {
     Bell,
+    BarChart3,
     Database,
     Gamepad2,
     Globe,
