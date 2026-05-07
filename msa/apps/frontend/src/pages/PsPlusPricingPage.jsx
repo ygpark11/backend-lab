@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X} from 'lucide-react';
+import {ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, Icon} from 'lucide-react';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
