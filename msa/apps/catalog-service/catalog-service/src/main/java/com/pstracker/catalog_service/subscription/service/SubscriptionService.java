@@ -164,35 +164,35 @@ public class SubscriptionService {
                 .map(MonthlyGameCollectRequest.MonthlyGameDto::psStoreId)
                 .toList();
 
-        // 우리 DB에 저장된 '가장 최근'의 월(YearMonth) 조회
-        Optional<PsPlusMonthlyHistory> latestHistory = psPlusMonthlyHistoryRepository.findFirstByOrderByYearMonthDesc();
+        // '가장 최근'의 월(TargetMonth) 조회
+        Optional<PsPlusMonthlyHistory> latestHistory = psPlusMonthlyHistoryRepository.findFirstByOrderByTargetMonthDesc();
 
         if (latestHistory.isPresent()) {
-            String latestSavedYearMonth = latestHistory.get().getYearMonth();
+            String latestSavedTargetMonth = latestHistory.get().getTargetMonth();
 
             // 가장 최근 달에 적재된 게임 ID 목록 조회
-            List<String> latestSavedStoreIds = psPlusMonthlyHistoryRepository.findPsStoreIdsByYearMonth(latestSavedYearMonth);
+            List<String> latestSavedStoreIds = psPlusMonthlyHistoryRepository.findPsStoreIdsByTargetMonth(latestSavedTargetMonth);
 
             // 새로 수집된 게임 중 단 하나라도 이전 묶음과 겹치는지(교집합) 확인
             boolean hasIntersection = incomingStoreIds.stream()
                     .anyMatch(latestSavedStoreIds::contains);
 
             if (hasIntersection) {
-                log.debug("최신 적재된 월간 게임 묶음과 동일한 데이터가 존재합니다. 갱신을 무시합니다. (기준 월: {})", latestSavedYearMonth);
+                log.debug("최신 적재된 월간 게임 묶음과 동일한 데이터가 존재합니다. 갱신을 무시합니다. (기준 월: {})", latestSavedTargetMonth);
                 return;
             }
         }
 
-        // 완전히 새로운 게임 묶음임이 확인됨! 현재 시스템 날짜를 기준으로 타겟 월(YearMonth) 지정
-        String targetYearMonth = YearMonth.now().toString();
-        log.debug("새로운 월간 게임 교체를 감지했습니다! 신규 적재 타겟 월: {}", targetYearMonth);
+        // 완전히 새로운 게임 묶음임이 확인됨! 현재 시스템 날짜를 기준으로 타겟 월(targetMonth) 지정
+        String targetMonth = YearMonth.now().toString();
+        log.debug("새로운 월간 게임 교체를 감지했습니다! 신규 적재 타겟 월: {}", targetMonth);
 
         //  DB 적재 진행
         for (MonthlyGameCollectRequest.MonthlyGameDto monthlyGame : request.monthlyGames()) {
             String psStoreId = monthlyGame.psStoreId();
 
             PsPlusMonthlyHistory psPlusMonthlyHistory = PsPlusMonthlyHistory.createPsPlusMonthlyHistory(
-                    targetYearMonth,
+                    targetMonth,
                     psStoreId,
                     monthlyGame.title(),
                     monthlyGame.imageUrl()

@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PsPlusMonthlyHistoryRepository extends JpaRepository<PsPlusMonthlyHistory, Long> {
-    Optional<PsPlusMonthlyHistory> findFirstByOrderByYearMonthDesc();
+    Optional<PsPlusMonthlyHistory> findFirstByOrderByTargetMonthDesc();
 
-    @Query("SELECT p.psStoreId FROM PsPlusMonthlyHistory p WHERE p.yearMonth = :yearMonth")
-    List<String> findPsStoreIdsByYearMonth(@Param("yearMonth") String yearMonth);
+    @Query("SELECT p.psStoreId FROM PsPlusMonthlyHistory p WHERE p.targetMonth = :targetMonth")
+    List<String> findPsStoreIdsByTargetMonth(@Param("targetMonth") String targetMonth);
 
 }

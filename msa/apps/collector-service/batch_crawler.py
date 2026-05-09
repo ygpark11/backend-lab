@@ -333,7 +333,7 @@ def crawl_ps_plus_prices_no_click(bm):
         page = setup_page(context)
 
         page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_selector(".service-hub-tier-selector", state="attached", timeout=15000)
+        page.wait_for_selector(".service-hub-tier-selector", state="attached", timeout=30000)
 
         tiers = {"ESSENTIAL": "TIER_10", "SPECIAL": "TIER_20", "DELUXE": "TIER_30"}
         durations = {
@@ -360,9 +360,17 @@ def crawl_ps_plus_prices_no_click(bm):
         logger.info(f"🎉 구독권 파싱 완료: {result_data}")
 
         api_url = f"{BASE_URL}/api/v1/subscriptions/ps-plus/collect"
-        res = session.post(api_url, json={"data": result_data}, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=15)
-        if res.status_code == 200: logger.info("   📤 PS Plus 가격 백엔드 전송 완료!")
-        else: logger.error(f"   💥 백엔드 전송 실패 ({res.status_code}): {res.text}")
+        res = session.post(
+            api_url,
+            json={"data": result_data},
+            headers={"X-Internal-Secret": CRAWLER_SECRET_KEY},
+            timeout=30
+        )
+
+        if res.status_code == 200:
+            logger.info("PS Plus 가격 백엔드 전송 완료!")
+        else:
+            logger.error(f"백엔드 전송 실패 ({res.status_code}): {res.text}")
 
     except Exception as e:
         logger.error(f"🔥 PS-Plus 파싱 중 에러 발생: {e}")
@@ -412,7 +420,7 @@ def crawl_ps_plus_monthly_games(bm):
 
             wishlist_btn = page.locator('button[data-qa="wishlistToggle"]')
             try:
-                wishlist_btn.first.wait_for(state="attached", timeout=10000)
+                wishlist_btn.first.wait_for(state="attached", timeout=30000)
                 meta_str = wishlist_btn.first.get_attribute("data-telemetry-meta")
                 if meta_str:
                     meta_json = json.loads(meta_str)
@@ -427,7 +435,7 @@ def crawl_ps_plus_monthly_games(bm):
             api_url = f"{BASE_URL}/api/v1/subscriptions/monthly-games/collect"
             payload = {"monthlyGames": valid_games}
 
-            res = session.post(api_url, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=15)
+            res = session.post(api_url, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
             if res.status_code == 200:
                 logger.info("PS Plus 월간 게임 백엔드 전송 완료!")
             else:
@@ -560,7 +568,7 @@ def crawl_phase0_new_releases(bm):
                         "psStoreId": ps_store_id,
                         "title": title,
                         "imageUrl": image_url
-                    }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
+                    }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
 
             elif "/product/" in url:
                 ps_store_id = url.split('/')[-1]
