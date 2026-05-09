@@ -94,6 +94,7 @@ is_vip_running = False
 is_ranking_running = False
 is_rating_running = False
 is_psplus_running = False
+is_psplus_monthly_running = False
 
 
 # --- [2. 브라우저 매니저 (1코어 1기가 메모리 최적화)] ---
@@ -543,6 +544,77 @@ def crawl_ps_plus_prices_no_click(bm):
         try: page.close()
         except: pass
         # 브라우저 카운트 증가 (일정 횟수 후 재시작되도록)
+        bm.increment()
+
+def crawl_ps_plus_monthly_games(bm):
+    logger.info("[PS-Plus Monthly] 월간 무료 게임 수집 시작")
+    target_url = "https://www.playstation.com/ko-kr/ps-plus/whats-new/"
+    base_url = "https://www.playstation.com"
+    scraped_games = []
+
+    try:
+        context = bm.get_context()
+        page = setup_page(context)
+
+        logger.info(f"[Step 1] 마케팅 페이지 접속: {target_url}")
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+
+        section_locator = page.locator(".cmp-experiencefragment--wn-latest-monthly-games-content")
+        boxes_locator = section_locator.locator(".box:has(a.btn--cta[href*='/games/'])")
+        boxes_count = boxes_locator.count()
+
+        logger.info(f"발견된 게임 카드 수: {boxes_count}개")
+
+        for i in range(boxes_count):
+            box = boxes_locator.nth(i)
+            title_loc = box.locator("h3.txt-style-medium-title")
+            title = title_loc.text_content().strip() if title_loc.count() > 0 else "Unknown Title"
+
+            link_loc = box.locator("a.btn--cta")
+            slug = link_loc.get_attribute("href") if link_loc.count() > 0 else None
+
+            img_loc = box.locator(".media-block--image")
+            image_url = img_loc.get_attribute("data-src") if img_loc.count() > 0 else None
+
+            if slug:
+                scraped_games.append({"title": title, "slug": slug, "imageUrl": image_url})
+
+        logger.info("[Step 2] 상세 페이지 진입 및 ps_store_id 추출 시작")
+
+        valid_games = []
+        for game in scraped_games:
+            detail_url = base_url + game["slug"]
+            page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
+            human_like_delay(1.0, 2.5)
+
+            wishlist_btn = page.locator('button[data-qa="wishlistToggle"]')
+            try:
+                wishlist_btn.first.wait_for(state="attached", timeout=10000)
+                meta_str = wishlist_btn.first.get_attribute("data-telemetry-meta")
+                if meta_str:
+                    meta_json = json.loads(meta_str)
+                    game["psStoreId"] = meta_json.get("productId")
+                    valid_games.append(game)
+                    logger.info(f"성공! ps_store_id 획득: {game['psStoreId']}")
+            except Exception as e:
+                logger.warning(f"찜 버튼 파싱 실패: {game['title']}")
+
+        # 백엔드로 전송
+        if valid_games:
+            api_url = f"{BASE_URL}/api/v1/subscriptions/monthly-games/collect"
+            payload = {"monthlyGames": valid_games}
+
+            res = session.post(api_url, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=15)
+            if res.status_code == 200:
+                logger.info("PS Plus 월간 게임 백엔드 전송 완료!")
+            else:
+                logger.error(f"백엔드 전송 실패 ({res.status_code}): {res.text}")
+
+    except Exception as e:
+        logger.error(f"PS-Plus 월간 게임 파싱 중 에러 발생: {e}")
+    finally:
+        try: page.close()
+        except: pass
         bm.increment()
 
 def mine_english_title(html_content):
@@ -995,11 +1067,48 @@ def trigger_ps_plus_crawl():
         return jsonify({"status": "success", "message": "PS Plus prices collected"}), 200
 
     except Exception as e:
-        logger.error(f"🔥 PS-Plus 수집 중 치명적 에러: {e}")
+        logger.error(f"PS-Plus 수집 중 치명적 에러: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         with crawler_lock:
             is_psplus_running = False
+
+@app.route('/crawl/ps-plus-monthly', methods=['POST'])
+def trigger_ps_plus_monthly_crawl():
+    data = request.json or {}
+    if not verify_secret(data):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    global is_psplus_monthly_running
+
+    with crawler_lock:
+        if check_if_busy() or is_rating_running:
+            logger.warning("다른 작업 실행 중, PS Plus 월간 게임 수집을 거절합니다.")
+            return jsonify({"status": "running", "message": "다른 작업이 이미 실행 중입니다."}), 409
+
+        is_psplus_monthly_running = True
+
+    logger.info("PS-Plus 월간 게임 크롤링 요청 수신 및 자원 선점 완료")
+
+    try:
+        with sync_playwright() as p:
+            bm = BrowserManager(p)
+            crawl_ps_plus_monthly_games(bm)
+
+            try: bm.context.close()
+            except: pass
+            try: bm.browser.close()
+            except: pass
+            gc.collect()
+
+        return jsonify({"status": "success", "message": "PS Plus monthly games collected"}), 200
+
+    except Exception as e:
+        logger.error(f"🔥 PS-Plus 월간 게임 수집 중 치명적 에러: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        with crawler_lock:
+            is_psplus_monthly_running = False
 
 def run_ranking_wrapper():
     global is_ranking_running
@@ -1041,7 +1150,7 @@ def health_check():
     return jsonify({"status": "UP", "running": is_batch_running or is_ranking_running or is_vip_running or is_psplus_running or is_rating_running}), 200
 
 def check_if_busy():
-    return is_batch_running or is_ranking_running or is_vip_running or is_psplus_running or not urgent_queue.empty()
+    return is_batch_running or is_ranking_running or is_vip_running or is_psplus_running or is_psplus_monthly_running or not urgent_queue.empty()
 
 def set_rating_running(state):
     global is_rating_running
