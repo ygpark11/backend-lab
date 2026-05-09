@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.subscription.controller;
 
+import com.pstracker.catalog_service.subscription.dto.MonthlyGameCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusPricingResponse;
 import com.pstracker.catalog_service.subscription.service.SubscriptionService;
@@ -30,5 +31,11 @@ public class SubscriptionController {
     public ResponseEntity<String> collectPsPlusPrices(@Valid @RequestBody PsPlusCollectRequest request) {
         subscriptionService.upsertPsPlusPrices(request);
         return ResponseEntity.ok("PS Plus subscription prices processed successfully.");
+    }
+
+    @PostMapping("/monthly-games/collect")
+    public ResponseEntity<Void> collectMonthlyGames(@Valid @RequestBody MonthlyGameCollectRequest request) {
+        subscriptionService.collectMonthlyGames(request);
+        return ResponseEntity.ok().build();
     }
 }

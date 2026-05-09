@@ -32,7 +32,15 @@ public class CrawlerScheduler {
             log.error("Failed to trigger PS Plus crawler (Proceeding to Phase 2): {}", e.getMessage());
         }
 
-        log.info("Task Phase 2: Triggering Main Batch Crawler...");
+        log.info("Task Phase 2: Triggering PS Plus Monthly Games Crawler...");
+        try {
+            String response = collectorApiClient.triggerMonthlyGamesCrawl(new CrawlTriggerRequest(internalSecretKey));
+            log.info("PS Plus Monthly Games Crawler Triggered Successfully! Response: {}", response);
+        } catch (Exception e) {
+            log.error("Failed to trigger PS Plus Monthly Games crawler: {}", e.getMessage());
+        }
+
+        log.info("Task Phase 3: Triggering Main Batch Crawler...");
         triggerCrawler();
     }
 

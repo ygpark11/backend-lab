@@ -16,4 +16,6 @@ public interface GameCandidateRepository extends JpaRepository<GameCandidate, Lo
 
     // 누군가 수집을 요청하면 진열장에서 즉시 삭제 (중복 클릭 방어)
     void deleteByPsStoreId(String psStoreId);
+
+    boolean existsByPsStoreId(String psStoreId);
 }

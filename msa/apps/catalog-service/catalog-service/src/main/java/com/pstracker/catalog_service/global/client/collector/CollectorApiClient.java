@@ -24,4 +24,7 @@ public interface CollectorApiClient {
 
     @PostExchange("/crawl/ps-plus")
     String triggerPsPlusCrawl(@RequestBody CrawlTriggerRequest request);
+
+    @PostExchange("/crawl/ps-plus-monthly")
+    String triggerMonthlyGamesCrawl(@RequestBody CrawlTriggerRequest request);
 }

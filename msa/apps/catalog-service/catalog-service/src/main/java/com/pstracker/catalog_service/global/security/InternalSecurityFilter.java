@@ -20,9 +20,10 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     private final List<String> internalUris = List.of(
-            "/api/internal/**",                     // 파이썬 -> 자바 동기화 및 콜백
-            "/api/v1/games/batch-complete",         // 캐시 초기화
-            "/api/v1/subscriptions/ps-plus/collect" // 구독권 수집
+            "/api/internal/**",                             // 파이썬 -> 자바 동기화 및 콜백
+            "/api/v1/games/batch-complete",                 // 캐시 초기화
+            "/api/v1/subscriptions/ps-plus/collect",        // 구독권 수집
+            "/api/v1/subscriptions/monthly-games/collect"  // 월간게임 수집
     );
 
     @Override
