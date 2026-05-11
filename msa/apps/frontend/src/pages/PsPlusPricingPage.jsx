@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, Icon} from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, CalendarDays } from 'lucide-react';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
@@ -159,6 +159,7 @@ const PsPlusPricingPage = () => {
                             theme="basic"
                             icon={ShieldCheck}
                             onExclusiveClick={() => navigate('/games?isPlusExclusive=true')}
+                            onMonthlyGamesClick={() => navigate('/monthly-games')}
                         />
                     </div>
 
@@ -174,6 +175,7 @@ const PsPlusPricingPage = () => {
                             icon={Gamepad2}
                             onCatalogClick={() => navigate('/games?inCatalog=true')}
                             onExclusiveClick={() => navigate('/games?isPlusExclusive=true')}
+                            onMonthlyGamesClick={() => navigate('/monthly-games')}
                         />
                     </div>
 
@@ -189,6 +191,7 @@ const PsPlusPricingPage = () => {
                             icon={Sparkles}
                             onCatalogClick={() => navigate('/games?inCatalog=true')}
                             onExclusiveClick={() => navigate('/games?isPlusExclusive=true')}
+                            onMonthlyGamesClick={() => navigate('/monthly-games')}
                         />
                     </div>
                 </div>
@@ -203,7 +206,7 @@ const PsPlusPricingPage = () => {
     );
 };
 
-const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick }) => {
+const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick, onMonthlyGamesClick }) => {
 
     const themeStyles = {
         basic: {
@@ -299,6 +302,20 @@ const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, 
                 </ul>
 
                 <div className="mt-auto flex flex-col gap-3">
+
+                    {/* 역대 월간 게임 보기 (블루 테마) */}
+                    {onMonthlyGamesClick && (
+                        <button
+                            onClick={onMonthlyGamesClick}
+                            className="w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
+                                border border-blue-400/50 dark:border-blue-500/30
+                                bg-blue-50/50 dark:bg-blue-500/5
+                                text-blue-700 dark:text-blue-400
+                                hover:bg-blue-100 dark:hover:bg-blue-500/10"
+                        >
+                            <CalendarDays className="w-4 h-4" /> 역대 월간 게임 보기
+                        </button>
+                    )}
 
                     {/* 카탈로그 둘러보기 (스페셜/디럭스 전용 - 항상 Primary) */}
                     {onCatalogClick && (

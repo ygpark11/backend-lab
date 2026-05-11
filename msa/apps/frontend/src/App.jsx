@@ -10,6 +10,7 @@ import InsightsPage from "./pages/InsightsPage.jsx";
 import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
 import MyPage from './pages/MyPage';
 import PsPlusPricingPage from './pages/PsPlusPricingPage';
+import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -42,7 +43,8 @@ function AppRoutes() {
                     <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
                     <Route path="/ps-plus" element={<PsPlusPricingPage />} />
-                    <Route path="/games/:id" element={<GameDetailPage />} />
+                    <Route path="/ps-plus" element={<PsPlusPricingPage />} />
+                    <Route path="/monthly-games" element={<MonthlyGamesArchivePage />} />
                     <Route
                         path="/wishlist"
                         element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}

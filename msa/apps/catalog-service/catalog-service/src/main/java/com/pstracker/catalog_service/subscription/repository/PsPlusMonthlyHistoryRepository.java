@@ -8,10 +8,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface PsPlusMonthlyHistoryRepository extends JpaRepository<PsPlusMonthlyHistory, Long> {
+public interface PsPlusMonthlyHistoryRepository extends JpaRepository<PsPlusMonthlyHistory, Long>, PsPlusMonthlyHistoryRepositoryCustom {
     Optional<PsPlusMonthlyHistory> findFirstByOrderByTargetMonthDesc();
 
     @Query("SELECT p.psStoreId FROM PsPlusMonthlyHistory p WHERE p.targetMonth = :targetMonth")
     List<String> findPsStoreIdsByTargetMonth(@Param("targetMonth") String targetMonth);
-
 }

@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
+import com.pstracker.catalog_service.catalog.dto.GameIdMappingDto;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -71,8 +72,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("UPDATE Game g SET g.mostDownloadedRank = null")
     void clearMostDownloadedRanks();
 
-    List<Game> findByPsStoreIdIn(List<String> psStoreIds);
-
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Game g SET g.bestSellerRank = :rank WHERE g.psStoreId = :psStoreId")
     int updateBestSellerRank(@Param("psStoreId") String psStoreId, @Param("rank") Integer rank);
@@ -100,4 +99,8 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPlusExclusive = true AND g.discountRate > 0")
     long countPlusExclusiveDeals();
+
+    @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMappingDto(g.psStoreId, g.id) " +
+            "FROM Game g WHERE g.psStoreId IN :psStoreIds")
+    List<GameIdMappingDto> findGameIdsByPsStoreIds(@Param("psStoreIds") List<String> psStoreIds);
 }

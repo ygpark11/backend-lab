@@ -12,7 +12,9 @@ import {
     Sparkles,
     Star,
     Trophy,
-    X
+    X,
+    CalendarDays,
+    Lock
 } from 'lucide-react';
 
 const HELP_CONTENT = {
@@ -153,6 +155,29 @@ const HELP_CONTENT = {
             </div>
         ),
         icon: <Gamepad2 className="w-5 h-5 text-primary" />
+    },
+    ARCHIVE: {
+        title: "월간 게임 아카이브",
+        content: (
+            <div className="space-y-4">
+                <p className="text-sm text-secondary leading-relaxed">
+                    매월 새롭게 제공되는 PS Plus 에센셜 무료 게임들의 <strong className="text-primary">역대 기록을 탐험</strong>하는 공간입니다.
+                </p>
+                <ul className="text-sm text-secondary space-y-3 bg-surface p-4 rounded-xl border border-divider">
+                    <li className="flex gap-2 items-start">
+                        <CalendarDays className="w-4 h-4 mt-0.5 text-yellow-500 shrink-0" />
+                        <span>타임라인을 클릭하면 해당 게임의 <b>상세 평점 및 최저가 분석 페이지</b>로 이동합니다.</span>
+                    </li>
+                    <li className="flex gap-2 items-start">
+                        <Lock className="w-4 h-4 mt-0.5 text-gray-400 shrink-0" />
+                        <span>
+                            <strong className="text-gray-400 bg-black px-1.5 py-0.5 rounded text-[10px]">수집 대기중</strong> 뱃지가 있는 게임은 소니 스토어의 과거 혜택 기록에는 존재하지만, 아직 PS Tracker 메인 시스템에 상세 정보가 적재되지 않은 게임입니다.
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        ),
+        icon: <CalendarDays className="w-5 h-5 text-yellow-500" />
     }
 };
 

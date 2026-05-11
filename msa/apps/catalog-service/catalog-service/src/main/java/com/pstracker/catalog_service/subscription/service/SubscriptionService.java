@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.subscription.service;
 
+import com.pstracker.catalog_service.catalog.dto.GameIdMappingDto;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
@@ -9,6 +10,7 @@ import com.pstracker.catalog_service.subscription.domain.PsPlusHistory;
 import com.pstracker.catalog_service.subscription.domain.PsPlusMonthlyHistory;
 import com.pstracker.catalog_service.subscription.domain.PsPlusPricing;
 import com.pstracker.catalog_service.subscription.domain.PsPlusTier;
+import com.pstracker.catalog_service.subscription.dto.MonthlyGameArchiveResponse;
 import com.pstracker.catalog_service.subscription.dto.MonthlyGameCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusPricingResponse;
@@ -17,6 +19,9 @@ import com.pstracker.catalog_service.subscription.repository.PsPlusMonthlyHistor
 import com.pstracker.catalog_service.subscription.repository.PsPlusPricingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -211,5 +216,36 @@ public class SubscriptionService {
                 log.info("새로운 게임 Candidate 적재 완료: {}", monthlyGame.title());
             }
         }
+    }
+
+    public Page<MonthlyGameArchiveResponse> getMonthlyGamesArchive(Pageable pageable) {
+        // 달(Month) 단위로 페이징 처리하여 조회
+        Page<MonthlyGameArchiveResponse> page = psPlusMonthlyHistoryRepository.findMonthlyArchivePage(pageable);
+
+        if (page.isEmpty()) {
+            return page;
+        }
+
+        // 메인 DB 매핑을 위한 psStoreId 추출
+        List<String> psStoreIds = page.getContent().stream()
+                .flatMap(response -> response.getGames().stream())
+                .map(MonthlyGameArchiveResponse.ArchiveGameDto::getPsStoreId)
+                .toList();
+
+        // Game ID 가져오기
+        Map<String, Long> gameIdMap = gameRepository.findGameIdsByPsStoreIds(psStoreIds).stream()
+                .collect(Collectors.toMap(
+                        GameIdMappingDto::psStoreId,
+                        GameIdMappingDto::gameId
+                ));
+
+        // 기존 DTO에 gameId 매핑
+        page.getContent().forEach(response -> {
+            response.getGames().forEach(game -> {
+                game.setGameId(gameIdMap.get(game.getPsStoreId()));
+            });
+        });
+
+        return page;
     }
 }

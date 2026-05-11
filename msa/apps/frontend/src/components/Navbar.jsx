@@ -16,6 +16,7 @@ import {
     Menu,
     Moon,
     Plus,
+    CalendarDays,
     Shield,
     Sparkles,
     Sun,
@@ -281,6 +282,18 @@ const Navbar = () => {
                         <Plus className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-active:scale-95" strokeWidth={2.5} />
                     </button>
 
+                    <button
+                        onClick={() => { navigate('/monthly-games'); window.scrollTo(0,0); }}
+                        className={`hidden md:flex relative p-2 rounded-full transition-colors group ${
+                            location.pathname.includes('/monthly-games')
+                                ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
+                                : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
+                        }`}
+                        title="PS Plus 월간 게임 아카이브"
+                    >
+                        <CalendarDays className="w-5 h-5 sm:w-5 sm:h-5 transition-transform group-active:scale-95" />
+                    </button>
+
                     <div className="hidden md:block w-[1px] h-4 bg-divider mx-1"></div>
 
                     <button onClick={() => setIsLightMode(!isLightMode)} className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="테마 변경">
@@ -392,6 +405,13 @@ const Navbar = () => {
                                             <Plus className="w-3.5 h-3.5" strokeWidth={4} />
                                         </div>
                                         PS Plus 구독권
+                                    </button>
+
+                                    <button onClick={() => { navigate('/monthly-games'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/monthly-games') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                        <div className="bg-[var(--bento-yellow-from)] p-1.5 rounded border border-[color:var(--bento-yellow-border)] text-yellow-600 dark:text-yellow-500 shadow-sm shrink-0">
+                                            <CalendarDays className="w-3.5 h-3.5" />
+                                        </div>
+                                        월간 게임 아카이브
                                     </button>
                                 </div>
 
