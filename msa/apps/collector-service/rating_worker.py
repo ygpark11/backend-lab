@@ -49,7 +49,7 @@ def setup_stealth_page(context):
 def crawl_metacritic_single(game_title):
     slug = generate_slug(game_title)
     target_url = f"https://www.metacritic.com/game/{slug}/"
-    logger.info(f"[Metacritic] 타겟 접속 시도: {target_url}")
+    logger.info(f"[Metacritic] 타겟 접속 시도: {game_title} | URL: {target_url}")
 
     result = {"status": "FAIL", "metaScore": None, "metaCount": None, "userScore": None, "userCount": None}
 
@@ -149,8 +149,7 @@ def parse_hltb_time_to_float(raw_value):
 def crawl_hltb_single(game_title):
     encoded_query = urllib.parse.quote(game_title)
     target_url = f"https://howlongtobeat.com/?q={encoded_query}"
-
-    logger.info(f"[HLTB] 타겟 접속 시도: {game_title}")
+    logger.info(f"[HLTB] 타겟 접속 시도: {game_title} | URL: {target_url}")
 
     result = {"status": "FAIL", "mainStory": None, "mainExtra": None, "completionist": None}
 
