@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Allow: /games
 Allow: /ps-plus
+Allow: /monthly-games
 Allow: /pioneers
 Allow: /insights
 
