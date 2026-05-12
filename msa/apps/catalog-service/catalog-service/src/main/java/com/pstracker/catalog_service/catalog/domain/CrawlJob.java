@@ -40,7 +40,7 @@ public class CrawlJob {
     private LocalDateTime updatedAt;
 
     public enum JobStatus {
-        PENDING, PROCESSING, DONE, FAILED, NOT_FOUND, SKIP
+        PENDING, PROCESSING, DONE, FAILED, NOT_FOUND, SKIP, ERROR
     }
 
     public enum TargetType {
