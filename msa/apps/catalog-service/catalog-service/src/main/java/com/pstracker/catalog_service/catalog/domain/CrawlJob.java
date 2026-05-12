@@ -22,12 +22,13 @@ public class CrawlJob {
     @Column(name = "game_id", nullable = false)
     private Long gameId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "target_type", nullable = false)
-    private String targetType;
+    private TargetType targetType;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private JobStatus status; // PENDING, PROCESSING, DONE, FAILED, NOT_FOUND
+    private JobStatus status;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
@@ -39,10 +40,15 @@ public class CrawlJob {
     private LocalDateTime updatedAt;
 
     public enum JobStatus {
-        PENDING, PROCESSING, DONE, FAILED, NOT_FOUND
+        PENDING, PROCESSING, DONE, FAILED, NOT_FOUND, SKIP
     }
 
-    public static CrawlJob create(Long gameId, String targetType) {
+    public enum TargetType {
+        METACRITIC,
+        HLTB
+    }
+
+    public static CrawlJob create(Long gameId, CrawlJob.TargetType targetType) {
         CrawlJob job = new CrawlJob();
         job.gameId = gameId;
         job.targetType = targetType;

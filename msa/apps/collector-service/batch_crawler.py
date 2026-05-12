@@ -36,12 +36,12 @@ if not logger.handlers:
     logger.addHandler(console_handler)
 logger.propagate = False
 
-ranking_logger = logging.getLogger("Ranking-Crawler")
-ranking_logger.setLevel(logging.INFO)
-if not ranking_logger.handlers:
-    ranking_logger.addHandler(file_handler)
-    ranking_logger.addHandler(console_handler)
-ranking_logger.propagate = False
+metadata_logger = logging.getLogger("Metadata-Worker")
+metadata_logger.setLevel(logging.INFO)
+if not metadata_logger.handlers:
+    metadata_logger.addHandler(file_handler)
+    metadata_logger.addHandler(console_handler)
+metadata_logger.propagate = False
 
 rating_logger = logging.getLogger("Rating-Worker")
 rating_logger.setLevel(logging.INFO)

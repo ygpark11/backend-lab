@@ -101,7 +101,8 @@ public class CatalogService {
         gameReadService.evictGameDetailCache(game.getId());
 
         if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1))) {
-            requeueRecentGameForRating(game.getId());
+            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.METACRITIC);
+            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.HLTB);
         }
     }
 
@@ -461,9 +462,7 @@ public class CatalogService {
         }
     }
 
-    private void requeueRecentGameForRating(Long gameId) {
-        String targetType = "METACRITIC";
-
+    private void requeueRecentGameForScraping(Long gameId, CrawlJob.TargetType targetType) {
         // 1. 이미 큐에서 대기 중이거나 작업 중이면 무시
         List<CrawlJob.JobStatus> activeStatuses = List.of(CrawlJob.JobStatus.PENDING, CrawlJob.JobStatus.PROCESSING);
         if (crawlJobRepository.existsByGameIdAndTargetTypeAndStatusIn(gameId, targetType, activeStatuses)) {
@@ -479,11 +478,9 @@ public class CatalogService {
                 finishedStatuses
         );
 
-        // 3. 업데이트된 행이 0개라면 아예 DB에 없는 신규 게임이므로 create 메서드로 생성
+        // 3. 이력이 아예 없는 경우 신규 생성
         if (updatedRows == 0) {
-            CrawlJob newJob = CrawlJob.create(gameId, targetType);
-            crawlJobRepository.save(newJob);
-            log.debug("[Rating-Queue] 신규 게임 평점 수집 대기열 등록 완료: {}", gameId);
+            crawlJobRepository.save(CrawlJob.create(gameId, targetType));
         }
     }
 

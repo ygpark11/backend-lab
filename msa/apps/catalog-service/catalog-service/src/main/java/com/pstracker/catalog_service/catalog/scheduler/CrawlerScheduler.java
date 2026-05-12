@@ -28,7 +28,7 @@ public class CrawlerScheduler {
         triggerCrawler();
     }
 
-    @Scheduled(cron = "0 30 13 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 30 15 * * *", zone = "Asia/Seoul")
     public void scheduleRankingCrawling() {
         log.info("Scheduled Task: Triggering Ranking Crawler...");
         try {

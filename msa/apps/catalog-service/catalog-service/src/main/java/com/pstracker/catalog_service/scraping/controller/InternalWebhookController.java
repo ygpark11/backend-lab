@@ -2,10 +2,9 @@ package com.pstracker.catalog_service.scraping.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CrawlerCallbackRequest;
 import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
-import com.pstracker.catalog_service.catalog.dto.RatingTargetResponse;
-import com.pstracker.catalog_service.catalog.dto.RatingUpdateDto;
 import com.pstracker.catalog_service.catalog.service.RankingService;
-import com.pstracker.catalog_service.scraping.dto.CandidateSyncRequest;
+import com.pstracker.catalog_service.scraping.dto.*;
+import com.pstracker.catalog_service.scraping.service.HltbScrapingService;
 import com.pstracker.catalog_service.scraping.service.RatingScrapingService;
 import com.pstracker.catalog_service.scraping.service.ScrapingWebhookService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +26,7 @@ public class InternalWebhookController {
     private final ScrapingWebhookService scrapingWebhookService;
     private final RankingService rankingService;
     private final RatingScrapingService ratingScrapingService;
+    private final HltbScrapingService hltbScrapingService;
 
     @PostMapping("/callback")
     @Transactional
@@ -75,4 +75,18 @@ public class InternalWebhookController {
         return ResponseEntity.ok("Result saved successfully");
     }
 
+    @GetMapping("/hltb/target")
+    public ResponseEntity<HltbTargetResponse> getHltbTarget() {
+        HltbTargetResponse target = hltbScrapingService.getPendingTarget();
+        if (target == null) {
+            return ResponseEntity.noContent().build(); // 204 No Content
+        }
+        return ResponseEntity.ok(target);
+    }
+
+    @PostMapping("/hltb/update")
+    public ResponseEntity<String> updateHltbResult(@RequestBody HltbUpdateDto request) {
+        hltbScrapingService.updateHltbResult(request);
+        return ResponseEntity.ok("HLTB Result saved successfully");
+    }
 }

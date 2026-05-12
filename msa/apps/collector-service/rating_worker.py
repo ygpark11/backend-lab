@@ -8,7 +8,7 @@ import gc
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
-logger = logging.getLogger("Rating-Worker")
+logger = logging.getLogger("Metadata-Worker")
 
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -17,11 +17,8 @@ USER_AGENTS = [
 ]
 
 def generate_slug(title):
-    # 1. 소문자화 및 에디션/번들 꼬리표 제거 (슬러그 최적화)
     slug = title.lower()
     slug = re.sub(r'\b((standard|deluxe|ultimate|premium|sound|digital|special|anniversary|gold|definitive)\s*)*(edition|cut|version|bundle|pack)\b', '', slug)
-
-    # 2. 특수문자 제거 및 하이픈 연결
     slug = re.sub(r'[\'’‘´`"“”]', '', slug)
     slug = unicodedata.normalize('NFKD', slug).encode('ascii', 'ignore').decode('ascii')
     slug = re.sub(r'[^a-z0-9]+', '-', slug).strip('-')
@@ -53,37 +50,20 @@ def crawl_metacritic_single(game_title):
     target_url = f"https://www.metacritic.com/game/{slug}/"
     logger.info(f"[Metacritic] 타겟 접속 시도: {target_url}")
 
-    result = {
-        "status": "FAIL", "metaScore": None, "metaCount": None, "userScore": None, "userCount": None
-    }
+    result = {"status": "FAIL", "metaScore": None, "metaCount": None, "userScore": None, "userCount": None}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled",
-                "--js-flags=--max-old-space-size=128"
-            ]
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-blink-features=AutomationControlled", "--js-flags=--max-old-space-size=128"]
         )
 
-        context = browser.new_context(
-            user_agent=random.choice(USER_AGENTS),
-            viewport={"width": 1920, "height": 1080},
-            locale="en-US"
-        )
-
+        context = browser.new_context(user_agent=random.choice(USER_AGENTS), viewport={"width": 1920, "height": 1080}, locale="en-US")
         page = setup_stealth_page(context)
 
         try:
-            # 1. 페이지 접속
-            try:
-                response = page.goto(target_url, wait_until="commit", timeout=20000)
-            except Exception as e:
-                logger.warning(f"접속 지연, 새로고침으로 재시도: {e}")
-                response = page.reload(wait_until="commit", timeout=20000)
+            try: response = page.goto(target_url, wait_until="commit", timeout=30000)
+            except Exception: response = page.reload(wait_until="commit", timeout=30000)
 
             if response and response.status == 404:
                 logger.warning(f"[404] 게임을 찾을 수 없음: {game_title} | 시도한 URL: {target_url}")
@@ -98,7 +78,6 @@ def crawl_metacritic_single(game_title):
                 result["status"] = "BLOCKED"
                 return result
 
-            # 핵심 DOM(점수판) 렌더링을 명시적으로 기다림 + 타임아웃 시 재시도
             try:
                 page.wait_for_selector("div[data-testid='product-score']", state="attached", timeout=15000)
             except PlaywrightTimeoutError:
@@ -151,65 +130,155 @@ def crawl_metacritic_single(game_title):
 
     return result
 
+def parse_hltb_time_to_float(raw_value):
+    if not raw_value or raw_value == "--": return None
+
+    val = raw_value.replace("½", ".5").replace(" 1/2", ".5").replace("1/2", ".5").lower()
+
+    try:
+        if "hour" in val or "h" in val:
+            return float(val.replace("hours", "").replace("hour", "").replace("h", "").strip())
+        elif "min" in val or "m" in val:
+            mins = float(val.replace("mins", "").replace("min", "").replace("m", "").strip())
+            return round(mins / 60.0, 2)
+    except Exception:
+        return None
+    return None
+
+def crawl_hltb_single(game_title):
+    encoded_query = urllib.parse.quote(game_title)
+    target_url = f"https://howlongtobeat.com/?q={encoded_query}"
+
+    logger.info(f"[HLTB] 타겟 접속 시도: {game_title}")
+
+    result = {"status": "FAIL", "mainStory": None, "mainExtra": None, "completionist": None}
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-blink-features=AutomationControlled", "--js-flags=--max-old-space-size=128"]
+        )
+        context = browser.new_context(user_agent=random.choice(USER_AGENTS), viewport={"width": 1920, "height": 1080}, locale="en-US")
+        page = setup_stealth_page(context)
+
+        try:
+            page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+
+            try:
+                page.wait_for_selector("li[class*='search_list'], h3:has-text('No Results Found')", timeout=30000)
+            except Exception:
+                result["status"] = "BLOCKED"
+                return result
+
+            if page.locator("h3:has-text('No Results Found')").count() > 0:
+                result["status"] = "NOT_FOUND"
+                return result
+
+            cards = page.locator("li[class*='search_list']")
+            if cards.count() == 0:
+                result["status"] = "NOT_FOUND"
+                return result
+
+            first_card = cards.nth(0)
+            tidbits_loc = first_card.locator("div[class*='tidbit']")
+            tidbit_texts = tidbits_loc.all_text_contents()
+
+            playtimes = {}
+            for i in range(0, len(tidbit_texts), 2):
+                if i + 1 < len(tidbit_texts):
+                    label = tidbit_texts[i].strip()
+                    playtimes[label] = parse_hltb_time_to_float(tidbit_texts[i+1].strip())
+
+            result["mainStory"] = playtimes.get("Main Story")
+            result["mainExtra"] = playtimes.get("Main + Extra")
+            result["completionist"] = playtimes.get("Completionist")
+            result["status"] = "SUCCESS"
+
+            logger.info(f"[HLTB 성공] {game_title} -> Main: {result['mainStory']}, Extra: {result['mainExtra']}, 100%: {result['completionist']}")
+
+        except Exception as e:
+            logger.error(f"[HLTB] 파싱 중 에러 발생: {e}")
+            result["status"] = "ERROR"
+        finally:
+            try: page.close()
+            except: pass
+            try: context.close()
+            except: pass
+            try: browser.close()
+            except: pass
+            gc.collect()
+
+    return result
+
 def start_polling(base_url, secret_key, check_if_busy, set_rating_running, crawler_lock):
     logger.info("[Stealth Worker] 메타크리틱 평점 수집 워커가 백그라운드에서 가동됩니다.")
 
-    API_TARGET_URL = f"{base_url}/api/internal/scraping/ratings/target"
-    API_UPDATE_URL = f"{base_url}/api/internal/scraping/ratings/update"
     HEADERS = {"X-Internal-Secret": secret_key}
+
+    MC_TARGET_URL = f"{base_url}/api/internal/scraping/ratings/target"
+    MC_UPDATE_URL = f"{base_url}/api/internal/scraping/ratings/update"
+    HLTB_TARGET_URL = f"{base_url}/api/internal/scraping/hltb/target"
+    HLTB_UPDATE_URL = f"{base_url}/api/internal/scraping/hltb/update"
 
     while True:
         sleep_time = random.randint(150, 180)
         time.sleep(sleep_time)
 
-        # check_if_busy()와 set_rating_running(True)을 같은 락 안에서 원자적으로 처리
-        # → 체크 후 설정 사이에 배치/랭킹 트리거가 끼어드는 레이스 컨디션 방지
         with crawler_lock:
             if check_if_busy():
-                logger.debug("메인 작업 또는 VIP 대기 중. 평점 워커는 턴을 넘깁니다.")
+                logger.debug("메인 작업 또는 VIP 대기 중. 메타데이터 워커는 턴을 넘깁니다.")
                 continue
             set_rating_running(True)
 
         try:
+            # ---------------------------------------------------------
+            # Phase 1: 메타크리틱 (Metacritic)
+            # ---------------------------------------------------------
+            try:
+                res_mc = requests.get(MC_TARGET_URL, headers=HEADERS, timeout=15)
 
-            # 1. 수집 타겟 요청
-            res = requests.get(API_TARGET_URL, headers=HEADERS, timeout=10)
+                if res_mc.status_code == 204:
+                    pass
+                elif res_mc.status_code != 200 or not res_mc.text:
+                    logger.error(f"[메타크리틱] 1호기 타겟 요청 실패: HTTP {res_mc.status_code}")
+                else:
+                    job = res_mc.json()
+                    mc_result = crawl_metacritic_single(job['searchTitle'])
 
-            # 1호기가 204 No Content를 주면 조용히 다음으로 넘김
-            if res.status_code == 204:
-                continue
+                    payload = {
+                        "jobId": job['jobId'], "gameId": job['gameId'], "status": mc_result["status"],
+                        "metaScore": mc_result["metaScore"], "metaCount": mc_result["metaCount"],
+                        "userScore": mc_result["userScore"], "userCount": mc_result["userCount"]
+                    }
+                    requests.post(MC_UPDATE_URL, json=payload, headers=HEADERS, timeout=15)
+                    logger.info(f"메타크리틱 업데이트 완료 (GameID: {job['gameId']})")
+                    human_sleep(2.0, 3.0)
+            except Exception as e:
+                logger.error(f"메타크리틱 Phase 에러 (진행 속행): {e}")
 
-            # 그 외의 에러 처리
-            if res.status_code != 200 or not res.json():
-                logger.error(f"1호기 타겟 요청 실패: HTTP {res.status_code}")
-                continue
+            # ---------------------------------------------------------
+            # Phase 2: HowLongToBeat (HLTB)
+            # ---------------------------------------------------------
+            try:
+                res_hltb = requests.get(HLTB_TARGET_URL, headers=HEADERS, timeout=15)
 
-            # 정상적으로 일거리를 받아온 경우
-            job = res.json()
-            job_id = job['jobId']
-            game_id = job['gameId']
-            game_title = job['title']
+                if res_hltb.status_code == 204:
+                    pass
+                elif res_hltb.status_code != 200 or not res_hltb.text:
+                    logger.error(f"[HLTB] 1호기 타겟 요청 실패: HTTP {res_hltb.status_code}")
+                else:
+                    job = res_hltb.json()
+                    hltb_result = crawl_hltb_single(job['searchTitle'])
 
-            # 2. 메타크리틱 수집
-            result = crawl_metacritic_single(game_title)
-
-            # 3. 결과 전송
-            payload = {
-                "jobId": job_id,
-                "gameId": game_id,
-                "status": result["status"],
-                "metaScore": result["metaScore"],
-                "metaCount": result["metaCount"],
-                "userScore": result["userScore"],
-                "userCount": result["userCount"]
-            }
-
-            post_res = requests.post(API_UPDATE_URL, json=payload, headers=HEADERS, timeout=10)
-
-            if post_res.status_code == 200:
-                logger.info(f"평점 수집 결과 전송 완료 (GameID: {game_id})")
-            else:
-                logger.error(f"결과 전송 실패: HTTP {post_res.status_code}")
+                    payload = {
+                        "jobId": job['jobId'], "gameId": job['gameId'], "status": hltb_result["status"],
+                        "mainStory": hltb_result["mainStory"], "mainExtra": hltb_result["mainExtra"],
+                        "completionist": hltb_result["completionist"]
+                    }
+                    requests.post(HLTB_UPDATE_URL, json=payload, headers=HEADERS, timeout=15)
+                    logger.info(f"HLTB 업데이트 완료 (GameID: {job['gameId']})")
+            except Exception as e:
+                logger.error(f"HLTB Phase 에러: {e}")
 
         except Exception as e:
             logger.error(f"스텔스 워커 루프 에러: {e}")

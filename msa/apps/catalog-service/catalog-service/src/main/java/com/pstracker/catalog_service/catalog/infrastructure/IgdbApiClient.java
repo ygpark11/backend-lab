@@ -50,7 +50,7 @@ public class IgdbApiClient {
         IgdbGameResponse result = null;
 
         // 1. 인코딩 찌꺼기 및 구두점만 제거 (에디션 등 원본 유지)
-        String stage1Title = GameTitleNormalizer.cleanMojibakeOnly(gameTitle);
+        String stage1Title = GameTitleNormalizer.cleanMojibakeOnly(gameTitle, false);
         if (hasText(stage1Title)) {
             result = searchByName(stage1Title, "[Stage 1] Exact/Edition Search");
             if (result != null) return result;
@@ -66,7 +66,7 @@ public class IgdbApiClient {
 
         // 3. 핵심 타이틀만 추출
         String rawCoreTitle = GameTitleNormalizer.extractCoreTitle(gameTitle);
-        String stage3Title = GameTitleNormalizer.normalizeAggressive(GameTitleNormalizer.cleanMojibakeOnly(rawCoreTitle));
+        String stage3Title = GameTitleNormalizer.normalizeAggressive(GameTitleNormalizer.cleanMojibakeOnly(rawCoreTitle, false));
 
         if (hasText(stage3Title) && !stage3Title.equals(stage2Title)) {
             result = searchByName(stage3Title, "[Stage 3] Core Keyword Search");

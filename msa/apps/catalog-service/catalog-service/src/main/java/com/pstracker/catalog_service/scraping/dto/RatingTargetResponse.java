@@ -1,4 +1,4 @@
-package com.pstracker.catalog_service.catalog.dto;
+package com.pstracker.catalog_service.scraping.dto;
 
 public record RatingTargetResponse(
         Long jobId,

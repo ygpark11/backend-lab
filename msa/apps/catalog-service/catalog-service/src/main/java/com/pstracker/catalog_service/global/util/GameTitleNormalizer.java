@@ -6,16 +6,27 @@ import static org.springframework.util.StringUtils.hasText;
 
 public class GameTitleNormalizer {
 
-    public static String cleanMojibakeOnly(String rawTitle) {
+    public static String cleanMojibakeOnly(String rawTitle, boolean isForMetacritic) {
         if (!hasText(rawTitle)) return "";
-        return rawTitle
+
+        String cleaned = rawTitle
                 .replaceAll("\u0080\u0099", "'").replaceAll("â\u0080\u0099", "'")
                 .replaceAll("\u0080\u009C", "\"").replaceAll("\u0080\u009D", "\"")
                 .replaceAll("’", "'").replaceAll("‘", "'")
                 .replaceAll("YEAH! YOU WANT \\\\\\\\", "")
                 .replaceAll("\u0084", " ").replaceAll("[Â„€“”™®©â¢]", " ")
-                .replaceAll("＆", "&").replaceAll("\\t", " ")
-                .replaceAll("[:,&+–-]", " ")
+                .replaceAll("\\t", " ");
+
+        if (isForMetacritic) {
+            // 메타크리틱은 & 기호를 " and "로 풀어써야 검색이 잘 됨
+            cleaned = cleaned.replaceAll("[＆&]", " and ");
+        } else {
+            // HLTB 등은 & 기호를 유지해야 함 (전각 기호만 반각으로 통일)
+            cleaned = cleaned.replaceAll("＆", "&");
+        }
+
+        return cleaned
+                .replaceAll("[:,+–-]", " ")
                 .replaceAll("\\s+", " ").strip();
     }
 

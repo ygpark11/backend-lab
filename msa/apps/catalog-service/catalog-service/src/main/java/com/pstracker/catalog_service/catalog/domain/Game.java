@@ -133,9 +133,6 @@ public class Game {
     @Column(name = "vibe_tags", columnDefinition = "json")
     private List<String> vibeTags;
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
-    private List<GamePriceHistory> priceHistories = new ArrayList<>();
-
     @ElementCollection(targetClass = Platform.class, fetch = FetchType.LAZY)
     @CollectionTable(
             name = "game_platforms",
@@ -151,8 +148,20 @@ public class Game {
     @Column(name = "most_downloaded_rank")
     private Integer mostDownloadedRank;
 
+    @Column(name = "hltb_main_story")
+    private Double hltbMainStory;
+
+    @Column(name = "hltb_main_extra")
+    private Double hltbMainExtra;
+
+    @Column(name = "hltb_completionist")
+    private Double hltbCompletionist;
+
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<GameGenre> gameGenres = new HashSet<>();
+
+    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    private List<GamePriceHistory> priceHistories = new ArrayList<>();
 
     public static String extractFamilyId(String psStoreId) {
         if (!hasText(psStoreId)) return null;
@@ -353,11 +362,9 @@ public class Game {
         if (this.dislikeCount > 0) this.dislikeCount--;
     }
 
-    public void updateRank(String rankingType, Integer rank) {
-        if ("BEST_SELLER".equals(rankingType)) {
-            this.bestSellerRank = rank;
-        } else if ("MOST_DOWNLOADED".equals(rankingType)) {
-            this.mostDownloadedRank = rank;
-        }
+    public void updatePlayTimes(Double main, Double extra, Double completionist) {
+        this.hltbMainStory = main;
+        this.hltbMainExtra = extra;
+        this.hltbCompletionist = completionist;
     }
 }

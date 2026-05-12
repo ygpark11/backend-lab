@@ -1,9 +1,9 @@
-package com.pstracker.catalog_service.catalog.dto;
+package com.pstracker.catalog_service.scraping.dto;
 
 public record RatingUpdateDto(
         Long jobId,
         Long gameId,
-        String status, // SUCCESS, NOT_FOUND, BLOCKED, ERROR 등
+        String status,
         Integer metaScore,
         Integer metaCount,
         Double userScore,
