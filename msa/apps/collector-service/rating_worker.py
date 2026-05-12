@@ -147,7 +147,9 @@ def parse_hltb_time_to_float(raw_value):
     return None
 
 def crawl_hltb_single(game_title):
-    encoded_query = urllib.parse.quote(game_title)
+    pre_processed_title = game_title.replace(" ", "%20")
+    encoded_query = urllib.parse.quote(pre_processed_title)
+
     target_url = f"https://howlongtobeat.com/?q={encoded_query}"
     logger.info(f"[HLTB] 타겟 접속 시도: {game_title} | URL: {target_url}")
 
