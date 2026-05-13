@@ -35,10 +35,8 @@ def setup_stealth_page(context):
 def crawl_hltb_times():
     # 💡 수정 1: 테스트용 검색어(정상 케이스 + 실패 케이스) 세팅
     search_queries = [
-        "Ghost of Tsushima DIRECTOR'S CUT",
-        "Like a Dragon: Pirate Yakuza in Hawaii",
-        "Marvel's Spider-Man Remastered",
-        "godd oof warr"  # 검색 실패 테스트용 오타
+        "Assassin's Creed Shadows",
+        "Like a Dragon: Pirate Yakuza in Hawaii"
     ]
 
     results = []
@@ -69,6 +67,7 @@ def crawl_hltb_times():
 
                 encoded_query = urllib.parse.quote(query)
                 target_url = f"https://howlongtobeat.com/?q={encoded_query}"
+                logger.info(f"[HLTB] 타겟 접속 시도: {target_url}")
 
                 page.goto(target_url, wait_until="domcontentloaded")
 

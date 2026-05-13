@@ -38,7 +38,7 @@ def setup_stealth_page(context):
     def route_intercept(route):
         r_type = route.request.resource_type
         # 텍스트(점수)만 필요하므로 쓸데없는 자원 전면 차단
-        if r_type in ["image", "media", "font"]:
+        if r_type in ["image", "media", "font", "stylesheet"]:
             route.abort()
             return
         route.continue_()
@@ -147,8 +147,7 @@ def parse_hltb_time_to_float(raw_value):
     return None
 
 def crawl_hltb_single(game_title):
-    pre_processed_title = game_title.replace(" ", "%20")
-    encoded_query = urllib.parse.quote(pre_processed_title)
+    encoded_query = urllib.parse.quote(game_title)
 
     target_url = f"https://howlongtobeat.com/?q={encoded_query}"
     logger.info(f"[HLTB] 타겟 접속 시도: {game_title} | URL: {target_url}")
