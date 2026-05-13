@@ -30,12 +30,13 @@ public record GameDetailResponse(
         @JsonProperty("isPs5ProEnhanced")
         boolean isPs5ProEnhanced,
 
-        // [일자 정보]
+        // 일자 정보
         LocalDate saleEndDate,
         LocalDate releaseDate,
 
         String pioneerName,
 
+        // 평점 정보
         Integer mcMetaScore,
         Integer mcMetaCount,
         Double mcUserScore,
@@ -45,9 +46,14 @@ public record GameDetailResponse(
         Double igdbUserScore,
         Integer igdbUserCount,
 
+        // HLTB 플레이타임
+        Double hltbMainStory,
+        Double hltbMainExtra,
+        Double hltbCompletionist,
+
         List<VibeTagDto> vibeTags,
 
-        // [투표 정보]
+        // 투표 정보
         Integer likeCount,
         Integer dislikeCount,
         VoteType userVote,
@@ -56,7 +62,7 @@ public record GameDetailResponse(
         Integer myTargetPrice,
         LocalDateTime createdAt,
 
-        // [판정 및 차트]
+        // 판정 및 차트
         PriceVerdict priceVerdict, // 판정 결과
         String verdictMessage,     // 판정 메시지
         List<PriceHistoryDto> priceHistory, // 차트용 데이터
@@ -66,14 +72,16 @@ public record GameDetailResponse(
         String defenseTier,
         String defenseMessage,
 
-        // [기타]
+        // 기타
         List<String> platforms,
         List<String> genres,
         @JsonProperty("inCatalog")
         boolean inCatalog,
+
+        // 연관 게임 리스트
         List<FamilyGameDto> familyGames,
 
-        // [추천 게임 리스트]
+        // 추천 게임 리스트
         List<GameSearchResultDto> relatedGames
 ) implements Serializable {
 
@@ -92,6 +100,7 @@ public record GameDetailResponse(
                 this.saleEndDate, this.releaseDate, this.pioneerName,
                 this.mcMetaScore, this.mcMetaCount, this.mcUserScore, this.mcUserCount,
                 this.igdbCriticScore, this.igdbCriticCount, this.igdbUserScore, this.igdbUserCount,
+                this.hltbMainStory, this.hltbMainExtra, this.hltbCompletionist,
                 this.vibeTags,
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
@@ -156,6 +165,7 @@ public record GameDetailResponse(
                 game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(),
                 game.getMcMetaScore(), game.getMcMetaCount(), game.getMcUserScore(), game.getMcUserCount(),
                 game.getIgdbCriticScore(), game.getIgdbCriticCount(), game.getIgdbUserScore(), game.getIgdbUserCount(),
+                game.getHltbMainStory(), game.getHltbMainExtra(), game.getHltbCompletionist(),
                 vibeTags,
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, null, game.getCreatedAt(), verdict, verdictMsg, history,

@@ -33,11 +33,13 @@ public class GlobalCacheConfig {
     public static final String INSIGHT_KEY_IN_CATALOG = "'insight_in_catalog'";
     public static final String INSIGHT_KEY_PLUS_EXCLUSIVE = "'insight_plus_exclusive'";
 
+    public static final String INSIGHT_KEY_PT_SHORT = "'ptShort'";
+    public static final String INSIGHT_KEY_PT_MEDIUM = "'ptMedium'";
+    public static final String INSIGHT_KEY_PT_LONG = "'ptLong'";
+    public static final String INSIGHT_KEY_PT_EPIC = "'ptEpic'";
+
     @Bean
     public CacheManager cacheManager(MeterRegistry meterRegistry) {
-        // 네이티브 Caffeine Cache를 먼저 생성 후 Micrometer에 수동 등록
-        // SimpleCacheManager는 CaffeineCacheManager와 달리 자동 메트릭 바인딩 미지원 → 직접 등록 필요
-
         // 1. 게임 상세 캐시 (전체 게임 수 ~2,000개 기준, 1GB 서버 메모리 고려)
         Cache<Object, Object> gameDetailNative = Caffeine.newBuilder()
                 .expireAfterWrite(24, TimeUnit.HOURS)

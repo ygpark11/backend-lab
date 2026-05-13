@@ -8,6 +8,7 @@ import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertTriangle,
     CheckSquare,
+    Clock,
     ExternalLink,
     Gamepad2,
     Heart,
@@ -121,7 +122,7 @@ const WishlistPage = () => {
         setLoading(true);
         try {
             const response = await client.get('/api/v1/wishlists', {
-                params: { page: pageNumber, size: 20, sort: 'createdAt,desc' }
+                params: { page: pageNumber, size: 30, sort: 'createdAt,desc' }
             });
             if (pageNumber === 0) {
                 setGames(response.data.content);
@@ -206,6 +207,11 @@ const WishlistPage = () => {
         return acc + (saving > 0 ? saving : 0);
     }, 0);
 
+    const totalPlayTime = games.reduce((acc, game) => {
+        if (!game.hltbMainStory) return acc;
+        return acc + game.hltbMainStory;
+    }, 0);
+
     if (loading && page === 0) return <div className="min-h-screen pt-20 flex justify-center bg-base"><PSLoader /></div>;
 
     return (
@@ -258,6 +264,29 @@ const WishlistPage = () => {
                                             {totalSavings.toLocaleString()}
                                         </span>
                                         <span className="text-secondary font-bold text-sm ml-1">세이브!</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!loading && totalPlayTime > 0 && (
+                        <div className="relative flex-1 md:flex-none group overflow-hidden bg-surface border border-divider p-5 pr-8 rounded-2xl shadow-sm transition-all hover:border-[color:var(--bento-purple-border-hover)] hover:[box-shadow:var(--bento-purple-shadow)] md:min-w-[280px]">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--bento-purple-from)] rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 transition-colors"></div>
+
+                            <div className="flex items-center gap-5 relative z-10">
+                                <div className="bg-[var(--bento-purple-from)] border border-[color:var(--bento-purple-border)] p-3.5 rounded-xl shadow-sm group-hover:scale-110 transition-transform">
+                                    <Clock className="w-7 h-7 text-purple-600 dark:text-purple-500 drop-shadow-sm" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-purple-600 dark:text-purple-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 mb-0.5">
+                                        <Timer className="w-3.5 h-3.5" /> Time Required
+                                    </span>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-primary font-black text-4xl tracking-tight leading-none drop-shadow-md">
+                                            {Math.round(totalPlayTime).toLocaleString()}
+                                        </span>
+                                        <span className="text-secondary font-bold text-sm ml-1">시간 순삭!</span>
                                     </div>
                                 </div>
                             </div>

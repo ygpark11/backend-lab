@@ -9,6 +9,7 @@ import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
@@ -65,7 +66,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         bestSellerEq(condition.getIsBestSeller()),
                         mostDownloadedEq(condition.getIsMostDownloaded()),
                         isClosingSoon(condition.getIsClosingSoon()),
-                        isNewDiscount(condition.getIsNewDiscount())
+                        isNewDiscount(condition.getIsNewDiscount()),
+                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime())
                 )
                 .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
                 .offset(pageable.getOffset())
@@ -90,7 +92,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         bestSellerEq(condition.getIsBestSeller()),
                         mostDownloadedEq(condition.getIsMostDownloaded()),
                         isClosingSoon(condition.getIsClosingSoon()),
-                        isNewDiscount(condition.getIsNewDiscount())
+                        isNewDiscount(condition.getIsNewDiscount()),
+                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -149,10 +152,12 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     private BooleanExpression nameContains(String keyword) {
         if (!hasText(keyword)) return null;
 
-        String strippedKeyword = keyword.replaceAll("\\s+", "");
+        String strippedKeyword = keyword.strip().replaceAll("\\s+", "");
 
-        return game.name.containsIgnoreCase(keyword)
-                .or(game.englishName.containsIgnoreCase(keyword))
+        return Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.name)
+                    .containsIgnoreCase(strippedKeyword)
+                .or(Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.englishName)
+                    .containsIgnoreCase(strippedKeyword))
                 .or(game.chosungName.containsIgnoreCase(strippedKeyword));
     }
 
@@ -246,6 +251,13 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 ).exists();
     }
 
+    private BooleanExpression playTimeBetween(Double minPlayTime, Double maxPlayTime) {
+        if (minPlayTime != null && maxPlayTime != null) return game.hltbMainStory.between(minPlayTime, maxPlayTime);
+        else if (minPlayTime != null) return game.hltbMainStory.goe(minPlayTime);
+        else if (maxPlayTime != null) return game.hltbMainStory.loe(maxPlayTime);
+        return null;
+    }
+
     private OrderSpecifier<?>[] getOrderSpecifiers(Sort sort, GameSearchCondition condition) {
         List<OrderSpecifier<?>> orders = new ArrayList<>();
 
@@ -267,6 +279,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.mcMetaScore.coalesce(game.igdbCriticScore)));
                 case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate, OrderSpecifier.NullHandling.NullsLast));
                 case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, game.releaseDate));
+                case "playTime" -> orders.add(new OrderSpecifier<>(direction, game.hltbMainStory, OrderSpecifier.NullHandling.NullsLast));
                 default ->orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
             }
         }

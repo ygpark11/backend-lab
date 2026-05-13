@@ -21,6 +21,7 @@ import {
     CalendarDays,
     Check,
     Circle,
+    Clock,
     Crosshair,
     ExternalLink,
     Gamepad2,
@@ -44,6 +45,7 @@ import {
     TrendingDown,
     TrendingUp,
     Triangle,
+    Trophy,
     Users,
     X,
     Youtube
@@ -328,6 +330,15 @@ export default function GameDetailPage() {
     const mcDiff = (game.mcMetaScore && game.mcUserScore) ? Math.abs(game.mcMetaScore - (game.mcUserScore * 10)) : 0;
     const igdbDiff = (game.igdbCriticScore && game.igdbUserScore) ? Math.abs(game.igdbCriticScore - (game.igdbUserScore * 10)) : 0;
     const isDiscrepancyWarning = mcDiff >= 15 || igdbDiff >= 15;
+
+    const formatPlayTime = (hours) => {
+        if (!hours) return '-';
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        if (h === 0) return `${m}m`;
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}m`;
+    };
 
     const tagStyles = [
         "text-cyan-400 border-cyan-500/40 hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]",
@@ -850,6 +861,55 @@ export default function GameDetailPage() {
                             )}
 
                         </div>
+
+                        {/* Playtime 영역 */}
+                        {(game.hltbMainStory || game.hltbMainExtra || game.hltbCompletionist) ? (
+                            <div className="bg-surface border border-divider p-4 sm:p-5 rounded-xl shadow-md relative overflow-hidden mt-4 group">
+                                {/* 배경 은은한 효과 (PS Vibe) */}
+                                <div className="absolute -top-10 -right-10 w-32 h-32 bg-ps-blue/5 rounded-full blur-2xl group-hover:bg-ps-blue/10 transition-colors duration-700 pointer-events-none"></div>
+
+                                <div className="relative z-10">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                                            <Clock className="w-4 h-4 text-ps-blue" /> Playtime Radar
+                                        </h3>
+                                        <span className="text-[9px] sm:text-[10px] font-black text-white bg-secondary/80 dark:bg-white/20 px-2 py-0.5 rounded shadow-inner tracking-widest">HLTB</span>
+                                    </div>
+
+                                    {/* 대시보드 계기판 3분할 영역 */}
+                                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                                        {/* Main Story */}
+                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-ps-blue/40 hover:bg-ps-blue/5">
+                                            <Gamepad2 className="absolute -bottom-1 -right-1 w-8 h-8 text-ps-blue opacity-5 -rotate-12 pointer-events-none" />
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">MAIN</span>
+                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbMainStory)}</span>
+                                        </div>
+
+                                        {/* Main + Extra */}
+                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-purple-500/40 hover:bg-purple-500/5">
+                                            <Layers className="absolute -bottom-1 -right-1 w-8 h-8 text-purple-500 opacity-5 -rotate-12 pointer-events-none" />
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">+ EXTRA</span>
+                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbMainExtra)}</span>
+                                        </div>
+
+                                        {/* Completionist */}
+                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-yellow-500/40 hover:bg-yellow-500/5">
+                                            <Trophy className="absolute -bottom-1 -right-1 w-8 h-8 text-yellow-500 opacity-5 -rotate-12 pointer-events-none" />
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">PLATINUM</span>
+                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbCompletionist)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            /* 데이터 없을 때의 Null 방어 UI */
+                            <div className="bg-surface/30 border-2 border-dashed border-divider p-4 sm:p-5 rounded-xl flex items-center justify-center mt-4 min-h-[120px]">
+                                <div className="text-center opacity-50 flex flex-col items-center">
+                                    <Clock className="w-5 h-5 text-secondary mb-1.5" />
+                                    <span className="text-[11px] sm:text-xs font-bold text-primary whitespace-nowrap">플레이타임 분석 중</span>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="bg-surface border border-divider p-5 sm:p-6 rounded-2xl backdrop-blur-md md:backdrop-blur-xl shadow-md relative overflow-hidden group/verdict mt-4">
                             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-secondary to-transparent blur-[1px]"></div>

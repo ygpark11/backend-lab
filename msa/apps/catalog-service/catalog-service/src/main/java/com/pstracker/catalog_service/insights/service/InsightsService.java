@@ -129,4 +129,24 @@ public class InsightsService {
     public long getPlusExclusiveCount() {
         return gameRepository.countPlusExclusiveDeals();
     }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PT_SHORT)
+    public long getShortPlayTimeCount() {
+        return gameRepository.countShortPlayTimeGames();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PT_MEDIUM)
+    public long getMediumPlayTimeCount() {
+        return gameRepository.countMediumPlayTimeGames();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PT_LONG)
+    public long getLongPlayTimeCount() {
+        return gameRepository.countLongPlayTimeGames();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PT_EPIC)
+    public long getEpicPlayTimeCount() {
+        return gameRepository.countEpicPlayTimeGames();
+    }
 }

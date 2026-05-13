@@ -47,6 +47,8 @@ public class WishlistDto {
     private Integer igdbCriticScore;
     private Double igdbUserScore;
 
+    private Double hltbMainStory;
+
     @QueryProjection
     public WishlistDto(Long id, Long gameId, String gameName, String gameImgUrl,
                        Integer originalPrice, Integer currentPrice, Integer discountRate,
@@ -54,6 +56,7 @@ public class WishlistDto {
                        boolean isPlusExclusive, LocalDate saleEndDate,
                        Integer mcMetaScore, Double mcUserScore,
                        Integer igdbCriticScore, Double igdbUserScore,
+                       Double hltbMainStory,
                        boolean inCatalog, String pioneerName,
                        LocalDateTime createdAt, LocalDateTime wishedAt,
                        boolean isPs5ProEnhanced, List<String> vibeTags) {
@@ -78,6 +81,8 @@ public class WishlistDto {
         this.mcUserScore = mcUserScore;
         this.igdbCriticScore = igdbCriticScore;
         this.igdbUserScore = igdbUserScore;
+
+        this.hltbMainStory = hltbMainStory;
 
         if (mcMetaScore != null && mcMetaScore > 0) {
             this.displayScore = mcMetaScore;

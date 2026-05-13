@@ -64,6 +64,7 @@ public class CatalogService {
 
         // 2. 게임 엔티티 조회 또는 생성
         Game game = findOrCreateGame(request);
+        boolean isNewGame = game.getId() == null;
 
         Integer oldOriginalPrice = game.getOriginalPrice();
 
@@ -100,7 +101,10 @@ public class CatalogService {
         // 다음 조회 시 최신 데이터로 다시 캐싱됨
         gameReadService.evictGameDetailCache(game.getId());
 
-        if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1))) {
+        if (isNewGame) {
+            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.METACRITIC);
+            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.HLTB);
+        } else if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1))) {
             requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.METACRITIC);
             requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.HLTB);
         }
@@ -360,7 +364,7 @@ public class CatalogService {
         // 1. 순수 게임 정보 가져오기 (캐시 적용됨)
         GameDetailResponse baseResponse = gameReadService.getBaseGameDetail(gameId);
 
-        // 2. 유저별 동적 데이터 순차 조회 (단순 인덱스 조회 3개, 커넥션 1개로 처리)
+        // 2. 유저별 동적 데이터 순차 조회
         Optional<Wishlist> myWish = memberId != null
                 ? wishlistRepository.findByMemberIdAndGameId(memberId, gameId)
                 : Optional.empty();
@@ -470,7 +474,7 @@ public class CatalogService {
         }
 
         // 2. 예전에 수집된 이력(DONE, FAILED)이 있다면 PENDING 으로 덮어쓰기
-        List<CrawlJob.JobStatus> finishedStatuses = List.of(CrawlJob.JobStatus.DONE, CrawlJob.JobStatus.FAILED);
+        List<CrawlJob.JobStatus> finishedStatuses = List.of(CrawlJob.JobStatus.DONE, CrawlJob.JobStatus.FAILED, CrawlJob.JobStatus.ERROR);
         int updatedRows = crawlJobRepository.requeueFinishedJob(
                 gameId,
                 targetType,

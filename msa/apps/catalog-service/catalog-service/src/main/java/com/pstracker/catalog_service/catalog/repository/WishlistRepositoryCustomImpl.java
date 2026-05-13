@@ -29,6 +29,7 @@ public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
                         game.isPlusExclusive, game.saleEndDate,
                         game.mcMetaScore, game.mcUserScore,
                         game.igdbCriticScore, game.igdbUserScore,
+                        game.hltbMainStory,
                         game.inCatalog, game.pioneerName,
                         game.createdAt, wishlist.createdAt,
                         game.isPs5ProEnhanced, game.vibeTags

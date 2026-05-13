@@ -12,6 +12,7 @@ import {
     Globe,
     Heart,
     Info,
+    Layers,
     Plus,
     Radio,
     RefreshCw,
@@ -346,11 +347,102 @@ const InsightsPage = () => {
                         </div>
                     </section>
 
-
                     {/* ==========================================
-                        Section 3: PlayStation Ecosystem
+                        Section 3: Playtime Distribution (볼륨 분포도)
                     ========================================== */}
                     <section className="animate-fadeIn" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-ps-blue" /> Playtime Distribution
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'PLAYTIME' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* 주말 컷 (0-10h) */}
+                            <div onClick={() => navigate('/games?minPlayTime=0&maxPlayTime=10')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-yellow-500/50 hover:shadow-[0_0_20px_rgba(234,179,8,0.1)] transition-all duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-yellow-500/10 text-yellow-500 group-hover:scale-110 transition-transform shadow-sm">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-yellow-600 dark:text-yellow-400 font-bold uppercase tracking-wider mb-0.5">0-10h</p>
+                                        <h3 className="text-sm font-black text-primary">주말 컷</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                    <div className="text-3xl font-black text-primary tracking-tighter">
+                                        {stats.ptShortCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+
+                            {/* 정주행 (10-30h) */}
+                            <div onClick={() => navigate('/games?minPlayTime=10&maxPlayTime=30')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)] transition-all duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-blue-500/10 text-ps-blue group-hover:scale-110 transition-transform shadow-sm">
+                                        <Gamepad2 className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-0.5">10-30h</p>
+                                        <h3 className="text-sm font-black text-primary">정주행</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                    <div className="text-3xl font-black text-primary tracking-tighter">
+                                        {stats.ptMediumCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+
+                            {/* 각 잡고 (30-100h) */}
+                            <div onClick={() => navigate('/games?minPlayTime=30&maxPlayTime=100')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-purple-500/50 hover:shadow-[0_0_20px_rgba(168,85,247,0.1)] transition-all duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500 group-hover:scale-110 transition-transform shadow-sm">
+                                        <Layers className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider mb-0.5">30-100h</p>
+                                        <h3 className="text-sm font-black text-primary">각 잡고</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                    <div className="text-3xl font-black text-primary tracking-tighter">
+                                        {stats.ptLongCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+
+                            {/* 타임머신 (100h+) */}
+                            <div onClick={() => navigate('/games?minPlayTime=100')} className="relative overflow-hidden rounded-2xl bg-glass backdrop-blur-md border border-divider p-5 cursor-pointer group hover:border-orange-500/50 hover:shadow-[0_0_20px_rgba(249,115,22,0.1)] transition-all duration-300">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="p-2 rounded-lg bg-orange-500/10 text-orange-500 group-hover:scale-110 transition-transform shadow-sm">
+                                        <Trophy className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-orange-600 dark:text-orange-400 font-bold uppercase tracking-wider mb-0.5">100h+</p>
+                                        <h3 className="text-sm font-black text-primary">타임머신</h3>
+                                    </div>
+                                </div>
+                                <div className="flex items-end justify-between">
+                                    <div className="text-3xl font-black text-primary tracking-tighter">
+                                        {stats.ptEpicCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* ==========================================
+                        Section 4: PlayStation Ecosystem
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
                         <div className="flex items-center gap-2 mb-4">
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Globe className="w-4 h-4 text-ps-blue" /> PlayStation Ecosystem
@@ -415,9 +507,9 @@ const InsightsPage = () => {
                     </section>
 
                     {/* ==========================================
-                        Section 4: System Matrix (시스템 현황)
+                        Section 5: System Matrix (시스템 현황)
                     ========================================== */}
-                    <section className="animate-fadeIn" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+                    <section className="animate-fadeIn" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
                         <div className="flex items-center gap-2 mb-4">
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Database className="w-4 h-4 text-ps-blue" /> System Matrix

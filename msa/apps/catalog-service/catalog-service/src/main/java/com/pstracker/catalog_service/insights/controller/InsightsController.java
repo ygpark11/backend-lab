@@ -61,6 +61,12 @@ public class InsightsController {
         // 12. PLUS 전용 할인 게임 수
         response.put("plusExclusiveCount", insightsService.getPlusExclusiveCount());
 
+        // 13. 플레이타임 분포 구간별 카운트
+        response.put("ptShortCount", insightsService.getShortPlayTimeCount());
+        response.put("ptMediumCount", insightsService.getMediumPlayTimeCount());
+        response.put("ptLongCount", insightsService.getLongPlayTimeCount());
+        response.put("ptEpicCount", insightsService.getEpicPlayTimeCount());
+
         return ResponseEntity.ok(response);
     }
 

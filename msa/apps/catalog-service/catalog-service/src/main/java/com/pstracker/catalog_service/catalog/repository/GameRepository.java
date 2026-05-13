@@ -103,4 +103,16 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMappingDto(g.psStoreId, g.id) " +
             "FROM Game g WHERE g.psStoreId IN :psStoreIds")
     List<GameIdMappingDto> findGameIdsByPsStoreIds(@Param("psStoreIds") List<String> psStoreIds);
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 0 AND g.hltbMainStory <= 10")
+    long countShortPlayTimeGames();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 10 AND g.hltbMainStory <= 30")
+    long countMediumPlayTimeGames();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 30 AND g.hltbMainStory <= 100")
+    long countLongPlayTimeGames();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 100")
+    long countEpicPlayTimeGames();
 }

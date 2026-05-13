@@ -40,4 +40,7 @@ public class GameSearchCondition {
 
     // 마감 임박
     private Boolean isClosingSoon;
+
+    private Double minPlayTime;
+    private Double maxPlayTime;
 }
