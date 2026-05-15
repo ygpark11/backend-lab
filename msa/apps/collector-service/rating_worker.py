@@ -169,10 +169,11 @@ def crawl_hltb_single(game_title):
         try:
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
-            # domcontentloaded 직후 "No Results Found"가 placeholder로 먼저 렌더링되므로
-            # 카드만 기다려야 오탐을 피할 수 있음. 2단계로 NOT_FOUND 판별 속도도 확보.
+            # 스켈레톤 li.search_list가 먼저 렌더링되었다가 실제 카드로 교체되므로
+            # 실제 게임 타이틀 링크(h2 a)가 포함된 카드만 기다림.
+            CARD_SELECTOR = "li[class*='search_list'] h2 a"
             try:
-                page.wait_for_selector("li[class*='search_list']", timeout=10000)
+                page.wait_for_selector(CARD_SELECTOR, timeout=10000)
             except Exception:
                 # 1단계 10초 경과: "No Results Found" 확인
                 # → 10초면 HLTB API 응답이 충분히 도달했을 시간이므로 진짜 NOT_FOUND
@@ -182,7 +183,7 @@ def crawl_hltb_single(game_title):
                     return result
                 # "No Results Found"도 없음 = 아직 로딩 중 → 20초 추가 대기
                 try:
-                    page.wait_for_selector("li[class*='search_list']", timeout=20000)
+                    page.wait_for_selector(CARD_SELECTOR, timeout=20000)
                 except Exception:
                     if page.locator("h3:has-text('No Results Found')").count() > 0:
                         logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
