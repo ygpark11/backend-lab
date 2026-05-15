@@ -43,12 +43,12 @@ if not metadata_logger.handlers:
     metadata_logger.addHandler(console_handler)
 metadata_logger.propagate = False
 
-rating_logger = logging.getLogger("Rating-Worker")
-rating_logger.setLevel(logging.INFO)
-if not rating_logger.handlers:
-    rating_logger.addHandler(file_handler)
-    rating_logger.addHandler(console_handler)
-rating_logger.propagate = False
+ranking_logger = logging.getLogger("Ranking-Crawler")
+ranking_logger.setLevel(logging.INFO)
+if not ranking_logger.handlers:
+    ranking_logger.addHandler(file_handler)
+    ranking_logger.addHandler(console_handler)
+ranking_logger.propagate = False
 
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
 
@@ -959,7 +959,7 @@ def crawl_single_url():
     target_url = data.get('url')
     if not target_url: return jsonify({"error": "URL is required"}), 400
 
-    if is_batch_running or is_ranking_running or is_vip_running or is_rating_running or is_psplus_running:
+    if is_batch_running or is_ranking_running or is_vip_running or is_rating_running:
         return jsonify({"status": "error", "message": "다른 수집 작업이 실행 중입니다. 잠시 후 시도해주세요."}), 429
 
     logger.info(f"Single Crawl Request: {target_url}")

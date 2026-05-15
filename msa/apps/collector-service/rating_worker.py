@@ -63,8 +63,10 @@ def crawl_metacritic_single(game_title):
         page = setup_stealth_page(context)
 
         try:
-            try: response = page.goto(target_url, wait_until="commit", timeout=30000)
-            except Exception: response = page.reload(wait_until="commit", timeout=30000)
+            try:
+                response = page.goto(target_url, wait_until="commit", timeout=30000)
+            except Exception:
+                response = page.reload(wait_until="commit", timeout=30000)
 
             if response and response.status == 404:
                 logger.warning(f"[404] 게임을 찾을 수 없음: {game_title} | 시도한 URL: {target_url}")
@@ -138,10 +140,12 @@ def parse_hltb_time_to_float(raw_value):
 
     try:
         if "hour" in val or "h" in val:
-            return float(val.replace("hours", "").replace("hour", "").replace("h", "").strip())
+            numeric = re.sub(r'[^0-9.]', '', val)
+            return float(numeric) if numeric else None
         elif "min" in val or "m" in val:
-            mins = float(val.replace("mins", "").replace("min", "").replace("m", "").strip())
-            return round(mins / 60.0, 2)
+            numeric = re.sub(r'[^0-9.]', '', val)
+            mins = float(numeric) if numeric else None
+            return round(mins / 60.0, 2) if mins is not None else None
     except Exception:
         return None
     return None
@@ -165,18 +169,32 @@ def crawl_hltb_single(game_title):
         try:
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
+            # domcontentloaded 직후 "No Results Found"가 placeholder로 먼저 렌더링되므로
+            # 카드만 기다려야 오탐을 피할 수 있음. 2단계로 NOT_FOUND 판별 속도도 확보.
             try:
-                page.wait_for_selector("li[class*='search_list'], h3:has-text('No Results Found')", timeout=30000)
+                page.wait_for_selector("li[class*='search_list']", timeout=10000)
             except Exception:
-                result["status"] = "BLOCKED"
-                return result
-
-            if page.locator("h3:has-text('No Results Found')").count() > 0:
-                result["status"] = "NOT_FOUND"
-                return result
+                # 1단계 10초 경과: "No Results Found" 확인
+                # → 10초면 HLTB API 응답이 충분히 도달했을 시간이므로 진짜 NOT_FOUND
+                if page.locator("h3:has-text('No Results Found')").count() > 0:
+                    logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
+                    result["status"] = "NOT_FOUND"
+                    return result
+                # "No Results Found"도 없음 = 아직 로딩 중 → 20초 추가 대기
+                try:
+                    page.wait_for_selector("li[class*='search_list']", timeout=20000)
+                except Exception:
+                    if page.locator("h3:has-text('No Results Found')").count() > 0:
+                        logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
+                        result["status"] = "NOT_FOUND"
+                    else:
+                        logger.error(f"[HLTB BLOCKED] {game_title} — 카드 대기 30s 타임아웃")
+                        result["status"] = "BLOCKED"
+                    return result
 
             cards = page.locator("li[class*='search_list']")
             if cards.count() == 0:
+                logger.warning(f"[HLTB NOT_FOUND] {game_title} — 카드 0개")
                 result["status"] = "NOT_FOUND"
                 return result
 
@@ -231,7 +249,7 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running, crawl
                 continue
             set_rating_running(True)
 
-        try:
+        try:  # set_rating_running(False)는 반드시 finally에서 보장됨
             # ---------------------------------------------------------
             # Phase 1: 메타크리틱 (Metacritic)
             # ---------------------------------------------------------

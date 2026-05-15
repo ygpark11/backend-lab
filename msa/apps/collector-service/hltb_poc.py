@@ -1,3 +1,4 @@
+import re
 import time
 import urllib.parse
 import json
@@ -15,15 +16,32 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ]
 
+# rating_worker.py 와 동일한 로직 (변환 확인용)
+def parse_hltb_time_to_float(raw_value):
+    if not raw_value or raw_value == "--":
+        return None
+
+    val = raw_value.replace("½", ".5").replace(" 1/2", ".5").replace("1/2", ".5").lower()
+
+    try:
+        if "hour" in val or "h" in val:
+            numeric = re.sub(r'[^0-9.]', '', val)
+            return float(numeric) if numeric else None
+        elif "min" in val or "m" in val:
+            numeric = re.sub(r'[^0-9.]', '', val)
+            mins = float(numeric) if numeric else None
+            return round(mins / 60.0, 2) if mins is not None else None
+    except Exception:
+        return None
+    return None
+
+
 def setup_stealth_page(context):
     page = context.new_page()
     page.set_default_timeout(30000)
-
-    # 🛡️ Webdriver 탐지 우회
     page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
 
     def route_intercept(route):
-        # 💡 저사양 서버 최적화: 이미지, 폰트, CSS 등 무거운 자원 차단
         if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
             route.abort()
             return
@@ -32,11 +50,15 @@ def setup_stealth_page(context):
     page.route("**/*", route_intercept)
     return page
 
+
 def crawl_hltb_times():
-    # 💡 수정 1: 테스트용 검색어(정상 케이스 + 실패 케이스) 세팅
     search_queries = [
         "Assassin's Creed Shadows",
-        "Like a Dragon: Pirate Yakuza in Hawaii"
+        "Like a Dragon: Pirate Yakuza in Hawaii",
+        "Puyo Puyo Tetris 2",          # 실제 운영에서 성공한 케이스
+        "EDENS ZERO",                  # 오탐 NOT_FOUND 재현 케이스
+        "Elden Ring",                  # 긴 게임 케이스
+        "존재하지않는게임XYZ1234",      # 진짜 NOT_FOUND 케이스
     ]
 
     results = []
@@ -49,94 +71,95 @@ def crawl_hltb_times():
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--disable-blink-features=AutomationControlled",
-                "--js-flags=--max-old-space-size=128" # V8 메모리 제한 (1GB RAM 서버용)
+                "--js-flags=--max-old-space-size=128"
             ]
         )
-
         context = browser.new_context(
             user_agent=random.choice(USER_AGENTS),
             viewport={"width": 1920, "height": 1080},
             locale="en-US"
         )
-
         page = setup_stealth_page(context)
 
         try:
             for query in search_queries:
-                logger.info(f"👉 검색 시작: [{query}]")
+                logger.info(f"검색 시작: [{query}]")
 
                 encoded_query = urllib.parse.quote(query)
                 target_url = f"https://howlongtobeat.com/?q={encoded_query}"
-                logger.info(f"[HLTB] 타겟 접속 시도: {target_url}")
+                logger.info(f"[HLTB] 접속: {target_url}")
 
                 page.goto(target_url, wait_until="domcontentloaded")
 
+                # domcontentloaded 직후 "No Results Found"가 placeholder로 먼저 렌더링되므로
+                # 카드만 기다려야 오탐을 피할 수 있음. 2단계로 NOT_FOUND 판별 속도도 확보.
                 try:
-                    # 💡 수정 1: 게임 카드 리스트 혹은 'No Results Found' 헤더가 뜰 때까지 대기
-                    page.wait_for_selector("li[class*='search_list'], h3:has-text('No Results Found')", timeout=15000)
+                    page.wait_for_selector("li[class*='search_list']", timeout=10000)
                 except Exception:
-                    logger.warning(f"   ⚠️ 응답 지연 또는 Cloudflare 블락 의심: {query}")
-                    results.append({"query": query, "status": "ERROR"})
-                    continue
+                    # 1단계 10초 경과: "No Results Found" 확인
+                    # → 10초면 HLTB API 응답이 충분히 도달했을 시간이므로 진짜 NOT_FOUND
+                    if page.locator("h3:has-text('No Results Found')").count() > 0:
+                        logger.info(f"검색 결과 없음 (No Results Found): {query}")
+                        results.append({"query": query, "status": "NOT_FOUND"})
+                        time.sleep(random.uniform(2.0, 4.0))
+                        continue
+                    # "No Results Found"도 없음 = 아직 로딩 중 → 20초 추가 대기
+                    try:
+                        page.wait_for_selector("li[class*='search_list']", timeout=20000)
+                    except Exception:
+                        if page.locator("h3:has-text('No Results Found')").count() > 0:
+                            logger.info(f"검색 결과 없음 (No Results Found): {query}")
+                            results.append({"query": query, "status": "NOT_FOUND"})
+                        else:
+                            logger.warning(f"카드 대기 30s 타임아웃 — 차단 의심: {query}")
+                            results.append({"query": query, "status": "BLOCKED"})
+                        time.sleep(random.uniform(2.0, 4.0))
+                        continue
 
-                # 💡 수정 1: 결과 없음(No Results Found) 방어 로직
-                if page.locator("h3:has-text('No Results Found')").count() > 0:
-                    logger.info("   ❌ 검색 결과가 없습니다 (No Results Found).")
-                    results.append({"query_title": query, "status": "NOT_FOUND"})
-                    time.sleep(random.uniform(2.0, 4.0)) # 차단 방지 딜레이
-                    continue
-
-                # 검색 결과가 있는 경우 첫 번째 카드 추출
                 cards = page.locator("li[class*='search_list']")
                 if cards.count() == 0:
-                    logger.info("   ❌ 카드를 찾을 수 없습니다.")
-                    results.append({"query_title": query, "status": "NOT_FOUND"})
+                    logger.info(f"카드 0개: {query}")
+                    results.append({"query": query, "status": "NOT_FOUND"})
                     continue
 
                 first_card = cards.nth(0)
 
-                # 1. 매칭된 게임 타이틀 추출
                 found_title_loc = first_card.locator("h2 a").first
                 found_title = found_title_loc.text_content().strip() if found_title_loc.count() > 0 else "Unknown"
+                logger.info(f"1순위 매칭 게임: {found_title}")
 
-                logger.info(f"   ✔️ 1순위 매칭 게임: {found_title}")
-
-                # 2. 플레이타임 블록 추출
                 tidbits_loc = first_card.locator("div[class*='tidbit']")
                 tidbit_texts = tidbits_loc.all_text_contents()
+                logger.info(f"tidbit 원본: {tidbit_texts}")  # raw 구조 확인용
 
-                playtimes = {}
+                playtimes_raw = {}
+                playtimes_float = {}
                 for i in range(0, len(tidbit_texts), 2):
                     if i + 1 < len(tidbit_texts):
                         label = tidbit_texts[i].strip()
-                        raw_value = tidbit_texts[i+1].strip()
+                        raw_value = tidbit_texts[i + 1].strip()
+                        parsed = parse_hltb_time_to_float(raw_value)
 
-                        # 💡 수정 2: 분수 표기(½, 1/2) 및 텍스트 정규화 로직 고도화
-                        value = (raw_value
-                                 .replace("½", ".5")
-                                 .replace(" 1/2", ".5")
-                                 .replace("1/2", ".5")
-                                 .replace(" Hours", "h")
-                                 .replace(" Mins", "m"))
+                        playtimes_raw[label] = raw_value
+                        playtimes_float[label] = parsed
 
-                        playtimes[label] = value
-
-                logger.info(f"   ⏱️ 수집된 시간: {playtimes}")
+                        logger.info(f"  {label}: '{raw_value}' → {parsed}")
 
                 results.append({
-                    "query_title": query,
+                    "query": query,
                     "found_title": found_title,
-                    "playtimes": playtimes,
+                    "mainStory": playtimes_float.get("Main Story"),
+                    "mainExtra": playtimes_float.get("Main + Extra"),
+                    "completionist": playtimes_float.get("Completionist"),
+                    "raw": playtimes_raw,
                     "status": "SUCCESS"
                 })
 
-                # IP 블락 방지를 위한 랜덤 딜레이 (필수)
                 time.sleep(random.uniform(2.5, 5.0))
 
         except Exception as e:
-            logger.error(f"❌ 크롤링 중 치명적 에러 발생: {e}")
+            logger.error(f"크롤링 중 치명적 에러 발생: {e}")
         finally:
-            # 자원 반환
             try: page.close()
             except: pass
             try: context.close()
@@ -146,6 +169,7 @@ def crawl_hltb_times():
             gc.collect()
 
     return results
+
 
 if __name__ == "__main__":
     final_data = crawl_hltb_times()
