@@ -169,14 +169,11 @@ def crawl_hltb_single(game_title):
         try:
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
-            # 스켈레톤 li.search_list가 먼저 렌더링되었다가 실제 카드로 교체되므로
-            # 실제 게임 타이틀 링크(h2 a)가 포함된 카드만 기다림.
             CARD_SELECTOR = "li[class*='search_list'] h2 a"
             try:
                 page.wait_for_selector(CARD_SELECTOR, timeout=10000)
             except Exception:
                 # 1단계 10초 경과: "No Results Found" 확인
-                # → 10초면 HLTB API 응답이 충분히 도달했을 시간이므로 진짜 NOT_FOUND
                 if page.locator("h3:has-text('No Results Found')").count() > 0:
                     logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
                     result["status"] = "NOT_FOUND"
@@ -250,7 +247,7 @@ def start_polling(base_url, secret_key, check_if_busy, set_rating_running, crawl
                 continue
             set_rating_running(True)
 
-        try:  # set_rating_running(False)는 반드시 finally에서 보장됨
+        try:
             # ---------------------------------------------------------
             # Phase 1: 메타크리틱 (Metacritic)
             # ---------------------------------------------------------
