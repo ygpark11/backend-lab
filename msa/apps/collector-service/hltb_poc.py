@@ -6,7 +6,7 @@ import random
 import logging
 import gc
 
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger("HLTB-PoC")
@@ -60,6 +60,7 @@ def crawl_hltb_times():
         "DRAGON BALL FighterZ",        # 스켈레톤 카드 오탐 케이스
         "STRIKERS 1945 III",           # 스켈레톤 카드 오탐 케이스
         "Elden Ring",                  # 긴 게임 케이스
+        "Portal Knights",              # 운영서버 NOT_FOUND 오탐 재현 케이스
         "존재하지않는게임XYZ1234",      # 진짜 NOT_FOUND 케이스
     ]
 
@@ -96,32 +97,29 @@ def crawl_hltb_times():
                 # 스켈레톤 li.search_list가 먼저 렌더링되었다가 실제 카드로 교체되므로
                 # 실제 게임 타이틀 링크(h2 a)가 포함된 카드만 기다림.
                 CARD_SELECTOR = "li[class*='search_list'] h2 a"
+                NO_RESULT_SELECTOR = "h3:has-text('No Results Found')"
+
+                # 결과 카드 또는 검색 결과 없음 중 하나가 나타날 때까지 최대 30초 대기
                 try:
-                    page.wait_for_selector(CARD_SELECTOR, timeout=10000)
-                except Exception:
-                    # 1단계 10초 경과: "No Results Found" 확인
-                    # → 10초면 HLTB API 응답이 충분히 도달했을 시간이므로 진짜 NOT_FOUND
-                    if page.locator("h3:has-text('No Results Found')").count() > 0:
-                        logger.info(f"검색 결과 없음 (No Results Found): {query}")
-                        results.append({"query": query, "status": "NOT_FOUND"})
-                        time.sleep(random.uniform(2.0, 4.0))
-                        continue
-                    # "No Results Found"도 없음 = 아직 로딩 중 → 20초 추가 대기
-                    try:
-                        page.wait_for_selector(CARD_SELECTOR, timeout=20000)
-                    except Exception:
-                        if page.locator("h3:has-text('No Results Found')").count() > 0:
-                            logger.info(f"검색 결과 없음 (No Results Found): {query}")
-                            results.append({"query": query, "status": "NOT_FOUND"})
-                        else:
-                            logger.warning(f"카드 대기 30s 타임아웃 — 차단 의심: {query}")
-                            results.append({"query": query, "status": "BLOCKED"})
-                        time.sleep(random.uniform(2.0, 4.0))
-                        continue
+                    page.wait_for_selector(f"{CARD_SELECTOR}, {NO_RESULT_SELECTOR}", timeout=30000)
+                except PlaywrightTimeoutError:
+                    logger.warning(f"카드 대기 30s 타임아웃 — 차단 의심: {query}")
+                    results.append({"query": query, "status": "BLOCKED"})
+                    time.sleep(random.uniform(2.0, 4.0))
+                    continue
+
+                if page.locator(NO_RESULT_SELECTOR).count() > 0:
+                    logger.info(f"검색 결과 없음 (No Results Found): {query}")
+                    results.append({"query": query, "status": "NOT_FOUND"})
+                    time.sleep(random.uniform(2.0, 4.0))
+                    continue
+
+                # 느린 서버에서 React 카드 마운트 완료를 보장하기 위한 안정화 대기
+                time.sleep(1.0)
 
                 cards = page.locator("li[class*='search_list']")
                 if cards.count() == 0:
-                    logger.info(f"카드 0개: {query}")
+                    logger.info(f"카드 0개 (DOM 안정화 후): {query}")
                     results.append({"query": query, "status": "NOT_FOUND"})
                     continue
 

@@ -170,29 +170,27 @@ def crawl_hltb_single(game_title):
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
             CARD_SELECTOR = "li[class*='search_list'] h2 a"
+            NO_RESULT_SELECTOR = "h3:has-text('No Results Found')"
+
+            # 결과 카드 또는 검색 결과 없음 중 하나가 나타날 때까지 최대 30초 대기
             try:
-                page.wait_for_selector(CARD_SELECTOR, timeout=10000)
-            except Exception:
-                # 1단계 10초 경과: "No Results Found" 확인
-                if page.locator("h3:has-text('No Results Found')").count() > 0:
-                    logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
-                    result["status"] = "NOT_FOUND"
-                    return result
-                # "No Results Found"도 없음 = 아직 로딩 중 → 20초 추가 대기
-                try:
-                    page.wait_for_selector(CARD_SELECTOR, timeout=20000)
-                except Exception:
-                    if page.locator("h3:has-text('No Results Found')").count() > 0:
-                        logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
-                        result["status"] = "NOT_FOUND"
-                    else:
-                        logger.error(f"[HLTB BLOCKED] {game_title} — 카드 대기 30s 타임아웃")
-                        result["status"] = "BLOCKED"
-                    return result
+                page.wait_for_selector(f"{CARD_SELECTOR}, {NO_RESULT_SELECTOR}", timeout=30000)
+            except PlaywrightTimeoutError:
+                logger.error(f"[HLTB BLOCKED] {game_title} — 30s 타임아웃")
+                result["status"] = "BLOCKED"
+                return result
+
+            if page.locator(NO_RESULT_SELECTOR).count() > 0:
+                logger.warning(f"[HLTB NOT_FOUND] {game_title} — 검색 결과 없음")
+                result["status"] = "NOT_FOUND"
+                return result
+
+            # 느린 서버에서 React 카드 마운트 완료를 보장하기 위한 안정화 대기
+            time.sleep(1.0)
 
             cards = page.locator("li[class*='search_list']")
             if cards.count() == 0:
-                logger.warning(f"[HLTB NOT_FOUND] {game_title} — 카드 0개")
+                logger.warning(f"[HLTB NOT_FOUND] {game_title} — 카드 0개 (DOM 안정화 후)")
                 result["status"] = "NOT_FOUND"
                 return result
 
