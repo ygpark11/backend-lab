@@ -22,9 +22,6 @@ public class NoticeEventListener {
     private final FcmTokenRepository fcmTokenRepository;
     private final FcmService fcmService;
 
-    @Value("${app.auth.redirect-uri}")
-    private String redirectUri;
-
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleNoticeCreated(NoticeCreatedEvent event) {
@@ -40,7 +37,7 @@ public class NoticeEventListener {
         String pushTitle = "[공지] " + event.getTitle();
         String pushBody = "공지가 등록되었습니다. 자세한 내용은 공지사항에서 확인해주세요.";
 
-        Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+        Map<String, String> fcmData = Map.of("url", "/games");
 
         fcmService.sendMulticastMessage(allTokens, pushTitle, pushBody, fcmData);
     }

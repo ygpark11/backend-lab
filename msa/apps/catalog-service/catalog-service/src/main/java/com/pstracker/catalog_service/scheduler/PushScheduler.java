@@ -6,7 +6,6 @@ import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import com.pstracker.catalog_service.notification.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -21,9 +20,6 @@ public class PushScheduler {
     private final InsightsService insightsService;
     private final FcmService fcmService;
     private final FcmTokenRepository fcmTokenRepository;
-
-    @Value("${app.auth.redirect-uri}")
-    private String redirectUri;
 
     /**
      * 마감 임박 (Closing Soon) 알림 발송
@@ -40,7 +36,7 @@ public class PushScheduler {
             
             List<FcmToken> allTokens = fcmTokenRepository.findAllWithMember();
             if (!allTokens.isEmpty()) {
-                Map<String, String> fcmData = Map.of("url", redirectUri + "/games?isClosingSoon=true");
+                Map<String, String> fcmData = Map.of("url", "/games?isClosingSoon=true");
 
                 fcmService.sendMulticastMessage(allTokens, title, body, fcmData);
                 log.info("마감 임박 푸시 발송 완료 (대상자: {}명)", allTokens.size());
@@ -67,7 +63,7 @@ public class PushScheduler {
             
             List<FcmToken> allTokens = fcmTokenRepository.findAllWithMember();
             if (!allTokens.isEmpty()) {
-                Map<String, String> fcmData = Map.of("url", redirectUri + "/games?isNewDiscount=true");
+                Map<String, String> fcmData = Map.of("url", "/games?isNewDiscount=true");
 
                 fcmService.sendMulticastMessage(allTokens, title, body, fcmData);
                 log.info("신규 할인 푸시 발송 완료 (대상자: {}명)", allTokens.size());

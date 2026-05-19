@@ -26,9 +26,6 @@ public class ScrapingEventListener {
     private final FcmService fcmService;
     private final FcmTokenRepository  fcmTokenRepository;
 
-    @Value("${app.auth.redirect-uri}")
-    private String redirectUri;
-
     @Async
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener
@@ -55,7 +52,7 @@ public class ScrapingEventListener {
                 return;
             }
 
-            Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+            Map<String, String> fcmData = Map.of("url", "/games");
 
             fcmService.sendMulticastMessage(tokens, title, body, fcmData);
             log.debug("개척자({})에게 FCM 알림 발송 완료", event.getMember().getNickname());

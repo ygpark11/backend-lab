@@ -25,7 +25,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
     console.debug('[SW] 백그라운드 메시지 수신:', payload);
 
-    // 🛡방어 로직: payload.notification이 "없을 때만" 직접 알림을 띄우도록 (중복 방지)
+    // 방어 로직: payload.notification이 "없을 때만" 직접 알림을 띄우도록 (중복 방지)
     if (!payload.notification) {
         const notificationTitle = payload.data?.title || 'PS Tracker';
         const notificationOptions = {
@@ -42,42 +42,44 @@ messaging.onBackgroundMessage((payload) => {
 
 // 6. 알림 클릭 시 화면 이동을 처리하는 이벤트 리스너
 self.addEventListener('notificationclick', function(event) {
-    console.debug('[SW] 알림 클릭됨!', event);
-
-    // 1. 클릭한 알림 창 닫기
+    console.debug('[SW] 알림 클릭: ', event.notification);
     event.notification.close();
 
-    // 2. 백엔드에서 넘겨준 이동할 URL 추출
-    // (Firebase가 자동 생성한 알림의 경우 FCM_MSG 내부에 데이터가 있을 수 있음)
     let targetUrl = '/';
-    if (event.notification.data && event.notification.data.FCM_MSG && event.notification.data.FCM_MSG.data && event.notification.data.FCM_MSG.data.url) {
-        targetUrl = event.notification.data.FCM_MSG.data.url;
-    } else if (event.notification.data && event.notification.data.url) {
+    if (event.notification.data?.url) {
         targetUrl = event.notification.data.url;
+    } else if (event.notification.data?.FCM_MSG?.notification?.click_action) {
+        targetUrl = event.notification.data.FCM_MSG.notification.click_action;
     }
 
+    // URL이 우리 사이트 내부 경로인지 확인
     const isSafeUrl = targetUrl.startsWith('/') || targetUrl.startsWith(self.location.origin);
-
     if (!isSafeUrl) {
-        console.warn('[SW] 🚨 보안 경고: 허용되지 않은 외부 URL 차단됨 ->', targetUrl);
-        targetUrl = '/'; // 악성 URL이면 무조건 메인 화면으로 튕겨버림
+        console.warn(`[SW] 보안 경고: 허용되지 않은 외부 URL(${targetUrl})은 차단하고 메인으로 이동합니다.`);
+        targetUrl = '/'; // 안전하지 않은 URL이면 무조건 메인 화면으로 리디렉션
     }
+    
+    console.debug(`[SW] 최종 이동 URL: ${targetUrl}`);
 
-    // 3. 브라우저 탭 이동 로직
-    event.waitUntil(
-        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(windowClients) {
-            // 이미 열려있는 PS Tracker 창(탭)이 있는지 확인
-            for (let i = 0; i < windowClients.length; i++) {
-                const client = windowClients[i];
-                if (client.url.includes(self.registration.scope) && 'focus' in client) {
-                    client.navigate(targetUrl); // 해당 탭을 타겟 URL로 새로고침/이동
-                    return client.focus();      // 화면을 사용자 앞으로 가져옴
-                }
-            }
-            // 열려있는 탭이 없다면 새 창 열기
-            if (clients.openWindow) {
-                return clients.openWindow(targetUrl);
-            }
-        })
-    );
+    const promiseChain = clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+    }).then((windowClients) => {
+        // 이미 열려있는 탭이 있는지 확인하고, 있다면 해당 탭을 재사용합니다.
+        const existingClient = windowClients.find(
+            (client) => client.url.startsWith(self.location.origin) && 'focus' in client
+        );
+
+        if (existingClient) {
+            // 기존 탭을 찾았으면, 해당 탭으로 이동하고 포커스를 줍니다.
+            return existingClient.navigate(targetUrl).then((client) => client.focus());
+        }
+        
+        // 열려있는 탭이 없다면, 새 탭을 엽니다.
+        if (clients.openWindow) {
+            return clients.openWindow(targetUrl);
+        }
+    });
+
+    event.waitUntil(promiseChain);
 });

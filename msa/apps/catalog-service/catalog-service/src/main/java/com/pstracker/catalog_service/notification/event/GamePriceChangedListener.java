@@ -33,9 +33,6 @@ public class GamePriceChangedListener {
     private final FcmTokenRepository fcmTokenRepository;
     private final FcmService fcmService;
 
-    @Value("${app.auth.redirect-uri}")
-    private String redirectUri;
-
     /**
      * 가격 하락 이벤트 수신 -> 찜한 유저들에게 알림 발송
      */
@@ -117,7 +114,7 @@ public class GamePriceChangedListener {
 
                 if (!memberTokens.isEmpty()) {
                     try {
-                        Map<String, String> fcmData = Map.of("url", redirectUri + "/games");
+                        Map<String, String> fcmData = Map.of("url", "/games");
 
                         fcmService.sendMulticastMessage(memberTokens, fcmTitles.get(i), fcmBodies.get(i), fcmData);
                     } catch (Exception e) {
