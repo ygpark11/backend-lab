@@ -42,13 +42,6 @@ public class GamePriceChangedListenerTest {
     private FcmService fcmService;
 
 
-    @BeforeEach
-    void setUp() {
-        // 단위 테스트 환경에서는 Spring Context가 로드되지 않으므로,
-        // @Value 필드에 ReflectionTestUtils를 이용해 가짜 값을 주입
-        ReflectionTestUtils.setField(listener, "redirectUri", "https://testUrl.com");
-    }
-
     @Test
     @DisplayName("찜한 유저가 없으면 알림 로직이 조기 종료되어야 한다.")
     void handle_NoSubscribers() {
