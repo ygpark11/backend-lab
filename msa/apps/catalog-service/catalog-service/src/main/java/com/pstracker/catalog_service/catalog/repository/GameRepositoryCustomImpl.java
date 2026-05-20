@@ -252,9 +252,13 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression playTimeBetween(Double minPlayTime, Double maxPlayTime) {
-        if (minPlayTime != null && maxPlayTime != null) return game.hltbMainStory.between(minPlayTime, maxPlayTime);
-        else if (minPlayTime != null) return game.hltbMainStory.goe(minPlayTime);
-        else if (maxPlayTime != null) return game.hltbMainStory.loe(maxPlayTime);
+        if (minPlayTime != null && maxPlayTime != null) {
+            return game.hltbMainStory.gt(minPlayTime).and(game.hltbMainStory.loe(maxPlayTime));
+        } else if (minPlayTime != null) {
+            return game.hltbMainStory.gt(minPlayTime);
+        } else if (maxPlayTime != null) {
+            return game.hltbMainStory.loe(maxPlayTime);
+        }
         return null;
     }
 
