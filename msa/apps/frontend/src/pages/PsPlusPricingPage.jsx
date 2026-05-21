@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import { ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, CalendarDays } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, CalendarDays, ExternalLink } from 'lucide-react';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
@@ -142,6 +142,29 @@ const PsPlusPricingPage = () => {
                                 {btn.label}
                             </button>
                         ))}
+                    </div>
+
+                    <div className="mt-8 animate-fadeIn" style={{ animationDelay: '150ms' }}>
+                        <a
+                            href="https://www.playstation.com/ko-kr/ps-plus/?smcid=pdc%3Ako-kr%3Asupport-subscriptions%3Aprimary%20nav%3Amsg-store%3Aps-plus#subscriptions"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group relative inline-flex items-center justify-center gap-3 px-6 py-3 rounded-2xl bg-surface hover:bg-surface-hover border border-divider shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                            <div className="relative z-10 bg-[#00439c] text-white p-2 rounded-xl shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                                <ExternalLink className="w-4 h-4" strokeWidth={2.5} />
+                            </div>
+                            <div className="relative z-10 flex flex-col items-start mr-2">
+                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5 leading-none">
+                                    Official PlayStation™ Store
+                                </span>
+                                <span className="text-sm sm:text-base font-black text-primary leading-none group-hover:text-[#00439c] dark:group-hover:text-blue-400 transition-colors">
+                                    공식 스토어 구독하러 가기
+                                </span>
+                            </div>
+                        </a>
                     </div>
                 </div>
 

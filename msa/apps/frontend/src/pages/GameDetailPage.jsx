@@ -15,7 +15,6 @@ import {
     AlertCircle,
     AlertTriangle,
     ArrowLeft,
-    ArrowUpRight,
     Building2,
     Calendar,
     CalendarDays,
@@ -27,10 +26,8 @@ import {
     Gamepad2,
     Heart,
     HelpCircle,
-    Info,
     Layers,
     Link,
-    MonitorPlay,
     Pickaxe,
     Plus,
     RefreshCw,
@@ -39,13 +36,11 @@ import {
     ShieldAlert,
     Sparkles,
     Square,
-    Star,
     Timer,
     Trash2,
-    TrendingDown,
     TrendingUp,
+    TrendingDown,
     Triangle,
-    Trophy,
     Users,
     X,
     Youtube
@@ -365,93 +360,93 @@ export default function GameDetailPage() {
 
     const pageContent = (
         <div className="relative z-10">
-            <div className="p-4 sm:p-6 md:p-10 pb-20 max-w-5xl mx-auto">
-                <button onClick={handleClose} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors text-sm font-bold gap-1">
+            <div className="p-4 sm:p-6 md:p-8 pb-20 max-w-7xl mx-auto">
+                <button onClick={handleClose} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors text-sm font-bold gap-1 w-fit">
                     <ArrowLeft className="w-4 h-4" /> Back to List
                 </button>
 
-                <div className="flex flex-col md:flex-row gap-8 md:gap-10">
-                    <div className="w-full md:w-1/3 shrink-0 space-y-6">
-                        <div
-                            className={`rounded-xl overflow-hidden shadow-2xl border relative group bg-base ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider'}`}
-                        >
+                {/* 💡 새로운 레이아웃 뼈대: 12칸 그리드 시스템 */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
+
+                    {/* ========================================== */}
+                    {/* 📱 좌측 사이드바 (PC: Sticky 고정 / Mobile: 상단) */}
+                    {/* ========================================== */}
+                    <div className="lg:col-span-4 lg:sticky lg:top-24 h-fit space-y-5">
+                        <div className={`rounded-2xl overflow-hidden shadow-2xl border relative group bg-base ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider'}`}>
                             <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover aspect-[3/4]" />
-                            {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-xl pointer-events-none animate-pulse"></div>}
-                            {isNew && <span className="absolute top-2 left-2 bg-green-500 text-white text-xs font-black px-2 py-1 rounded shadow-lg z-10">NEW</span>}
-                            {isClosingSoon && <span className="absolute top-2 right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded shadow animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 마감임박</span>}
+                            {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse"></div>}
+                            {isNew && <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-lg z-10">NEW</span>}
+                            {isClosingSoon && <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> 막차!</span>}
                         </div>
-                        {game.defenseTier && (
-                            <div className={`bg-base/90 dark:bg-base/80 backdrop-blur-xl border rounded-xl p-4 text-center transition-colors shadow-lg hidden md:block ${
-                                game.defenseTier.includes('S') || game.defenseTier.includes('A')
-                                    ? 'border-red-500/30'
-                                    : 'border-green-500/30'
-                            }`}>
-                                <div className={`flex items-center justify-center gap-1.5 mb-1 ${
-                                    game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'
-                                }`}>
-                                    <ShieldAlert className="w-3 h-3" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider">할인 방어력</span>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'DEFENSE' }); }}
-                                        className="opacity-60 hover:opacity-100 transition-opacity p-1"
-                                    >
-                                        <Info className="w-3.5 h-3.5" />
+
+                        {/* 모바일에서는 아래로 빠지고, PC에서만 이미지 밑에 액션 버튼 고정 */}
+                        <div className="hidden lg:flex flex-col gap-3">
+                            <a
+                                href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full flex items-center justify-center gap-2 bg-primary text-[color:var(--color-bg-base)] hover:opacity-80 py-4 rounded-2xl font-black transition-transform hover:-translate-y-1 shadow-xl group"
+                            >
+                                <Gamepad2 className="w-5 h-5 group-hover:rotate-12 transition-transform" /> PS Store 이동
+                            </a>
+                            <div className="flex gap-3">
+                                {game.liked && (
+                                    <button onClick={() => setIsTargetModalOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] text-ps-blue hover:border-[color:var(--bento-blue-border-hover)] transition-all font-bold text-sm shadow-sm hover:-translate-y-1">
+                                        <Crosshair className="w-4 h-4 shrink-0" /> 목표가 설정
                                     </button>
+                                )}
+                                <button onClick={onWishlistClick} className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border transition-all font-bold shadow-md hover:-translate-y-1 ${game.liked ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500 hover:bg-red-500/20' : 'bg-surface border-divider hover:bg-surface-hover text-primary'}`}>
+                                    <Heart className={`w-4 h-4 shrink-0 ${game.liked ? 'fill-current' : ''}`} /> {game.liked ? '찜 취소' : '찜하기'}
+                                </button>
+                                <button onClick={handleShare} className="shrink-0 flex items-center justify-center px-4 rounded-xl border border-divider bg-surface text-primary hover:bg-surface-hover transition-all font-bold shadow-md hover:-translate-y-1">
+                                    <Link className="w-4 h-4 shrink-0" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {game.defenseTier && (
+                            <div className={`hidden lg:block bg-base/90 backdrop-blur-xl border rounded-2xl p-5 text-center transition-colors shadow-lg ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'border-red-500/30' : 'border-green-500/30'}`}>
+                                <div className={`flex items-center justify-center gap-1.5 mb-1 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>
+                                    <ShieldAlert className="w-4 h-4" />
+                                    <span className="text-xs font-bold uppercase tracking-widest">할인 방어력</span>
                                 </div>
-                                <div className={`text-xl font-black mt-2 transition-all ${
-                                    game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'
-                                }`}>
-                                    {game.defenseTier}
-                                </div>
-                                <p className="text-xs text-primary dark:text-gray-200 mt-2 break-keep leading-relaxed font-bold">{game.defenseMessage}</p>
+                                <div className={`text-2xl font-black mt-2 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</div>
+                                <p className="text-xs text-secondary mt-2 font-bold">{game.defenseMessage}</p>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap gap-2 mb-3 items-center">
-                            {game.isPs5ProEnhanced && (
-                                <span className="px-3 py-1 rounded-md text-xs font-black border border-divider bg-surface text-primary shadow-sm flex items-center gap-1.5">
-                                    <Sparkles className="w-3.5 h-3.5 text-primary" /> PS5 Pro Enhanced
-                                </span>
-                            )}
+                    {/* ========================================== */}
+                    {/* 💻 우측 메인 콘텐츠 영역 (Scrollable) */}
+                    {/* ========================================== */}
+                    <div className="lg:col-span-8 flex flex-col min-w-0">
 
-                            {game.genres && game.genres.length > 0 ? game.genres.map(g => (
-                                <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded-md text-xs font-bold border shadow-sm transition-all hover:opacity-80 ${getGenreBadgeStyle(g)}`}>
-                                    {g}
-                                </button>
-                            )) : <span className="px-3 py-1 rounded-md text-xs font-bold border border-divider bg-surface text-secondary shadow-sm">미분류</span>}
+                        {/* 1. 타이틀 & 메타 태그 헤더 */}
+                        <div className="mb-6">
+                            <div className="flex flex-wrap gap-2 mb-4 items-center">
+                                {game.isPs5ProEnhanced && <span className="px-3 py-1 rounded-md text-xs font-black border border-divider bg-surface text-primary shadow-sm flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-primary" /> PS5 Pro</span>}
+                                {game.genres && game.genres.length > 0 ? game.genres.map(g => <button key={g} onClick={() => handleGenreClick(g)} className={`px-3 py-1 rounded-md text-xs font-bold border shadow-sm transition-all hover:opacity-80 ${getGenreBadgeStyle(g)}`}>{g}</button>) : <span className="px-3 py-1 rounded-md text-xs font-bold border border-divider bg-surface text-secondary shadow-sm">미분류</span>}
+                                {game.platforms && game.platforms.map(p => <span key={p} className="px-2.5 py-1 rounded-md text-xs font-bold border border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm cursor-default">{p}</span>)}
+                            </div>
 
-                            {game.platforms && game.platforms.map(p => (
-                                <span key={p} className="px-2.5 py-1 rounded-md text-xs font-bold border border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm cursor-default">
-                                    {p}
-                                </span>
-                            ))}
-                        </div>
+                            <div className="flex justify-between items-start gap-4">
+                                <h1 className="text-3xl md:text-5xl font-black leading-tight text-primary drop-shadow-sm flex-1 break-keep break-words">{game.title}</h1>
+                                {isAdmin && (
+                                    <div className="flex gap-2 shrink-0 pt-2">
+                                        <button onClick={handleRefresh} className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-[var(--bento-blue-from)] text-secondary hover:text-ps-blue transition-all"><RefreshCw className="w-4 h-4" /></button>
+                                        <button onClick={handleDeleteGame} className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-[var(--bento-red-from)] text-secondary hover:text-red-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                                    </div>
+                                )}
+                            </div>
 
-                        <div className="flex justify-between items-start gap-4 mb-3">
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary drop-shadow-sm flex-1 break-keep break-words">{game.title}</h1>
-                            {isAdmin && (
-                                <div className="flex gap-2 shrink-0 pt-1">
-                                    <button onClick={handleRefresh} className="p-2 sm:p-3 rounded-full bg-[var(--bento-blue-from)] text-ps-blue hover:bg-[var(--bento-blue-border)] border border-[color:var(--bento-blue-border)] transition-all shadow-sm backdrop-blur-md group" title="정보 갱신"><RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-700" /></button>
-                                    <button onClick={handleDeleteGame} className="p-2 sm:p-3 rounded-full bg-[var(--bento-red-from)] text-red-500 hover:bg-[var(--bento-red-border)] border border-[color:var(--bento-red-border)] transition-all shadow-sm backdrop-blur-md group" title="게임 삭제"><Trash2 className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" /></button>
-                                </div>
-                            )}
-                        </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs font-bold text-secondary">
+                                <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4" /> {game.publisher}</span>
+                                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {game.releaseDate?.replace(/-/g, '. ')}</span>
+                                {game.pioneerName && <span className="flex items-center gap-1.5 text-ps-blue bg-blue-500/10 px-2 py-0.5 rounded-md"><Pickaxe className="w-3.5 h-3.5" /> {game.pioneerName} 발굴</span>}
+                            </div>
 
-                        {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
-                            <div className="mb-6 mt-1">
-                                <div className="flex items-center gap-1.5 mb-2.5 ml-1">
-                                    <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                                    <span className="text-[10px] font-bold text-secondary uppercase tracking-widest">AI Vibe Tags</span>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'VIBE' }); }}
-                                        className="text-muted hover:text-primary transition-colors p-0.5"
-                                    >
-                                        <Info className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
+                            {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-4">
                                     {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 5).map((tag, idx) => (
                                         <span
                                             key={idx}
@@ -465,568 +460,441 @@ export default function GameDetailPage() {
                                         </span>
                                     ))}
                                 </div>
-                            </div>
-                        )}
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
-                            {game.isPs5ProEnhanced && (
-                                <div className="flex items-center gap-2.5 bg-surface border-l-4 border-primary px-3 py-1.5 rounded-r-xl shadow-sm backdrop-blur-md cursor-default w-full sm:w-auto mt-1 sm:mt-0 order-last sm:order-none">
-                                    <MonitorPlay className="w-4 h-4 sm:w-5 sm:h-5 text-primary drop-shadow-sm animate-pulse" />
-                                    <div>
-                                        <p className="text-primary font-black text-[11px] sm:text-xs tracking-wide drop-shadow-md">PS5 Pro 성능 향상</p>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-lg border border-divider backdrop-blur-sm shadow-sm hover:bg-surface-hover transition-colors cursor-default">
-                                <Building2 className="w-4 h-4 text-secondary" />
-                                <span className="text-primary text-xs font-bold tracking-wide">{game.publisher}</span>
-                            </div>
-                            {game.releaseDate && (
-                                <div className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-lg border border-divider backdrop-blur-sm shadow-sm hover:bg-surface-hover transition-colors cursor-default">
-                                    <Calendar className="w-4 h-4 text-secondary" />
-                                    <span className="text-primary text-xs font-bold tracking-wide">{game.releaseDate.replace(/-/g, '. ')} 출시</span>
-                                    {differenceInCalendarDays(new Date(), parseISO(game.releaseDate)) <= 180 && <span className="ml-1.5 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[9px] px-1.5 py-0.5 rounded font-black shadow-sm animate-pulse">NEW</span>}
-                                </div>
-                            )}
-
-                            {/* 4. 개척자 뱃지 */}
-                            {game.pioneerName && (
-                                <div className="flex items-center gap-1.5 bg-[rgba(59,130,246,0.12)] px-3 py-1.5 rounded-lg border border-[rgba(59,130,246,0.3)] backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.15)] cursor-default transition-all hover:bg-[rgba(59,130,246,0.2)]">
-                                    <Pickaxe className="w-4 h-4 text-ps-blue" />
-                                    <span className="text-ps-blue text-[10px] sm:text-xs font-bold tracking-widest">최초 발굴</span>
-                                    <div className="w-[1px] h-3 bg-ps-blue/40 mx-0.5"></div>
-                                    <span className="text-primary text-xs sm:text-sm font-black drop-shadow-md">{game.pioneerName}</span>
-                                </div>
                             )}
                         </div>
 
-                        {/* 5. 가격 신호등 영역 */}
-                        <div className={`p-5 sm:p-6 rounded-xl border-2 backdrop-blur-md md:backdrop-blur-xl mb-8 transition-all duration-300 relative overflow-hidden group bg-base/90 dark:bg-base/80 ${glowStyle}`}>
-                            <div className="absolute inset-0 bg-gradient-to-r from-base to-transparent z-0 pointer-events-none"></div>
-                            <div className="relative z-10 flex items-start gap-4 sm:gap-5">
-                                <div className="shrink-0 scale-100 sm:scale-105">{renderVerdictIcon(game.priceVerdict)}</div>
-                                <div className="flex-1">
-                                    <h3 className="text-lg sm:text-xl font-black mb-1.5 text-primary drop-shadow-sm flex items-center gap-2">{traffic.text}</h3>
-                                    <p className="text-xs sm:text-sm text-primary dark:text-gray-200 font-bold leading-relaxed">{traffic.desc}</p>
-                                    {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
-                                        <div className="mt-3 inline-flex items-center gap-2 text-[10px] sm:text-xs bg-surface px-3 py-1.5 rounded-lg border border-divider shadow-sm">
-                                            <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-500" />
-                                            <span className="text-secondary font-bold">History Low:</span>
-                                            <span className="font-black text-primary text-xs sm:text-sm">{game.lowestPrice.toLocaleString()}원</span>
+                        {/* 2. 구매 결정 핵심 패널 (가격 + 신호등 통합) */}
+                        <div className={`p-6 md:p-8 rounded-3xl border-2 backdrop-blur-xl mb-8 transition-all relative overflow-hidden group ${glowStyle}`}>
+                            <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-8 flex-wrap">
+
+                                {/* 1. 좌측: 가격 신호등 */}
+                                <div className="flex-1 flex items-center gap-4 sm:gap-5 bg-base/50 p-4 md:p-5 rounded-2xl border border-divider min-w-0 shadow-sm">
+                                    <div className="shrink-0 scale-100 sm:scale-110">{renderVerdictIcon(game.priceVerdict)}</div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-lg md:text-2xl font-black mb-1.5 text-primary break-keep">{traffic.text}</h3>
+                                        <p className="text-xs sm:text-sm text-secondary font-bold leading-tight break-keep">{traffic.desc}</p>
+                                    </div>
+                                </div>
+
+                                {/* 2. 우측: 가격 상세 */}
+                                <div className="shrink-0 flex flex-col xl:items-end w-full xl:w-auto">
+                                    {game.isPlusExclusive && (
+                                        <div className="flex items-center gap-1.5 mb-2">
+                                            <span className="bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">PLUS</span>
+                                            <span className="text-yellow-600 dark:text-yellow-500 text-xs font-bold">특별 할인가</span>
+                                        </div>
+                                    )}
+
+                                    {/* 메인 가격 */}
+                                    <div className="flex items-end xl:justify-end gap-3 mb-2 flex-wrap">
+                                        <span className={`whitespace-nowrap text-5xl md:text-6xl font-black tracking-tighter drop-shadow-xl ${game.isPlusExclusive ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary'}`}>
+                                            {game.currentPrice.toLocaleString()}<span className="text-2xl font-medium text-secondary ml-1">원</span>
+                                        </span>
+                                        {game.discountRate > 0 && (
+                                            <div className="flex flex-col mb-1.5 shrink-0">
+                                                <span className="whitespace-nowrap text-secondary line-through text-lg font-medium">{game.originalPrice.toLocaleString()}원</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 태그 영역 (할인율, 최저가) */}
+                                    <div className="flex flex-wrap items-center xl:justify-end gap-3 mt-1">
+                                        {game.discountRate > 0 && (
+                                            <span className={`px-3 py-1 rounded-lg font-black text-base text-center shadow-md ${game.isPlusExclusive ? 'bg-yellow-500 text-white' : 'bg-ps-blue text-white'}`}>
+                                                -{game.discountRate}%
+                                            </span>
+                                        )}
+                                        {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
+                                            <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs bg-surface border border-divider px-3 py-1 rounded-lg shadow-sm font-bold text-primary">
+                                                <TrendingUp className="w-3.5 h-3.5 text-green-500" /> 최저가: {game.lowestPrice.toLocaleString()}원
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* 3. 할인 종료일 */}
+                                    {game.saleEndDate && game.discountRate > 0 && (
+                                        <div className="mt-5 flex items-center xl:justify-end gap-2 text-xs w-fit xl:ml-auto">
+                                            <CalendarDays className="w-4 h-4 text-secondary" />
+                                            <span className="text-secondary font-bold">할인 종료: {game.saleEndDate.replace(/-/g, '.')}</span>
+                                            {daysLeft !== null && daysLeft >= 0 ? (
+                                                <span className={`px-2 py-0.5 rounded-md border shadow-sm font-black ${
+                                                    daysLeft <= 3
+                                                        ? "bg-red-500/10 border-red-500/30 text-red-500 animate-pulse"
+                                                        : "bg-surface border-divider text-primary"
+                                                }`}>
+                                                    {daysLeft}일 남음
+                                                </span>
+                                            ) : (
+                                                <span className="bg-base border border-divider text-muted px-2 py-0.5 rounded-md font-bold">
+                                                    종료됨
+                                                </span>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        </div>
 
-                        {/* 가격 영역 */}
-                        <div className="flex flex-wrap items-end gap-4 mb-6 pb-6 border-b border-divider">
-                            <div>
-                                {game.isPlusExclusive && <div className="flex items-center gap-1 mb-1 animate-pulse"><span className="bg-yellow-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded">PLUS</span><span className="text-yellow-600 dark:text-yellow-500 text-xs font-bold">회원 특별 할인가</span></div>}
-                                <span className={`text-5xl sm:text-6xl font-black tracking-tighter drop-shadow-xl break-keep ${game.isPlusExclusive ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary'}`}>
-                                    {game.currentPrice.toLocaleString()}<span className="text-xl sm:text-2xl font-medium text-secondary ml-1">원</span>
-                                </span>
+                            {/* 모바일용 CTA 렌더링 */}
+                            <div className="lg:hidden flex gap-2 mt-6 pt-6 border-t border-divider/50">
+                                <a href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-primary text-[color:var(--color-bg-base)] py-3.5 rounded-xl font-black text-sm"><Gamepad2 className="w-5 h-5"/> 스토어</a>
+                                <button onClick={onWishlistClick} className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-xl border font-bold text-sm ${game.liked ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500' : 'bg-surface border-divider text-primary'}`}><Heart className={`w-4 h-4 ${game.liked ? 'fill-current' : ''}`} /> {game.liked ? '찜 취소' : '찜하기'}</button>
                             </div>
-                            {game.discountRate > 0 && (
-                                <div className="flex flex-col mb-1 sm:mb-2 animate-bounce-slow shrink-0">
-                                    <span className="text-secondary line-through text-base sm:text-lg font-medium">{game.originalPrice.toLocaleString()}원</span>
-                                    <span className={`px-2 sm:px-3 py-1 rounded-lg font-black text-base sm:text-lg text-center shadow-lg transform -rotate-2 ${game.isPlusExclusive ? 'bg-yellow-500 text-white' : 'bg-ps-blue text-white'}`}>-{game.discountRate}%</span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 스텔스 브리핑 패널 */}
-                        {game.scouterTotalWatchers > 0 && (
-                            <div className="mb-6">
-                                <StealthPanel
-                                    watchersCount={game.scouterTotalWatchers}
-                                    averagePrice={game.scouterAverageTargetPrice}
-                                    isLiked={isLiked}
-                                />
-                            </div>
-                        )}
-
-                        {/* 에디션(가족 게임) 모아보기 UI */}
-                        {game.familyGames && game.familyGames.length > 1 && (
-                            <div className="mb-8 animate-fadeIn">
-                                <h3 className="text-secondary text-xs font-bold mb-3 flex items-center gap-1.5 uppercase tracking-widest">
-                                    <Layers className="w-4 h-4 text-ps-blue" /> 에디션 비교 및 선택
-                                </h3>
-                                <div className="flex flex-col gap-2">
-                                    {game.familyGames.map((edition) => {
-                                        const isCurrent = edition.id === game.id;
-                                        const priceGap = edition.currentPrice - game.currentPrice;
-                                        const isHigherTier = edition.originalPrice > game.originalPrice;
-                                        const isLowerTier = edition.originalPrice < game.originalPrice;
-
-                                        return (
-                                            <button
-                                                key={edition.id}
-                                                onClick={() => navigate(`/games/${edition.id}`, { replace: true, state: location.state })}
-                                                className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all text-left group ${
-                                                    isCurrent
-                                                        ? 'bg-blue-50/90 dark:bg-blue-900/40 border-ps-blue ring-1 ring-ps-blue shadow-[0_0_20px_rgba(59,130,246,0.25)] cursor-default'
-                                                        : 'bg-surface/50 dark:bg-surface/60 border-divider hover:bg-surface-hover hover:border-divider-strong hover:shadow-md cursor-pointer'
-                                                }`}
-                                                disabled={isCurrent}
-                                            >
-                                                <div className="flex-1 pr-4 mb-3 sm:mb-0 break-keep">
-                                                    {isCurrent && (
-                                                        <span className="inline-flex items-center gap-1 text-[10px] font-black text-white bg-ps-blue px-2.5 py-1 rounded-md mb-2 tracking-widest shadow-md">
-                                                            <Check className="w-3 h-3" strokeWidth={3} /> 현재 보고 있는 게임
-                                                        </span>
-                                                    )}
-
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
-                                                        <p className={`text-sm sm:text-base font-bold leading-tight ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary transition-colors'}`}>
-                                                            {edition.name}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0 w-full sm:w-auto border-t sm:border-t-0 border-divider pt-2 sm:pt-0">
-
-                                                    {/* 1. 상위판이 더 저렴! */}
-                                                    {!isCurrent && isHigherTier && priceGap < 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-black text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-1 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
-                                                            <Sparkles className="w-3 h-3 text-green-500" /> 상위판이 더 저렴!
-                                                        </span>
-                                                    )}
-
-                                                    {/* 2. 하위판인데 더 비쌈 */}
-                                                    {!isCurrent && isLowerTier && priceGap > 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                            <AlertTriangle className="w-3 h-3 text-red-500" /> 하위판인데 더 비쌈
-                                                        </span>
-                                                    )}
-
-                                                    {/* 3 & 4. 정상적인 상위 에디션 업그레이드 */}
-                                                    {!isCurrent && isHigherTier && priceGap >= 0 && (
-                                                        (priceGap <= 15000 && edition.discountRate > 0) ? (
-                                                            // 소액 업그레이드 (노란색 쨍하게)
-                                                            <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                                <ArrowUpRight className="w-3 h-3 text-yellow-500" /> +{priceGap.toLocaleString()}원 업그레이드
-                                                            </span>
-                                                        ) : (
-                                                            // 일반적인 추가 금액 (차분한 보조색)
-                                                            <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-secondary bg-surface border border-divider px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                                <Plus className="w-3 h-3 text-muted" /> {priceGap.toLocaleString()}원 추가
-                                                            </span>
-                                                        )
-                                                    )}
-
-                                                    {/* 5. 절약 */}
-                                                    {!isCurrent && isLowerTier && priceGap < 0 && (
-                                                        <span className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-blue-500 bg-blue-500/10 border border-blue-500/30 px-1.5 py-1 rounded whitespace-nowrap shrink-0">
-                                                            <TrendingDown className="w-3 h-3 text-blue-500" /> {Math.abs(priceGap).toLocaleString()}원 절약
-                                                        </span>
-                                                    )}
-
-                                                    {/* 할인율 표시 */}
-                                                    {edition.discountRate > 0 && (
-                                                        <span className="text-xs font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
-                                                            -{edition.discountRate}%
-                                                        </span>
-                                                    )}
-
-                                                    {/* 가격 정보 */}
-                                                    <div className="flex flex-col text-right min-w-[50px] sm:min-w-[60px] shrink-0">
-                                                        {edition.discountRate > 0 && <span className="text-[10px] text-muted line-through leading-none">{edition.originalPrice.toLocaleString()}원</span>}
-                                                        <span className={`font-black ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
-                                                            {edition.currentPrice.toLocaleString()}원
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {game.inCatalog && (
-                            <div className="mb-8 p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/30 flex items-center gap-4 shadow-[0_0_15px_rgba(234,179,8,0.05)]">
-                                <div className="bg-yellow-500/10 p-2 sm:p-3 rounded-lg border border-yellow-500/30 shrink-0"><Sparkles className="w-5 h-5 text-yellow-500 animate-pulse" /></div>
-                                <div><h4 className="text-yellow-600 dark:text-yellow-500 font-bold text-sm">PS Plus 스페셜 / 디럭스 포함</h4><p className="text-secondary text-xs mt-0.5">구독 회원은 추가 비용 없이 플레이 가능합니다.</p></div>
-                            </div>
-                        )}
-
-                        {game.saleEndDate && game.discountRate > 0 && (
-                            <div className="flex items-center gap-2 mb-8 text-sm bg-base/90 dark:bg-base/80 w-fit px-4 py-2 rounded-lg backdrop-blur-xl border border-divider shadow-sm">
-                                <CalendarDays className="w-4 h-4 text-primary" />
-                                <span className="text-primary font-bold">할인 종료:</span>
-                                <span className="text-primary font-black">{game.saleEndDate.replace(/-/g, '.')}</span>
-                                {daysLeft !== null && daysLeft >= 0 ? (
-                                    daysLeft <= 1 ?
-                                        <span className="text-orange-500 font-bold ml-1">({daysLeft}일 남음 - 막차!)</span> :
-                                        <span className="text-primary font-bold ml-1">({daysLeft}일 남음)</span>
-                                ) : (
-                                    <span className="text-muted ml-1">(할인 종료)</span>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="flex flex-col sm:flex-row items-stretch sm:justify-start gap-3 sm:gap-4 w-full mt-6 p-1 sm:p-0">
-                            <a
-                                href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 sm:flex-none shrink-0 flex items-center justify-center gap-2 bg-primary text-[color:var(--color-bg-base)] hover:opacity-80 py-3 sm:py-4 px-6 sm:px-8 rounded-xl sm:rounded-full font-black text-sm sm:text-base text-center transition-transform hover:-translate-y-1 shadow-xl whitespace-nowrap group"
-                            >
-                                <Gamepad2 className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-12 transition-transform" />
-                                PS Store에서 보기
-                            </a>
-
-                            <div className="flex items-stretch gap-2 sm:gap-3 w-full sm:w-auto shrink-0">
-                                {game.liked && (
-                                    <button
-                                        onClick={() => setIsTargetModalOpen(true)}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-2 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] text-ps-blue hover:border-[color:var(--bento-blue-border-hover)] transition-all font-bold text-[11px] sm:text-sm shadow-sm hover:-translate-y-1"
-                                    >
-                                        <Crosshair className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                                        <span className="whitespace-nowrap">
-                                            {game.myTargetPrice ? (
-                                                <>
-                                                    <span className="sm:hidden">{game.myTargetPrice.toLocaleString()}원</span>
-                                                    <span className="hidden sm:inline">{game.myTargetPrice.toLocaleString()}원 설정 중</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span className="sm:hidden">목표가</span>
-                                                    <span className="hidden sm:inline">목표가 설정</span>
-                                                </>
-                                            )}
-                                        </span>
-                                    </button>
-                                )}
-
-                                <button
-                                    onClick={onWishlistClick}
-                                    className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2 py-3 sm:py-4 rounded-xl sm:rounded-full border transition-all font-bold shadow-lg hover:-translate-y-1 ${
-                                        game.liked
-                                            ? 'px-2 sm:px-6 bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500 hover:bg-red-500/20 backdrop-blur-xl'
-                                            : 'px-4 sm:px-8 bg-base/95 dark:bg-glass border-divider hover:bg-surface-hover text-primary backdrop-blur-2xl'
-                                    }`}
-                                >
-                                    <div className={`transition-transform duration-300 ${game.liked ? 'scale-110' : 'scale-100'}`}>
-                                        <Heart className={`w-4 h-4 sm:w-5 sm:h-5 shrink-0 ${game.liked ? 'fill-current' : ''}`} />
-                                    </div>
-                                    <span className={`whitespace-nowrap text-[11px] sm:text-sm leading-tight ${game.liked ? 'hidden sm:inline' : 'inline'}`}>
-                                        {game.liked ? '찜 취소' : '찜하기'}
-                                    </span>
-                                </button>
-
-                                <button
-                                    onClick={handleShare}
-                                    className="shrink-0 flex items-center justify-center px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-full border border-divider bg-base/95 dark:bg-glass text-primary hover:bg-surface-hover transition-all font-bold shadow-lg hover:-translate-y-1 backdrop-blur-2xl"
-                                >
-                                    <Link className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 mt-12 sm:mt-16">
-                    <div className="lg:col-span-2 space-y-6 sm:space-y-8 min-w-0">
-                        <div className="bg-surface backdrop-blur-md p-4 sm:p-6 rounded-xl border border-divider shadow-md">
-                            <h3 className="text-lg font-bold text-primary mb-6 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 가격 변동 그래프</h3>
-                            <PriceChart historyData={game.priceHistory} />
-                        </div>
-                        <div className="bg-surface backdrop-blur-md p-4 sm:p-6 rounded-xl border border-divider shadow-md">
-                            <h3 className="text-lg font-bold text-primary mb-4">게임 정보</h3>
-                            {hasDescription ? <p className="text-secondary text-xs sm:text-sm leading-relaxed whitespace-pre-line mb-6">{game.description}</p> : <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3 mb-6"><AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" /><div><p className="text-yellow-600 dark:text-yellow-500 text-sm font-bold">상세 설명이 제공되지 않는 게임입니다.</p><p className="text-yellow-600/80 dark:text-yellow-500/80 text-xs mt-1">대신 아래 버튼을 통해 게임플레이 영상이나 리뷰를 찾아보세요!</p></div></div>}
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-[var(--bento-red-from)] hover:bg-[var(--bento-red-border)] border border-[color:var(--bento-red-border)] text-red-600 dark:text-red-500 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2"><Youtube className="w-4 h-4" /> 유튜브 검색</a>
-                                <a href={`https://www.google.com/search?q=${encodeURIComponent(game.title)}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-[var(--bento-blue-from)] hover:bg-[var(--bento-blue-border)] border border-[color:var(--bento-blue-border)] text-blue-700 dark:text-blue-500 text-sm font-bold py-3 rounded-lg text-center transition-colors flex items-center justify-center gap-2"><Search className="w-4 h-4" /> 구글 검색</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="space-y-4 sm:space-y-5">
-
-                        <div className="flex items-center justify-between px-1 mb-2">
-                            <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
-                                <Star className="w-4 h-4 text-yellow-500" /> 종합 평가 지표
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'SCORE' }); }}
-                                    className="text-muted hover:text-primary transition-colors ml-1 p-0.5"
-                                >
-                                    <Info className="w-4 h-4" />
-                                </button>
-                            </h3>
                         </div>
 
                         {isDiscrepancyWarning && (
-                            <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-pulse">
-                                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                                <span className="text-red-500 font-bold text-[11px] sm:text-xs leading-tight">
-                                    주의: 전문가와 유저의 평가가 크게 엇갈리는 게임입니다.
-                                </span>
+                            <div className="mb-4 flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-fadeIn">
+                                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 animate-pulse" />
+                                <div>
+                                    <span className="block text-red-500 font-black text-sm leading-tight mb-0.5">
+                                        요주의 게임! (평가 엇갈림)
+                                    </span>
+                                    <span className="block text-red-400 font-bold text-xs leading-tight">
+                                        전문가(Critic)와 일반 유저(User)의 평가가 크게 엇갈리고 있습니다. 구매 전 리뷰를 꼭 확인하세요.
+                                    </span>
+                                </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3 sm:gap-4 items-stretch">
+                        {/* 3. 벤토 그리드 대시보드 (평가/플레이타임) */}
+                        <div className="grid grid-cols-2 gap-4 mb-8">
 
-                            {/* [카드 1: Metacritic] */}
-                            {(game.mcMetaScore > 0 || game.mcUserScore > 0) ? (
-                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-divider-strong flex flex-col justify-between h-full">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="bg-black dark:bg-white text-white dark:text-black font-black text-[10px] px-2 py-0.5 rounded shadow-sm border border-divider">
-                                            M
-                                        </span>
-                                        <span className="text-[10px] font-bold text-primary opacity-80">Metacritic</span>
+                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
+                                <Triangle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-green-500/20 transition-colors" />
+
+                                <div className="relative z-10 flex justify-between items-center mb-6">
+                                    <span className="bg-black dark:bg-white text-white dark:text-black font-black text-xs px-2.5 py-0.5 rounded shadow-sm tracking-wide">M</span>
+                                    <span className="text-xs font-bold text-secondary tracking-wide">Metacritic</span>
+                                </div>
+
+                                <div className="relative z-10 flex flex-col gap-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
+                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.mcMetaCount)} reviews</span>
+                                        </div>
+                                        <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
+                                            {game.mcMetaScore || '-'}
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex justify-between items-center gap-2">
-                                            <div className="flex flex-col shrink-0">
-                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">CRITIC</span>
-                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.mcMetaCount)} reviews</span>
-                                            </div>
-                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
-                                                <span className={`text-2xl sm:text-3xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
-                                                    {game.mcMetaScore || '-'}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
-                                            </div>
+                                    <div className="w-full h-px bg-divider/50"></div>
+
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
+                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.mcUserCount)} ratings</span>
                                         </div>
-
-                                        <div className="w-full h-[1px] bg-divider"></div>
-
-                                        <div className="flex justify-between items-center gap-2">
-                                            <div className="flex flex-col shrink-0">
-                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">USER</span>
-                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.mcUserCount)} ratings</span>
-                                            </div>
-                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
-                                                <span className={`text-xl sm:text-2xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
-                                                    {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-primary opacity-50">/10</span>
-                                            </div>
+                                        <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
+                                            {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[120px] transition-colors hover:border-divider-strong overflow-hidden">
-                                    <span className="text-[11px] sm:text-xs font-bold text-primary opacity-60 whitespace-nowrap">메타크리틱 평가 없음</span>
-                                </div>
-                            )}
+                            </div>
 
-                            {/* [카드 2: IGDB] */}
-                            {(game.igdbCriticScore > 0 || game.igdbUserScore > 0) ? (
-                                <div className="bg-surface border border-divider p-4 rounded-xl shadow-md transition-colors hover:border-[color:var(--bento-purple-border)] flex flex-col justify-between h-full">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-[10px] px-2 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm">
-                                            IGDB
-                                        </span>
-                                        <span className="text-[10px] font-bold text-primary opacity-80">Community</span>
+                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
+                                <Circle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-purple-500/20 transition-colors" />
+
+                                <div className="relative z-10 flex justify-between items-center mb-6">
+                                    <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-xs px-2.5 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm tracking-wide">IGDB</span>
+                                    <span className="text-xs font-bold text-secondary tracking-wide">Community</span>
+                                </div>
+
+                                <div className="relative z-10 flex flex-col gap-4">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
+                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbCriticCount)} reviews</span>
+                                        </div>
+                                        <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
+                                            {game.igdbCriticScore || '-'}
+                                        </div>
                                     </div>
 
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex justify-between items-center gap-2">
-                                            <div className="flex flex-col shrink-0">
-                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">CRITIC</span>
-                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.igdbCriticCount)} reviews</span>
-                                            </div>
-                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
-                                                <span className={`text-2xl sm:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
-                                                    {game.igdbCriticScore || '-'}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
-                                            </div>
+                                    <div className="w-full h-px bg-divider/50"></div>
+
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
+                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbUserCount)} ratings</span>
                                         </div>
-
-                                        <div className="w-full h-[1px] bg-divider"></div>
-
-                                        <div className="flex justify-between items-center gap-2">
-                                            <div className="flex flex-col shrink-0">
-                                                <span className="text-[10px] sm:text-xs font-black text-primary opacity-90 tracking-wider">USER</span>
-                                                <span className="text-[9px] sm:text-[10px] text-primary opacity-60 whitespace-nowrap">{formatCount(game.igdbUserCount)} ratings</span>
-                                            </div>
-                                            <div className="flex items-baseline gap-0.5 justify-end shrink-0">
-                                                <span className={`text-xl sm:text-2xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
-                                                    {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-primary opacity-50">/100</span>
-                                            </div>
+                                        <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
+                                            {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="bg-surface/30 border-2 border-dashed border-divider p-4 rounded-xl flex items-center justify-center h-full min-h-[120px] transition-colors hover:border-divider-strong overflow-hidden">
-                                    <span className="text-[11px] sm:text-xs font-bold text-primary opacity-60 whitespace-nowrap">IGDB 평가 없음</span>
-                                </div>
-                            )}
+                            </div>
 
-                        </div>
-
-                        {/* Playtime 영역 */}
-                        {(game.hltbMainStory || game.hltbMainExtra || game.hltbCompletionist) ? (
-                            <div className="bg-surface border border-divider p-4 sm:p-5 rounded-xl shadow-md relative overflow-hidden mt-4 group">
-                                {/* 배경 은은한 효과 (PS Vibe) */}
+                            <div className="col-span-2 bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
                                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-ps-blue/5 rounded-full blur-2xl group-hover:bg-ps-blue/10 transition-colors duration-700 pointer-events-none"></div>
+                                <Square className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-ps-blue/20 transition-colors pointer-events-none" />
 
                                 <div className="relative z-10">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 uppercase tracking-wider">
+                                        <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 tracking-wider">
                                             <Clock className="w-4 h-4 text-ps-blue" /> Playtime Radar
                                         </h3>
-                                        <span className="text-[9px] sm:text-[10px] font-black text-white bg-secondary/80 dark:bg-white/20 px-2 py-0.5 rounded shadow-inner tracking-widest">HLTB</span>
+                                        <span className="text-[9px] font-black text-white bg-secondary/80 dark:bg-white/20 px-2 py-0.5 rounded shadow-inner tracking-widest">HLTB Average</span>
                                     </div>
 
-                                    {/* 대시보드 계기판 3분할 영역 */}
-                                    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                                        {/* Main Story */}
-                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-ps-blue/40 hover:bg-ps-blue/5">
-                                            <Gamepad2 className="absolute -bottom-1 -right-1 w-8 h-8 text-ps-blue opacity-5 -rotate-12 pointer-events-none" />
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">MAIN</span>
-                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbMainStory)}</span>
+                                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-ps-blue/5 hover:border-ps-blue/30 transition-colors">
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">MAIN</span>
+                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbMainStory)}</span>
                                         </div>
-
-                                        {/* Main + Extra */}
-                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-purple-500/40 hover:bg-purple-500/5">
-                                            <Layers className="absolute -bottom-1 -right-1 w-8 h-8 text-purple-500 opacity-5 -rotate-12 pointer-events-none" />
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">+ EXTRA</span>
-                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbMainExtra)}</span>
+                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-purple-500/5 hover:border-purple-500/30 transition-colors">
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">+EXTRA</span>
+                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbMainExtra)}</span>
                                         </div>
-
-                                        {/* Completionist */}
-                                        <div className="flex flex-col items-center justify-center bg-base/50 rounded-xl p-2.5 sm:p-3 border border-divider shadow-inner relative overflow-hidden transition-all hover:border-yellow-500/40 hover:bg-yellow-500/5">
-                                            <Trophy className="absolute -bottom-1 -right-1 w-8 h-8 text-yellow-500 opacity-5 -rotate-12 pointer-events-none" />
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1 z-10">PLATINUM</span>
-                                            <span className="text-lg sm:text-xl font-black text-primary drop-shadow-sm z-10">{formatPlayTime(game.hltbCompletionist)}</span>
+                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-yellow-500/5 hover:border-yellow-500/30 transition-colors">
+                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">100%</span>
+                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbCompletionist)}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        ) : (
-                            /* 데이터 없을 때의 Null 방어 UI */
-                            <div className="bg-surface/30 border-2 border-dashed border-divider p-4 sm:p-5 rounded-xl flex items-center justify-center mt-4 min-h-[120px]">
-                                <div className="text-center opacity-50 flex flex-col items-center">
-                                    <Clock className="w-5 h-5 text-secondary mb-1.5" />
-                                    <span className="text-[11px] sm:text-xs font-bold text-primary whitespace-nowrap">플레이타임 분석 중</span>
+                        </div>
+
+                        {game.inCatalog && (
+                            <div className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-yellow-500/5 border border-yellow-500/30 flex items-center gap-4 shadow-[0_0_15px_rgba(234,179,8,0.05)] animate-fadeIn">
+                                <div className="bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30 shrink-0">
+                                    <Sparkles className="w-6 h-6 text-yellow-600 dark:text-yellow-500 animate-pulse" />
+                                </div>
+                                <div>
+                                    <h4 className="text-yellow-700 dark:text-yellow-400 font-black text-sm sm:text-base mb-0.5">PS Plus 스페셜 / 디럭스 카탈로그 포함</h4>
+                                    <p className="text-secondary text-xs font-bold">구독 회원은 추가 비용 없이 즉시 플레이 가능합니다.</p>
                                 </div>
                             </div>
                         )}
 
-                        <div className="bg-surface border border-divider p-5 sm:p-6 rounded-2xl backdrop-blur-md md:backdrop-blur-xl shadow-md relative overflow-hidden group/verdict mt-4">
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-secondary to-transparent blur-[1px]"></div>
-                            <h4 className="text-secondary text-xs font-bold mb-5 flex items-center justify-between">
-                                <span className="flex items-center gap-1.5 uppercase tracking-widest"><Users className="w-3.5 h-3.5"/> Community Verdict</span>
-                                <span className="text-primary bg-base px-2.5 py-1 rounded-full text-[10px] shadow-inner border border-divider">
-                                    Total {(voteCounts.likes + voteCounts.dislikes).toLocaleString()}
-                                </span>
-                            </h4>
+                        {/* 4. 에디션 비교 패널 */}
+                        {game.familyGames && game.familyGames.length > 1 && (
+                            <div className="mb-8 animate-fadeIn">
+                                <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-1.5"><Layers className="w-4 h-4 text-ps-blue" /> 에디션 비교 및 선택</h3>
+                                <div className="bg-surface border border-divider rounded-2xl p-2 shadow-inner">
+                                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong hover:[&::-webkit-scrollbar-thumb]:bg-muted [&::-webkit-scrollbar-thumb]:rounded-full">
+                                        {game.familyGames.map((edition) => {
+                                            const isCurrent = edition.id === game.id;
+                                            const priceGap = edition.currentPrice - game.currentPrice;
+                                            const isHigherTier = edition.originalPrice > game.originalPrice;
+                                            const isLowerTier = edition.originalPrice < game.originalPrice;
 
-                            <div className="flex gap-3 sm:gap-4 mb-5">
-                                <button
-                                    onClick={() => handleVote('LIKE')}
-                                    className={`relative flex-1 flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border transition-all duration-300 overflow-hidden group ${
-                                        userVote === 'LIKE'
-                                            ? 'bg-green-500/10 border-green-500/50 shadow-[0_0_20px_rgba(34,197,94,0.1)]'
-                                            : 'bg-base border-divider hover:bg-green-500/5 hover:border-green-500/30'
-                                    }`}
-                                >
-                                    {userVote === 'LIKE' && <div className="absolute inset-0 bg-gradient-to-t from-green-500/10 to-transparent pointer-events-none"></div>}
-                                    <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-active:scale-90 ${
-                                        userVote === 'LIKE' ? 'bg-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'bg-transparent'
-                                    }`}>
-                                        <Circle className={`w-6 h-6 sm:w-7 sm:h-7 stroke-[3.5px] transition-colors ${
-                                            userVote === 'LIKE' ? 'text-green-600 dark:text-green-500 fill-green-500/20 drop-shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'text-secondary group-hover:text-green-600 dark:group-hover:text-green-500'
-                                        }`} />
-                                    </div>
-                                    <span className={`relative z-10 font-black text-lg sm:text-xl leading-none tracking-tight ${
-                                        userVote === 'LIKE' ? 'text-green-600 dark:text-green-500 drop-shadow-sm' : 'text-secondary group-hover:text-primary'
-                                    }`}>{voteCounts.likes}</span>
-                                </button>
+                                            return (
+                                                <button
+                                                    key={edition.id}
+                                                    onClick={() => navigate(`/games/${edition.id}`, { replace: true, state: location.state })}
+                                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all text-left group shrink-0 ${
+                                                        isCurrent
+                                                            ? 'bg-blue-50/90 dark:bg-blue-900/40 border-ps-blue ring-1 ring-ps-blue shadow-sm cursor-default'
+                                                            : 'bg-base border-divider hover:border-divider-strong hover:shadow-sm cursor-pointer'
+                                                    }`}
+                                                    disabled={isCurrent}
+                                                >
+                                                    <div className="flex-1 pr-4 mb-3 sm:mb-0 min-w-0">
+                                                        {isCurrent && (
+                                                            <span className="inline-block text-[9px] font-black text-white bg-ps-blue px-2 py-0.5 rounded mb-1.5 shadow-sm">
+                                                                CURRENT
+                                                            </span>
+                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
+                                                            <p className={`text-xs sm:text-sm font-bold truncate ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
+                                                                {edition.name}
+                                                            </p>
+                                                        </div>
+                                                    </div>
 
-                                <button
-                                    onClick={() => handleVote('DISLIKE')}
-                                    className={`relative flex-1 flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border transition-all duration-300 overflow-hidden group ${
-                                        userVote === 'DISLIKE'
-                                            ? 'bg-red-500/10 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]'
-                                            : 'bg-base border-divider hover:bg-red-500/5 hover:border-red-500/30'
-                                    }`}
-                                >
-                                    {userVote === 'DISLIKE' && <div className="absolute inset-0 bg-gradient-to-t from-red-500/10 to-transparent pointer-events-none"></div>}
-                                    <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 transition-transform duration-300 group-active:scale-90 ${
-                                        userVote === 'DISLIKE' ? 'bg-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-transparent'
-                                    }`}>
-                                        <X className={`w-7 h-7 sm:w-8 sm:h-8 stroke-[4px] transition-colors ${
-                                            userVote === 'DISLIKE' ? 'text-red-600 dark:text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]' : 'text-secondary group-hover:text-red-600 dark:group-hover:text-red-500'
-                                        }`} />
+                                                    <div className="flex items-center justify-end gap-2 shrink-0 flex-wrap sm:flex-nowrap border-t sm:border-t-0 border-divider pt-2 sm:pt-0">
+
+                                                        {!isCurrent && isHigherTier && priceGap < 0 && (
+                                                            <span className="flex items-center gap-1 text-[10px] font-black text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
+                                                                <Sparkles className="w-3 h-3 text-green-500" /> 상위판이 더 저렴!
+                                                            </span>
+                                                        )}
+
+                                                        {!isCurrent && isLowerTier && priceGap > 0 && (
+                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                <AlertTriangle className="w-3 h-3 text-red-500" /> 하위판인데 더 비쌈
+                                                            </span>
+                                                        )}
+
+                                                        {!isCurrent && isHigherTier && priceGap >= 0 && (
+                                                            (priceGap <= 15000 && edition.discountRate > 0) ? (
+                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                    <ArrowUpRight className="w-3 h-3 text-yellow-600 dark:text-yellow-500" /> +{priceGap.toLocaleString()}원 업그레이드
+                                                                </span>
+                                                            ) : (
+                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-secondary bg-surface border border-divider px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                    <Plus className="w-3 h-3 text-muted" /> {priceGap.toLocaleString()}원 추가
+                                                                </span>
+                                                            )
+                                                        )}
+
+                                                        {!isCurrent && isLowerTier && priceGap < 0 && (
+                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                <TrendingDown className="w-3 h-3 text-blue-500" /> {Math.abs(priceGap).toLocaleString()}원 절약
+                                                            </span>
+                                                        )}
+
+                                                        {/* 할인율 표시 */}
+                                                        {edition.discountRate > 0 && (
+                                                            <span className="text-[10px] font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
+                                                                -{edition.discountRate}%
+                                                            </span>
+                                                        )}
+
+                                                        {/* 최종 가격 정보 */}
+                                                        <div className="flex flex-col text-right min-w-[50px] shrink-0">
+                                                            {edition.discountRate > 0 && <span className="text-[9px] text-muted line-through leading-none">{edition.originalPrice.toLocaleString()}원</span>}
+                                                            <span className={`text-sm font-black ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
+                                                                {edition.currentPrice.toLocaleString()}원
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
-                                    <span className={`relative z-10 font-black text-lg sm:text-xl leading-none tracking-tight ${
-                                        userVote === 'DISLIKE' ? 'text-red-600 dark:text-red-500 drop-shadow-sm' : 'text-secondary group-hover:text-primary'
-                                    }`}>{voteCounts.dislikes}</span>
-                                </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 5. 심층 정보 영역 (차트, 커뮤니티, 상세설명) */}
+                        <div className="space-y-6">
+                            {game.scouterTotalWatchers > 0 && <StealthPanel watchersCount={game.scouterTotalWatchers} averagePrice={game.scouterAverageTargetPrice} isLiked={isLiked} />}
+
+                            <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md">
+                                <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
+                                <PriceChart historyData={game.priceHistory} />
                             </div>
 
-                            <div className="relative h-2 w-full bg-base rounded-full overflow-hidden border border-divider shadow-inner">
-                                {(voteCounts.likes > 0 || voteCounts.dislikes > 0) ? (
-                                    <div className="absolute inset-0 flex">
-                                        <div className="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-1000 ease-out relative" style={{ width: `${(voteCounts.likes / (voteCounts.likes + voteCounts.dislikes)) * 100}%` }}>
-                                            <div className="absolute right-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
-                                        </div>
-                                        <div className="h-full bg-gradient-to-l from-red-600 to-red-400 transition-all duration-1000 ease-out relative" style={{ width: `${(voteCounts.dislikes / (voteCounts.likes + voteCounts.dislikes)) * 100}%` }}>
-                                            <div className="absolute left-0 top-0 bottom-0 w-2 bg-white/50 blur-[2px]"></div>
-                                        </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md flex flex-col">
+                                    <h4 className="text-xs font-bold text-secondary mb-4 flex items-center justify-between uppercase tracking-widest">
+                                        <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 유저 평가</span>
+                                        <span className="bg-base px-2 py-0.5 rounded shadow-inner border border-divider">{voteCounts.likes + voteCounts.dislikes} Votes</span>
+                                    </h4>
+                                    <div className="flex gap-3 mb-4">
+                                        <button onClick={() => handleVote('LIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center ${userVote === 'LIKE' ? 'bg-green-500/10 border-green-500/50' : 'bg-base border-divider'}`}><Circle className={`w-6 h-6 mb-1 ${userVote === 'LIKE' ? 'text-green-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.likes}</span></button>
+                                        <button onClick={() => handleVote('DISLIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center ${userVote === 'DISLIKE' ? 'bg-red-500/10 border-red-500/50' : 'bg-base border-divider'}`}><X className={`w-6 h-6 mb-1 ${userVote === 'DISLIKE' ? 'text-red-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.dislikes}</span></button>
                                     </div>
+                                </div>
+                                <div className="bg-surface p-5 rounded-2xl border border-divider text-center shadow-md flex flex-col items-center justify-center relative overflow-hidden group">
+                                    <Server className="w-8 h-8 text-yellow-600 dark:text-yellow-500 mb-2 group-hover:scale-110 transition-transform" />
+                                    <h4 className="font-bold text-primary mb-1">감자 서버 밥 주기</h4>
+                                    <p className="text-[10px] text-secondary mb-3">할인을 놓치지 않고 잡아낸<br/>서버 유지에 힘을 보태주세요!</p>
+                                    <button onClick={() => setIsDonationOpen(true)} className="w-full bg-yellow-500 text-black font-black py-2 rounded-lg text-xs shadow-md">후원하기 <ExternalLink className="w-3 h-3 inline"/></button>
+                                </div>
+                            </div>
+
+                            <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md">
+                                <h3 className="text-lg font-bold text-primary mb-4">게임 설명</h3>
+
+                                {hasDescription ? (
+                                    <p className="text-sm text-secondary leading-relaxed whitespace-pre-line mb-6">
+                                        {game.description}
+                                    </p>
                                 ) : (
-                                    <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,var(--color-border-strong)_10px,var(--color-border-strong)_20px)] animate-[progress_2s_linear_infinite]"></div>
+                                    <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3 mb-6">
+                                        <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-yellow-600 dark:text-yellow-500 text-sm font-bold mb-1">상세 설명이 제공되지 않는 게임입니다.</p>
+                                            <p className="text-secondary text-xs font-bold">대신 아래 버튼을 통해 게임플레이 영상이나 리뷰를 바로 찾아보세요!</p>
+                                        </div>
+                                    </div>
                                 )}
+
+                                <div className="flex flex-col sm:flex-row gap-3 border-t border-divider pt-6">
+                                    <a
+                                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-600 dark:text-red-500 text-sm font-bold py-3.5 rounded-xl text-center transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                                    >
+                                        <Youtube className="w-4 h-4" /> 유튜브에서 게임플레이 보기
+                                    </a>
+                                    <a
+                                        href={`https://www.google.com/search?q=${encodeURIComponent(game.title)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-600 dark:text-blue-500 text-sm font-bold py-3.5 rounded-xl text-center transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5"
+                                    >
+                                        <Search className="w-4 h-4" /> 구글에서 리뷰 검색하기
+                                    </a>
+                                </div>
                             </div>
-                            {(voteCounts.likes === 0 && voteCounts.dislikes === 0) && <p className="text-center text-[10px] text-muted mt-2 font-bold animate-pulse">첫 번째 평가를 남겨주세요!</p>}
-                        </div>
-
-                        <div className="bg-surface p-5 sm:p-6 rounded-xl border border-divider text-center shadow-md relative overflow-hidden group mt-4">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-500"></div>
-
-                            <Server className="w-8 h-8 sm:w-10 sm:h-10 text-yellow-600 dark:text-yellow-500 mx-auto mb-3 group-hover:scale-110 transition-transform" />
-
-                            <h4 className="font-bold text-primary mb-2 text-sm sm:text-base">감자 서버 밥 주기</h4>
-
-                            <p className="text-[10px] sm:text-xs text-secondary mb-5 leading-relaxed">
-                                PS Tracker로 게임값 아끼셨나요?<br/>
-                                작은 후원이 무럭무럭 자라나는<br/>
-                                감자 서버 유지에 큰 힘이 됩니다!
-                            </p>
-
-                            <button onClick={() => setIsDonationOpen(true)} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-2.5 sm:py-3 rounded-lg transition-all shadow-md hover:shadow-yellow-500/20 active:scale-95 flex items-center justify-center gap-2 text-sm">
-                                서버비 보태기 (후원) <ExternalLink className="w-4 h-4"/>
-                            </button>
-
-                            <Sparkles className="absolute top-4 right-4 w-4 h-4 text-yellow-500 opacity-20 animate-pulse" />
                         </div>
                     </div>
                 </div>
 
+                {/* 관련 게임 추천 */}
                 {game.relatedGames && game.relatedGames.length > 0 && (
-                    <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-divider animate-fadeIn">
-                        <h3 className="text-lg sm:text-xl font-black text-primary mb-6 flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-500" /><span>이 게임을 좋아한다면 (Recommended)</span></h3>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="mt-16 pt-10 border-t border-divider">
+                        <h3 className="text-xl font-black text-primary mb-6 flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-500" />이 게임을 좋아한다면</h3>
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                             {game.relatedGames.map(related => <RelatedGameCard key={related.id} game={related} />)}
                         </div>
                     </div>
                 )}
             </div>
+
+            <div className="lg:hidden fixed bottom-0 left-0 w-full p-3 sm:p-4 bg-base/90 backdrop-blur-xl border-t border-divider z-[60] animate-slideUp">
+                <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+                    {/* 가격 정보 요약 */}
+                    <div className="flex-1 min-w-0">
+                        <p className="text-[10px] sm:text-xs text-secondary font-bold truncate">{game.title}</p>
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                            <p className={`text-base sm:text-lg font-black leading-none ${game.isPlusExclusive ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary'}`}>
+                                {game.currentPrice.toLocaleString()}원
+                            </p>
+                            {game.discountRate > 0 && (
+                                <span className="text-[10px] sm:text-[11px] font-black text-white bg-ps-blue px-1.5 py-0.5 rounded shadow-sm">
+                                    -{game.discountRate}%
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 핵심 액션 버튼들 (찜하기, 찜취소, 목표가, 스토어) */}
+                    <div className="flex gap-2 shrink-0">
+                        {game.liked && (
+                            <button
+                                onClick={() => setIsTargetModalOpen(true)}
+                                className="p-2.5 sm:p-3 rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] text-ps-blue shadow-md active:scale-95 transition-transform"
+                                aria-label="목표가 설정"
+                            >
+                                <Crosshair className="w-5 h-5" />
+                            </button>
+                        )}
+
+                        <button
+                            onClick={onWishlistClick}
+                            className={`p-2.5 sm:p-3 rounded-xl border font-bold shadow-md active:scale-95 transition-all ${
+                                game.liked
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-500'
+                                    : 'bg-surface border-divider text-primary'
+                            }`}
+                            aria-label={game.liked ? '찜 취소' : '찜하기'}
+                        >
+                            <Heart className={`w-5 h-5 ${game.liked ? 'fill-current scale-110 transition-transform' : ''}`} />
+                        </button>
+
+                        <a
+                            href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-1.5 px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-primary text-[color:var(--color-bg-base)] font-black text-sm shadow-lg active:scale-95 transition-transform"
+                        >
+                            <Gamepad2 className="w-4 h-4" />
+                            <span className="whitespace-nowrap hidden sm:inline">스토어</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {/* Modal Components */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
-
-            <TargetPriceModal
-                isOpen={isTargetModalOpen}
-                onClose={() => setIsTargetModalOpen(false)}
-                game={game}
-                defenseTier={game.defenseTier}
-                onSubmit={(price) => handleTargetSubmit(price)}
-            />
-
-            <HelpModal
-                isOpen={helpInfo.isOpen}
-                type={helpInfo.type}
-                onClose={() => setHelpInfo({ isOpen: false, type: null })}
-            />
+            <TargetPriceModal isOpen={isTargetModalOpen} onClose={() => setIsTargetModalOpen(false)} game={game} defenseTier={game.defenseTier} onSubmit={(price) => handleTargetSubmit(price)} />
+            <HelpModal isOpen={helpInfo.isOpen} type={helpInfo.type} onClose={() => setHelpInfo({ isOpen: false, type: null })} />
         </div>
     );
 
