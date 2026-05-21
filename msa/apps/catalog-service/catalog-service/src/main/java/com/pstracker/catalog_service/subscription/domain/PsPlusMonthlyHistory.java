@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
         name = "ps_plus_monthly_history",
         uniqueConstraints = {
                 @UniqueConstraint(
-                        name = "uk_monthly_history_target_month_ps_store_id",
-                        columnNames = {"target_month", "ps_store_id"}
+                        name = "uk_monthly_history_month_storeid_type",
+                        columnNames = {"target_month", "ps_store_id", "benefit_type"}
                 )
         }
 )
@@ -31,6 +31,10 @@ public class PsPlusMonthlyHistory {
     @Column(name = "ps_store_id", nullable = false)
     private String psStoreId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "benefit_type", nullable = false, length = 20)
+    private BenefitType benefitType;
+
     @Column(nullable = false)
     private String title;
 
@@ -40,10 +44,15 @@ public class PsPlusMonthlyHistory {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    public static PsPlusMonthlyHistory createPsPlusMonthlyHistory(String targetMonth, String psStoreId, String title, String imageUrl) {
+    public enum BenefitType {
+        ESSENTIAL, CATALOG
+    }
+
+    public static PsPlusMonthlyHistory createPsPlusMonthlyHistory(String targetMonth, String psStoreId, BenefitType benefitType, String title, String imageUrl) {
         PsPlusMonthlyHistory history = new PsPlusMonthlyHistory();
         history.targetMonth = targetMonth;
         history.psStoreId = psStoreId;
+        history.benefitType = benefitType;
         history.title = title;
         history.imageUrl = imageUrl;
         history.createdAt = LocalDateTime.now();

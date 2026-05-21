@@ -61,19 +61,19 @@ def crawl_monthly_games():
 
         try:
             # ==========================================
-            # [Step 1] 마케팅 페이지에서 월간 게임 리스트(Slug) 수집
+            # [Step 1-A] 마케팅 페이지에서 에센셜 월간 게임 리스트 수집 (기존 로직 유지)
             # ==========================================
-            logger.info(f"👉 [Step 1] 마케팅 페이지 접속: {target_url}")
+            logger.info(f"👉 [Step 1-A] 마케팅 페이지 접속: {target_url}")
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
 
-            # 🚀 [수정 후] 소니의 AEM 고유 클래스(마스터 키)를 활용한 완벽한 타겟팅
+            # 🚀 소니의 AEM 고유 클래스(마스터 키)를 활용한 타겟팅
             section_locator = page.locator(".cmp-experiencefragment--wn-latest-monthly-games-content")
 
             # 해당 섹션 내부에서만 게임 박스를 찾음
             boxes_locator = section_locator.locator(".box:has(a.btn--cta[href*='/games/'])")
             boxes_count = boxes_locator.count()
 
-            logger.info(f"발견된 게임 카드 수: {boxes_count}개")
+            logger.info(f"발견된 에센셜 게임 카드 수: {boxes_count}개")
 
             scraped_games = []
 
@@ -94,20 +94,60 @@ def crawl_monthly_games():
 
                 if slug:
                     scraped_games.append({
+                        "benefitType": "ESSENTIAL", # 💡 DB 구분을 위해 추가
                         "title": title,
                         "slug": slug,
                         "image_url": image_url
                     })
-                    logger.info(f"   ✔️ 1차 수집 완료: {title} ({slug})")
+                    logger.info(f"   ✔️ 에센셜 수집 완료: {title} ({slug})")
 
             # ==========================================
-            # [Step 2] 각 상세 페이지로 이동하여 ps_store_id 탈취
+            # 💡 [Step 1-B] 스페셜 카탈로그 신작 게임 수집 (신규 로직 추가)
+            # ==========================================
+            logger.info(f"👉 [Step 1-B] 스페셜 카탈로그 추가 게임 수집 시작")
+
+            # 페이지 내 두 번째 캐러셀(인덱스 1)이 카탈로그 영역
+            catalog_carousel = page.locator("div.carousel").nth(1)
+
+            # 전달받은 DOM 구조 적용: 복제본(.simple-carousel-clone) 제외
+            catalog_cards = catalog_carousel.locator("a.card:not(.simple-carousel-clone)")
+            catalog_count = catalog_cards.count()
+
+            logger.info(f"발견된 카탈로그 게임 카드 수: {catalog_count}개")
+
+            for i in range(catalog_count):
+                card = catalog_cards.nth(i)
+
+                # 1. 제목 추출 (h5 태그)
+                title_loc = card.locator("h5.txt-block-utility__title")
+                title = title_loc.text_content().strip() if title_loc.count() > 0 else "Unknown Title"
+
+                # 2. 상세 페이지 링크(Slug) 추출 (a 태그 자체의 href)
+                slug = card.get_attribute("href")
+
+                # 3. 이미지 URL 추출 (picture source 태그)
+                img_loc = card.locator("picture.media-block__img source").first
+                image_url = img_loc.get_attribute("srcset") if img_loc.count() > 0 else None
+                if image_url and "?" in image_url:
+                    image_url = image_url.split("?")[0] # 해상도 파라미터 제거
+
+                if slug:
+                    scraped_games.append({
+                        "benefitType": "CATALOG", # 💡 DB 구분을 위해 추가
+                        "title": title,
+                        "slug": slug,
+                        "image_url": image_url
+                    })
+                    logger.info(f"   ✔️ 카탈로그 수집 완료: {title} ({slug})")
+
+            # ==========================================
+            # [Step 2] 각 상세 페이지로 이동하여 ps_store_id 탈취 (기존 로직 유지)
             # ==========================================
             logger.info("👉 [Step 2] 상세 페이지 진입 및 ps_store_id (productId) 추출 시작")
 
             for game in scraped_games:
                 detail_url = base_url + game["slug"]
-                logger.info(f"   탐색 중... {game['title']} -> {detail_url}")
+                logger.info(f"   탐색 중... [{game['benefitType']}] {game['title']} -> {detail_url}")
 
                 # 상세 페이지로 이동
                 page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
@@ -142,7 +182,7 @@ def crawl_monthly_games():
 
             result["status"] = "SUCCESS"
             result["monthly_games"] = scraped_games
-            logger.info("🎉 모든 월간 게임 수집이 완료되었습니다!")
+            logger.info("🎉 모든 월간 게임 및 카탈로그 수집이 완료되었습니다!")
 
         except Exception as e:
             logger.error(f"❌ 크롤링 중 치명적 에러 발생: {e}")

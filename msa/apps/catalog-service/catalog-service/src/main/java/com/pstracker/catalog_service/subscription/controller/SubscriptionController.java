@@ -1,7 +1,8 @@
 package com.pstracker.catalog_service.subscription.controller;
 
+import com.pstracker.catalog_service.subscription.domain.PsPlusMonthlyHistory;
 import com.pstracker.catalog_service.subscription.dto.MonthlyGameArchiveResponse;
-import com.pstracker.catalog_service.subscription.dto.MonthlyGameCollectRequest;
+import com.pstracker.catalog_service.subscription.dto.PsPlusBenefitCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusPricingResponse;
 import com.pstracker.catalog_service.subscription.service.SubscriptionService;
@@ -37,17 +38,18 @@ public class SubscriptionController {
         return ResponseEntity.ok("PS Plus subscription prices processed successfully.");
     }
 
-    @PostMapping("/monthly-games/collect")
-    public ResponseEntity<Void> collectMonthlyGames(@Valid @RequestBody MonthlyGameCollectRequest request) {
-        subscriptionService.collectMonthlyGames(request);
+    @PostMapping("/benefits/collect")
+    public ResponseEntity<Void> collectPsPlusBenefits(@Valid @RequestBody PsPlusBenefitCollectRequest request) {
+        subscriptionService.collectPsPlusBenefits(request);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/monthly-games")
-    public ResponseEntity<Page<MonthlyGameArchiveResponse>> getMonthlyGamesArchive(
+    @GetMapping("/benefits")
+    public ResponseEntity<Page<MonthlyGameArchiveResponse>> getBenefitsArchive(
+            @RequestParam(defaultValue = "ESSENTIAL") PsPlusMonthlyHistory.BenefitType benefitType,
             @PageableDefault(size = 5) Pageable pageable) {
 
-        Page<MonthlyGameArchiveResponse> response = subscriptionService.getMonthlyGamesArchive(pageable);
+        Page<MonthlyGameArchiveResponse> response = subscriptionService.getMonthlyGamesArchive(benefitType, pageable);
 
         if (response.isEmpty()) {
             return ResponseEntity.noContent().build();

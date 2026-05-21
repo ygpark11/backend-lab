@@ -9,7 +9,6 @@ import PriceChart from '../components/PriceChart';
 import HelpModal from '../components/common/HelpModal';
 
 const PS_PLUS_BENEFITS = {
-    // ... (기존과 완벽히 동일하므로 생략 없이 풀버전 유지)
     ESSENTIAL: [
         { name: "월간 게임", active: true, highlight: true },
         { name: "온라인 멀티플레이", active: true, highlight: false },

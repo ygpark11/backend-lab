@@ -357,7 +357,7 @@ def crawl_ps_plus_prices_no_click(bm):
 
             result_data[tier_key] = tier_prices
 
-        logger.info(f"🎉 구독권 파싱 완료: {result_data}")
+        logger.info(f"구독권 파싱 완료: {result_data}")
 
         api_url = f"{BASE_URL}/api/v1/subscriptions/ps-plus/collect"
         res = session.post(
@@ -373,7 +373,7 @@ def crawl_ps_plus_prices_no_click(bm):
             logger.error(f"백엔드 전송 실패 ({res.status_code}): {res.text}")
 
     except Exception as e:
-        logger.error(f"🔥 PS-Plus 파싱 중 에러 발생: {e}")
+        logger.error(f"PS-Plus 파싱 중 에러 발생: {e}")
     finally:
         try: page.close()
         except: pass
@@ -408,7 +408,12 @@ def crawl_ps_plus_monthly_games(bm):
             image_url = img_loc.get_attribute("data-src") if img_loc.count() > 0 else None
 
             if slug:
-                scraped_games.append({"title": title, "slug": slug, "imageUrl": image_url})
+                scraped_games.append({
+                    "benefitType": "ESSENTIAL",
+                    "title": title,
+                    "slug": slug,
+                    "imageUrl": image_url
+                })
 
         logger.info("[Step 2] 상세 페이지 진입 및 ps_store_id 추출 시작")
 
@@ -432,8 +437,8 @@ def crawl_ps_plus_monthly_games(bm):
 
         # 백엔드로 전송
         if valid_games:
-            api_url = f"{BASE_URL}/api/v1/subscriptions/monthly-games/collect"
-            payload = {"monthlyGames": valid_games}
+            api_url = f"{BASE_URL}/api/v1/subscriptions/benefits/collect"
+            payload = {"benefits": valid_games}
 
             res = session.post(api_url, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
             if res.status_code == 200:
@@ -443,6 +448,83 @@ def crawl_ps_plus_monthly_games(bm):
 
     except Exception as e:
         logger.error(f"PS-Plus 월간 게임 파싱 중 에러 발생: {e}")
+    finally:
+        try: page.close()
+        except: pass
+        bm.increment()
+
+def crawl_ps_plus_catalog_games(bm):
+    logger.info("[PS-Plus Catalog] 이번 달 스페셜 카탈로그 신작 수집 시작")
+    target_url = "https://www.playstation.com/ko-kr/ps-plus/whats-new/"
+    base_url = "https://www.playstation.com"
+    scraped_games = []
+
+    try:
+        context = bm.get_context()
+        page = setup_page(context)
+
+        page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+
+        catalog_carousel = page.locator("div.carousel").nth(1)
+        catalog_cards = catalog_carousel.locator("a.card:not(.simple-carousel-clone)")
+        boxes_count = catalog_cards.count()
+
+        logger.info(f"발견된 카탈로그 게임 카드 수: {boxes_count}개")
+
+        for i in range(boxes_count):
+            card = catalog_cards.nth(i)
+
+            title_loc = card.locator("h5.txt-block-utility__title")
+            title = title_loc.text_content().strip() if title_loc.count() > 0 else "Unknown Title"
+
+            slug = card.get_attribute("href")
+
+            img_loc = card.locator("picture.media-block__img source").first
+            image_url = img_loc.get_attribute("srcset") if img_loc.count() > 0 else None
+            if image_url and "?" in image_url:
+                image_url = image_url.split("?")[0]
+
+            if slug:
+                scraped_games.append({
+                    "benefitType": "CATALOG",
+                    "title": title,
+                    "slug": slug,
+                    "imageUrl": image_url
+                })
+
+        logger.info("[Step 2] 상세 페이지 진입 및 ps_store_id 추출 시작")
+
+        valid_games = []
+        for game in scraped_games:
+            detail_url = base_url + game["slug"]
+            page.goto(detail_url, wait_until="domcontentloaded", timeout=30000)
+            human_like_delay(1.0, 2.5)
+
+            wishlist_btn = page.locator('button[data-qa="wishlistToggle"]')
+            try:
+                wishlist_btn.first.wait_for(state="attached", timeout=30000)
+                meta_str = wishlist_btn.first.get_attribute("data-telemetry-meta")
+                if meta_str:
+                    meta_json = json.loads(meta_str)
+                    game["psStoreId"] = meta_json.get("productId")
+                    valid_games.append(game)
+                    logger.info(f"성공! ps_store_id 획득: {game['psStoreId']}")
+            except Exception as e:
+                logger.warning(f"찜 버튼 파싱 실패: {game['title']}")
+
+        # 백엔드로 전송
+        if valid_games:
+            api_url = f"{BASE_URL}/api/v1/subscriptions/benefits/collect"
+            payload = {"benefits": valid_games}
+
+            res = session.post(api_url, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
+            if res.status_code == 200:
+                logger.info("PS Plus 카탈로그 게임 백엔드 전송 완료!")
+            else:
+                logger.error(f"백엔드 전송 실패 ({res.status_code}): {res.text}")
+
+    except Exception as e:
+        logger.error(f"PS-Plus 카탈로그 게임 파싱 중 에러 발생: {e}")
     finally:
         try: page.close()
         except: pass
@@ -869,6 +951,10 @@ def run_batch_crawler_logic():
             # [Pre-Phase 2] PS Plus 월간 무료 게임 수집
             try: crawl_ps_plus_monthly_games(bm)
             except Exception as e: logger.error(f"Pre-Phase 2 Error: {e}")
+
+            # [Pre-Phase 3] PS Plus 이번달 카탈로그 추가 게임 수집
+            try: crawl_ps_plus_catalog_games(bm)
+            except Exception as e: logger.error(f"Pre-Phase 3 Error: {e}")
 
             # [Phase 0] 신작 수집소
             try: crawl_phase0_new_releases(bm)

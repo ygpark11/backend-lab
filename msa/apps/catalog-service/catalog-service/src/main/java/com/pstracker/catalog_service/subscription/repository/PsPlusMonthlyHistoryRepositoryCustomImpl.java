@@ -20,12 +20,13 @@ public class PsPlusMonthlyHistoryRepositoryCustomImpl implements PsPlusMonthlyHi
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<MonthlyGameArchiveResponse> findMonthlyArchivePage(Pageable pageable) {
+    public Page<MonthlyGameArchiveResponse> findMonthlyArchivePage(PsPlusMonthlyHistory.BenefitType benefitType, Pageable pageable) {
 
         // 1. '월(Month)' 기준으로 페이징 (Row 단위 잘림 방지)
         List<String> targetMonths = queryFactory
                 .select(psPlusMonthlyHistory.targetMonth).distinct()
                 .from(psPlusMonthlyHistory)
+                .where(psPlusMonthlyHistory.benefitType.eq(benefitType))
                 .orderBy(psPlusMonthlyHistory.targetMonth.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -38,7 +39,10 @@ public class PsPlusMonthlyHistoryRepositoryCustomImpl implements PsPlusMonthlyHi
         // 2. 확보된 '월'들에 해당하는 모든 게임 데이터 조회
         List<PsPlusMonthlyHistory> histories = queryFactory
                 .selectFrom(psPlusMonthlyHistory)
-                .where(psPlusMonthlyHistory.targetMonth.in(targetMonths))
+                .where(
+                        psPlusMonthlyHistory.targetMonth.in(targetMonths),
+                        psPlusMonthlyHistory.benefitType.eq(benefitType)
+                )
                 .fetch();
 
         // 3. 자바 단에서 그룹핑 후 Response DTO 변환
@@ -48,17 +52,18 @@ public class PsPlusMonthlyHistoryRepositoryCustomImpl implements PsPlusMonthlyHi
                 .map(entry -> {
                     List<MonthlyGameArchiveResponse.ArchiveGameDto> gameDtos = entry.getValue().stream()
                             .map(h -> new MonthlyGameArchiveResponse.ArchiveGameDto(
-                                    h.getPsStoreId(), h.getTitle(), h.getImageUrl(), null // gameId는 아직 모름
+                                    h.getPsStoreId(), h.getTitle(), h.getImageUrl(), null
                             )).toList();
                     return new MonthlyGameArchiveResponse(entry.getKey(), gameDtos);
                 })
-                .sorted((a, b) -> b.getTargetMonth().compareTo(a.getTargetMonth())) // 최신순 정렬
+                .sorted((a, b) -> b.getTargetMonth().compareTo(a.getTargetMonth()))
                 .toList();
 
         // 4. Page 처리를 위한 Count 쿼리 (총 '월'의 개수)
         JPAQuery<Long> countQuery = queryFactory
                 .select(psPlusMonthlyHistory.targetMonth.countDistinct())
-                .from(psPlusMonthlyHistory);
+                .from(psPlusMonthlyHistory)
+                .where(psPlusMonthlyHistory.benefitType.eq(benefitType));
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }

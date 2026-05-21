@@ -1,18 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-    Calendar,
-    ChevronRight,
-    Circle,
-    Gamepad2,
-    Info,
-    Lock,
-    Square,
-    Triangle,
-    X as XIcon,
-    Plus,
-    Ghost
+    Calendar, ChevronRight, Circle, Gamepad2, Info, Lock, Square, Triangle, X as XIcon, Plus, Ghost, Layers
 } from 'lucide-react';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate'; // 💡 복구됨!
+import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import { useLocation } from 'react-router-dom';
 import client from '../api/client';
 import toast from 'react-hot-toast';
@@ -112,6 +102,8 @@ const SkeletonMonth = () => (
 // --- 메인 페이지 컴포넌트 ---
 const MonthlyGamesArchivePage = () => {
     const navigate = useTransitionNavigate();
+    const location = useLocation();
+    const [activeTab, setActiveTab] = useState('ESSENTIAL');
     const [pages, setPages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -121,12 +113,12 @@ const MonthlyGamesArchivePage = () => {
 
     const observerTarget = useRef(null);
 
-    const fetchArchive = useCallback(async (pageIdx) => {
+    const fetchArchive = useCallback(async (pageIdx, tab) => {
         try {
             if (pageIdx === 0) setLoading(true);
             else setLoadingMore(true);
 
-            const response = await client.get(`/api/v1/subscriptions/monthly-games?page=${pageIdx}&size=5`);
+            const response = await client.get(`/api/v1/subscriptions/benefits?benefitType=${tab}&page=${pageIdx}&size=5`);
 
             if (!response.data || response.status === 204) {
                 setHasNext(false);
@@ -144,7 +136,7 @@ const MonthlyGamesArchivePage = () => {
 
             setHasNext(!last);
         } catch (error) {
-            console.error('월간 게임 아카이브 로딩 실패:', error);
+            console.error('아카이브 로딩 실패:', error);
             toast.error('데이터를 불러오는 중 문제가 발생했습니다.');
         } finally {
             setLoading(false);
@@ -153,8 +145,11 @@ const MonthlyGamesArchivePage = () => {
     }, []);
 
     useEffect(() => {
-        fetchArchive(0);
-    }, [fetchArchive]);
+        setPages([]);
+        setPageNumber(0);
+        setHasNext(true);
+        fetchArchive(0, activeTab);
+    }, [activeTab, fetchArchive]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -162,7 +157,7 @@ const MonthlyGamesArchivePage = () => {
                 if (entries[0].isIntersecting && hasNext && !loading && !loadingMore) {
                     setPageNumber(prev => {
                         const next = prev + 1;
-                        fetchArchive(next);
+                        fetchArchive(next, activeTab);
                         return next;
                     });
                 }
@@ -170,12 +165,9 @@ const MonthlyGamesArchivePage = () => {
             { threshold: 0.1, rootMargin: "300px" }
         );
 
-        if (observerTarget.current) {
-            observer.observe(observerTarget.current);
-        }
-
+        if (observerTarget.current) observer.observe(observerTarget.current);
         return () => observer.disconnect();
-    }, [hasNext, loading, loadingMore, fetchArchive]);
+    }, [hasNext, loading, loadingMore, fetchArchive, activeTab]);
 
 
     return (
@@ -194,28 +186,15 @@ const MonthlyGamesArchivePage = () => {
             <div className="max-w-6xl mx-auto relative z-10">
 
                 {/* 헤더 */}
-                <div className="mb-16 animate-fadeIn flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div className="mb-10 animate-fadeIn flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
                         <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 text-black shadow-lg mb-6">
-                            <Gamepad2 className="w-8 h-8" />
+                            <Layers className="w-8 h-8" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">
-                            PS Plus <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">월간 게임</span> 아카이브
+                            PS Plus <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600">혜택</span> 아카이브
                         </h1>
-                        <p className="text-secondary font-bold">역대 PS Plus 에센셜 무료 혜택의 발자취를 탐험하세요.</p>
-
-                        <button
-                            onClick={() => { navigate('/ps-plus'); window.scrollTo(0,0); }}
-                            className="mt-4 inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface hover:bg-surface-hover border border-divider shadow-sm transition-all group"
-                        >
-                            <div className="bg-yellow-400 rounded p-0.5 text-black">
-                                <Plus className="w-3.5 h-3.5" strokeWidth={4} />
-                            </div>
-                            <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors">
-                                현재 PS Plus 요금제 확인하기
-                            </span>
-                            <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary transition-colors ml-1" />
-                        </button>
+                        <p className="text-secondary font-bold">역대 PS Plus 요금제별 무료 혜택의 발자취를 탐험하세요.</p>
                     </div>
                     <button
                         onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'ARCHIVE' }); }}
@@ -223,6 +202,27 @@ const MonthlyGamesArchivePage = () => {
                         aria-label="아카이브 가이드 보기"
                     >
                         <Info className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="flex bg-surface border border-divider p-1.5 rounded-2xl w-full sm:w-fit mb-12 shadow-sm animate-fadeIn">
+                    <button
+                        onClick={() => setActiveTab('ESSENTIAL')}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 flex items-center justify-center gap-2
+                            ${activeTab === 'ESSENTIAL'
+                            ? 'bg-primary text-white dark:text-slate-900 text-base shadow-md'
+                            : 'text-secondary hover:text-primary'}`}
+                    >
+                        <Gamepad2 className="w-4 h-4" /> 월간 게임
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('CATALOG')}
+                        className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 flex items-center justify-center gap-2
+                            ${activeTab === 'CATALOG'
+                            ? 'bg-primary text-white dark:text-slate-900 text-base shadow-md'
+                            : 'text-secondary hover:text-primary'}`}
+                    >
+                        <Layers className="w-4 h-4" /> 신규 카탈로그
                     </button>
                 </div>
 
@@ -239,7 +239,9 @@ const MonthlyGamesArchivePage = () => {
                                 <Ghost className="w-12 h-12 text-muted opacity-40" />
                             </div>
                             <h3 className="text-2xl font-black text-primary mb-2">아카이브가 텅 비어있습니다</h3>
-                            <p className="text-secondary font-bold">아직 수집된 PS Plus 월간 게임 데이터가 존재하지 않습니다.<br/>크롤러를 통해 데이터를 먼저 적재해 주세요.</p>
+                            <p className="text-secondary font-bold">
+                                아직 수집된 {activeTab === 'ESSENTIAL' ? '월간 게임' : '카탈로그'} 데이터가 존재하지 않습니다.
+                            </p>
                         </div>
                     ) : (
                         <div className="space-y-12 lg:space-y-0">

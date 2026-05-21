@@ -11,7 +11,7 @@ import com.pstracker.catalog_service.subscription.domain.PsPlusMonthlyHistory;
 import com.pstracker.catalog_service.subscription.domain.PsPlusPricing;
 import com.pstracker.catalog_service.subscription.domain.PsPlusTier;
 import com.pstracker.catalog_service.subscription.dto.MonthlyGameArchiveResponse;
-import com.pstracker.catalog_service.subscription.dto.MonthlyGameCollectRequest;
+import com.pstracker.catalog_service.subscription.dto.PsPlusBenefitCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusPricingResponse;
 import com.pstracker.catalog_service.subscription.repository.PsPlusHistoryRepository;
@@ -20,7 +20,6 @@ import com.pstracker.catalog_service.subscription.repository.PsPlusPricingReposi
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -163,64 +162,71 @@ public class SubscriptionService {
     }
 
     @Transactional
-    public void collectMonthlyGames(MonthlyGameCollectRequest request) {
-        // 크롤러가 가져온 현재 홈페이지의 게임 ID 목록 추출
-        List<String> incomingStoreIds = request.monthlyGames().stream()
-                .map(MonthlyGameCollectRequest.MonthlyGameDto::psStoreId)
-                .toList();
+    public void collectPsPlusBenefits(PsPlusBenefitCollectRequest request) {
+        String currentMonth = YearMonth.now().toString();
 
-        // '가장 최근'의 월(TargetMonth) 조회
-        Optional<PsPlusMonthlyHistory> latestHistory = psPlusMonthlyHistoryRepository.findFirstByOrderByTargetMonthDesc();
+        // 수집된 데이터를 BenefitType(ESSENTIAL, CATALOG) 기준으로 분리
+        Map<PsPlusMonthlyHistory.BenefitType, List<PsPlusBenefitCollectRequest.BenefitGameDto>> groupedGames =
+                request.benefits().stream().collect(Collectors.groupingBy(PsPlusBenefitCollectRequest.BenefitGameDto::benefitType));
 
-        if (latestHistory.isPresent()) {
-            String latestSavedTargetMonth = latestHistory.get().getTargetMonth();
+        // 타입별로 각각 독립적인 중복 검사 및 적재 로직 수행
+        for (Map.Entry<PsPlusMonthlyHistory.BenefitType, List<PsPlusBenefitCollectRequest.BenefitGameDto>> entry : groupedGames.entrySet()) {
+            PsPlusMonthlyHistory.BenefitType type = entry.getKey();
+            List<PsPlusBenefitCollectRequest.BenefitGameDto> incomingGames = entry.getValue();
 
-            // 가장 최근 달에 적재된 게임 ID 목록 조회
-            List<String> latestSavedStoreIds = psPlusMonthlyHistoryRepository.findPsStoreIdsByTargetMonth(latestSavedTargetMonth);
+            List<String> incomingStoreIds = incomingGames.stream()
+                    .map(PsPlusBenefitCollectRequest.BenefitGameDto::psStoreId)
+                    .toList();
 
-            // 새로 수집된 게임 중 단 하나라도 이전 묶음과 겹치는지(교집합) 확인
-            boolean hasIntersection = incomingStoreIds.stream()
-                    .anyMatch(latestSavedStoreIds::contains);
+            // 해당 타입(ESSENTIAL or CATALOG)의 가장 최근 적재 이력 조회
+            Optional<PsPlusMonthlyHistory> latestHistory = psPlusMonthlyHistoryRepository.findFirstByBenefitTypeOrderByTargetMonthDesc(type);
 
-            if (hasIntersection) {
-                log.debug("최신 적재된 월간 게임 묶음과 동일한 데이터가 존재합니다. 갱신을 무시합니다. (기준 월: {})", latestSavedTargetMonth);
-                return;
+            if (latestHistory.isPresent()) {
+                String latestSavedTargetMonth = latestHistory.get().getTargetMonth();
+                List<String> latestSavedStoreIds = psPlusMonthlyHistoryRepository.findPsStoreIdsByTargetMonthAndBenefitType(latestSavedTargetMonth, type);
+
+                // 현재 수집된 게임과 과거 게임 교집합(중복) 확인
+                boolean hasIntersection = incomingStoreIds.stream().anyMatch(latestSavedStoreIds::contains);
+
+                if (hasIntersection) {
+                    log.debug("[{}] 최신 적재된 묶음과 동일한 데이터가 존재합니다. 갱신 무시 (기준 월: {})", type, latestSavedTargetMonth);
+                    continue; // 교집합이 있으면 이 타입은 건너뛰고 다음 타입(ex. CATALOG) 진행
+                }
             }
-        }
 
-        // 완전히 새로운 게임 묶음임이 확인됨! 현재 시스템 날짜를 기준으로 타겟 월(targetMonth) 지정
-        String targetMonth = YearMonth.now().toString();
-        log.debug("새로운 월간 게임 교체를 감지했습니다! 신규 적재 타겟 월: {}", targetMonth);
+            log.info("[{}] 새로운 혜택 게임 교체 감지! 신규 적재 타겟 월: {}", type, currentMonth);
 
-        //  DB 적재 진행
-        for (MonthlyGameCollectRequest.MonthlyGameDto monthlyGame : request.monthlyGames()) {
-            String psStoreId = monthlyGame.psStoreId();
+            // DB 적재 진행
+            for (PsPlusBenefitCollectRequest.BenefitGameDto gameDto : incomingGames) {
+                String psStoreId = gameDto.psStoreId();
 
-            PsPlusMonthlyHistory psPlusMonthlyHistory = PsPlusMonthlyHistory.createPsPlusMonthlyHistory(
-                    targetMonth,
-                    psStoreId,
-                    monthlyGame.title(),
-                    monthlyGame.imageUrl()
-            );
-            psPlusMonthlyHistoryRepository.save(psPlusMonthlyHistory);
-
-            // 메인 게임 DB에 없는 신규 게임이라면 Candidate에 적재
-            if (!gameRepository.existsByPsStoreId(psStoreId) && !gameCandidateRepository.existsByPsStoreId(psStoreId)) {
-                gameCandidateRepository.save(
-                        GameCandidate.builder()
-                                .psStoreId(psStoreId)
-                                .title(monthlyGame.title())
-                                .imageUrl(monthlyGame.imageUrl())
-                                .build()
+                PsPlusMonthlyHistory history = PsPlusMonthlyHistory.createPsPlusMonthlyHistory(
+                        currentMonth,
+                        psStoreId,
+                        type,
+                        gameDto.title(),
+                        gameDto.imageUrl()
                 );
-                log.info("새로운 게임 Candidate 적재 완료: {}", monthlyGame.title());
+                psPlusMonthlyHistoryRepository.save(history);
+
+                // 메인 DB에 없는 신규 게임이라면 Candidate 적재 (기존 로직 유지)
+                if (!gameRepository.existsByPsStoreId(psStoreId) && !gameCandidateRepository.existsByPsStoreId(psStoreId)) {
+                    gameCandidateRepository.save(
+                            GameCandidate.builder()
+                                    .psStoreId(psStoreId)
+                                    .title(gameDto.title())
+                                    .imageUrl(gameDto.imageUrl())
+                                    .build()
+                    );
+                    log.info("새로운 게임 Candidate 적재 완료: {}", gameDto.title());
+                }
             }
         }
     }
 
-    public Page<MonthlyGameArchiveResponse> getMonthlyGamesArchive(Pageable pageable) {
+    public Page<MonthlyGameArchiveResponse> getMonthlyGamesArchive(PsPlusMonthlyHistory.BenefitType benefitType, Pageable pageable) {
         // 달(Month) 단위로 페이징 처리하여 조회
-        Page<MonthlyGameArchiveResponse> page = psPlusMonthlyHistoryRepository.findMonthlyArchivePage(pageable);
+        Page<MonthlyGameArchiveResponse> page = psPlusMonthlyHistoryRepository.findMonthlyArchivePage(benefitType, pageable);
 
         if (page.isEmpty()) {
             return page;
