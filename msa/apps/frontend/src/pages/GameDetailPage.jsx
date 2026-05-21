@@ -392,7 +392,8 @@ export default function GameDetailPage() {
                             <div className="flex gap-3">
                                 {game.liked && (
                                     <button onClick={() => setIsTargetModalOpen(true)} className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] text-ps-blue hover:border-[color:var(--bento-blue-border-hover)] transition-all font-bold text-sm shadow-sm hover:-translate-y-1">
-                                        <Crosshair className="w-4 h-4 shrink-0" /> 목표가 설정
+                                        <Crosshair className="w-4 h-4 shrink-0" />
+                                        <span>{game.myTargetPrice ? `${game.myTargetPrice.toLocaleString()}원` : '목표가 설정'}</span>
                                     </button>
                                 )}
                                 <button onClick={onWishlistClick} className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border transition-all font-bold shadow-md hover:-translate-y-1 ${game.liked ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500 hover:bg-red-500/20' : 'bg-surface border-divider hover:bg-surface-hover text-primary'}`}>
@@ -535,9 +536,30 @@ export default function GameDetailPage() {
                             </div>
 
                             {/* 모바일용 CTA 렌더링 */}
-                            <div className="lg:hidden flex gap-2 mt-6 pt-6 border-t border-divider/50">
-                                <a href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-2 bg-primary text-[color:var(--color-bg-base)] py-3.5 rounded-xl font-black text-sm"><Gamepad2 className="w-5 h-5"/> 스토어</a>
-                                <button onClick={onWishlistClick} className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-xl border font-bold text-sm ${game.liked ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500' : 'bg-surface border-divider text-primary'}`}><Heart className={`w-4 h-4 ${game.liked ? 'fill-current' : ''}`} /> {game.liked ? '찜 취소' : '찜하기'}</button>
+                            <div className="lg:hidden flex flex-col gap-2 mt-6 pt-6 border-t border-divider/50">
+                                <div className="flex gap-2">
+                                    {/* 스토어 이동 버튼 */}
+                                    <a href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`} target="_blank" rel="noopener noreferrer"
+                                       className="flex-[2] flex items-center justify-center gap-2 bg-primary text-[color:var(--color-bg-base)] py-3.5 rounded-xl font-black text-sm">
+                                        <Gamepad2 className="w-5 h-5"/> 스토어
+                                    </a>
+
+                                    {/* 찜하기/찜취소 토글 버튼 */}
+                                    <button onClick={onWishlistClick}
+                                            className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-xl border font-bold text-sm ${game.liked ? 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-500' : 'bg-surface border-divider text-primary'}`}>
+                                        <Heart className={`w-4 h-4 ${game.liked ? 'fill-current' : ''}`} /> {game.liked ? '찜 취소' : '찜하기'}
+                                    </button>
+                                </div>
+
+                                {/* 목표가 설정 버튼 (찜한 경우에만 2층으로 렌더링) */}
+                                {game.liked && (
+                                    <button onClick={() => setIsTargetModalOpen(true)}
+                                            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] text-ps-blue font-black text-sm transition-all active:scale-95">
+                                        <Crosshair className="w-4 h-4" />
+                                        {/* 💡 목표가 설정 여부에 따른 텍스트 동적 변화 */}
+                                        <span>{game.myTargetPrice ? `${game.myTargetPrice.toLocaleString()}원 목표` : '목표가 설정'}</span>
+                                    </button>
+                                )}
                             </div>
                         </div>
 
