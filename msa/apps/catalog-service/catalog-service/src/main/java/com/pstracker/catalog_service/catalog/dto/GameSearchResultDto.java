@@ -40,6 +40,7 @@ public class GameSearchResultDto implements Serializable {
     private Integer bestSellerRank;
     private Integer mostDownloadedRank;
 
+    private Integer allTimeLowPrice;
     private Integer displayScore;
     private String scoreSource;
     private String topVibeTag;
@@ -51,7 +52,8 @@ public class GameSearchResultDto implements Serializable {
                                boolean inCatalog, LocalDateTime createdAt,
                                boolean isPs5ProEnhanced,
                                Integer bestSellerRank, Integer mostDownloadedRank,
-                               Integer mcMetaScore, Integer igdbCriticScore, List<String> vibeTags) {
+                               Integer mcMetaScore, Integer igdbCriticScore, List<String> vibeTags,
+                               Integer allTimeLowPrice) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -66,6 +68,7 @@ public class GameSearchResultDto implements Serializable {
         this.isPs5ProEnhanced = isPs5ProEnhanced;
         this.bestSellerRank = bestSellerRank;
         this.mostDownloadedRank = mostDownloadedRank;
+        this.allTimeLowPrice = allTimeLowPrice != null ? allTimeLowPrice : 0;
 
         if (mcMetaScore != null && mcMetaScore > 0) {
             this.displayScore = mcMetaScore;

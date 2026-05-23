@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,4 +26,7 @@ public interface GamePriceHistoryRepository extends JpaRepository<GamePriceHisto
      */
     @Query("SELECT h FROM GamePriceHistory h WHERE h.game.id = :gameId ORDER BY h.recordedAt ASC")
     List<GamePriceHistory> findAllByGameIdOrderByRecordedAtAsc(Long gameId);
+
+    @Query("SELECT h.game.id, COUNT(h) FROM GamePriceHistory h WHERE h.game.id IN :gameIds GROUP BY h.game.id")
+    List<Object[]> countGroupByGameId(@Param("gameIds") List<Long> gameIds);
 }

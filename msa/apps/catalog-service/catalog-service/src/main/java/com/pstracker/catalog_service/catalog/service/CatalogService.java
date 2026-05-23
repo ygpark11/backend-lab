@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -28,6 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CatalogService {
+
+    private static final String PS_STORE_BASE_URL = "https://store.playstation.com/ko-kr/product/";
 
     @Value("${crawler.secret-key}")
     private String internalSecretKey;
@@ -59,22 +60,14 @@ public class CatalogService {
             return;
         }
 
-        // 1. 장르 데이터 준비 (String -> Entity Set)
         Set<Genre> genreEntities = resolveGenres(request.getGenreIds());
-
-        // 2. 게임 엔티티 조회 또는 생성
         Game game = findOrCreateGame(request);
         boolean isNewGame = game.getId() == null;
-
         Integer oldOriginalPrice = game.getOriginalPrice();
 
-        // 3. 게임 메타데이터 업데이트 (제목, 설명, 이미지, 장르, 플랫폼)
         updateGameMetadata(game, request, genreEntities);
-
-        // 4. 외부 API(IGDB)를 통한 평점 정보 보정
         updateGameRatingsFromIgdb(game, request);
 
-        // 역정규화된 가격 검색용 정보 업데이트
         game.updatePriceSearchInfo(
                 request.getOriginalPrice(),
                 request.getCurrentPrice(),
@@ -84,27 +77,21 @@ public class CatalogService {
                 request.isInCatalog()
         );
 
+        // 정가가 영구 인하된 경우, 모순된 목표가를 가진 위시리스트 일괄 초기화
         Integer newOriginalPrice = request.getOriginalPrice();
         if (oldOriginalPrice != null && newOriginalPrice != null && newOriginalPrice < oldOriginalPrice) {
-            // 정가가 내려갔다면, 모순된 목표가를 가진 Wishlist들을 일괄 초기화!
             wishlistRepository.resetInvalidTargetPrices(game.getId(), newOriginalPrice);
             log.debug("정가 영구 인하 감지 ({} -> {}). 관련 목표 가격 초기화 완료.", oldOriginalPrice, newOriginalPrice);
         }
 
-        // 5. 게임 정보 저장
         gameRepository.save(game);
-
-        // 6. 가격 정보 처리 (변동 감지, 저장, 알림)
         processPriceInfo(game, request);
+        gameReadService.evictGameDetailCache(game.getId()); // 다음 조회 시 최신 데이터로 재캐싱
 
-        // 7. 모든 변경이 끝난 후 마지막에 캐시 삭제!
-        // 다음 조회 시 최신 데이터로 다시 캐싱됨
-        gameReadService.evictGameDetailCache(game.getId());
-
-        if (isNewGame) {
-            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.METACRITIC);
-            requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.HLTB);
-        } else if (request.getReleaseDate() != null && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1))) {
+        // 신규 게임 또는 최근 출시(1개월 이내)면 메타크리틱/HLTB 스크래핑 큐에 등록
+        boolean isRecentRelease = request.getReleaseDate() != null
+                && request.getReleaseDate().isAfter(LocalDate.now().minusMonths(1));
+        if (isNewGame || isRecentRelease) {
             requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.METACRITIC);
             requeueRecentGameForScraping(game.getId(), CrawlJob.TargetType.HLTB);
         }
@@ -236,14 +223,14 @@ public class CatalogService {
 
                 game.updateIgdbRatings(criticScore, criticCount, userScore, userCount);
 
-                log.debug("⭐ IGDB Ratings updated: Critic={} ({}명), User={} ({}명)",
+                log.debug("IGDB Ratings updated: Critic={} ({}명), User={} ({}명)",
                         criticScore, criticCount, userScore, userCount);
             } else {
-                log.debug("🌫️ IGDB Miss: {}", searchTitle);
+                log.debug("IGDB Miss: {}", searchTitle);
             }
         } catch (Exception e) {
             // 외부 API 장애가 내부 로직에 영향을 주지 않도록 처리
-            log.warn("⚠️ IGDB Sync Failed for '{}': {}", request.getTitle(), e.getMessage());
+            log.warn("IGDB Sync Failed for '{}': {}", request.getTitle(), e.getMessage());
         }
     }
 
@@ -255,18 +242,11 @@ public class CatalogService {
     private void processPriceInfo(Game game, CollectRequestDto request) {
         Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game);
 
-        // [방어 로직 1] 가격 데이터 자체가 이상하면(0원 등) 저장하지 않음 (이미 크롤러에서 막았지만 이중 잠금)
-        if (request.getCurrentPrice() == null || request.getCurrentPrice() == 0) {
-            return;
-        }
-
-        // 변경 사항이 없으면 종료
         if (!shouldSaveHistory(latestHistoryOpt, request)) {
             return;
         }
 
-        // 6-1. 이력 저장
-        GamePriceHistory newHistory = GamePriceHistory.create(
+        priceHistoryRepository.save(GamePriceHistory.create(
                 game,
                 request.getOriginalPrice(),
                 request.getCurrentPrice(),
@@ -274,12 +254,9 @@ public class CatalogService {
                 request.isPlusExclusive(),
                 request.getSaleEndDate(),
                 request.isInCatalog()
-        );
+        ));
+        log.debug("Price Updated: {} ({} KRW)", game.getName(), request.getCurrentPrice());
 
-        priceHistoryRepository.save(newHistory);
-        log.debug("📈 Price Updated: {} ({} KRW)", game.getName(), request.getCurrentPrice());
-
-        // 6-2. 가격 하락 알림 발행
         publishAlertIfDropped(game, latestHistoryOpt, request.getCurrentPrice(), request.getDiscountRate());
     }
 
@@ -312,7 +289,7 @@ public class CatalogService {
 
         Integer oldPrice = oldHistoryOpt.get().getPrice();
         if (newPrice < oldPrice) {
-            log.info("🚨 Price Drop! {} ({} -> {})", game.getName(), oldPrice, newPrice);
+            log.info("Price Drop! {} ({} -> {})", game.getName(), oldPrice, newPrice);
             eventPublisher.publishEvent(new GamePriceChangedEvent(
                     game.getId(), game.getName(), game.getPsStoreId(),
                     oldPrice, newPrice, newDiscountRate, game.getImageUrl()
@@ -325,11 +302,9 @@ public class CatalogService {
      * @return 업데이트 대상 게임 PS 스토어 URL 리스트
      */
     public List<String> getGamesToUpdate() {
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDate today = LocalDate.now();
-
-        return gameRepository.findGamesToUpdate(todayStart, today).stream()
-                .map(game -> "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId())
+        return gameRepository.findGamesToUpdate(today.atStartOfDay(), today).stream()
+                .map(game -> PS_STORE_BASE_URL + game.getPsStoreId())
                 .toList();
     }
 
@@ -342,15 +317,9 @@ public class CatalogService {
      */
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         Page<GameSearchResultDto> result = gameRepository.searchGames(condition, pageable);
-
-        if(!result.isEmpty()) {
-            markGameGenre(result.getContent());
-
-            if (memberId != null) {
-                markLikedGames(result.getContent(), memberId);
-            }
+        if (!result.isEmpty()) {
+            enrichSearchResults(result.getContent(), memberId);
         }
-
         return result;
     }
 
@@ -411,38 +380,21 @@ public class CatalogService {
         gameReadService.evictGameDetailCache(gameId);
     }
 
-    /**
-     * 검색 결과에 장르 정보 표시
-     * @param games 게임 검색 결과 리스트
-     */
-    private void markGameGenre(List<GameSearchResultDto> games) {
+    /** 검색 결과에 장르·찜 여부를 일괄 세팅 (gameIds 추출 1회) */
+    private void enrichSearchResults(List<GameSearchResultDto> games, Long memberId) {
         List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
 
-        List<GameGenreResultDto> gameGenres = gameGenreRepository.findGameGenres(gameIds);
-
-        Map<Long, List<String>> gameGenreMap = gameGenres.stream()
+        Map<Long, List<String>> gameGenreMap = gameGenreRepository.findGameGenres(gameIds)
+                .stream()
                 .collect(Collectors.groupingBy(
-                        GameGenreResultDto::getGameId, Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+                        GameGenreResultDto::getGameId,
+                        Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+        games.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of())));
 
-        games.forEach(dto -> {
-            dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of()));
-        });
-    }
-
-    /**
-     * 검색 결과에 찜 여부 표시
-     * @param games 게임 검색 결과 리스트
-     * @param memberId 회원 ID
-     */
-    private void markLikedGames(List<GameSearchResultDto> games, Long memberId) {
-        List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
-        Set<Long> myLikedGameIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
-
-        games.forEach(dto -> {
-            if (myLikedGameIds.contains(dto.getId())) {
-                dto.setLiked(true);
-            }
-        });
+        if (memberId != null) {
+            Set<Long> likedIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
+            games.forEach(dto -> dto.setLiked(likedIds.contains(dto.getId())));
+        }
     }
 
     /**
@@ -453,9 +405,9 @@ public class CatalogService {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
-        String targetUrl = "https://store.playstation.com/ko-kr/product/" + game.getPsStoreId();
+        String targetUrl = PS_STORE_BASE_URL + game.getPsStoreId();
 
-        log.info("🚀 Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
+        log.info("Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
 
         try {
             String response = collectorApiClient.triggerSingleCrawl(new SingleCrawlRequest(targetUrl, internalSecretKey));

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,16 +26,12 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class GameReadService {
 
-    private static final Integer RECOMMEND_GAME_COUNT = 4;
+    private static final int RECOMMEND_GAME_COUNT = 4;
 
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final CacheManager cacheManager;
 
-    /**
-     * 게임 상세 캐시 삭제
-     * @param gameId 게임 ID
-     */
     public void evictGameDetailCache(Long gameId) {
         if (gameId != null) {
             var cache = cacheManager.getCache(GlobalCacheConfig.GAME_DETAIL_CACHE);
@@ -44,36 +42,16 @@ public class GameReadService {
         }
     }
 
-    /**
-     * 기본 게임 상세 조회 (캐시 사용)
-     * @param gameId 게임 ID
-     * @return 게임 상세 응답 DTO
-     */
     @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
     public GameDetailResponse getBaseGameDetail(Long gameId) {
         Game game = gameRepository.findByIdWithGenres(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
+        // 1. 가격 이력 → 차트 DTO + 판정에 필요한 컨텍스트
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
-
-        Integer originalPrice = (game.getOriginalPrice() != null) ? game.getOriginalPrice() : 0;
-        Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
         int historySize = histories.size();
-
-        List<GameDetailResponse.FamilyGameDto> familyGames =
-                gameRepository.findByFamilyIdOrderByOriginalPriceAsc(game.getFamilyId())
-                        .stream()
-                        .map(g -> {
-                            int approxHistorySize = (g.getAllTimeLowPrice() != null && g.getAllTimeLowPrice() > 0) ? 2 : 1;
-                            PriceVerdict verdict = PriceVerdictCalculator.forGame(
-                                    g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(), approxHistorySize
-                            );
-                            return new GameDetailResponse.FamilyGameDto(
-                                    g.getId(), g.getName(), g.getOriginalPrice(),
-                                    g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
-                                    verdict
-                            );
-                        }).toList();
+        Integer originalPrice = game.getOriginalPrice() != null ? game.getOriginalPrice() : 0;
+        Integer lowestPrice = game.getAllTimeLowPrice() != null ? game.getAllTimeLowPrice() : 0;
 
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
                 .map(h -> new GameDetailResponse.PriceHistoryDto(
@@ -84,21 +62,73 @@ public class GameReadService {
                 ))
                 .toList();
 
-        List<GameSearchResultDto> relatedGames = getRelatedGames(game);
+        // 2. 패밀리 게임 (같은 시리즈/에디션) — 정가 오름차순
+        List<GameDetailResponse.FamilyGameDto> familyGames = buildFamilyGames(game.getFamilyId());
+
+        // 3. 연관 게임 (장르 기반 추천)
+        List<GameDetailResponse.RelatedGameDto> relatedGames = buildRelatedGames(game);
 
         return GameDetailResponse.from(game, historyDtos, false, familyGames, relatedGames);
     }
 
-    /**
-     * 연관 게임 추천 조회
-     * @param game 게임 엔티티
-     * @return 연관 게임 리스트
-     */
+    private List<GameDetailResponse.FamilyGameDto> buildFamilyGames(String familyId) {
+        List<Game> familyList = gameRepository.findByFamilyIdOrderByOriginalPriceAsc(familyId);
+        if (familyList.isEmpty()) return List.of();
+
+        Map<Long, Integer> historyCountMap = countHistoryByGameIds(
+                familyList.stream().map(Game::getId).toList());
+
+        return familyList.stream()
+                .map(g -> {
+                    PriceVerdict verdict = PriceVerdictCalculator.forGame(
+                            g.getCurrentPrice(), g.getOriginalPrice(), g.getAllTimeLowPrice(),
+                            historyCountMap.getOrDefault(g.getId(), 0)
+                    );
+                    return new GameDetailResponse.FamilyGameDto(
+                            g.getId(), g.getName(), g.getOriginalPrice(),
+                            g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
+                            verdict
+                    );
+                })
+                .toList();
+    }
+
+    private List<GameDetailResponse.RelatedGameDto> buildRelatedGames(Game game) {
+        List<GameSearchResultDto> rawList = getRelatedGames(game);
+        if (rawList.isEmpty()) return List.of();
+
+        Map<Long, Integer> historyCountMap = countHistoryByGameIds(
+                rawList.stream().map(GameSearchResultDto::getId).toList());
+
+        return rawList.stream()
+                .map(r -> {
+                    PriceVerdict verdict = PriceVerdictCalculator.forGame(
+                            r.getPrice(), r.getOriginalPrice(), r.getAllTimeLowPrice(),
+                            historyCountMap.getOrDefault(r.getId(), 0)
+                    );
+                    return new GameDetailResponse.RelatedGameDto(
+                            r.getId(), r.getName(), r.getImageUrl(),
+                            r.getOriginalPrice(), r.getPrice(), r.getDiscountRate(),
+                            r.getSaleEndDate(), r.getDisplayScore(), verdict
+                    );
+                })
+                .toList();
+    }
+
+    /** gameId 목록으로 가격 이력 건수를 일괄 조회해 Map으로 반환 */
+    private Map<Long, Integer> countHistoryByGameIds(List<Long> gameIds) {
+        return priceHistoryRepository.countGroupByGameId(gameIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],
+                        arr -> ((Long) arr[1]).intValue()
+                ));
+    }
+
     private List<GameSearchResultDto> getRelatedGames(Game game) {
         List<Long> genreIds = game.getGameGenres().stream()
                 .map(gg -> gg.getGenre().getId())
                 .toList();
-
         if (genreIds.isEmpty()) return List.of();
         return gameRepository.findRelatedGames(genreIds, game.getId(), RECOMMEND_GAME_COUNT);
     }

@@ -9,21 +9,23 @@ export default function RelatedGameCard({ game }) {
     const navigate = useTransitionNavigate();
     const location = useLocation();
 
-    const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
+    const isPlatinum = game.displayScore >= 85 && game.discountRate >= 50;
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
     const isClosing = daysLeft >= 0 && daysLeft <= 3;
 
     const renderSignalIcon = () => {
-        if (game.discountRate >= 50) {
-            return <Circle className="w-3 h-3 text-green-600 dark:text-green-500 fill-green-600 dark:fill-green-500 animate-pulse" />;
+        switch (game.priceVerdict) {
+            case 'BUY_NOW':
+                return <Circle className="w-3 h-3 text-green-500 fill-green-500/50 drop-shadow-[0_0_4px_rgba(34,197,94,0.6)]" />;
+            case 'GOOD_OFFER':
+                return <Triangle className="w-3 h-3 text-yellow-500 fill-yellow-500/50 drop-shadow-[0_0_4px_rgba(234,179,8,0.6)]" />;
+            case 'WAIT':
+                return <X className="w-3 h-3 text-red-500 stroke-[3px]" />;
+            case 'TRACKING':
+                return <Square className="w-3 h-3 text-ps-blue fill-blue-500/50" />;
+            default:
+                return null;
         }
-        if (game.discountRate >= 20) {
-            return <Triangle className="w-3 h-3 text-yellow-600 dark:text-yellow-500 fill-yellow-600 dark:fill-yellow-500" />;
-        }
-        if (game.discountRate > 0) {
-            return <Square className="w-3 h-3 text-blue-600 dark:text-blue-500 fill-blue-600 dark:fill-blue-500" />;
-        }
-        return <X className="w-3 h-3 text-secondary" />;
     };
 
     const handleClick = () => {
@@ -79,11 +81,11 @@ export default function RelatedGameCard({ game }) {
                 <div className="flex justify-between items-end mt-auto pt-2">
                     <div>
                         {game.discountRate > 0 && <p className="text-[10px] text-secondary line-through">{game.originalPrice?.toLocaleString()}</p>}
-                        <p className="text-sm font-black text-primary">{game.price?.toLocaleString()}원</p>
+                        <p className="text-sm font-black text-primary">{game.currentPrice?.toLocaleString()}원</p>
                     </div>
-                    {game.metaScore > 0 && (
-                        <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border ${game.metaScore >= 80 ? 'bg-score-green-bg text-score-green-text border-green-500/30' : 'bg-score-yellow-bg text-score-yellow-text border-yellow-500/30'}`}>
-                            {game.metaScore}
+                    {game.displayScore > 0 && (
+                        <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded shadow-sm border ${game.displayScore >= 80 ? 'bg-score-green-bg text-score-green-text border-green-500/30' : 'bg-score-yellow-bg text-score-yellow-text border-yellow-500/30'}`}>
+                            {game.displayScore}
                         </span>
                     )}
                 </div>

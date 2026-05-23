@@ -64,7 +64,6 @@ public record GameDetailResponse(
 
         // 판정 및 차트
         PriceVerdict priceVerdict, // 판정 결과
-        String verdictMessage,     // 판정 메시지
         List<PriceHistoryDto> priceHistory, // 차트용 데이터
 
         Integer scouterTotalWatchers,
@@ -82,7 +81,7 @@ public record GameDetailResponse(
         List<FamilyGameDto> familyGames,
 
         // 추천 게임 리스트
-        List<GameSearchResultDto> relatedGames
+        List<RelatedGameDto> relatedGames
 ) implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -104,7 +103,7 @@ public record GameDetailResponse(
                 this.vibeTags,
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
-                this.verdictMessage, this.priceHistory,
+                this.priceHistory,
                 totalWatchers, avgTargetPrice, defTier, defMessage,
                 this.platforms, this.genres, this.inCatalog, this.familyGames, this.relatedGames
         );
@@ -115,7 +114,7 @@ public record GameDetailResponse(
             List<PriceHistoryDto> history,
             boolean liked,
             List<FamilyGameDto> familyGames,
-            List<GameSearchResultDto> relatedGames
+            List<RelatedGameDto> relatedGames
     ){
 
         Integer currentPrice = (game.getCurrentPrice() != null) ? game.getCurrentPrice() : 0;
@@ -124,22 +123,6 @@ public record GameDetailResponse(
         Integer lowestPrice = (game.getAllTimeLowPrice() != null) ? game.getAllTimeLowPrice() : 0;
 
         PriceVerdict verdict = PriceVerdictCalculator.forGame(currentPrice, originalPrice, lowestPrice, history.size());
-        String verdictMsg;
-
-        if (verdict == PriceVerdict.TRACKING) {
-            verdictMsg = (history.size() == 1 && currentPrice < originalPrice)
-                    ? "첫 수집된 할인 정보예요! 역대 최저가인지 확인하기 위해 데이터가 더 필요해요."
-                    : "가격 정보를 수집하는 중입니다. 🕵️";
-        } else if (verdict == PriceVerdict.WAIT && history.size() == 1) {
-            verdictMsg = "아직은 정가예요. 할인이 시작될 때까지 기다려보세요!";
-        } else if (verdict == PriceVerdict.GOOD_OFFER) {
-            double diffPercent = (double) (currentPrice - (lowestPrice == 0 ? currentPrice : lowestPrice)) / (lowestPrice == 0 ? currentPrice : lowestPrice) * 100;
-            verdictMsg = String.format("역대 최저가보다 %.0f%% 높지만 괜찮은 가격이에요!", diffPercent);
-        } else if (verdict == PriceVerdict.WAIT && currentPrice < originalPrice) {
-            verdictMsg = String.format("아쉬운 할인율! 최저가(%s원) 대비 비싸요.", lowestPrice == 0 ? currentPrice : lowestPrice);
-        } else {
-            verdictMsg = verdict.getMessage();
-        }
 
         // 3. 장르 문자열 파싱 ("Action, RPG" -> List)
         List<String> genreList = game.getGameGenres().stream()
@@ -168,7 +151,7 @@ public record GameDetailResponse(
                 game.getHltbMainStory(), game.getHltbMainExtra(), game.getHltbCompletionist(),
                 vibeTags,
                 game.getLikeCount(), game.getDislikeCount(), null,
-                liked, null, game.getCreatedAt(), verdict, verdictMsg, history,
+                liked, null, game.getCreatedAt(), verdict, history,
                 0, null, null ,null,
                 game.getPlatforms().stream().map(Enum::name).toList(),
                 genreList, game.isInCatalog(), familyGames, relatedGames
@@ -195,5 +178,17 @@ public record GameDetailResponse(
     public record VibeTagDto(
             String name,
             String color
-    )implements Serializable {}
+    ) implements Serializable {}
+
+    public record RelatedGameDto(
+            Long id,
+            String name,
+            String imageUrl,
+            Integer originalPrice,
+            Integer currentPrice,
+            Integer discountRate,
+            LocalDate saleEndDate,
+            Integer displayScore,
+            PriceVerdict priceVerdict
+    ) implements Serializable {}
 }

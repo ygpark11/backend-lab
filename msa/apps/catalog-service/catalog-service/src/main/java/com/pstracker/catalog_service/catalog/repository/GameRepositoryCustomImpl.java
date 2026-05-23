@@ -1,10 +1,8 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Platform;
-import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
-import com.pstracker.catalog_service.catalog.dto.QGameGenreResultDto;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -23,12 +21,8 @@ import org.springframework.data.support.PageableExecutionUtils;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static com.pstracker.catalog_service.catalog.domain.QGame.game;
-import static com.pstracker.catalog_service.catalog.domain.QGameGenre.gameGenre;
-import static com.pstracker.catalog_service.catalog.domain.QGenre.genre;
 import static com.pstracker.catalog_service.catalog.domain.QGamePriceHistory.gamePriceHistory;
 import static org.springframework.util.StringUtils.hasText;
 
@@ -48,7 +42,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.inCatalog, game.createdAt,
                         game.isPs5ProEnhanced,
                         game.bestSellerRank, game.mostDownloadedRank,
-                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags
+                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
+                        game.allTimeLowPrice
                 ))
                 .from(game)
                 .where(
@@ -103,8 +98,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     public List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
         NumberExpression<Integer> fallbackScore = game.mcMetaScore.coalesce(game.igdbCriticScore);
 
-        // 1단계: DTO 프로젝션으로 직접 조회 (엔티티 로딩 없음, LIMIT 정확히 적용)
-        List<GameSearchResultDto> dtos = queryFactory
+        return queryFactory
                 .select(new QGameSearchResultDto(
                         game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
@@ -112,7 +106,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.inCatalog, game.createdAt,
                         game.isPs5ProEnhanced,
                         game.bestSellerRank, game.mostDownloadedRank,
-                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags
+                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
+                        game.allTimeLowPrice
                 ))
                 .from(game)
                 .where(
@@ -127,26 +122,6 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 )
                 .limit(limit)
                 .fetch();
-
-        if (dtos.isEmpty()) return List.of();
-
-        // 2단계: 장르 일괄 조회 후 매핑 (IN절 한 번으로 N+1 없음)
-        List<Long> gameIds = dtos.stream().map(GameSearchResultDto::getId).toList();
-        Map<Long, List<String>> genreMap = queryFactory
-                .select(new QGameGenreResultDto(gameGenre.game.id, genre.name))
-                .from(gameGenre)
-                .join(gameGenre.genre, genre)
-                .where(gameGenre.game.id.in(gameIds))
-                .fetch()
-                .stream()
-                .collect(Collectors.groupingBy(
-                        GameGenreResultDto::getGameId,
-                        Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())
-                ));
-
-        dtos.forEach(dto -> dto.setGenres(genreMap.getOrDefault(dto.getId(), List.of())));
-
-        return dtos;
     }
 
     private BooleanExpression nameContains(String keyword) {

@@ -242,6 +242,11 @@ export default function GameDetailPage() {
     };
 
     const handleVote = async (type) => {
+        if (!isAuthenticated) {
+            openLoginModal();
+            return;
+        }
+
         const toastId = toast.loading('투표 기록 중...');
         try {
             const response = await client.post(`/api/v1/games/${id}/vote`, { voteType: type });
@@ -261,24 +266,10 @@ export default function GameDetailPage() {
 
             toast.success(toastMessage, { id: toastId });
         } catch (error) {
-            if (error.response?.status === 401) {
-                toast.dismiss(toastId);
-                toast((t) => (
-                    <div className="flex flex-col gap-2">
-                        <span className="font-bold text-sm text-primary">로그인이 필요한 기능입니다 🔒</span>
-                        <span className="text-xs text-secondary mb-1">로그인하고 커뮤니티 평가에 참여해보세요!</span>
-                        <div className="flex gap-2 mt-1">
-                            <button onClick={() => { toast.dismiss(t.id); openLoginModal(); }} className="bg-ps-blue text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors shadow-md flex-1">로그인 하러 가기</button>
-                            <button onClick={() => toast.dismiss(t.id)} className="bg-surface text-secondary border border-divider px-4 py-2 rounded-lg text-xs font-bold hover:bg-surface-hover transition-colors flex-1">닫기</button>
-                        </div>
-                    </div>
-                ), { duration: 5000, position: 'top-center', style: { background: 'var(--color-bg-base)', padding: '16px', borderRadius: '16px', border: '1px solid var(--color-border-default)' } });
-            } else {
-                const errorMessage = typeof error.response?.data === 'string'
-                    ? error.response.data
-                    : (error.response?.data?.message || "투표에 실패했습니다.");
-                toast.error(errorMessage, { id: toastId });
-            }
+            const errorMessage = typeof error.response?.data === 'string'
+                ? error.response.data
+                : (error.response?.data?.message || "투표에 실패했습니다.");
+            toast.error(errorMessage, { id: toastId });
         }
     };
 
@@ -311,7 +302,7 @@ export default function GameDetailPage() {
     if (loading) return <div className="pt-20"><PSLoader /></div>;
     if (!game) return null;
 
-    const traffic = getTrafficLight(game.priceVerdict);
+    const traffic = getTrafficLight(game.priceVerdict, game);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
     const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
