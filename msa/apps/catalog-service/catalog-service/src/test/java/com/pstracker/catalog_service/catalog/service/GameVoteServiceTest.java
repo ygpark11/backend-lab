@@ -97,4 +97,86 @@ class GameVoteServiceTest {
         GameVote vote = gameVoteRepository.findByMemberIdAndGameId(2L, gameId).orElseThrow();
         assertThat(vote.getUpdatedAt()).isAfterOrEqualTo(firstUpdatedAt);
     }
+
+    @Test
+    @DisplayName("싫어요 5번 요청 시 likeCount=0, dislikeCount=1이고 game_votes에 DISLIKE 1행만 남아야 한다.")
+    void toggleVote_dislike5Times_shouldHaveOneDislikeRow() {
+        final Long memberId = 10L;
+
+        // 싫어요 5번 반복
+        for (int i = 0; i < 5; i++) {
+            gameVoteService.toggleVote(gameId, memberId, VoteType.DISLIKE);
+            em.flush();
+            em.clear();
+        }
+
+        // then - 카운트 검증
+        Game game = gameRepository.findById(gameId).orElseThrow();
+        assertThat(game.getLikeCount()).isEqualTo(0);
+        assertThat(game.getDislikeCount()).isEqualTo(1);
+
+        // then - game_votes 테이블 검증
+        assertThat(gameVoteRepository.findByMemberIdAndGameId(memberId, gameId))
+                .isPresent()
+                .get()
+                .extracting(GameVote::getVoteType)
+                .isEqualTo(VoteType.DISLIKE);
+    }
+
+    @Test
+    @DisplayName("좋아요 → 싫어요 → 좋아요 요청 시 likeCount=1, dislikeCount=0이고 game_votes에 LIKE 1행만 남아야 한다.")
+    void toggleVote_likeDislikeLike_shouldHaveOneLikeRow() {
+        final Long memberId = 20L;
+
+        // 좋아요
+        gameVoteService.toggleVote(gameId, memberId, VoteType.LIKE);
+        em.flush();
+        em.clear();
+
+        // 싫어요
+        gameVoteService.toggleVote(gameId, memberId, VoteType.DISLIKE);
+        em.flush();
+        em.clear();
+
+        // 좋아요
+        gameVoteService.toggleVote(gameId, memberId, VoteType.LIKE);
+        em.flush();
+        em.clear();
+
+        // then - 카운트 검증
+        Game game = gameRepository.findById(gameId).orElseThrow();
+        assertThat(game.getLikeCount()).isEqualTo(1);
+        assertThat(game.getDislikeCount()).isEqualTo(0);
+
+        // then - game_votes 테이블 검증
+        assertThat(gameVoteRepository.findByMemberIdAndGameId(memberId, gameId))
+                .isPresent()
+                .get()
+                .extracting(GameVote::getVoteType)
+                .isEqualTo(VoteType.LIKE);
+    }
+
+    @Test
+    @DisplayName("좋아요 취소 시 game_votes 행이 삭제되고 likeCount가 0이 되어야 한다.")
+    void toggleVote_cancelLike_shouldDeleteRowAndDecrementCount() {
+        final Long memberId = 30L;
+
+        // 좋아요
+        gameVoteService.toggleVote(gameId, memberId, VoteType.LIKE);
+        em.flush();
+        em.clear();
+
+        // 좋아요 취소
+        gameVoteService.toggleVote(gameId, memberId, VoteType.LIKE);
+        em.flush();
+        em.clear();
+
+        // then - game_votes 행 삭제 검증
+        assertThat(gameVoteRepository.findByMemberIdAndGameId(memberId, gameId)).isEmpty();
+
+        // then - 카운트 검증
+        Game game = gameRepository.findById(gameId).orElseThrow();
+        assertThat(game.getLikeCount()).isEqualTo(0);
+        assertThat(game.getDislikeCount()).isEqualTo(0);
+    }
 }

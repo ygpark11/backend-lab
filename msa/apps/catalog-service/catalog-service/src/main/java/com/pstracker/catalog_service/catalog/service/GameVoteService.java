@@ -38,14 +38,14 @@ public class GameVoteService {
 
             if (existingVote.getVoteType() == requestedVoteType) {
                 // 동일한 버튼을 다시 누름 -> 투표 기록 삭제 (취소)
-                gameVoteRepository.delete(existingVote);
+                gameVoteRepository.deleteByMemberIdAndGameId(memberId, gameId);
                 switch (requestedVoteType) {
                     case LIKE    -> gameRepository.decrementLikeCount(gameId);
                     case DISLIKE -> gameRepository.decrementDislikeCount(gameId);
                 }
             } else {
                 // 반대 버튼을 누름 -> 기존 상태 변경
-                existingVote.changeVote(requestedVoteType);
+                gameVoteRepository.updateVoteType(memberId, gameId, requestedVoteType);
                 switch (requestedVoteType) {
                     case LIKE    -> { gameRepository.decrementDislikeCount(gameId); gameRepository.incrementLikeCount(gameId); }
                     case DISLIKE -> { gameRepository.decrementLikeCount(gameId);    gameRepository.incrementDislikeCount(gameId); }
