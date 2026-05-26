@@ -146,7 +146,7 @@ public class CatalogService {
      * @return 게임 엔티티
      */
     private Game findOrCreateGame(CollectRequestDto request) {
-        return gameRepository.findByPsStoreId(request.getPsStoreId())
+        return gameRepository.findByPsStoreIdWithGenres(request.getPsStoreId())
                 .orElseGet(() -> Game.create(
                         request.getPsStoreId(),
                         request.getTitle(),
@@ -240,7 +240,7 @@ public class CatalogService {
      * @param request 수집 요청 DTO
      */
     private void processPriceInfo(Game game, CollectRequestDto request) {
-        Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByRecordedAtDesc(game);
+        Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(game);
 
         if (!shouldSaveHistory(latestHistoryOpt, request)) {
             return;

@@ -1,11 +1,10 @@
 package com.pstracker.catalog_service.subscription.domain;
 
+import com.pstracker.catalog_service.global.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -19,7 +18,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class PsPlusMonthlyHistory {
+public class PsPlusMonthlyHistory extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,9 +40,6 @@ public class PsPlusMonthlyHistory {
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
     public enum BenefitType {
         ESSENTIAL, CATALOG
     }
@@ -55,7 +51,6 @@ public class PsPlusMonthlyHistory {
         history.benefitType = benefitType;
         history.title = title;
         history.imageUrl = imageUrl;
-        history.createdAt = LocalDateTime.now();
         return history;
     }
 }

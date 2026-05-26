@@ -1,17 +1,19 @@
 package com.pstracker.catalog_service.notification.domain;
 
+import com.pstracker.catalog_service.global.domain.BaseTimeEntity;
 import com.pstracker.catalog_service.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+        @Index(name = "idx_notification_member_created", columnList = "member_id, created_at")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Notification {
+public class Notification extends BaseTimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -32,9 +34,6 @@ public class Notification {
     @Column(name = "is_read", nullable = false)
     private boolean isRead;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
     // 생성 메서드
     public static Notification create(Member member, String title, String message, Long gameId) {
         Notification notification = new Notification();
@@ -43,7 +42,6 @@ public class Notification {
         notification.message = message;
         notification.gameId = gameId;
         notification.isRead = false;
-        notification.createdAt = LocalDateTime.now();
         return notification;
     }
 

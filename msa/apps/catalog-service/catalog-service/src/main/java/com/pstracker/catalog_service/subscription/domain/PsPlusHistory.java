@@ -4,13 +4,16 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 
 @Entity
 @Table(name = "ps_plus_history", indexes = {
-        @Index(name = "idx_ps_plus_tier_date", columnList = "tier, recorded_at")
+        @Index(name = "idx_ps_plus_tier_date", columnList = "tier, created_at")
 })
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PsPlusHistory {
@@ -32,8 +35,9 @@ public class PsPlusHistory {
     @Column(name = "price_12month", nullable = false)
     private Integer price12Month;
 
-    @Column(name = "recorded_at", nullable = false, updatable = false)
-    private LocalDateTime recordedAt;
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     public static PsPlusHistory create(PsPlusTier tier, Integer price1Month, Integer price3Month, Integer price12Month) {
         PsPlusHistory history = new PsPlusHistory();
@@ -41,7 +45,6 @@ public class PsPlusHistory {
         history.price1Month = price1Month;
         history.price3Month = price3Month;
         history.price12Month = price12Month;
-        history.recordedAt = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         return history;
     }
 }

@@ -25,6 +25,13 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     Optional<Game> findByIdWithGenres(@Param("gameId") Long gameId);
 
     /**
+     * upsert 시 장르 동기화를 위해 gameGenres 까지 한 번에 fetch join
+     */
+    @EntityGraph(attributePaths = {"gameGenres", "gameGenres.genre"})
+    @Query("SELECT g FROM Game g WHERE g.psStoreId = :psStoreId")
+    Optional<Game> findByPsStoreIdWithGenres(@Param("psStoreId") String psStoreId);
+
+    /**
      * [수집 원칙 제1조 - 효율성 및 기간 존중 (완전판)]
      * 1. 갱신 주기 도래: 오늘 자정(todayStart) 이전에 갱신된 게임 (하루 1회 보장)
      * 2. 세일 중인 게임 제외: 정가(NULL)이거나, 할인이 어제부로 종료된 게임만 조회
@@ -61,6 +68,22 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     List<Game> findAllByPioneerMemberIdOrderByCreatedAtDesc(Long pioneerMemberId);
 
     @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.likeCount = g.likeCount + 1 WHERE g.id = :id")
+    void incrementLikeCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.likeCount = CASE WHEN g.likeCount > 0 THEN g.likeCount - 1 ELSE 0 END WHERE g.id = :id")
+    void decrementLikeCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.dislikeCount = g.dislikeCount + 1 WHERE g.id = :id")
+    void incrementDislikeCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Game g SET g.dislikeCount = CASE WHEN g.dislikeCount > 0 THEN g.dislikeCount - 1 ELSE 0 END WHERE g.id = :id")
+    void decrementDislikeCount(@Param("id") Long id);
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE Game g SET g.pioneerName = :newNickname WHERE g.pioneerMemberId = :memberId")
     void updatePioneerNameByMemberId(@Param("memberId") Long memberId, @Param("newNickname") String newNickname);
 
@@ -87,7 +110,7 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     @Query("SELECT COUNT(DISTINCT h.game.id) FROM GamePriceHistory h " +
             "WHERE h.discountRate > 0 " +
-            "AND h.recordedAt BETWEEN :startOfDay AND :endOfDay")
+            "AND h.createdAt BETWEEN :startOfDay AND :endOfDay")
     long countNewDiscountGames(@Param("startOfDay") LocalDateTime startOfDay,
                                @Param("endOfDay") LocalDateTime endOfDay);
 

@@ -48,14 +48,14 @@ public class GameReadService {
                 .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
 
         // 1. 가격 이력 → 차트 DTO + 판정에 필요한 컨텍스트
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(gameId);
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(gameId);
         int historySize = histories.size();
         Integer originalPrice = game.getOriginalPrice() != null ? game.getOriginalPrice() : 0;
         Integer lowestPrice = game.getAllTimeLowPrice() != null ? game.getAllTimeLowPrice() : 0;
 
         List<GameDetailResponse.PriceHistoryDto> historyDtos = histories.stream()
                 .map(h -> new GameDetailResponse.PriceHistoryDto(
-                        h.getRecordedAt().toLocalDate(),
+                        h.getCreatedAt().toLocalDate(),
                         h.getPrice(),
                         h.getDiscountRate(),
                         PriceVerdictCalculator.forGame(h.getPrice(), originalPrice, lowestPrice, historySize)

@@ -60,7 +60,7 @@ public class SubscriptionService {
                         )
                 ));
 
-        List<PsPlusHistory> allHistories = psPlusHistoryRepository.findAllByOrderByRecordedAtAsc();
+        List<PsPlusHistory> allHistories = psPlusHistoryRepository.findAllByOrderByCreatedAtAsc();
         Map<PsPlusTier, List<PsPlusHistory>> historyByTier = allHistories.stream()
                 .collect(Collectors.groupingBy(PsPlusHistory::getTier));
 
@@ -104,7 +104,7 @@ public class SubscriptionService {
                     PriceVerdict verdict = PriceVerdictCalculator.forSubscription(historyPrice, originalPrice, lowestPrice, histories.size());
 
                     return new PsPlusPricingResponse.PsPlusPriceHistoryDto(
-                            h.getRecordedAt().toLocalDate(),
+                            h.getCreatedAt().toLocalDate(),
                             historyPrice,
                             discountRate,
                             verdict

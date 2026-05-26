@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.Objects;
 
 @Entity
-@Table(name = "game_genres")
+@Table(name = "game_genres", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_game_genre", columnNames = {"game_id", "genre_id"})
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GameGenre {
@@ -18,11 +20,11 @@ public class GameGenre {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "game_id")
+    @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "genre_id")
+    @JoinColumn(name = "genre_id", nullable = false)
     private Genre genre;
 
     // 생성자 (연결 생성)

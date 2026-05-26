@@ -4,14 +4,17 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "game_price_history", indexes = {
-        @Index(name = "idx_price_history_game_date", columnList = "game_id, recorded_at")
+        @Index(name = "idx_price_history_game_date", columnList = "game_id, created_at")
 })
+@EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class GamePriceHistory {
@@ -43,8 +46,9 @@ public class GamePriceHistory {
     @Column(name = "sale_end_date")
     private LocalDate saleEndDate;
 
-    @Column(name = "recorded_at")
-    private LocalDateTime recordedAt;
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     @Column(name = "in_catalog", nullable = false)
     private boolean inCatalog;
@@ -89,7 +93,6 @@ public class GamePriceHistory {
         history.isPlusExclusive = isPlusExclusive;
         history.saleEndDate = saleEndDate;
         history.inCatalog = inCatalog;
-        history.recordedAt = LocalDateTime.now();
         return history;
     }
 }

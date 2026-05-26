@@ -17,15 +17,15 @@ public interface GamePriceHistoryRepository extends JpaRepository<GamePriceHisto
      * @param game 게임 엔티티
      * @return 가장 최근의 GamePriceHistory 객체 (없을 경우 Optional.empty() 반환)
      */
-    Optional<GamePriceHistory> findTopByGameOrderByRecordedAtDesc(Game game);
+    Optional<GamePriceHistory> findTopByGameOrderByCreatedAtDesc(Game game);
 
     /**
      * 특정 게임의 모든 가격 이력을 기록일자 오름차순으로 조회
      * @param gameId 게임 ID
      * @return 가격 이력 리스트
      */
-    @Query("SELECT h FROM GamePriceHistory h WHERE h.game.id = :gameId ORDER BY h.recordedAt ASC")
-    List<GamePriceHistory> findAllByGameIdOrderByRecordedAtAsc(Long gameId);
+    @Query("SELECT h FROM GamePriceHistory h WHERE h.game.id = :gameId ORDER BY h.createdAt ASC")
+    List<GamePriceHistory> findAllByGameIdOrderByCreatedAtAsc(Long gameId);
 
     @Query("SELECT h.game.id, COUNT(h) FROM GamePriceHistory h WHERE h.game.id IN :gameIds GROUP BY h.game.id")
     List<Object[]> countGroupByGameId(@Param("gameIds") List<Long> gameIds);

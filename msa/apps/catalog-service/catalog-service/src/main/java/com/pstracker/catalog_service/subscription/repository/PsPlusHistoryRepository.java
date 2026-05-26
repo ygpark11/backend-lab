@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface PsPlusHistoryRepository extends JpaRepository<PsPlusHistory, Long> {
-    List<PsPlusHistory> findAllByOrderByRecordedAtAsc();
+    List<PsPlusHistory> findAllByOrderByCreatedAtAsc();
 }

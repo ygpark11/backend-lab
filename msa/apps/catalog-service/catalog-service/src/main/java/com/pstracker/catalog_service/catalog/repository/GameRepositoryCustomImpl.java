@@ -221,8 +221,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         gamePriceHistory.discountRate.gt(0),
                         // QueryDSL에서 LocalDateTime 컬럼의 날짜 부분만 비교할 수 없으므로 
                         // 오늘 시작(00:00:00)부터 끝(23:59:59) 사이에 기록된 이력을 찾습니다.
-                        gamePriceHistory.recordedAt.goe(today.atStartOfDay()),
-                        gamePriceHistory.recordedAt.lt(today.plusDays(1).atStartOfDay())
+                        gamePriceHistory.createdAt.goe(today.atStartOfDay()),
+                        gamePriceHistory.createdAt.lt(today.plusDays(1).atStartOfDay())
                 ).exists();
     }
 

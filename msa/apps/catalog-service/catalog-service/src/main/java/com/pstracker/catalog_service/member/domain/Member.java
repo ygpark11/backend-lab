@@ -1,17 +1,17 @@
 package com.pstracker.catalog_service.member.domain;
 
+import com.pstracker.catalog_service.global.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "members")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Member {
+public class Member extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,10 +29,6 @@ public class Member {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-    // 가입일
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 
     // --- [OAuth2 확장을 위한 필드] ---
     private String provider;
@@ -54,7 +50,6 @@ public class Member {
         this.providerId = providerId;
         this.priceAlertEnabled = true;
         this.nightModeEnabled = false;
-        this.createdAt = LocalDateTime.now(); // 생성 시점 주입
     }
 
     // --- [비즈니스 메서드] ---

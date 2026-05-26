@@ -69,7 +69,7 @@ public class CatalogServiceTest {
         assertThat(savedGame).isPresent();
         assertThat(savedGame.get().getName()).isEqualTo("Elden Ring");
 
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(savedGame.get().getId());
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(savedGame.get().getId());
         assertThat(histories).hasSize(1);
         assertThat(histories.get(0).getPrice()).isEqualTo(69800);
     }
@@ -91,7 +91,7 @@ public class CatalogServiceTest {
 
         // then
         Game game = gameRepository.findByPsStoreId("PROD-002").orElseThrow();
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(game.getId());
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(game.getId());
 
         assertThat(histories).hasSize(2);
         assertThat(histories.get(1).getPrice()).isEqualTo(5000);
@@ -116,7 +116,7 @@ public class CatalogServiceTest {
 
         // then
         Game game = gameRepository.findByPsStoreId("PROD-003").orElseThrow();
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(game.getId());
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(game.getId());
 
         assertThat(histories).hasSize(1);
     }
@@ -138,7 +138,7 @@ public class CatalogServiceTest {
 
         // then
         Game game = gameRepository.findByPsStoreId("PROD-004").orElseThrow();
-        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByRecordedAtAsc(game.getId());
+        List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(game.getId());
 
         assertThat(histories).hasSize(2);
 
@@ -159,6 +159,50 @@ public class CatalogServiceTest {
         // then
         Optional<Game> game = gameRepository.findByPsStoreId("PROD-005");
         assertThat(game).isEmpty();
+    }
+
+    @Test
+    @DisplayName("신규 게임 저장 시 createdAt, lastUpdated 타임스탬프가 설정되어야 한다.")
+    void save_NewGame_shouldSetTimestamps() {
+        // given
+        CollectRequestDto request = createDto("PROD-AUDIT-001", "Audit Test Game", 60000, 60000, 0, null);
+        given(igdbApiClient.searchGame(any())).willReturn(null);
+
+        // when
+        catalogService.upsertGameData(request);
+        em.flush();
+        em.clear();
+
+        // then
+        Game game = gameRepository.findByPsStoreId("PROD-AUDIT-001").orElseThrow();
+        assertThat(game.getCreatedAt()).isNotNull();
+        assertThat(game.getLastUpdated()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("게임 재수집(upsert) 시 lastUpdated 가 갱신되어야 한다.")
+    void upsert_ExistingGame_shouldUpdateLastUpdated() throws InterruptedException {
+        // given
+        CollectRequestDto initial = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 60000, 0, null);
+        given(igdbApiClient.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(initial);
+        em.flush();
+        em.clear();
+
+        Game before = gameRepository.findByPsStoreId("PROD-AUDIT-002").orElseThrow();
+        java.time.LocalDateTime firstUpdated = before.getLastUpdated();
+
+        Thread.sleep(10);
+
+        // when
+        CollectRequestDto updated = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 55000, 8, null);
+        catalogService.upsertGameData(updated);
+        em.flush();
+        em.clear();
+
+        // then
+        Game after = gameRepository.findByPsStoreId("PROD-AUDIT-002").orElseThrow();
+        assertThat(after.getLastUpdated()).isAfterOrEqualTo(firstUpdated);
     }
 
     private CollectRequestDto createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {

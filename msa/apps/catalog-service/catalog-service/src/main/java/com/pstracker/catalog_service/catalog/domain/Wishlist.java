@@ -1,12 +1,11 @@
 package com.pstracker.catalog_service.catalog.domain;
 
+import com.pstracker.catalog_service.global.domain.BaseTimeEntity;
 import com.pstracker.catalog_service.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDateTime;
 
 @Entity
 @Table(
@@ -20,7 +19,7 @@ import java.time.LocalDateTime;
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Wishlist {
+public class Wishlist extends BaseTimeEntity {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -36,9 +35,6 @@ public class Wishlist {
     @Column(name = "target_price")
     private Integer targetPrice;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
     public static Wishlist create(Member member, Game game) {
         return createWithTargetPrice(member, game, null);
     }
@@ -48,7 +44,6 @@ public class Wishlist {
         wishlist.member = member;
         wishlist.game = game;
         wishlist.targetPrice = targetPrice;
-        wishlist.createdAt = LocalDateTime.now();
         return wishlist;
     }
 

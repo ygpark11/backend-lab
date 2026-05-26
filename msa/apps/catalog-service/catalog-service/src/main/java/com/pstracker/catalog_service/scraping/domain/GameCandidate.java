@@ -1,18 +1,17 @@
 package com.pstracker.catalog_service.scraping.domain;
 
+import com.pstracker.catalog_service.global.domain.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "game_candidates")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class GameCandidate {
+public class GameCandidate extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,15 +29,11 @@ public class GameCandidate {
     @Column(name = "is_hidden", nullable = false)
     private boolean isHidden = false;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
     @Builder
     public GameCandidate(String psStoreId, String title, String imageUrl) {
         this.psStoreId = psStoreId;
         this.title = title;
         this.imageUrl = imageUrl;
-        this.createdAt = LocalDateTime.now();
         this.isHidden = false;
     }
 

@@ -10,7 +10,6 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -160,9 +159,6 @@ public class Game {
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<GameGenre> gameGenres = new HashSet<>();
 
-    @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
-    private List<GamePriceHistory> priceHistories = new ArrayList<>();
-
     public static String extractFamilyId(String psStoreId) {
         if (!hasText(psStoreId)) return null;
         String[] parts = psStoreId.split("-");
@@ -227,7 +223,7 @@ public class Game {
             this.releaseDate = releaseDate;
         }
 
-        if (newGenres != null && !newGenres.isEmpty()) {
+        if (newGenres != null && !newGenres.isEmpty() && isGenresChanged(newGenres)) {
             syncGenres(newGenres);
         }
 
@@ -246,6 +242,16 @@ public class Game {
      * 장르 정보 동기화
      * @param newGenres 새로운 장르 집합
      */
+    private boolean isGenresChanged(Set<Genre> newGenres) {
+        Set<String> currentNames = this.gameGenres.stream()
+                .map(gg -> gg.getGenre().getName())
+                .collect(Collectors.toSet());
+        Set<String> newNames = newGenres.stream()
+                .map(Genre::getName)
+                .collect(Collectors.toSet());
+        return !currentNames.equals(newNames);
+    }
+
     private void syncGenres(Set<Genre> newGenres) {
         // 1. 기존엔 있는데 새 목록엔 없으면 -> 삭제 (OrphanRemoval 동작)
         this.gameGenres.removeIf(gg -> !newGenres.contains(gg.getGenre()));
@@ -344,22 +350,6 @@ public class Game {
             this.pioneerMemberId = memberId;
             this.pioneerName = nickname;
         }
-    }
-
-    public void addLike() {
-        this.likeCount++;
-    }
-
-    public void removeLike() {
-        if (this.likeCount > 0) this.likeCount--;
-    }
-
-    public void addDislike() {
-        this.dislikeCount++;
-    }
-
-    public void removeDislike() {
-        if (this.dislikeCount > 0) this.dislikeCount--;
     }
 
     public void updatePlayTimes(Double main, Double extra, Double completionist) {
