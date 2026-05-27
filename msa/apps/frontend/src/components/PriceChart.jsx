@@ -1,12 +1,19 @@
-import React from 'react';
-import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { format, isValid, parseISO } from 'date-fns';
+import React, { useState } from 'react';
+import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ResponsiveContainer } from 'recharts';
+import { format, isValid, parseISO, subMonths } from 'date-fns';
+
+const PERIODS = [
+    { label: '1M', months: 1 },
+    { label: '3M', months: 3 },
+    { label: '6M', months: 6 },
+    { label: '1Y', months: 12 },
+    { label: '전체', months: null },
+];
 
 const renderPSButton = (cx, cy, verdict, isActive = false) => {
     const scale = isActive ? 1.3 : 0.9;
     const strokeW = isActive ? 3 : 2.5;
     const bgOpacity = isActive ? "0.3" : "0.15";
-
     const innerFill = "var(--color-bg-base)";
 
     switch (verdict) {
@@ -59,9 +66,9 @@ const CustomActiveDot = (props) => {
     return renderPSButton(cx, cy, payload.verdict, true);
 };
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length > 0 && payload[0]?.payload) {
-        const { price, discountRate, verdict } = payload[0].payload;
+        const { price, discountRate, verdict, fullDate } = payload[0].payload;
 
         let color = "#3B82F6";
         if (verdict === 'BUY_NOW') color = "#22C55E";
@@ -72,7 +79,7 @@ const CustomTooltip = ({ active, payload, label }) => {
             <div className="bg-base rounded-xl shadow-lg border z-[110]"
                  style={{ borderColor: `${color}80`, boxShadow: `0 0 20px ${color}20` }}>
                 <div className="bg-surface p-4 rounded-xl">
-                    <p className="text-secondary text-xs font-bold mb-1 tracking-wider">{label} 기록</p>
+                    <p className="text-secondary text-xs font-bold mb-1 tracking-wider">{fullDate} 기록</p>
                     <div className="flex items-center gap-3">
                         <p className="text-xl font-black flex items-center gap-2 text-primary">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}></span>
@@ -92,16 +99,43 @@ const CustomTooltip = ({ active, payload, label }) => {
     return null;
 };
 
-export default function PriceChart({ historyData }) {
-    if (!historyData || historyData.length === 0) return <div className="text-secondary text-sm text-center py-10 font-bold">가격 데이터가 수집 중입니다.</div>;
+// 역대 최저가 기준선 라벨: 선 우측 끝에 초록 원 + 텍스트
+const AllTimeLowLabel = ({ viewBox, lowestPrice }) => {
+    if (!viewBox) return null;
+    const { x, y, width } = viewBox;
+    const labelText = `역대 최저 ${Number(lowestPrice).toLocaleString()}원`;
+    return (
+        <g>
+            <circle cx={x + width} cy={y} r={4} fill="#22C55E" stroke="var(--color-bg-base)" strokeWidth={1.5} />
+            <text
+                x={x + width - 10}
+                y={y - 7}
+                textAnchor="end"
+                fill="#22C55E"
+                fontSize={10}
+                fontWeight="bold"
+            >
+                {labelText}
+            </text>
+        </g>
+    );
+};
 
-    let data = historyData.map(item => {
+export default function PriceChart({ historyData, lowestPrice }) {
+    const [selectedPeriod, setSelectedPeriod] = useState(null); // null = 전체
+
+    if (!historyData || historyData.length === 0) {
+        return <div className="text-secondary text-sm text-center py-10 font-bold">가격 데이터가 수집 중입니다.</div>;
+    }
+
+    // Step 1: 전체 데이터 파싱
+    const allMapped = historyData.map(item => {
         try {
             const dateObj = item.date ? parseISO(item.date) : null;
             if (!isValid(dateObj)) return null;
-
             return {
-                date: format(dateObj, 'MM.dd'),
+                rawDate: dateObj,
+                year: dateObj.getFullYear(),
                 price: item.price,
                 discountRate: item.discountRate || 0,
                 verdict: item.verdict || 'TRACKING'
@@ -109,46 +143,135 @@ export default function PriceChart({ historyData }) {
         } catch (e) {
             return null;
         }
-    }).filter(item => item !== null);
+    }).filter(Boolean);
 
-    if (data.length === 1) {
-        data = [ { ...data[0] }, { ...data[0], date: '오늘' } ];
+    if (allMapped.length === 0) {
+        return <div className="text-secondary text-sm text-center py-10 font-bold">유효한 가격 데이터가 없습니다.</div>;
     }
 
-    if (data.length === 0) return <div className="text-secondary text-sm text-center py-10 font-bold">유효한 가격 데이터가 없습니다.</div>;
+    // Step 2: 기간 필터링
+    const cutoff = selectedPeriod ? subMonths(new Date(), selectedPeriod) : null;
+    const filtered = cutoff ? allMapped.filter(item => item.rawDate >= cutoff) : allMapped;
+
+    // Step 3: 필터된 데이터 기준으로 다년도 판단 → 포맷 결정
+    const years = [...new Set(filtered.map(d => d.year))];
+    const isMultiYear = years.length > 1;
+
+    // Step 4: 차트 데이터 생성
+    let data = filtered.map(item => ({
+        date: isMultiYear ? format(item.rawDate, 'yy.MM.dd') : format(item.rawDate, 'MM.dd'),
+        fullDate: format(item.rawDate, 'yyyy.MM.dd'),
+        price: item.price,
+        discountRate: item.discountRate,
+        verdict: item.verdict
+    }));
+
+    // 역대 최저가 기준선 표시 여부
+    const showReferenceLine = lowestPrice && lowestPrice > 0;
+
+    // Y축 도메인: 역대 최저가가 항상 차트 범위에 포함되도록
+    const yDomain = showReferenceLine
+        ? [
+            (dataMin) => Math.floor(Math.min(dataMin, lowestPrice) * 0.92),
+            (dataMax) => Math.ceil(dataMax * 1.08)
+          ]
+        : ['auto', 'auto'];
+
+    const periodTabs = (
+        <div className="flex items-center gap-1 mt-4 mb-1">
+            {PERIODS.map(p => (
+                <button
+                    key={p.label}
+                    onClick={() => setSelectedPeriod(p.months)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                        selectedPeriod === p.months
+                            ? 'bg-ps-blue text-white shadow-sm'
+                            : 'text-secondary hover:text-primary hover:bg-surface-hover'
+                    }`}
+                >
+                    {p.label}
+                </button>
+            ))}
+        </div>
+    );
+
+    // 선택한 기간에 데이터 없음
+    if (data.length === 0) {
+        return (
+            <div>
+                {periodTabs}
+                <div className="text-secondary text-sm text-center py-10 font-bold">
+                    이 기간의 가격 데이터가 없습니다.
+                </div>
+            </div>
+        );
+    }
+
+    if (data.length === 1) {
+        data = [{ ...data[0] }, { ...data[0], date: '오늘', fullDate: '오늘' }];
+    }
 
     return (
-        <div className="w-full h-[250px] md:h-[300px] select-none relative group mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={data} margin={{ top: 25, right: 25, left: -10, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
+        <div>
+            {periodTabs}
+            <div className="w-full h-[250px] md:h-[300px] select-none relative group">
+                <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data} margin={{ top: 28, right: 25, left: -10, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
 
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" opacity={0.5} vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-default)" opacity={0.5} vertical={false} />
 
-                    <XAxis dataKey="date" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} dy={10} />
-                    <YAxis tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${value >= 10000 ? value/10000 + '만' : value}`} />
+                        <XAxis
+                            dataKey="date"
+                            tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }}
+                            axisLine={false}
+                            tickLine={false}
+                            dy={10}
+                        />
+                        <YAxis
+                            domain={yDomain}
+                            tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 'bold' }}
+                            axisLine={false}
+                            tickLine={false}
+                            tickFormatter={(value) => `${value >= 10000 ? (value / 10000).toFixed(value % 10000 === 0 ? 0 : 1) + '만' : value}`}
+                        />
 
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'var(--color-border-default)', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        <Tooltip
+                            content={<CustomTooltip />}
+                            cursor={{ stroke: 'var(--color-border-default)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                        />
 
-                    <Area type="stepAfter" dataKey="price" stroke="none" fill="url(#colorPrice)" />
+                        {/* 역대 최저가 기준선: 항상 표시, 초록 점선 + 우측 끝 원 + 레이블 */}
+                        {showReferenceLine && (
+                            <ReferenceLine
+                                y={lowestPrice}
+                                stroke="#22C55E"
+                                strokeDasharray="5 3"
+                                strokeWidth={1.5}
+                                label={<AllTimeLowLabel lowestPrice={lowestPrice} />}
+                            />
+                        )}
 
-                    <Line
-                        type="stepAfter"
-                        dataKey="price"
-                        stroke="#3B82F6"
-                        strokeWidth={3}
-                        dot={<CustomDot />}
-                        activeDot={<CustomActiveDot />}
-                        animationDuration={1000}
-                        isAnimationActive={true}
-                    />
-                </ComposedChart>
-            </ResponsiveContainer>
+                        <Area type="stepAfter" dataKey="price" stroke="none" fill="url(#colorPrice)" />
+
+                        <Line
+                            type="stepAfter"
+                            dataKey="price"
+                            stroke="#3B82F6"
+                            strokeWidth={3}
+                            dot={<CustomDot />}
+                            activeDot={<CustomActiveDot />}
+                            animationDuration={1000}
+                            isAnimationActive={true}
+                        />
+                    </ComposedChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 }

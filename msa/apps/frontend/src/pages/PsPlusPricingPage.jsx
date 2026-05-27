@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import { ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, CalendarDays, ExternalLink } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, Gamepad2, Info, Plus, ShieldCheck, Sparkles, X, CalendarDays, ExternalLink, Clock } from 'lucide-react';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import PSLoader from '../components/PSLoader';
@@ -176,6 +176,8 @@ const PsPlusPricingPage = () => {
                             name="에센셜"
                             price={prices?.ESSENTIAL?.[selectedDuration]}
                             discountPrice={prices?.ESSENTIAL?.[selectedDuration.replace('price', 'discountPrice')]}
+                            discountRate={prices?.ESSENTIAL?.[selectedDuration.replace('price', 'discountRate')] || 0}
+                            saleEndDate={prices?.ESSENTIAL?.[selectedDuration.replace('price', 'saleEndDate')] || null}
                             historyData={history?.ESSENTIAL?.[selectedDuration] || []}
                             benefits={PS_PLUS_BENEFITS.ESSENTIAL}
                             theme="basic"
@@ -191,6 +193,8 @@ const PsPlusPricingPage = () => {
                             name="스페셜"
                             price={prices?.SPECIAL?.[selectedDuration]}
                             discountPrice={prices?.SPECIAL?.[selectedDuration.replace('price', 'discountPrice')]}
+                            discountRate={prices?.SPECIAL?.[selectedDuration.replace('price', 'discountRate')] || 0}
+                            saleEndDate={prices?.SPECIAL?.[selectedDuration.replace('price', 'saleEndDate')] || null}
                             historyData={history?.SPECIAL?.[selectedDuration] || []}
                             benefits={PS_PLUS_BENEFITS.SPECIAL}
                             theme="gold"
@@ -207,6 +211,8 @@ const PsPlusPricingPage = () => {
                             name="디럭스"
                             price={prices?.DELUXE?.[selectedDuration]}
                             discountPrice={prices?.DELUXE?.[selectedDuration.replace('price', 'discountPrice')]}
+                            discountRate={prices?.DELUXE?.[selectedDuration.replace('price', 'discountRate')] || 0}
+                            saleEndDate={prices?.DELUXE?.[selectedDuration.replace('price', 'saleEndDate')] || null}
                             historyData={history?.DELUXE?.[selectedDuration] || []}
                             benefits={PS_PLUS_BENEFITS.DELUXE}
                             theme="premium"
@@ -228,7 +234,13 @@ const PsPlusPricingPage = () => {
     );
 };
 
-const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick, onMonthlyGamesClick }) => {
+const formatSaleEndDate = (dateStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+
+const PricingCard = ({ tier, name, price, discountPrice, discountRate, saleEndDate, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick, onMonthlyGamesClick }) => {
 
     const themeStyles = {
         basic: {
@@ -263,6 +275,10 @@ const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, 
         }
     ] : []);
 
+    const lowestPrice = historyData && historyData.length > 0
+        ? Math.min(...historyData.map(h => h.price))
+        : null;
+
     return (
         <div className={`relative overflow-hidden rounded-3xl bg-glass backdrop-blur-xl border p-8 flex flex-col h-full transition-all duration-300 group
             ${style.border} hover:${style.border.replace('border', 'border-hover')} border-divider md:hover:shadow-lg md:hover:-translate-y-2
@@ -283,12 +299,28 @@ const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, 
                             <span className="text-xl font-bold text-muted line-through decoration-muted mb-1">
                                 ₩{price.toLocaleString()}
                             </span>
-                            <div>
+                            <div className="flex items-end gap-3 flex-wrap">
                                 <span className="text-4xl font-black text-primary tracking-tighter">
                                     ₩{discountPrice.toLocaleString()}
                                 </span>
-                                <span className="text-secondary font-medium ml-1">/ 선택기간</span>
+                                <span className="text-secondary font-medium mb-1">/ 선택기간</span>
                             </div>
+                            {discountRate > 0 && (
+                                <div className="flex flex-col gap-1.5 mt-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-3 py-1 rounded-lg font-black text-sm bg-ps-blue text-white shadow-md">
+                                            -{discountRate}%
+                                        </span>
+                                        <span className="text-xs font-bold text-secondary">프로모션 진행 중</span>
+                                    </div>
+                                    {saleEndDate && (
+                                        <div className="flex items-center gap-1.5 text-xs text-muted font-medium">
+                                            <Clock className="w-3.5 h-3.5 shrink-0" />
+                                            <span>할인 종료: {formatSaleEndDate(saleEndDate)}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div>
@@ -370,7 +402,7 @@ const PricingCard = ({ tier, name, price, discountPrice, historyData, benefits, 
 
                     {isChartOpen && (
                         <div className="pt-2 pb-1 animate-fadeIn border-t border-divider mt-2">
-                            <PriceChart historyData={chartDataToRender} />
+                            <PriceChart historyData={chartDataToRender} lowestPrice={lowestPrice} />
                         </div>
                     )}
                 </div>

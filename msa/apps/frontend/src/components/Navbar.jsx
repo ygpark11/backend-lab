@@ -8,6 +8,7 @@ import {
     AlertTriangle,
     Bell,
     BellOff,
+    CheckCheck,
     Gamepad2,
     Heart,
     HelpCircle,
@@ -43,7 +44,13 @@ const Navbar = () => {
     const [isNotiOpen, setIsNotiOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
-    const [notifications, setNotifications] = useState([]);
+    const [activeTab, setActiveTab] = useState('unread');
+    const [unreadNotis, setUnreadNotis] = useState([]);
+    const [allNotis, setAllNotis] = useState([]);
+    const [allPage, setAllPage] = useState(0);
+    const [allHasNext, setAllHasNext] = useState(false);
+    const [isNotiLoading, setIsNotiLoading] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [hasNewNotice, setHasNewNotice] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
     const lastScrollYRef = useRef(0);
@@ -195,30 +202,99 @@ const Navbar = () => {
     }, []);
 
     const handleLogoClick = () => { navigate('/games'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-    const fetchUnreadCount = async () => { try { const res = await client.get('/api/notifications/unread-count'); setUnreadCount(res.data); } catch (err) { console.error("알림 카운트 조회 실패", err); } };
-
-    const toggleNotification = async () => {
-        if (!isNotiOpen) {
-            try { const res = await client.get('/api/notifications'); setNotifications(res.data); }
-            catch (err) { toast.error("알림을 불러오지 못했습니다."); }
-        }
-        setIsNotiOpen(!isNotiOpen);
+    const fetchUnreadCount = async () => {
+        try {
+            const res = await client.get('/api/notifications/unread-count');
+            setUnreadCount(Math.max(0, Number(res.data) || 0));
+        } catch (err) { console.error("알림 카운트 조회 실패", err); }
     };
 
-    const handleNotificationClick = async (notiId, gameId) => {
+    const fetchUnreadNotifications = async () => {
+        setIsNotiLoading(true);
         try {
-            await client.patch(`/api/notifications/${notiId}/read`);
-            setUnreadCount(prev => Math.max(0, prev - 1));
-            setNotifications(prev => prev.map(n => n.id === notiId ? { ...n, isRead: true } : n));
-            setIsNotiOpen(false);
-
-            if (gameId) {
-                const currentBackground = location.state?.background || location;
-                navigate(`/games/${gameId}`, { state: { background: currentBackground } });
-            }
+            const res = await client.get('/api/notifications?filter=unread');
+            const content = res.data.content ?? [];
+            setUnreadNotis(content);
+            return content.length;
         } catch (err) {
-            console.error("알림 읽음 처리 실패", err);
-            toast.error("알림 이동 처리 중 문제가 발생했습니다.");
+            toast.error("알림을 불러오지 못했습니다.");
+            return 0;
+        } finally {
+            setIsNotiLoading(false);
+        }
+    };
+
+    const fetchAllNotifications = async (page = 0, append = false) => {
+        if (append) setIsLoadingMore(true);
+        else setIsNotiLoading(true);
+        try {
+            const res = await client.get(`/api/notifications?filter=all&page=${page}&size=20`);
+            const content = res.data.content ?? [];
+            const hasNext = res.data.hasNext ?? false;
+            setAllNotis(prev => append ? [...prev, ...content] : content);
+            setAllPage(page);
+            setAllHasNext(hasNext);
+        } catch (err) {
+            toast.error("알림을 불러오지 못했습니다.");
+        } finally {
+            if (append) setIsLoadingMore(false);
+            else setIsNotiLoading(false);
+        }
+    };
+
+    const toggleNotification = async () => {
+        if (isNotiOpen) { setIsNotiOpen(false); return; }
+        setActiveTab('unread');
+        setAllNotis([]);
+        setAllPage(0);
+        setAllHasNext(false);
+        setIsNotiOpen(true);
+        const count = await fetchUnreadNotifications();
+        if (count === 0) {
+            setActiveTab('all');
+            await fetchAllNotifications(0);
+        }
+    };
+
+    const handleTabChange = async (tab) => {
+        if (activeTab === tab) return;
+        setActiveTab(tab);
+        if (tab === 'all' && allNotis.length === 0) {
+            await fetchAllNotifications(0);
+        }
+    };
+
+    const handleMarkAllAsRead = async () => {
+        if (unreadCount === 0) return;
+        const prevUnreadNotis = unreadNotis;
+        const prevAllNotis = allNotis;
+        const prevCount = unreadCount;
+        setUnreadNotis([]);
+        setAllNotis(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+        try {
+            await client.patch('/api/notifications/read-all');
+        } catch (err) {
+            setUnreadNotis(prevUnreadNotis);
+            setAllNotis(prevAllNotis);
+            setUnreadCount(prevCount);
+            toast.error("전체 읽음 처리에 실패했습니다.");
+        }
+    };
+
+    const handleNotificationClick = (notiId, gameId, isRead) => {
+        if (!isRead) {
+            setUnreadNotis(prev => prev.filter(n => n.id !== notiId));
+            setAllNotis(prev => prev.map(n => n.id === notiId ? { ...n, isRead: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+            client.patch(`/api/notifications/${notiId}/read`).catch(err =>
+                console.error("알림 읽음 처리 실패", err)
+            );
+        }
+        setIsNotiOpen(false);
+        if (gameId) {
+            const currentBackground = location.state?.background || location;
+            navigate(`/games/${gameId}`, { state: { background: currentBackground } });
         }
     };
 
@@ -316,41 +392,117 @@ const Navbar = () => {
                     {isAuthenticated ? (
                         <>
                         <div className="relative" ref={notiRef}>
+                            {/* 벨 아이콘 + 숫자 뱃지 */}
                             <button onClick={toggleNotification} className="relative text-secondary transition-colors p-1.5 sm:p-2 rounded-full md:hover:text-primary md:hover:bg-surface-hover active:bg-surface-hover">
                                 <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                            </span>
+                                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center px-1 border-2 border-base leading-none">
+                                        {unreadCount > 9 ? '9+' : unreadCount}
+                                    </span>
                                 )}
                             </button>
+
                             {isNotiOpen && (
                                 <div className="fixed sm:absolute top-[72px] sm:top-full right-4 sm:right-0 left-4 sm:left-auto sm:mt-2 sm:w-80 md:w-96 bg-base border border-divider rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[100] origin-top-right">
-                                    <div className="flex items-center justify-between px-4 py-3 border-b border-divider bg-surface/50">
-                                        <h3 className="text-sm font-bold text-primary">알림 센터</h3>
-                                        <button onClick={() => setIsNotiOpen(false)} className="p-1 hover:bg-surface-hover rounded-full transition-colors">
-                                            <X className="w-5 h-5 text-secondary" />
-                                        </button>
+
+                                    {/* 헤더: 탭 + 액션 버튼 */}
+                                    <div className="flex items-center justify-between px-3 py-2.5 border-b border-divider bg-surface/50">
+                                        <div className="flex items-center gap-0.5 bg-surface rounded-lg p-0.5">
+                                            <button
+                                                onClick={() => handleTabChange('unread')}
+                                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'unread' ? 'bg-base text-primary shadow-sm' : 'text-secondary hover:text-primary'}`}
+                                            >
+                                                안읽음{unreadCount > 0 && <span className="ml-1.5 text-ps-blue">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+                                            </button>
+                                            <button
+                                                onClick={() => handleTabChange('all')}
+                                                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${activeTab === 'all' ? 'bg-base text-primary shadow-sm' : 'text-secondary hover:text-primary'}`}
+                                            >
+                                                전체
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-0.5">
+                                            <button
+                                                onClick={handleMarkAllAsRead}
+                                                disabled={unreadCount === 0}
+                                                title="전체 읽음"
+                                                className={`p-1.5 rounded-lg transition-colors ${unreadCount > 0 ? 'text-secondary hover:text-ps-blue hover:bg-blue-500/10' : 'text-muted opacity-40 cursor-not-allowed'}`}
+                                            >
+                                                <CheckCheck className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => setIsNotiOpen(false)} className="p-1.5 hover:bg-surface-hover rounded-lg transition-colors">
+                                                <X className="w-4 h-4 text-secondary" />
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    <ul className="max-h-[60vh] sm:max-h-[350px] overflow-y-auto custom-scrollbar">
-                                        {notifications.length === 0 ? (
-                                            <li className="py-12 text-center flex flex-col items-center gap-3 text-muted">
-                                                <BellOff className="w-8 h-8 opacity-50" />
-                                                <span className="text-xs font-bold">새로운 알림이 없습니다.</span>
-                                            </li>
-                                        ) : (
-                                            notifications.map((noti) => (
-                                                <li key={noti.id} onClick={() => handleNotificationClick(noti.id, noti.gameId)} className={`px-4 py-3 border-b border-divider cursor-pointer hover:bg-surface-hover/80 active:bg-surface/80 transition-colors ${!noti.isRead ? 'bg-blue-500/10' : ''}`}>
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <span className={`text-sm font-bold ${!noti.isRead ? 'text-blue-600 dark:text-blue-500' : 'text-primary'}`}>{noti.title}</span>
-                                                        {!noti.isRead && <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5 shrink-0"></span>}
-                                                    </div>
-                                                    <p className="text-xs text-secondary line-clamp-2">{noti.message}</p>
-                                                    <p className="text-[10px] text-muted mt-2 text-right">{new Date(noti.createdAt).toLocaleDateString()}</p>
+                                    {/* 알림 목록 */}
+                                    <ul className="max-h-[60vh] sm:max-h-[380px] overflow-y-auto custom-scrollbar">
+                                        {isNotiLoading ? (
+                                            [...Array(3)].map((_, i) => (
+                                                <li key={i} className="px-4 py-3.5 border-b border-divider animate-pulse">
+                                                    <div className="h-3.5 bg-surface rounded-md w-2/3 mb-2.5" />
+                                                    <div className="h-3 bg-surface rounded-md w-full mb-1.5" />
+                                                    <div className="h-3 bg-surface rounded-md w-1/2" />
                                                 </li>
                                             ))
+                                        ) : activeTab === 'unread' ? (
+                                            unreadNotis.length === 0 ? (
+                                                <li className="py-12 text-center flex flex-col items-center gap-3 text-muted">
+                                                    <BellOff className="w-8 h-8 opacity-50" />
+                                                    <span className="text-xs font-bold">새로운 알림이 없습니다.</span>
+                                                </li>
+                                            ) : unreadNotis.map(noti => (
+                                                <li
+                                                    key={noti.id}
+                                                    onClick={() => handleNotificationClick(noti.id, noti.gameId, noti.isRead)}
+                                                    className="px-4 py-3 border-b border-divider cursor-pointer bg-blue-500/10 hover:bg-blue-500/20 active:bg-blue-500/5 transition-colors"
+                                                >
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <span className="text-sm font-bold text-blue-600 dark:text-blue-500 line-clamp-1 pr-2">{noti.title}</span>
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5 shrink-0" />
+                                                    </div>
+                                                    <p className="text-xs text-secondary line-clamp-2">{noti.message}</p>
+                                                    <p className="text-[10px] text-muted mt-1.5 text-right">{new Date(noti.createdAt).toLocaleDateString('ko-KR')}</p>
+                                                </li>
+                                            ))
+                                        ) : (
+                                            <>
+                                                {allNotis.length === 0 ? (
+                                                    <li className="py-12 text-center flex flex-col items-center gap-3 text-muted">
+                                                        <BellOff className="w-8 h-8 opacity-50" />
+                                                        <span className="text-xs font-bold">알림 내역이 없습니다.</span>
+                                                    </li>
+                                                ) : allNotis.map(noti => (
+                                                    <li
+                                                        key={noti.id}
+                                                        onClick={() => handleNotificationClick(noti.id, noti.gameId, noti.isRead)}
+                                                        className={`px-4 py-3 border-b border-divider cursor-pointer transition-all active:bg-surface/80 ${noti.isRead ? 'opacity-60 hover:opacity-100 hover:bg-surface-hover/80' : 'bg-blue-500/10 hover:bg-blue-500/20'}`}
+                                                    >
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <span className={`text-sm font-bold line-clamp-1 pr-2 ${noti.isRead ? 'text-primary' : 'text-blue-600 dark:text-blue-500'}`}>{noti.title}</span>
+                                                            {!noti.isRead && <span className="h-1.5 w-1.5 rounded-full bg-ps-blue mt-1.5 shrink-0" />}
+                                                        </div>
+                                                        <p className="text-xs text-secondary line-clamp-2">{noti.message}</p>
+                                                        <p className="text-[10px] text-muted mt-1.5 text-right">{new Date(noti.createdAt).toLocaleDateString('ko-KR')}</p>
+                                                    </li>
+                                                ))}
+                                                {allNotis.length > 0 && (
+                                                    <li className="py-3 flex justify-center border-t border-divider">
+                                                        {allHasNext ? (
+                                                            <button
+                                                                onClick={() => fetchAllNotifications(allPage + 1, true)}
+                                                                disabled={isLoadingMore}
+                                                                className="text-xs font-bold text-secondary hover:text-ps-blue transition-colors px-4 py-2 rounded-lg hover:bg-surface-hover disabled:opacity-50"
+                                                            >
+                                                                {isLoadingMore ? '불러오는 중...' : '더 보기'}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-[10px] text-muted">전체 알림을 불러왔습니다.</span>
+                                                        )}
+                                                    </li>
+                                                )}
+                                            </>
                                         )}
                                     </ul>
                                 </div>

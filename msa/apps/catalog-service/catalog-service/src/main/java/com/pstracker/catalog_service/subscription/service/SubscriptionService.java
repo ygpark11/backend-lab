@@ -14,20 +14,24 @@ import com.pstracker.catalog_service.subscription.dto.MonthlyGameArchiveResponse
 import com.pstracker.catalog_service.subscription.dto.PsPlusBenefitCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusCollectRequest;
 import com.pstracker.catalog_service.subscription.dto.PsPlusPricingResponse;
+import com.pstracker.catalog_service.subscription.event.PsPlusDiscountEvent;
 import com.pstracker.catalog_service.subscription.repository.PsPlusHistoryRepository;
 import com.pstracker.catalog_service.subscription.repository.PsPlusMonthlyHistoryRepository;
 import com.pstracker.catalog_service.subscription.repository.PsPlusPricingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 
@@ -42,6 +46,7 @@ public class SubscriptionService {
     private final PsPlusMonthlyHistoryRepository psPlusMonthlyHistoryRepository;
     private final GameRepository gameRepository;
     private final GameCandidateRepository gameCandidateRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     public PsPlusPricingResponse getLatestPricing() {
@@ -54,10 +59,27 @@ public class SubscriptionService {
         Map<PsPlusTier, PsPlusPricingResponse.TierPriceDto> pricingData = pricing.stream()
                 .collect(Collectors.toMap(
                         PsPlusPricing::getTier,
-                        p -> new PsPlusPricingResponse.TierPriceDto(
-                                p.getPrice1Month(), p.getPrice3Month(), p.getPrice12Month(),
-                                null, null, null // TODO: 할인가 컬럼 생기면 p.getDiscountPrice12Month() 등으로 매핑
-                        )
+                        p -> {
+                            Integer orig1M = p.resolvedOriginalPrice1Month();
+                            Integer orig3M = p.resolvedOriginalPrice3Month();
+                            Integer orig12M = p.resolvedOriginalPrice12Month();
+                            // 정가와 현재 판매가가 다를 때만 할인가/할인율/종료일 노출 (프로모션 중)
+                            boolean promo1M = !p.getPrice1Month().equals(orig1M);
+                            boolean promo3M = !p.getPrice3Month().equals(orig3M);
+                            boolean promo12M = !p.getPrice12Month().equals(orig12M);
+                            return new PsPlusPricingResponse.TierPriceDto(
+                                    orig1M, orig3M, orig12M,
+                                    promo1M ? p.getPrice1Month() : null,
+                                    promo3M ? p.getPrice3Month() : null,
+                                    promo12M ? p.getPrice12Month() : null,
+                                    promo1M ? calcDiscountRate(orig1M, p.getPrice1Month()) : 0,
+                                    promo3M ? calcDiscountRate(orig3M, p.getPrice3Month()) : 0,
+                                    promo12M ? calcDiscountRate(orig12M, p.getPrice12Month()) : 0,
+                                    promo1M ? p.getSaleEndDate1Month() : null,
+                                    promo3M ? p.getSaleEndDate3Month() : null,
+                                    promo12M ? p.getSaleEndDate12Month() : null
+                            );
+                        }
                 ));
 
         List<PsPlusHistory> allHistories = psPlusHistoryRepository.findAllByOrderByCreatedAtAsc();
@@ -71,9 +93,15 @@ public class SubscriptionService {
                             List<PsPlusHistory> tierHistories = historyByTier.getOrDefault(p.getTier(), List.of());
 
                             return Map.of(
-                                    "price1Month", buildHistoryForDuration(tierHistories, PsPlusHistory::getPrice1Month, p.getPrice1Month()),
-                                    "price3Month", buildHistoryForDuration(tierHistories, PsPlusHistory::getPrice3Month, p.getPrice3Month()),
-                                    "price12Month", buildHistoryForDuration(tierHistories, PsPlusHistory::getPrice12Month, p.getPrice12Month())
+                                    "price1Month", buildHistoryForDuration(tierHistories,
+                                            PsPlusHistory::getPrice1Month, PsPlusHistory::resolvedOriginalPrice1Month,
+                                            p.resolvedOriginalPrice1Month()),
+                                    "price3Month", buildHistoryForDuration(tierHistories,
+                                            PsPlusHistory::getPrice3Month, PsPlusHistory::resolvedOriginalPrice3Month,
+                                            p.resolvedOriginalPrice3Month()),
+                                    "price12Month", buildHistoryForDuration(tierHistories,
+                                            PsPlusHistory::getPrice12Month, PsPlusHistory::resolvedOriginalPrice12Month,
+                                            p.resolvedOriginalPrice12Month())
                             );
                         }
                 ));
@@ -86,22 +114,31 @@ public class SubscriptionService {
         );
     }
 
+    private static int calcDiscountRate(int originalPrice, int price) {
+        if (originalPrice <= 0 || price >= originalPrice) return 0;
+        return (int) Math.round((double) (originalPrice - price) / originalPrice * 100);
+    }
+
     private List<PsPlusPricingResponse.PsPlusPriceHistoryDto> buildHistoryForDuration(
             List<PsPlusHistory> histories,
             ToIntFunction<PsPlusHistory> priceExtractor,
-            Integer originalPrice) {
+            ToIntFunction<PsPlusHistory> originalPriceExtractor,
+            Integer currentOriginalPrice) {
 
         Integer lowestPrice = histories.stream()
-                .map(priceExtractor::applyAsInt)
+                .mapToInt(priceExtractor)
+                .boxed()
                 .min(Integer::compareTo)
-                .orElse(originalPrice);
+                .orElse(currentOriginalPrice);
 
         return histories.stream()
                 .map(h -> {
                     int historyPrice = priceExtractor.applyAsInt(h);
-                    int discountRate = 0; // TODO: h.getDiscountRate()
+                    int historyOriginalPrice = originalPriceExtractor.applyAsInt(h);
+                    int discountRate = calcDiscountRate(historyOriginalPrice, historyPrice);
 
-                    PriceVerdict verdict = PriceVerdictCalculator.forSubscription(historyPrice, originalPrice, lowestPrice, histories.size());
+                    PriceVerdict verdict = PriceVerdictCalculator.forSubscription(
+                            historyPrice, historyOriginalPrice, lowestPrice, histories.size());
 
                     return new PsPlusPricingResponse.PsPlusPriceHistoryDto(
                             h.getCreatedAt().toLocalDate(),
@@ -125,40 +162,98 @@ public class SubscriptionService {
                 .stream()
                 .collect(Collectors.toMap(PsPlusPricing::getTier, p -> p));
 
-        request.getData().forEach((tier, prices) -> upsertTierPrice(tier, prices, existingMap));
+        AtomicBoolean discountStarted = new AtomicBoolean(false);
+        request.getData().forEach((tier, prices) -> {
+            if (upsertTierPrice(tier, prices, existingMap)) {
+                discountStarted.set(true);
+            }
+        });
+
+        // 어느 하나의 티어라도 정가→할인 전환이 감지되면 이벤트 발행 (트랜잭션 커밋 후 FCM 발송)
+        if (discountStarted.get()) {
+            eventPublisher.publishEvent(new PsPlusDiscountEvent());
+        }
     }
 
-    private void upsertTierPrice(PsPlusTier tier, PsPlusCollectRequest.TierPriceReq prices,
-                                  Map<PsPlusTier, PsPlusPricing> existingMap) {
+    /**
+     * @return true: 정가→할인 전환 감지 (FCM 이벤트 발행 대상)
+     */
+    private boolean upsertTierPrice(PsPlusTier tier, PsPlusCollectRequest.TierPriceReq prices,
+                                    Map<PsPlusTier, PsPlusPricing> existingMap) {
         Integer price1Month = prices.getPrice1Month();
         Integer price3Month = prices.getPrice3Month();
         Integer price12Month = prices.getPrice12Month();
+        Integer originalPrice1Month = prices.resolvedOriginalPrice1Month();
+        Integer originalPrice3Month = prices.resolvedOriginalPrice3Month();
+        Integer originalPrice12Month = prices.resolvedOriginalPrice12Month();
+        LocalDate saleEndDate1Month = prices.getSaleEndDate1Month();
+        LocalDate saleEndDate3Month = prices.getSaleEndDate3Month();
+        LocalDate saleEndDate12Month = prices.getSaleEndDate12Month();
 
-        Optional.ofNullable(existingMap.get(tier)).ifPresentOrElse(
-                current -> updateIfChanged(current, tier, price1Month, price3Month, price12Month),
-                () -> insertNew(tier, price1Month, price3Month, price12Month)
-        );
+        return Optional.ofNullable(existingMap.get(tier))
+                .map(current -> updateIfChanged(current, tier,
+                        price1Month, price3Month, price12Month,
+                        originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                        saleEndDate1Month, saleEndDate3Month, saleEndDate12Month))
+                .orElseGet(() -> {
+                    insertNew(tier,
+                            price1Month, price3Month, price12Month,
+                            originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                            saleEndDate1Month, saleEndDate3Month, saleEndDate12Month);
+                    return false; // 최초 적재는 알림 미발송
+                });
     }
 
-    private void updateIfChanged(PsPlusPricing current, PsPlusTier tier,
-                                  Integer price1Month, Integer price3Month, Integer price12Month) {
-        if (current.isSamePrice(price1Month, price3Month, price12Month)) {
+    /**
+     * @return true: 변동 후 할인 상태 (FCM 발송 대상)
+     */
+    private boolean updateIfChanged(PsPlusPricing current, PsPlusTier tier,
+                                    Integer price1Month, Integer price3Month, Integer price12Month,
+                                    Integer originalPrice1Month, Integer originalPrice3Month, Integer originalPrice12Month,
+                                    LocalDate saleEndDate1Month, LocalDate saleEndDate3Month, LocalDate saleEndDate12Month) {
+        if (current.isSamePrice(price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month)) {
             log.debug("PS Plus [{}] 가격 변동 없음. (Skip)", tier.name());
-            return;
+            return false;
         }
+
         log.debug("PS Plus [{}] 가격 변동 감지! (12M: {} -> {})", tier.name(), current.getPrice12Month(), price12Month);
-        current.updatePrices(price1Month, price3Month, price12Month);
-        saveHistory(tier, price1Month, price3Month, price12Month);
+        current.updatePrices(price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month);
+        saveHistory(tier, price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month);
+
+        // isSamePrice를 통과했으므로 변동 확정 → 새 가격이 할인이면 알림 발송
+        return price1Month < originalPrice1Month
+                || price3Month < originalPrice3Month
+                || price12Month < originalPrice12Month;
     }
 
-    private void insertNew(PsPlusTier tier, Integer price1Month, Integer price3Month, Integer price12Month) {
+    private void insertNew(PsPlusTier tier,
+                           Integer price1Month, Integer price3Month, Integer price12Month,
+                           Integer originalPrice1Month, Integer originalPrice3Month, Integer originalPrice12Month,
+                           LocalDate saleEndDate1Month, LocalDate saleEndDate3Month, LocalDate saleEndDate12Month) {
         log.debug("PS Plus [{}] 최초 데이터 적재 완료", tier.name());
-        psPlusPricingRepository.save(PsPlusPricing.create(tier, price1Month, price3Month, price12Month));
-        saveHistory(tier, price1Month, price3Month, price12Month);
+        psPlusPricingRepository.save(PsPlusPricing.create(tier,
+                price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month));
+        saveHistory(tier, price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month);
     }
 
-    private void saveHistory(PsPlusTier tier, Integer price1Month, Integer price3Month, Integer price12Month) {
-        psPlusHistoryRepository.save(PsPlusHistory.create(tier, price1Month, price3Month, price12Month));
+    private void saveHistory(PsPlusTier tier,
+                             Integer price1Month, Integer price3Month, Integer price12Month,
+                             Integer originalPrice1Month, Integer originalPrice3Month, Integer originalPrice12Month,
+                             LocalDate saleEndDate1Month, LocalDate saleEndDate3Month, LocalDate saleEndDate12Month) {
+        psPlusHistoryRepository.save(PsPlusHistory.create(tier,
+                price1Month, price3Month, price12Month,
+                originalPrice1Month, originalPrice3Month, originalPrice12Month,
+                saleEndDate1Month, saleEndDate3Month, saleEndDate12Month));
     }
 
     @Transactional

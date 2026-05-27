@@ -337,23 +337,46 @@ def crawl_ps_plus_prices_no_click(bm):
 
         tiers = {"ESSENTIAL": "TIER_10", "SPECIAL": "TIER_20", "DELUXE": "TIER_30"}
         durations = {
-            "price1Month": "1_MONTH",
-            "price3Month": "3_MONTH",
-            "price12Month": "12_MONTH"
+            "price1Month":  ("originalPrice1Month",  "saleEndDate1Month",  "1_MONTH"),
+            "price3Month":  ("originalPrice3Month",  "saleEndDate3Month",  "3_MONTH"),
+            "price12Month": ("originalPrice12Month", "saleEndDate12Month", "12_MONTH"),
         }
 
         for tier_key, tier_code in tiers.items():
             tier_prices = {}
-            for duration_key, duration_code in durations.items():
+            for duration_key, (original_key, sale_end_key, duration_code) in durations.items():
                 label_loc = page.locator(f"label:has(input[name='tier-selector-offer-switcher-{tier_code}'][value='{duration_code}'])")
                 price_loc = label_loc.locator("[data-qa$='#price']")
 
                 if price_loc.count() > 0:
                     raw_text = price_loc.first.text_content().strip()
-                    clean_price = int(re.sub(r'[^0-9]', '', raw_text))
-                    tier_prices[duration_key] = clean_price
+                    sale_price = int(re.sub(r'[^0-9]', '', raw_text))
+
+                    # 취소선 정가: 할인 시에만 존재
+                    strike_loc = label_loc.locator("[data-qa$='#strikethroughPrice']")
+                    if strike_loc.count() > 0:
+                        strike_text = strike_loc.first.text_content().strip()
+                        base_price = int(re.sub(r'[^0-9]', '', strike_text))
+
+                        # 프로모션 종료일: 할인 시 description 텍스트에서 추출
+                        sale_end_date = None
+                        desc_loc = label_loc.locator("[data-qa$='#description']")
+                        if desc_loc.count() > 0:
+                            desc_text = desc_loc.first.text_content()
+                            m = re.search(r'(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})', desc_text)
+                            if m:
+                                sale_end_date = f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}"
+                            else:
+                                logger.warning(f"[{tier_key}] {duration_key} 프로모션 종료일 파싱 실패 — 문구 변경 확인 필요")
+                    else:
+                        base_price = sale_price  # 할인 없으면 정가 = 현재가
+                        sale_end_date = None
+
+                    tier_prices[duration_key] = sale_price
+                    tier_prices[original_key] = base_price
+                    tier_prices[sale_end_key] = sale_end_date
                 else:
-                    logger.warning(f"   ⚠️ {tier_key} - {duration_key} 가격을 찾을 수 없습니다.")
+                    logger.warning(f"{tier_key} - {duration_key} 가격을 찾을 수 없습니다.")
 
             result_data[tier_key] = tier_prices
 

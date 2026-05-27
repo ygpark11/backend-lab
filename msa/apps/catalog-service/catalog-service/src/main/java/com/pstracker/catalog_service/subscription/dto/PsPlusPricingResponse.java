@@ -30,6 +30,16 @@ public class PsPlusPricingResponse {
         private Integer discountPrice1Month;
         private Integer discountPrice3Month;
         private Integer discountPrice12Month;
+
+        // 프로모션 중이면 할인율, 아니면 0
+        private Integer discountRate1Month;
+        private Integer discountRate3Month;
+        private Integer discountRate12Month;
+
+        // 할인 종료일 (프로모션 미진행 시 null)
+        private LocalDate saleEndDate1Month;
+        private LocalDate saleEndDate3Month;
+        private LocalDate saleEndDate12Month;
     }
 
     @Getter

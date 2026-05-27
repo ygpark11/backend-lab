@@ -778,7 +778,7 @@ export default function GameDetailPage() {
 
                             <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md">
                                 <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
-                                <PriceChart historyData={game.priceHistory} />
+                                <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

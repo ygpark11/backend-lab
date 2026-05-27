@@ -81,9 +81,30 @@ def crawl_ps_plus_prices_no_click():
                     if price_loc.count() > 0:
                         # .inner_text()는 화면에 숨겨져 있으면 값을 못 가져오지만, .text_content()는 무조건 가져옴
                         raw_text = price_loc.first.text_content().strip()
-                        clean_price = int(re.sub(r'[^0-9]', '', raw_text))
-                        tier_prices[duration_name] = clean_price
-                        logger.info(f"   ✔️ {duration_name}: {clean_price:,}원")
+                        sale_price = int(re.sub(r'[^0-9]', '', raw_text))
+
+                        # 취소선 정가: 할인 시에만 존재 ([data-qa$='#strikethroughPrice'])
+                        strike_loc = label_loc.locator("[data-qa$='#strikethroughPrice']")
+                        if strike_loc.count() > 0:
+                            strike_text = strike_loc.first.text_content().strip()
+                            base_price = int(re.sub(r'[^0-9]', '', strike_text))
+                        else:
+                            base_price = sale_price  # 할인 없으면 정가 = 현재가
+
+                        # 할인율 배지: 할인 시에만 존재 (.psw-badge--promo)
+                        badge_loc = label_loc.locator(".psw-badge--promo")
+                        discount_rate = badge_loc.first.text_content().strip() if badge_loc.count() > 0 else None
+
+                        tier_prices[duration_name] = {
+                            "base_price": base_price,
+                            "sale_price": sale_price,
+                            "discount_rate": discount_rate,
+                        }
+
+                        if discount_rate:
+                            logger.info(f"   ✔️ {duration_name}: {base_price:,}원 → {sale_price:,}원 ({discount_rate})")
+                        else:
+                            logger.info(f"   ✔️ {duration_name}: {sale_price:,}원 (할인 없음)")
                     else:
                         logger.warning(f"   ⚠️ {duration_name} 가격을 찾을 수 없습니다.")
 
@@ -106,4 +127,7 @@ def crawl_ps_plus_prices_no_click():
     return result
 
 if __name__ == "__main__":
-    crawl_ps_plus_prices_no_click()
+    import json
+    result = crawl_ps_plus_prices_no_click()
+    print("\n=== 최종 수집 결과 ===")
+    print(json.dumps(result, ensure_ascii=False, indent=2))

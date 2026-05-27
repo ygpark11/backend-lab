@@ -1,9 +1,12 @@
 package com.pstracker.catalog_service.notification.service;
 
 import com.pstracker.catalog_service.notification.domain.Notification;
+import com.pstracker.catalog_service.notification.dto.NotificationListResponse;
 import com.pstracker.catalog_service.notification.dto.NotificationResponse;
 import com.pstracker.catalog_service.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,41 +20,52 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     /**
-     * 내 알림 목록 조회 (최신 20개)
-     * @param memberId 회원 ID
-     * @return 알림 리스트
+     * 안읽음 알림 목록 조회 (제한 없음)
      */
-    public List<NotificationResponse> getMyNotifications(Long memberId) {
-        return notificationRepository.findTop20ByMemberIdOrderByCreatedAtDesc(memberId)
+    public NotificationListResponse getUnreadNotifications(Long memberId) {
+        List<NotificationResponse> content = notificationRepository
+                .findByMemberIdAndIsReadFalseOrderByCreatedAtDesc(memberId)
                 .stream()
                 .map(NotificationResponse::from)
                 .toList();
+        return new NotificationListResponse(content, false);
     }
 
     /**
-     * 안 읽은 알림 개수 조회
-     * @param memberId 회원 ID
-     * @return 안 읽은 알림 개수
+     * 전체 알림 목록 조회 (Slice 페이징 - 무한 스크롤)
+     */
+    public NotificationListResponse getAllNotifications(Long memberId, Pageable pageable) {
+        Slice<Notification> slice = notificationRepository
+                .findByMemberIdOrderByCreatedAtDesc(memberId, pageable);
+        List<NotificationResponse> content = slice.getContent()
+                .stream()
+                .map(NotificationResponse::from)
+                .toList();
+        return new NotificationListResponse(content, slice.hasNext());
+    }
+
+    /**
+     * 안읽음 알림 개수 조회
      */
     public long getUnreadCount(Long memberId) {
         return notificationRepository.countByMemberIdAndIsReadFalse(memberId);
     }
 
     /**
-     * 알림 읽음 처리
-     * @param notificationId 알림 ID
-     * @param memberId 회원 ID
+     * 단건 알림 읽음 처리
      */
     @Transactional
     public void markAsRead(Long notificationId, Long memberId) {
-        Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 알림입니다."));
-
-        // 남의 알림을 읽으려고 하면 차단
-        if (!notification.getMember().getId().equals(memberId)) {
-            throw new SecurityException("해당 알림에 대한 접근 권한이 없습니다.");
-        }
-
+        Notification notification = notificationRepository.findByIdAndMemberId(notificationId, memberId)
+                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
         notification.markAsRead();
+    }
+
+    /**
+     * 전체 알림 읽음 처리 (벌크 UPDATE)
+     */
+    @Transactional
+    public void markAllAsRead(Long memberId) {
+        notificationRepository.markAllAsRead(memberId);
     }
 }
