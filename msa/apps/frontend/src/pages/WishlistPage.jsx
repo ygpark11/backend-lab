@@ -222,17 +222,15 @@ const WishlistPage = () => {
         <div className="min-h-screen bg-base text-primary relative transition-colors duration-500">
             <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." />
 
-            {/* Aurora 배경 */}
+            {/* Aurora 배경 + PS 심볼 워터마크 */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
                 <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[120px] md:animate-[pulse_9s_ease-in-out_infinite]" />
                 <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-ps-blue/5 rounded-full blur-[100px] md:animate-[pulse_11s_ease-in-out_infinite]" />
-            </div>
-
-            {/* PS 심볼 워터마크 */}
-            <div className="absolute top-20 right-10 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
-                <Triangle className="w-40 h-40 stroke-[2px]" />
-                <Heart className="w-40 h-40 stroke-[2px]" />
-                <Square className="w-40 h-40 stroke-[2px]" />
+                <div className="absolute top-20 right-10 flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
+                    <Triangle className="w-40 h-40 stroke-[2px]" />
+                    <Heart className="w-40 h-40 stroke-[2px]" />
+                    <Square className="w-40 h-40 stroke-[2px]" />
+                </div>
             </div>
 
             <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">

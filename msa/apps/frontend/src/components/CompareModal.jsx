@@ -15,11 +15,18 @@ export default function CompareModal({ isOpen, onClose }) {
 
     useEffect(() => {
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
             setTimeout(() => setAnimateIn(true), 50);
             setTimeout(() => setAnimateVs(true), 450);
         } else {
-            document.body.style.overflow = 'unset';
+            const scrollY = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            if (scrollY) window.scrollTo(0, parseInt(scrollY) * -1);
             setAnimateIn(false);
             setAnimateVs(false);
         }
@@ -212,7 +219,7 @@ export default function CompareModal({ isOpen, onClose }) {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-6 md:p-10">
             <div className={`absolute inset-0 bg-backdrop/90 backdrop-blur-xl transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}></div>
 
-            <div className={`relative w-full h-full sm:h-auto max-w-5xl bg-base border-x-0 sm:border border-divider sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${animateIn ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-20 opacity-0 scale-95'}`}>
+            <div className={`relative w-full h-full sm:h-auto max-w-5xl bg-base border-x-0 sm:border border-divider sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
 
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-50 pointer-events-none">
                     <div className="absolute left-1/2 -translate-x-1/2 top-4 sm:top-6 flex flex-col items-center">
