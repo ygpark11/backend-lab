@@ -35,10 +35,10 @@ const LoginModal = ({ isOpen, onClose }) => {
                 <div className="p-8 pb-6 relative z-10 flex flex-col items-center">
                     {/* 로고 영역 */}
                     <div className="inline-block bg-[var(--bento-blue-from)] border border-[color:var(--bento-blue-border)] p-3 rounded-2xl shadow-sm mb-4 transform transition-transform hover:rotate-12 cursor-default">
-                        <Gamepad2 className="w-10 h-10 text-blue-800 dark:text-ps-blue drop-shadow-sm" />
+                        <Gamepad2 className="w-10 h-10 text-ps-blue drop-shadow-sm" />
                     </div>
                     <h2 className="text-3xl font-black tracking-tighter mb-2 text-primary">
-                        PS <span className="text-blue-800 dark:text-ps-blue">Tracker</span>
+                        PS <span className="text-ps-blue">Tracker</span>
                     </h2>
                     <p className="text-secondary text-xs font-medium mb-8 text-center">
                         로그인하고 실시간 최저가 알림을 받아보세요
@@ -55,7 +55,7 @@ const LoginModal = ({ isOpen, onClose }) => {
 
                     {/* 법적 동의 안내 */}
                     <div className="mt-6 p-3 bg-surface rounded-xl border border-divider flex items-start gap-2 w-full shadow-inner">
-                        <Info className="w-4 h-4 text-blue-700 dark:text-ps-blue shrink-0 mt-0.5" />
+                        <Info className="w-4 h-4 text-ps-blue shrink-0 mt-0.5" />
                         <p className="text-[10px] text-secondary leading-relaxed break-keep">
                             로그인 시 우측 상단의 <Shield className="w-3 h-3 inline text-secondary mx-0.5"/> 메뉴에 있는 <strong className="text-primary">이용약관</strong> 및 <strong className="text-primary">개인정보처리방침</strong>에 동의하는 것으로 간주합니다.
                         </p>

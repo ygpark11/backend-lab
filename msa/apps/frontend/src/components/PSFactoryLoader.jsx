@@ -46,19 +46,8 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-glass backdrop-blur-xl animate-fadeIn p-4 sm:p-8 overflow-hidden">
 
-            <style dangerouslySetInnerHTML={{__html: `
-                @keyframes gpu-scan {
-                    0% { transform: translateY(-150px); opacity: 0; }
-                    10% { opacity: 1; }
-                    90% { opacity: 1; }
-                    100% { transform: translateY(150px); opacity: 0; }
-                }
-            `}} />
-
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-10">
-                <Settings className="absolute w-96 h-96 text-ps-blue" style={{ animation: 'spin 20s linear infinite', top: '-10%', left: '-10%' }} />
-                <Settings className="absolute w-64 h-64 text-purple-500" style={{ animation: 'spin 15s linear infinite reverse', bottom: '10%', right: '-5%' }} />
-                <Settings className="absolute w-40 h-40 text-primary" style={{ animation: 'spin 10s linear infinite', bottom: '20%', left: '20%' }} />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
+                <Settings className="absolute w-96 h-96 text-ps-blue" style={{ animation: 'spin 30s linear infinite', top: '-10%', left: '-10%' }} />
             </div>
 
             <div className="absolute top-6 w-full text-center px-4 animate-slideDown z-50">
@@ -83,7 +72,7 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
                 `}>
 
                     <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
-                        <div className="w-full h-[2px] bg-ps-blue shadow-[0_0_20px_rgba(59,130,246,1)]" style={{ animation: 'gpu-scan 2s linear infinite' }}></div>
+                        <div className="w-full h-[2px] bg-ps-blue shadow-[0_0_20px_rgba(59,130,246,1)]" style={{ animation: 'gpu-scan 3s linear infinite' }}></div>
                     </div>
 
                     {/* 네모 (비활성 상태: text-muted 로 뚜렷하게) */}
@@ -97,7 +86,7 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
                         <Circle className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-all duration-700 
                             ${step >= 2 ? 'text-[#FF3E3E] drop-shadow-[0_0_15px_rgba(255,62,62,0.6)] scale-110' : 'text-muted scale-90'}
-                        `} style={{ animation: step >= 2 ? 'spin 1.5s linear infinite' : 'none' }} />
+                        `} style={{ animation: step >= 2 ? 'spin 2.5s linear infinite' : 'none' }} />
                     </div>
 
                     {/* 세모 */}
@@ -111,7 +100,7 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
                         <XIcon className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[4px] transition-all duration-700 
                             ${step >= 4 ? 'text-[#4E6CBB] drop-shadow-[0_0_20px_rgba(78,108,187,0.8)] scale-110' : 'text-muted scale-90'}
-                        `} style={{ animation: step >= 4 ? 'spin 3s linear infinite reverse' : 'none' }} />
+                        `} style={{ animation: step >= 4 ? 'spin 4.5s linear infinite reverse' : 'none' }} />
                     </div>
                 </div>
 
@@ -119,22 +108,22 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
                 <div className="w-full relative z-10 flex flex-col items-center px-4 text-center">
                     <p className={`
                         text-center text-sm sm:text-base font-bold h-12 sm:h-14 flex items-center justify-center px-4 transition-all duration-300
-                        ${step === 6 ? 'text-blue-600 dark:text-blue-400 animate-pulse drop-shadow-sm' : 'text-primary'}
+                        ${step === 6 ? 'text-blue-500 animate-pulse drop-shadow-sm' : 'text-primary'}
                     `}>
                         {scenarios[step].text}
                     </p>
 
                     <div className="w-full mt-6 flex flex-col items-center gap-2 max-w-md">
                         <div className="relative h-2 w-full bg-surface rounded-full overflow-hidden border border-divider shadow-inner">
-                            <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(59,130,246,0.6)_10px,rgba(59,130,246,0.6)_20px)] animate-[progress_1s_linear_infinite]"></div>
+                            <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(59,130,246,0.6)_10px,rgba(59,130,246,0.6)_20px)] animate-[progress_2s_linear_infinite]"></div>
                             <div className="absolute inset-0 bg-gradient-to-r from-base via-transparent to-base pointer-events-none"></div>
                         </div>
 
                         <div className="flex justify-between w-full text-[10px] sm:text-xs font-black tracking-widest px-1">
-                            <span className="text-blue-600 dark:text-blue-400 animate-pulse">
+                            <span className="text-blue-500 animate-pulse">
                                 FACTORY IN PROGRESS...
                             </span>
-                            <span className="text-blue-600 dark:text-blue-400">
+                            <span className="text-blue-500">
                                 <Settings className="w-3.5 h-3.5 animate-spin" />
                             </span>
                         </div>

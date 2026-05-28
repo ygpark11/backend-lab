@@ -87,9 +87,9 @@ const SkeletonMonth = () => (
         </div>
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 lg:pb-16">
             {[1, 2, 3].map(i => (
-                <div key={i} className="aspect-[16/9] rounded-2xl bg-surface border border-divider flex flex-col overflow-hidden shadow-lg">
-                    <div className="flex-1 bg-base border-b border-divider/50"></div>
-                    <div className="h-20 p-4 flex flex-col justify-center gap-2">
+                <div key={i} className="rounded-2xl bg-surface border border-divider flex flex-col overflow-hidden shadow-lg">
+                    <div className="aspect-[16/9] bg-base border-b border-divider/50"></div>
+                    <div className="p-4 flex flex-col gap-2">
                         <div className="w-3/4 h-4 bg-divider rounded"></div>
                         <div className="w-1/2 h-3 bg-divider rounded"></div>
                     </div>
@@ -101,8 +101,6 @@ const SkeletonMonth = () => (
 
 // --- 메인 페이지 컴포넌트 ---
 const MonthlyGamesArchivePage = () => {
-    const navigate = useTransitionNavigate();
-    const location = useLocation();
     const [activeTab, setActiveTab] = useState('ESSENTIAL');
     const [pages, setPages] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -173,8 +171,8 @@ const MonthlyGamesArchivePage = () => {
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
             {/* 배경 이펙트 */}
-            <div className="hidden md:block absolute top-[5%] left-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 dark:bg-yellow-500/5 transition-colors duration-500"></div>
-            <div className="hidden md:block absolute bottom-[20%] right-[5%] w-[30%] h-[30%] rounded-full blur-[120px] pointer-events-none bg-ps-blue/10 dark:bg-ps-blue/5 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute top-[5%] left-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute bottom-[20%] right-[5%] w-[30%] h-[30%] rounded-full blur-[120px] pointer-events-none bg-ps-blue/10 transition-colors duration-500"></div>
 
             <div className="absolute top-32 right-10 md:right-20 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
                 <Square className="w-24 h-24 stroke-[2px]" />
@@ -210,7 +208,7 @@ const MonthlyGamesArchivePage = () => {
                         onClick={() => setActiveTab('ESSENTIAL')}
                         className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 flex items-center justify-center gap-2
                             ${activeTab === 'ESSENTIAL'
-                            ? 'bg-primary text-white dark:text-slate-900 text-base shadow-md'
+                            ? 'bg-ps-blue text-white shadow-md'
                             : 'text-secondary hover:text-primary'}`}
                     >
                         <Gamepad2 className="w-4 h-4" /> 월간 게임
@@ -219,7 +217,7 @@ const MonthlyGamesArchivePage = () => {
                         onClick={() => setActiveTab('CATALOG')}
                         className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl font-black text-sm transition-all duration-300 flex items-center justify-center gap-2
                             ${activeTab === 'CATALOG'
-                            ? 'bg-primary text-white dark:text-slate-900 text-base shadow-md'
+                            ? 'bg-ps-blue text-white shadow-md'
                             : 'text-secondary hover:text-primary'}`}
                     >
                         <Layers className="w-4 h-4" /> 신규 카탈로그

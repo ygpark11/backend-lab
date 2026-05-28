@@ -22,6 +22,32 @@ export default function MyPage() {
 
     const [isEditingNickname, setIsEditingNickname] = useState(false);
     const [editNicknameValue, setEditNicknameValue] = useState('');
+    const [displayedSaved, setDisplayedSaved] = useState(0);
+    const [displayedPioneered, setDisplayedPioneered] = useState(0);
+
+    useEffect(() => {
+        if (!profile) return;
+
+        const duration = 1200;
+        const startTime = performance.now();
+        const targetSaved = profile.totalSavedAmount;
+        const targetPioneered = profile.pioneeredCount;
+
+        let raf;
+        const tick = (now) => {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+
+            setDisplayedSaved(Math.round(eased * targetSaved));
+            setDisplayedPioneered(Math.round(eased * targetPioneered));
+
+            if (progress < 1) raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [profile]);
 
     const handleContactClick = useCallback((e) => {
         e.preventDefault();
@@ -65,6 +91,33 @@ export default function MyPage() {
 
         fetchMyPageData();
     }, []);
+
+    const handleLogout = () => {
+        toast((t) => (
+            <div className="flex flex-col items-center gap-3">
+                <p className="font-bold text-sm text-primary">정말 로그아웃 하시겠습니까?</p>
+                <div className="flex gap-2 w-full">
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg border bg-surface border-divider text-secondary hover:bg-surface-hover transition-colors"
+                    >
+                        취소
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try { await client.post('/api/v1/auth/logout'); }
+                            catch (e) { console.error('로그아웃 실패:', e); }
+                            finally { localStorage.clear(); window.location.href = '/'; }
+                        }}
+                        className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg border border-[#FF3E3E]/30 bg-[#FF3E3E]/10 text-[#FF3E3E] hover:bg-[#FF3E3E]/20 transition-colors"
+                    >
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        ), { duration: 8000, position: 'top-center' });
+    };
 
     const handleToggleSetting = async (key) => {
         const newSettings = { ...settings, [key]: !settings[key] };
@@ -110,11 +163,11 @@ export default function MyPage() {
 
     const getTrophyStyle = (tier) => {
         switch (tier) {
-            case 'PLATINUM': return { icon: Crown, color: 'text-[#0284c7] dark:text-[#38bdf8]', bgClass: 'bg-[#38bdf8]/10', borderClass: 'border-[#38bdf8]/30', glowClass: 'shadow-md dark:shadow-[0_0_30px_rgba(56,189,248,0.2)]' };
-            case 'GOLD': return { icon: Trophy, color: 'text-[#d97706] dark:text-[#fbbf24]', bgClass: 'bg-[#fbbf24]/10', borderClass: 'border-[#fbbf24]/30', glowClass: 'shadow-md dark:shadow-[0_0_30px_rgba(251,191,36,0.2)]' };
-            case 'SILVER': return { icon: Medal, color: 'text-gray-500 dark:text-[#e2e8f0]', bgClass: 'bg-gray-500/10 dark:bg-[#e2e8f0]/10', borderClass: 'border-gray-400/30 dark:border-[#e2e8f0]/30', glowClass: 'shadow-sm dark:shadow-[0_0_30px_rgba(156,163,175,0.2)]' };
-            case 'BRONZE': return { icon: Award, color: 'text-[#c2410c] dark:text-[#f97316]', bgClass: 'bg-[#f97316]/10', borderClass: 'border-[#f97316]/30', glowClass: 'shadow-sm dark:shadow-[0_0_30px_rgba(249,115,22,0.2)]' };
-            default: return { icon: Lock, color: 'text-muted', bgClass: 'bg-surface', borderClass: 'border-divider', glowClass: 'shadow-sm' };
+            case 'PLATINUM': return { icon: Crown, color: 'text-sky-300', bgClass: 'bg-sky-300/10', borderClass: 'border-sky-300/30', hoverBorderClass: 'hover:border-sky-300/50', glowClass: 'shadow-[0_0_20px_rgba(56,189,248,0.15)]' };
+            case 'GOLD': return { icon: Trophy, color: 'text-yellow-400', bgClass: 'bg-yellow-400/10', borderClass: 'border-yellow-400/30', hoverBorderClass: 'hover:border-yellow-400/50', glowClass: 'shadow-[0_0_20px_rgba(251,191,36,0.15)]' };
+            case 'SILVER': return { icon: Medal, color: 'text-slate-400', bgClass: 'bg-slate-400/10', borderClass: 'border-slate-400/30', hoverBorderClass: 'hover:border-slate-400/50', glowClass: 'shadow-sm' };
+            case 'BRONZE': return { icon: Award, color: 'text-orange-400', bgClass: 'bg-orange-400/10', borderClass: 'border-orange-400/30', hoverBorderClass: 'hover:border-orange-400/50', glowClass: 'shadow-[0_0_20px_rgba(249,115,22,0.15)]' };
+            default: return { icon: Lock, color: 'text-muted', bgClass: 'bg-surface', borderClass: 'border-divider', hoverBorderClass: '', glowClass: 'shadow-sm' };
         }
     };
 
@@ -146,14 +199,14 @@ export default function MyPage() {
 
     return (
         <div className="min-h-screen p-4 sm:p-8 pt-20 sm:pt-24 relative overflow-hidden bg-base text-primary transition-colors duration-500">
-            <div className="hidden md:block absolute top-0 left-1/4 w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-ps-blue/10 transition-colors duration-500"></div>
-            <div className="hidden md:block absolute bottom-0 right-1/4 w-[30%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-transparent dark:bg-pink-500/05 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute top-0 left-1/4 w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-ps-blue/10 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute bottom-0 right-1/4 w-[30%] h-[50%] rounded-full blur-[120px] pointer-events-none bg-pink-500/5 transition-colors duration-500"></div>
 
             <div className="max-w-4xl mx-auto relative z-10">
 
                 <div className="relative p-5 sm:p-8 rounded-2xl border backdrop-blur-md mb-6 overflow-hidden group transition-all duration-500 bg-glass border-divider shadow-xl mt-4">
                     {/* 최고 업적 기반 배경 오로라 */}
-                    {highestTrophy && <div className={`absolute inset-0 opacity-0 dark:opacity-10 group-hover:dark:opacity-20 transition-opacity duration-700 blur-3xl ${avatarStyle.bgClass}`}></div>}
+                    {highestTrophy && <div className={`absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-700 blur-3xl ${avatarStyle.bgClass}`}></div>}
 
                     <div className="absolute -right-10 -bottom-10 pointer-events-none flex gap-4 rotate-12 scale-150 opacity-[0.02] text-primary">
                         <Triangle className="w-24 h-24 stroke-[2px]" />
@@ -220,13 +273,13 @@ export default function MyPage() {
 
                             <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 w-full">
                                 {[
-                                    { icon: Triangle, textClass: 'text-[#00A39D]', bgClass: 'bg-[#00A39D]/05', label: '절약 대기', value: `₩${(profile.totalSavedAmount / 1000).toFixed(0)}K`, valSize: 'text-sm sm:text-lg' },
-                                    { icon: XIcon, textClass: 'text-[#4E6CBB]', bgClass: 'bg-[#4E6CBB]/05', label: '발굴 데이터', value: `${profile.pioneeredCount}EA`, valSize: 'text-sm sm:text-lg' },
-                                    { icon: Square, textClass: 'text-[#E8789C]', bgClass: 'bg-[#E8789C]/05', label: '합류 일자', value: profile.joinDate.replace(/-/g, '.').substring(2), valSize: 'text-xs sm:text-base mt-auto sm:mt-0' }
+                                    { icon: Triangle, textClass: 'text-[#00A39D]', bgClass: 'bg-[#00A39D]/10', label: '절약 대기', value: `₩${(displayedSaved / 1000).toFixed(0)}K`, valSize: 'text-sm sm:text-lg' },
+                                    { icon: XIcon, textClass: 'text-[#4E6CBB]', bgClass: 'bg-[#4E6CBB]/10', label: '발굴 데이터', value: `${displayedPioneered}EA`, valSize: 'text-sm sm:text-lg' },
+                                    { icon: Square, textClass: 'text-[#E8789C]', bgClass: 'bg-[#E8789C]/10', label: '합류 일자', value: profile.joinDate.replace(/-/g, '.').substring(2), valSize: 'text-xs sm:text-base mt-auto sm:mt-0' }
                                 ].map((stat, i) => (
                                     <div key={i} className="p-2 sm:p-3 rounded-lg flex flex-col items-center sm:items-start relative overflow-hidden group transition-colors duration-300 border shadow-sm bg-surface border-divider hover:border-divider-strong">
-                                        <div className={`absolute -bottom-4 -right-4 w-14 h-14 rounded-full blur-xl ${stat.bgClass} opacity-0 dark:opacity-80 group-hover:dark:opacity-100 transition-opacity`}></div>
-                                        <stat.icon className={`absolute -bottom-2 -right-2 w-10 h-10 stroke-[3px] transition-colors opacity-10 dark:opacity-30 ${stat.textClass}`} />
+                                        <div className={`absolute -bottom-4 -right-4 w-14 h-14 rounded-full blur-xl ${stat.bgClass} opacity-50 group-hover:opacity-80 transition-opacity`}></div>
+                                        <stat.icon className={`absolute -bottom-2 -right-2 w-10 h-10 stroke-[3px] transition-colors opacity-20 ${stat.textClass}`} />
 
                                         <p className="text-secondary text-[9px] sm:text-[10px] font-bold uppercase mb-1 whitespace-nowrap relative z-10">{stat.label}</p>
                                         <p className={`${stat.valSize} ${stat.textClass} font-black tracking-tight relative z-10 drop-shadow-sm`}>{stat.value}</p>
@@ -268,12 +321,15 @@ export default function MyPage() {
                                 const Icon = style.icon;
 
                                 return (
-                                    <div key={idx} className={`p-4 rounded-xl border transition-all duration-600 flex items-center gap-4 relative overflow-hidden ${
-                                        trophy.unlocked
-                                            ? `bg-surface border-divider shadow-sm hover:${style.borderClass}`
-                                            : 'bg-base border-divider opacity-50 grayscale'
-                                    }`}>
-                                        {trophy.unlocked && <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl pointer-events-none opacity-0 dark:opacity-20 ${style.bgClass}`}></div>}
+                                    <div key={idx}
+                                        className={`p-4 rounded-xl border transition-all flex items-center gap-4 relative overflow-hidden ${
+                                            trophy.unlocked
+                                                ? `bg-surface border-divider shadow-sm ${style.hoverBorderClass} animate-in fade-in zoom-in-95 duration-500`
+                                                : 'bg-base border-divider opacity-50 grayscale'
+                                        }`}
+                                        style={trophy.unlocked ? { animationDelay: `${idx * 120}ms`, animationFillMode: 'both' } : {}}
+                                    >
+                                        {trophy.unlocked && <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl pointer-events-none opacity-10 ${style.bgClass}`}></div>}
 
                                         <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center shrink-0 border relative z-10 transition-all duration-600 ${trophy.unlocked ? `${style.bgClass} ${style.borderClass} ${style.glowClass}` : 'bg-surface border-divider shadow-inner'}`}>
                                             <Icon className={`w-6 h-6 sm:w-7 sm:h-7 ${style.color} drop-shadow-sm`} />
@@ -373,11 +429,7 @@ export default function MyPage() {
 
                                     {/* 3. 기기 로그아웃 */}
                                     <div className="flex items-center justify-between p-3 rounded-lg border transition-colors cursor-pointer group mt-4 bg-base border-divider hover:border-[#FF3E3E]/50 hover:bg-[#FF3E3E]/5"
-                                         onClick={async () => {
-                                             try { await client.post('/api/v1/auth/logout'); }
-                                             catch (error) { console.error("로그아웃 실패:", error); }
-                                             finally { localStorage.clear(); window.location.href = '/'; }
-                                         }}
+                                         onClick={handleLogout}
                                     >
                                         <div className="flex items-center gap-3 pr-2">
                                             <div className="p-1.5 sm:p-2 rounded-md shrink-0 bg-[#FF3E3E]/10 border border-[#FF3E3E]/20 group-hover:bg-[#FF3E3E]/20 transition-colors">

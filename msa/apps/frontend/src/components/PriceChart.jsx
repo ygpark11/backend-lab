@@ -99,27 +99,6 @@ const CustomTooltip = ({ active, payload }) => {
     return null;
 };
 
-// 역대 최저가 기준선 라벨: 선 우측 끝에 초록 원 + 텍스트
-const AllTimeLowLabel = ({ viewBox, lowestPrice }) => {
-    if (!viewBox) return null;
-    const { x, y, width } = viewBox;
-    const labelText = `역대 최저 ${Number(lowestPrice).toLocaleString()}원`;
-    return (
-        <g>
-            <circle cx={x + width} cy={y} r={4} fill="#22C55E" stroke="var(--color-bg-base)" strokeWidth={1.5} />
-            <text
-                x={x + width - 10}
-                y={y - 7}
-                textAnchor="end"
-                fill="#22C55E"
-                fontSize={10}
-                fontWeight="bold"
-            >
-                {labelText}
-            </text>
-        </g>
-    );
-};
 
 export default function PriceChart({ historyData, lowestPrice }) {
     const [selectedPeriod, setSelectedPeriod] = useState(null); // null = 전체
@@ -178,20 +157,30 @@ export default function PriceChart({ historyData, lowestPrice }) {
         : ['auto', 'auto'];
 
     const periodTabs = (
-        <div className="flex items-center gap-1 mt-4 mb-1">
-            {PERIODS.map(p => (
-                <button
-                    key={p.label}
-                    onClick={() => setSelectedPeriod(p.months)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                        selectedPeriod === p.months
-                            ? 'bg-ps-blue text-white shadow-sm'
-                            : 'text-secondary hover:text-primary hover:bg-surface-hover'
-                    }`}
-                >
-                    {p.label}
-                </button>
-            ))}
+        <div className="flex items-center justify-between gap-2 mt-4 mb-2 flex-wrap">
+            <div className="flex items-center gap-1">
+                {PERIODS.map(p => (
+                    <button
+                        key={p.label}
+                        onClick={() => setSelectedPeriod(p.months)}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                            selectedPeriod === p.months
+                                ? 'bg-ps-blue text-white shadow-sm'
+                                : 'text-secondary hover:text-primary hover:bg-surface-hover'
+                        }`}
+                    >
+                        {p.label}
+                    </button>
+                ))}
+            </div>
+            {showReferenceLine && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <div className="w-4 border-t border-dashed border-green-500"></div>
+                    <span className="text-[11px] font-bold text-green-600 dark:text-green-500 whitespace-nowrap">
+                        역대 최저 {Number(lowestPrice).toLocaleString()}원
+                    </span>
+                </div>
+            )}
         </div>
     );
 
@@ -216,7 +205,7 @@ export default function PriceChart({ historyData, lowestPrice }) {
             {periodTabs}
             <div className="w-full h-[250px] md:h-[300px] select-none relative group">
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={data} margin={{ top: 28, right: 25, left: -10, bottom: 0 }}>
+                    <ComposedChart data={data} margin={{ top: 16, right: 25, left: -10, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
@@ -253,7 +242,6 @@ export default function PriceChart({ historyData, lowestPrice }) {
                                 stroke="#22C55E"
                                 strokeDasharray="5 3"
                                 strokeWidth={1.5}
-                                label={<AllTimeLowLabel lowestPrice={lowestPrice} />}
                             />
                         )}
 

@@ -153,10 +153,26 @@
         background-color: var(--color-bg-base);
         color: var(--color-text-primary);
         transition: background-color 0.5s ease, color 0.5s ease;
+        overflow-x: hidden;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-brand-blue);
+        outline-offset: 3px;
+        border-radius: 4px;
     }
 }
 
 html { scrollbar-gutter: stable; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
 
 @layer utilities {
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -170,6 +186,13 @@ html { scrollbar-gutter: stable; }
     @keyframes progress {
         0% { background-position: 0 0; }
         100% { background-position: 40px 0; }
+    }
+
+    @keyframes gpu-scan {
+        0% { transform: translateY(-150px); opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { transform: translateY(150px); opacity: 0; }
     }
 
     @keyframes blackhole-absorb {

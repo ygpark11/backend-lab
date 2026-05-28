@@ -14,15 +14,20 @@ const DonationModal = ({ isOpen, onClose }) => {
 
     const handleCopy = () => {
         const text = `${BANK_INFO.bankName} ${BANK_INFO.accountNumber}`;
-        navigator.clipboard.writeText(text);
-        toast.success("계좌번호가 복사되었습니다!", {
-            icon: <Check className="w-5 h-5 text-green-600 dark:text-green-500" />,
-            style: {
-                background: 'var(--color-bg-surface)',
-                color: 'var(--color-text-primary)',
-                border: '1px solid var(--color-border-default)'
-            }
-        });
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                toast.success("계좌번호가 복사되었습니다!", {
+                    icon: <Check className="w-5 h-5 text-green-500" />,
+                    style: {
+                        background: 'var(--color-bg-surface)',
+                        color: 'var(--color-text-primary)',
+                        border: '1px solid var(--color-border-default)'
+                    }
+                });
+            })
+            .catch(() => {
+                toast.error("복사에 실패했습니다. 계좌번호를 직접 선택해 복사해주세요.");
+            });
     };
 
     return (
@@ -36,10 +41,10 @@ const DonationModal = ({ isOpen, onClose }) => {
 
                 <div className="text-center mb-6">
                     <div className="bg-[var(--bento-yellow-from)] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border border-[color:var(--bento-yellow-border)]">
-                        <Server className="w-8 h-8 text-yellow-600 dark:text-yellow-500" />
+                        <Server className="w-8 h-8 text-yellow-500" />
                     </div>
                     <h2 className="text-xl font-black text-primary mb-2">
-                        열일하는 <span className="text-yellow-700 dark:text-yellow-500">감자 서버</span> 밥 주기
+                        열일하는 <span className="text-yellow-500">감자 서버</span> 밥 주기
                     </h2>
                     <p className="text-sm text-secondary leading-relaxed">
                         보내주신 소중한 후원금은 <span className="text-primary font-bold">서버 유지비</span>와<br/>
@@ -66,7 +71,7 @@ const DonationModal = ({ isOpen, onClose }) => {
                 </button>
 
                 <div className="mt-4 flex justify-center gap-1 text-[10px] text-muted">
-                    <Heart className="w-3 h-3 text-red-600 dark:text-red-500 opacity-50 fill-current" />
+                    <Heart className="w-3 h-3 text-red-500 opacity-50 fill-current" />
                     <span>Always Thank You</span>
                 </div>
             </div>

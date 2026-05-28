@@ -101,18 +101,18 @@ const PsPlusPricingPage = () => {
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-0 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
             <SEO title="PS Plus 요금제" description="PlayStation Plus 에센셜, 스페셜, 디럭스 구독권 가격 비교" />
 
-            <div className="hidden md:block absolute top-[10%] left-[5%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 dark:bg-yellow-500/5 transition-colors duration-500"></div>
-            <div className="hidden md:block absolute bottom-[10%] right-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-blue-500/10 dark:bg-blue-500/5 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute top-[10%] left-[5%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 transition-colors duration-500"></div>
+            <div className="hidden md:block absolute bottom-[10%] right-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-blue-500/10 transition-colors duration-500"></div>
 
             <div className="max-w-7xl mx-auto relative z-10 px-4 sm:px-0">
                 <div className="mb-12 flex flex-col items-center text-center animate-fadeIn">
-                    <div className="inline-flex items-center justify-center p-3 sm:p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-600 dark:text-yellow-500 mb-6">
+                    <div className="inline-flex items-center justify-center p-3 sm:p-4 rounded-2xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 mb-6">
                         <Plus className="w-8 h-8 sm:w-10 sm:h-10" strokeWidth={2.5} />
                     </div>
 
                     <div className="flex items-center justify-center gap-3 mb-4">
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight">
-                            어떤 <span className="text-yellow-600 dark:text-yellow-400">플랜</span>이 적합할까요?
+                            어떤 <span className="text-yellow-500">플랜</span>이 적합할까요?
                         </h1>
                         <button
                             onClick={(e) => handleOpenHelp(e, 'PS_PLUS')}
@@ -157,10 +157,10 @@ const PsPlusPricingPage = () => {
                                 <ExternalLink className="w-4 h-4" strokeWidth={2.5} />
                             </div>
                             <div className="relative z-10 flex flex-col items-start mr-2">
-                                <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5 leading-none">
+                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-0.5 leading-none">
                                     Official PlayStation™ Store
                                 </span>
-                                <span className="text-sm sm:text-base font-black text-primary leading-none group-hover:text-[#00439c] dark:group-hover:text-blue-400 transition-colors">
+                                <span className="text-sm sm:text-base font-black text-primary leading-none group-hover:text-ps-blue transition-colors">
                                     공식 스토어 구독하러 가기
                                 </span>
                             </div>
@@ -244,27 +244,34 @@ const PricingCard = ({ tier, name, price, discountPrice, discountRate, saleEndDa
 
     const themeStyles = {
         basic: {
-            border: 'border-gray-300 dark:border-gray-600',
-            bgFrom: 'bg-white dark:bg-zinc-800',
-            text: 'text-gray-700 dark:text-gray-300',
-            highlightBg: 'bg-gray-600 dark:bg-gray-500 text-white'
+            border: 'border-divider',
+            borderHover: 'hover:border-divider-strong',
+            bgFrom: 'bg-surface',
+            text: 'text-secondary',
+            highlightBg: 'bg-gray-500 text-white'
         },
         gold: {
-            border: 'border-yellow-400 dark:border-yellow-500',
-            bgFrom: 'bg-yellow-50 dark:bg-yellow-500/10',
-            text: 'text-yellow-700 dark:text-yellow-400',
+            border: 'border-yellow-500/60',
+            borderHover: 'hover:border-yellow-500',
+            bgFrom: 'bg-yellow-500/10',
+            text: 'text-yellow-500',
             highlightBg: 'bg-yellow-500 text-black'
         },
         premium: {
-            border: 'border-gray-800 dark:border-zinc-800',
-            bgFrom: 'bg-zinc-100 dark:bg-black',
-            text: 'text-amber-700 dark:text-amber-500',
-            highlightBg: 'bg-amber-600 dark:bg-amber-600 text-white'
+            border: 'border-divider-strong',
+            borderHover: 'hover:border-amber-500/50',
+            bgFrom: 'bg-surface',
+            text: 'text-amber-500',
+            highlightBg: 'bg-amber-600 text-white'
         }
     };
 
     const style = themeStyles[theme];
     const [isChartOpen, setIsChartOpen] = useState(false);
+    const [showInactive, setShowInactive] = useState(false);
+
+    const activeBenefits = benefits.filter(b => b.active);
+    const inactiveBenefits = benefits.filter(b => !b.active);
 
     const chartDataToRender = historyData && historyData.length > 0 ? historyData : (price ? [
         {
@@ -281,7 +288,7 @@ const PricingCard = ({ tier, name, price, discountPrice, discountRate, saleEndDa
 
     return (
         <div className={`relative overflow-hidden rounded-3xl bg-glass backdrop-blur-xl border p-8 flex flex-col h-full transition-all duration-300 group
-            ${style.border} hover:${style.border.replace('border', 'border-hover')} border-divider md:hover:shadow-lg md:hover:-translate-y-2
+            ${style.border} ${style.borderHover} md:hover:shadow-lg md:hover:-translate-y-2
         `}>
             <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-gradient-to-br ${style.bgFrom} to-transparent`}></div>
 
@@ -334,67 +341,76 @@ const PricingCard = ({ tier, name, price, discountPrice, discountRate, saleEndDa
 
                 <div className="w-full h-px bg-divider mb-6"></div>
 
-                <ul className="space-y-4 flex-1 mb-8">
-                    {benefits.map((benefit, idx) => (
-                        <li key={idx} className={`flex items-start gap-3 ${!benefit.active ? 'opacity-40' : ''}`}>
-                            <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center 
-                                ${benefit.active
-                                ? (benefit.highlight ? style.highlightBg : 'bg-surface border border-divider text-primary')
-                                : 'bg-transparent border border-divider text-muted'}`}>
-                                {benefit.active
-                                    ? <Check className="w-3 h-3 stroke-[3]" />
-                                    : <X className="w-3 h-3 stroke-[3]" />}
+                <ul className="space-y-3 flex-1 mb-6">
+                    {activeBenefits.map((benefit, idx) => (
+                        <li key={idx} className="flex items-start gap-3">
+                            <div className={`mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center
+                                ${benefit.highlight ? style.highlightBg : 'bg-surface border border-divider text-primary'}`}>
+                                <Check className="w-3 h-3 stroke-[3]" />
                             </div>
-                            <span className={`text-sm leading-relaxed 
-                                ${benefit.active
-                                ? (benefit.highlight ? 'font-black text-primary' : 'font-bold text-secondary')
-                                : 'font-medium text-muted line-through decoration-muted'}`}>
+                            <span className={`text-sm leading-relaxed ${benefit.highlight ? 'font-black text-primary' : 'font-bold text-secondary'}`}>
                                 {benefit.name}
                             </span>
                         </li>
                     ))}
+
+                    {inactiveBenefits.length > 0 && (
+                        <>
+                            <li>
+                                <button
+                                    onClick={() => setShowInactive(p => !p)}
+                                    className="flex items-center gap-1.5 text-xs font-bold text-muted hover:text-secondary transition-colors py-0.5"
+                                >
+                                    <ChevronDown className={`w-3 h-3 transition-transform ${showInactive ? 'rotate-180' : ''}`} />
+                                    미포함 {inactiveBenefits.length}개 {showInactive ? '접기' : '보기'}
+                                </button>
+                            </li>
+                            {showInactive && inactiveBenefits.map((benefit, idx) => (
+                                <li key={`i-${idx}`} className="flex items-start gap-3 opacity-40">
+                                    <div className="mt-0.5 shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-transparent border border-divider text-muted">
+                                        <X className="w-3 h-3 stroke-[3]" />
+                                    </div>
+                                    <span className="text-sm leading-relaxed font-medium text-muted line-through decoration-muted">
+                                        {benefit.name}
+                                    </span>
+                                </li>
+                            ))}
+                        </>
+                    )}
                 </ul>
 
-                <div className="mt-auto flex flex-col gap-3">
-
-                    {/* 역대 월간 게임 보기 (블루 테마) */}
-                    {onMonthlyGamesClick && (
-                        <button
-                            onClick={onMonthlyGamesClick}
-                            className="w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
-                                border border-blue-400/50 dark:border-blue-500/30
-                                bg-blue-50/50 dark:bg-blue-500/5
-                                text-blue-700 dark:text-blue-400
-                                hover:bg-blue-100 dark:hover:bg-blue-500/10"
-                        >
-                            <CalendarDays className="w-4 h-4" /> 역대 월간 게임 보기
-                        </button>
-                    )}
-
-                    {/* 카탈로그 둘러보기 (스페셜/디럭스 전용 - 항상 Primary) */}
+                <div className="mt-auto flex flex-col gap-2">
                     {onCatalogClick && (
                         <button
                             onClick={onCatalogClick}
-                            className="w-full py-3.5 rounded-xl bg-primary text-[color:var(--color-bg-base)] font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md"
+                            className="w-full py-3 rounded-xl bg-primary text-[color:var(--color-bg-base)] font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-md active:scale-95"
                         >
-                            카탈로그 게임 둘러보기 <ArrowRight className="w-4 h-4" />
+                            카탈로그 둘러보기 <ArrowRight className="w-4 h-4" />
                         </button>
                     )}
 
-                    {onExclusiveClick && (
-                        <button
-                            onClick={onExclusiveClick}
-                            className="w-full py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
-                                border border-yellow-400/50 dark:border-yellow-500/30
-                                bg-yellow-50/50 dark:bg-yellow-500/5
-                                text-yellow-700 dark:text-yellow-400
-                                hover:bg-yellow-100 dark:hover:bg-yellow-500/10"
-                        >
-                            PS Plus 추가 할인 보기 <Plus className="w-4 h-4" strokeWidth={3} />
-                        </button>
-                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                        {onMonthlyGamesClick && (
+                            <button
+                                onClick={onMonthlyGamesClick}
+                                className="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95
+                                    border border-blue-500/30 bg-blue-500/5 text-blue-400 hover:bg-blue-500/10"
+                            >
+                                <CalendarDays className="w-3.5 h-3.5" /> 월간 게임
+                            </button>
+                        )}
+                        {onExclusiveClick && (
+                            <button
+                                onClick={onExclusiveClick}
+                                className="py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95
+                                    border border-yellow-500/30 bg-yellow-500/5 text-yellow-500 hover:bg-yellow-500/10"
+                            >
+                                PLUS 할인 <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+                            </button>
+                        )}
+                    </div>
 
-                    <div className="w-full h-px bg-divider my-1"></div>
+                    <div className="w-full h-px bg-divider mt-1"></div>
 
                     <button onClick={() => setIsChartOpen(!isChartOpen)} className="w-full py-2 text-xs font-bold text-secondary hover:text-primary transition-colors flex items-center justify-center gap-1">
                         역대 가격 추이 보기 <ChevronDown className={`w-3 h-3 transition-transform ${isChartOpen ? 'rotate-180' : ''}`} />

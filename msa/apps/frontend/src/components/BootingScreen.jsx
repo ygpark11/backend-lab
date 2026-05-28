@@ -25,6 +25,7 @@ const BootingScreen = ({ onResolved }) => {
 
             const response = await fetch(`${BASE_URL}/api/v1/members/me`, {
                 method: 'GET',
+                credentials: 'include',
                 signal: controller.signal,
                 headers: { 'Accept': 'application/json' }
             });
@@ -41,7 +42,7 @@ const BootingScreen = ({ onResolved }) => {
 
             setTimeLeft(60);
 
-        } catch (error) {
+        } catch {
             setTimeLeft(60);
         } finally {
             setIsChecking(false);
@@ -67,7 +68,7 @@ const BootingScreen = ({ onResolved }) => {
             setTimeLeft((prev) => {
                 if (prev <= 1) {
                     clearInterval(timerInterval);
-                    checkServerHealth();
+                    void checkServerHealth();
                     return 0;
                 }
                 return prev - 1;
@@ -87,7 +88,7 @@ const BootingScreen = ({ onResolved }) => {
 
                 <div className={`w-16 h-16 rounded-2xl flex items-center justify-center border mb-6 shadow-sm transition-colors duration-500 ${isSuccess ? 'bg-[var(--bento-green-from)] border-[color:var(--bento-green-border)]' : 'bg-[var(--bento-blue-from)] border-[color:var(--bento-blue-border)]'}`}>
                     {isSuccess ? (
-                        <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-500 animate-in zoom-in" />
+                        <CheckCircle2 className="w-8 h-8 text-green-500 animate-in zoom-in" />
                         ) : (
                         <ServerCrash className="w-8 h-8 text-ps-blue animate-pulse" />
                         )}
@@ -98,7 +99,7 @@ const BootingScreen = ({ onResolved }) => {
                 </h1>
 
                 <div className="h-6 mb-8 mt-2">
-                    <p className={`text-sm font-bold ${isSuccess ? 'text-green-600 dark:text-green-500' : 'text-secondary'} animate-pulse-slow transition-colors`}>
+                    <p className={`text-sm font-bold ${isSuccess ? 'text-green-500' : 'text-secondary'} animate-pulse-slow transition-colors`}>
                         {isSuccess ? '서버가 정상적으로 기동되었습니다.' : messages[messageIndex]}
                     </p>
                 </div>

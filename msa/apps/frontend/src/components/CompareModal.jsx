@@ -8,6 +8,7 @@ import {useLocation} from 'react-router-dom';
 export default function CompareModal({ isOpen, onClose }) {
     const { compareList } = useCompareStore();
     const [animateIn, setAnimateIn] = useState(false);
+    const [animateVs, setAnimateVs] = useState(false);
 
     const navigate = useTransitionNavigate();
     const location = useLocation();
@@ -16,9 +17,11 @@ export default function CompareModal({ isOpen, onClose }) {
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             setTimeout(() => setAnimateIn(true), 50);
+            setTimeout(() => setAnimateVs(true), 450);
         } else {
             document.body.style.overflow = 'unset';
             setAnimateIn(false);
+            setAnimateVs(false);
         }
     }, [isOpen]);
 
@@ -189,16 +192,16 @@ export default function CompareModal({ isOpen, onClose }) {
                         <span className="text-[10px] font-bold text-muted tracking-widest">데이터 부족 (비교 불가)</span>
                     </div>
                 ) : (
-                    <div className="relative h-3 sm:h-4 w-full bg-black/60 rounded-full overflow-hidden border border-white/10 shadow-inner mx-auto max-w-[90%]">
+                    <div className="relative h-3 sm:h-4 w-full bg-black/25 rounded-full overflow-hidden border border-white/10 shadow-inner mx-auto max-w-[90%]">
                         <div className="absolute inset-0 flex transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]">
-                            <div className="h-full bg-gradient-to-r from-blue-800 to-blue-500 transition-all duration-1000 relative" style={{ width: `${ratioA}%` }}>
-                                <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/40 blur-[2px]"></div>
+                            <div className="h-full bg-gradient-to-r from-blue-700 to-blue-400 transition-all duration-1000 relative" style={{ width: `${ratioA}%` }}>
+                                <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/30 blur-[2px]"></div>
                             </div>
-                            <div className="h-full bg-gradient-to-l from-rose-800 to-rose-500 transition-all duration-1000 relative" style={{ width: `${ratioB}%` }}>
-                                <div className="absolute left-0 top-0 bottom-0 w-4 bg-white/40 blur-[2px]"></div>
+                            <div className="h-full bg-gradient-to-l from-rose-700 to-rose-400 transition-all duration-1000 relative" style={{ width: `${ratioB}%` }}>
+                                <div className="absolute left-0 top-0 bottom-0 w-4 bg-white/30 blur-[2px]"></div>
                             </div>
                         </div>
-                        <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white -translate-x-1/2 z-10 shadow-[0_0_8px_rgba(255,255,255,0.9)]"></div>
+                        <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white/90 -translate-x-1/2 z-10 shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
                     </div>
                 )}
             </div>
@@ -213,7 +216,7 @@ export default function CompareModal({ isOpen, onClose }) {
 
                 <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-50 pointer-events-none">
                     <div className="absolute left-1/2 -translate-x-1/2 top-4 sm:top-6 flex flex-col items-center">
-                        <span className="text-3xl sm:text-5xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">V S</span>
+                        <span className={`text-3xl sm:text-5xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${animateVs ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>V S</span>
                         <div className="w-1 h-8 sm:h-12 bg-gradient-to-b from-white to-transparent mt-2 opacity-30"></div>
                     </div>
                     <div className="w-full flex justify-end pointer-events-auto">
@@ -227,7 +230,7 @@ export default function CompareModal({ isOpen, onClose }) {
                     <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-transparent z-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameA.imageUrl} className="w-full h-full object-cover object-top opacity-60" />
+                        <PSGameImage src={gameA.imageUrl} className="w-full h-full object-cover object-top opacity-80" />
                         <div className="absolute bottom-4 left-4 right-6 z-30">
                             <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 max-w-[85%]">{gameA.title || gameA.name}</h2>
                         </div>
@@ -236,7 +239,7 @@ export default function CompareModal({ isOpen, onClose }) {
                     <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : 'translate-x-full'}`}>
                         <div className="absolute inset-0 bg-gradient-to-l from-rose-900/60 to-transparent z-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameB.imageUrl} className="w-full h-full object-cover object-top opacity-60" />
+                        <PSGameImage src={gameB.imageUrl} className="w-full h-full object-cover object-top opacity-80" />
                         <div className="absolute bottom-4 left-6 right-4 z-30 flex justify-end">
                             <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 text-right max-w-[85%]">{gameB.title || gameB.name}</h2>
                         </div>
@@ -244,25 +247,31 @@ export default function CompareModal({ isOpen, onClose }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface/90 backdrop-blur-2xl custom-scrollbar relative z-30 border-t border-divider">
-                    <TensionBar label="현재 결제가 (최저가)" valA={gameA.currentPrice} valB={gameB.currentPrice} winner={winners.price} isLowerBetter={true} gameAData={gameA} gameBData={gameB} psIcon={<Triangle className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A39D] stroke-[3px] animate-[bounce_1s_infinite_-0.3s] drop-shadow-[0_0_8px_rgba(0,163,157,0.5)]" />} />
-                    <TensionBar label="전문가 평점 (MC/IGDB)" valA={criticA.val} valB={criticB.val} calcA={criticA.calcVal} calcB={criticB.calcVal} srcA={criticA} srcB={criticB} winner={winners.meta} psIcon={<Circle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF3E3E] stroke-[3px] animate-[bounce_1s_infinite_-0.15s] drop-shadow-[0_0_8px_rgba(255,62,62,0.5)]" />} />
-                    <TensionBar label="유저 평점 (MC/IGDB)" valA={userA.val} valB={userB.val} calcA={userA.calcVal} calcB={userB.calcVal} srcA={userA} srcB={userB} winner={winners.userVote} psIcon={<X className="w-5 h-5 sm:w-6 sm:h-6 text-[#4E6CBB] stroke-[4px] animate-[bounce_1s_infinite_0s] drop-shadow-[0_0_8px_rgba(78,108,187,0.5)]" />} />
+                    <TensionBar label="현재 결제가 (최저가)" valA={gameA.currentPrice} valB={gameB.currentPrice} winner={winners.price} isLowerBetter={true} gameAData={gameA} gameBData={gameB} psIcon={<Triangle className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A39D] stroke-[3px] animate-pulse drop-shadow-[0_0_8px_rgba(0,163,157,0.6)]" />} />
+                    <TensionBar label="전문가 평점 (MC/IGDB)" valA={criticA.val} valB={criticB.val} calcA={criticA.calcVal} calcB={criticB.calcVal} srcA={criticA} srcB={criticB} winner={winners.meta} psIcon={<Circle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF3E3E] stroke-[3px] animate-pulse drop-shadow-[0_0_8px_rgba(255,62,62,0.6)]" />} />
+                    <TensionBar label="유저 평점 (MC/IGDB)" valA={userA.val} valB={userB.val} calcA={userA.calcVal} calcB={userB.calcVal} srcA={userA} srcB={userB} winner={winners.userVote} psIcon={<X className="w-5 h-5 sm:w-6 sm:h-6 text-[#4E6CBB] stroke-[4px] animate-pulse drop-shadow-[0_0_8px_rgba(78,108,187,0.6)]" />} />
                 </div>
 
                 <div className="p-4 sm:p-6 bg-surface border-t border-divider shrink-0 z-40 relative backdrop-blur-xl">
                     <Square className="absolute top-4 right-6 w-12 h-12 text-[#E8789C] stroke-[2px] opacity-10 animate-[spin_10s_linear_infinite]" />
 
-                    <div className="text-center text-xs sm:text-sm text-secondary font-bold mb-5 leading-relaxed bg-base/50 p-3 rounded-xl border border-divider-strong inline-block w-full shadow-inner">
-                        <Sparkles className="w-4 h-4 text-yellow-500 inline-block mr-1.5 -mt-1 animate-pulse" />
-                        {getVerdictText()}
+                    <div className="flex items-start gap-3 mb-5 p-4 rounded-xl border border-divider bg-base/60 shadow-inner">
+                        <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5 animate-pulse" />
+                        <p className="text-xs sm:text-sm text-primary font-bold leading-relaxed">{getVerdictText()}</p>
                     </div>
 
-                    <div className="flex gap-4">
-                        <button onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameA.gameId || gameA.id}`, { state: { background: location } }), 300); }} className="flex-1 py-3.5 bg-base border border-divider hover:border-blue-500/50 rounded-xl font-black text-sm text-primary transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] group">
-                            <span className="group-hover:text-blue-400 transition-colors">{gameA.title || gameA.name}</span> 보기
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameA.gameId || gameA.id}`, { state: { background: location } }), 300); }}
+                            className="flex-1 py-3.5 bg-blue-500/10 border border-blue-500/30 hover:border-blue-500/70 hover:bg-blue-500/20 rounded-xl font-black text-sm text-blue-400 transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] active:scale-95 group"
+                        >
+                            <span className="line-clamp-1">{gameA.title || gameA.name}</span>
                         </button>
-                        <button onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameB.gameId || gameB.id}`, { state: { background: location } }), 300); }} className="flex-1 py-3.5 bg-base border border-divider hover:border-rose-500/50 rounded-xl font-black text-sm text-primary transition-all hover:shadow-[0_0_20px_rgba(225,29,72,0.15)] group">
-                            <span className="group-hover:text-rose-400 transition-colors">{gameB.title || gameB.name}</span> 보기
+                        <button
+                            onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameB.gameId || gameB.id}`, { state: { background: location } }), 300); }}
+                            className="flex-1 py-3.5 bg-rose-500/10 border border-rose-500/30 hover:border-rose-500/70 hover:bg-rose-500/20 rounded-xl font-black text-sm text-rose-400 transition-all hover:shadow-[0_0_20px_rgba(225,29,72,0.2)] active:scale-95 group"
+                        >
+                            <span className="line-clamp-1">{gameB.title || gameB.name}</span>
                         </button>
                     </div>
                 </div>

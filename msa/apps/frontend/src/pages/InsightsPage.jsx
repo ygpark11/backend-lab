@@ -320,7 +320,8 @@ const InsightsPage = () => {
                                         </div>
                                         <h3 className="text-lg font-black text-primary leading-tight">지갑이 열리는 중!<br/>베스트셀러</h3>
                                     </div>
-                                    <div className="flex items-end justify-end mt-4">
+                                    <div className="flex items-end justify-between mt-4">
+                                        <span className="text-[10px] font-bold text-secondary border border-divider rounded-lg px-2 py-1 tracking-wider">PS Store 공식</span>
                                         <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
                                 </div>
@@ -339,7 +340,8 @@ const InsightsPage = () => {
                                         </div>
                                         <h3 className="text-lg font-black text-primary leading-tight">지금 제일 핫한<br/>최다 다운로드</h3>
                                     </div>
-                                    <div className="flex items-end justify-end mt-4">
+                                    <div className="flex items-end justify-between mt-4">
+                                        <span className="text-[10px] font-bold text-secondary border border-divider rounded-lg px-2 py-1 tracking-wider">PS Store 공식</span>
                                         <ChevronRight className="w-5 h-5 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
                                 </div>
@@ -454,13 +456,13 @@ const InsightsPage = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             {/* PS5 Pro 향상 */}
-                            <div onClick={() => navigate('/games?isPs5ProEnhanced=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-gray-400/50 dark:hover:border-gray-500/50 hover:shadow-[0_0_15px_rgba(0,0,0,0.05)] dark:hover:shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-300 flex items-center justify-between">
+                            <div onClick={() => navigate('/games?isPs5ProEnhanced=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-divider-strong hover:shadow-[0_0_15px_rgba(255,255,255,0.07)] transition-all duration-300 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 group-hover:bg-gray-200 dark:group-hover:bg-gray-700 transition-colors shadow-sm">
+                                    <div className="p-2 rounded-lg bg-surface text-secondary group-hover:bg-surface-hover transition-colors shadow-sm">
                                         <Sparkles className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider mb-0.5">PS5 Pro Enhanced</p>
+                                        <p className="text-[10px] text-secondary font-bold uppercase tracking-wider mb-0.5">PS5 Pro Enhanced</p>
                                         <h3 className="text-sm font-black text-primary">Pro 향상 꿀딜</h3>
                                     </div>
                                 </div>
@@ -471,13 +473,13 @@ const InsightsPage = () => {
                             </div>
 
                             {/* 스페셜 카탈로그 무료 (옐로우/골드 아이덴티티 적용) */}
-                            <div onClick={() => navigate('/games?inCatalog=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-yellow-500/50 hover:shadow-[0_0_15px_rgba(250,204,21,0.1)] dark:hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] transition-all duration-300 flex items-center justify-between">
+                            <div onClick={() => navigate('/games?inCatalog=true')} className="relative overflow-hidden rounded-xl bg-glass backdrop-blur-md border border-divider p-4 cursor-pointer group hover:border-yellow-500/50 hover:shadow-[0_0_15px_rgba(234,179,8,0.15)] transition-all duration-300 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-white dark:bg-black border border-yellow-500 text-yellow-600 dark:text-yellow-500 group-hover:bg-yellow-50 dark:group-hover:bg-yellow-500 dark:group-hover:text-black transition-colors shadow-sm">
+                                    <div className="p-2 rounded-lg bg-base border border-yellow-500/50 text-yellow-500 group-hover:bg-yellow-500 group-hover:text-black transition-colors shadow-sm">
                                         <Gamepad2 className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-bold uppercase tracking-wider mb-0.5">PS Plus Extra / Premium</p>
+                                        <p className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider mb-0.5">PS Plus Extra / Premium</p>
                                         <h3 className="text-sm font-black text-primary">구독자 무료 혜택</h3>
                                     </div>
                                 </div>
@@ -488,13 +490,13 @@ const InsightsPage = () => {
                             </div>
 
                             {/* PLUS 전용 할인 */}
-                            <div onClick={() => navigate('/games?isPlusExclusive=true')} className="relative overflow-hidden rounded-xl bg-yellow-50/50 dark:bg-yellow-500/5 backdrop-blur-md border border-yellow-200 dark:border-yellow-500/20 p-4 cursor-pointer group hover:border-yellow-300 dark:hover:border-yellow-500/60 hover:bg-yellow-50 dark:hover:bg-yellow-500/10 hover:shadow-[0_0_15px_rgba(234,179,8,0.1)] dark:hover:shadow-[0_0_15px_rgba(234,179,8,0.2)] transition-all duration-300 flex items-center justify-between">
+                            <div onClick={() => navigate('/games?isPlusExclusive=true')} className="relative overflow-hidden rounded-xl bg-yellow-500/5 backdrop-blur-md border border-yellow-500/20 p-4 cursor-pointer group hover:border-yellow-500/60 hover:bg-yellow-500/10 hover:shadow-[0_0_15px_rgba(234,179,8,0.2)] transition-all duration-300 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-yellow-400 dark:bg-yellow-500 text-black shadow-sm group-hover:scale-110 transition-transform">
+                                    <div className="p-2 rounded-lg bg-yellow-500 text-black shadow-sm group-hover:scale-110 transition-transform">
                                         <Plus className="w-5 h-5" strokeWidth={3} />
                                     </div>
                                     <div>
-                                        <p className="text-[10px] text-yellow-700 dark:text-yellow-400 font-black uppercase tracking-wider mb-0.5">PS Plus Exclusive</p>
+                                        <p className="text-[10px] text-yellow-500 font-black uppercase tracking-wider mb-0.5">PS Plus Exclusive</p>
                                         <h3 className="text-sm font-black text-primary">PLUS 전용 혜택</h3>
                                     </div>
                                 </div>

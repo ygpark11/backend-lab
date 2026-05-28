@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {isSupported, requestFcmToken} from '../utils/fcm';
@@ -54,6 +54,7 @@ const Navbar = () => {
     const [hasNewNotice, setHasNewNotice] = useState(false);
     const [isNavVisible, setIsNavVisible] = useState(true);
     const lastScrollYRef = useRef(0);
+    const toggleNotificationRef = useRef(null);
 
     const [isLightMode, setIsLightMode] = useState(() => localStorage.getItem('ps-theme') === 'ps5');
 
@@ -118,6 +119,10 @@ const Navbar = () => {
         }
     }, [isLightMode]);
 
+    useEffect(() => {
+        toggleNotificationRef.current = toggleNotification;
+    });
+
     const checkNewNotice = async () => {
         try {
             const res = await client.get('/api/v1/notices', { params: { page: 0, size: 1 } });
@@ -176,7 +181,7 @@ const Navbar = () => {
                                  const currentBackground = location.state?.background || location;
                                  navigate(`/games/${pushGameId}`, { state: { background: currentBackground } });
                              } else {
-                                 toggleNotification();
+                                 toggleNotificationRef.current?.();
                              }
                          }}>
                         <span className="font-black text-sm sm:text-base text-green-600 dark:text-green-500 flex items-center gap-2">
@@ -202,6 +207,10 @@ const Navbar = () => {
     }, []);
 
     const handleLogoClick = () => { navigate('/games'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+    const navigateAndScroll = useCallback((path) => {
+        navigate(path);
+        window.scrollTo(0, 0);
+    }, [navigate]);
     const fetchUnreadCount = async () => {
         try {
             const res = await client.get('/api/notifications/unread-count');
@@ -318,7 +327,7 @@ const Navbar = () => {
             <nav className={`fixed top-0 w-full z-50 bg-glass backdrop-blur-md border-b border-divider h-16 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 h-full flex items-center justify-between">
 
-                <div className="flex items-center gap-2 md:gap-8 shrink-0">
+                <div className="flex items-center gap-2 md:gap-4 lg:gap-8 shrink-0">
                     {/* 로고 */}
                     <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group" onClick={handleLogoClick}>
                         <div className="bg-ps-blue p-1.5 rounded-lg transition-transform duration-300 md:group-hover:rotate-12 active:scale-95 active:rotate-12 shadow-[0_0_10px_rgba(0,112,209,0.5)]">
@@ -331,13 +340,13 @@ const Navbar = () => {
 
                     {/* 데스크톱 메뉴 */}
                     <div className="hidden md:flex items-center gap-2">
-                        <button onClick={() => { navigate('/games'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/games') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/games') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Gamepad2 className="w-4 h-4" /> 게임 목록
                         </button>
-                        <button onClick={() => { navigate('/discover'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/discover')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Sparkles className="w-4 h-4" /> 신작 수집소
                         </button>
-                        <button onClick={() => { navigate('/insights'); window.scrollTo(0,0); }} className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/insights')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Activity className="w-4 h-4" /> 통계 인사이트
                         </button>
                     </div>
@@ -347,8 +356,8 @@ const Navbar = () => {
                 <div className="flex items-center gap-0.5 sm:gap-3 shrink-0">
 
                     <button
-                        onClick={() => { navigate('/ps-plus'); window.scrollTo(0,0); }}
-                        className={`hidden md:flex relative p-2 rounded-full transition-colors group ${
+                        onClick={() => navigateAndScroll('/ps-plus')}
+                        className={`hidden lg:flex relative p-2 rounded-full transition-colors group ${
                             location.pathname.includes('/ps-plus')
                                 ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
                                 : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
@@ -359,8 +368,8 @@ const Navbar = () => {
                     </button>
 
                     <button
-                        onClick={() => { navigate('/monthly-games'); window.scrollTo(0,0); }}
-                        className={`hidden md:flex relative p-2 rounded-full transition-colors group ${
+                        onClick={() => navigateAndScroll('/monthly-games')}
+                        className={`hidden lg:flex relative p-2 rounded-full transition-colors group ${
                             location.pathname.includes('/monthly-games')
                                 ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
                                 : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
@@ -370,14 +379,14 @@ const Navbar = () => {
                         <CalendarDays className="w-5 h-5 sm:w-5 sm:h-5 transition-transform group-active:scale-95" />
                     </button>
 
-                    <div className="hidden md:block w-[1px] h-4 bg-divider mx-1"></div>
+                    <div className="hidden lg:block w-[1px] h-4 bg-divider mx-1"></div>
 
                     <button onClick={() => setIsLightMode(!isLightMode)} className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="테마 변경">
                         {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     </button>
 
-                    <button onClick={() => setIsLegalOpen(true)} className="hidden sm:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><Shield className="w-5 h-5" /></button>
-                    <button onClick={() => setIsGuideOpen(true)} className="hidden sm:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><HelpCircle className="w-5 h-5" /></button>
+                    <button onClick={() => setIsLegalOpen(true)} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><Shield className="w-5 h-5" /></button>
+                    <button onClick={() => setIsGuideOpen(true)} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><HelpCircle className="w-5 h-5" /></button>
 
                     <button onClick={() => { setIsNoticeOpen(true); setHasNewNotice(false); }} className="relative p-2 text-secondary transition-colors group md:hover:text-blue-600 active:text-blue-600 dark:md:hover:text-blue-500 dark:active:text-blue-500 hover:bg-surface-hover rounded-full">
                         <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 transition-transform md:group-hover:scale-110 active:scale-95" />
@@ -509,7 +518,7 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        <button onClick={() => { navigate('/profile'); window.scrollTo(0,0); }} className={`hidden md:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary md:hover:text-primary md:hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/profile')} className={`hidden md:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary md:hover:text-primary md:hover:bg-surface-hover'}`}>
                             <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
@@ -538,28 +547,28 @@ const Navbar = () => {
                             <div className="absolute top-full right-0 mt-3 w-52 bg-base border border-divider rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50 origin-top-right">
                                 {/* 모바일 핵심 서비스 영역 */}
                                 <div className="p-2 border-b border-divider bg-surface">
-                                    <button onClick={() => { navigate('/games'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/games') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/games'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/games') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-blue-from)] p-1.5 rounded-lg border border-[color:var(--bento-blue-border)] shadow-sm"><Gamepad2 className="w-4 h-4 text-ps-blue" /></div> 게임 목록
                                     </button>
 
-                                    <button onClick={() => { navigate('/discover'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/discover') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/discover'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/discover') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-purple-from)] p-1.5 rounded-lg border border-[color:var(--bento-purple-border)] shadow-sm"><Sparkles className="w-4 h-4 text-purple-500" /></div> 신작 수집소
                                     </button>
 
-                                    <button onClick={() => { navigate('/insights'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/insights') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/insights'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/insights') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-amber-from)] p-1.5 rounded-lg border border-[color:var(--bento-amber-border)] shadow-sm"><Activity className="w-4 h-4 text-amber-500" /></div> 통계 인사이트
                                     </button>
                                 </div>
 
                                 <div className="p-2 border-b border-divider bg-base">
-                                    <button onClick={() => { navigate('/ps-plus'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/ps-plus') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/ps-plus'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/ps-plus') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-yellow-400 rounded p-0.5 text-black">
                                             <Plus className="w-3.5 h-3.5" strokeWidth={4} />
                                         </div>
                                         PS Plus 구독권
                                     </button>
 
-                                    <button onClick={() => { navigate('/monthly-games'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/monthly-games') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/monthly-games'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mt-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/monthly-games') ? 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-yellow-from)] p-1.5 rounded border border-[color:var(--bento-yellow-border)] text-yellow-600 dark:text-yellow-500 shadow-sm shrink-0">
                                             <CalendarDays className="w-3.5 h-3.5" />
                                         </div>
@@ -570,7 +579,7 @@ const Navbar = () => {
                                 {/* 모바일 유틸리티 영역 */}
                                 <div className="p-2 bg-surface">
                                     {isAuthenticated && (
-                                        <button onClick={() => { navigate('/profile'); setIsMobileMenuOpen(false); window.scrollTo(0,0); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/profile') ? 'bg-surface-hover text-primary' : 'text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface'}`}>
+                                        <button onClick={() => { navigateAndScroll('/profile'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/profile') ? 'bg-surface-hover text-primary' : 'text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface'}`}>
                                             <UserCircle className="w-4 h-4 opacity-70" /> 마이페이지
                                         </button>
                                     )}

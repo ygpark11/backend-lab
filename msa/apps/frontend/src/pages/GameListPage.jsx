@@ -267,13 +267,17 @@ const GameListPage = () => {
     const handleFilterChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFilter(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-        if (name !== 'keyword') setPage(0);
+        if (name !== 'keyword') {
+            setPage(0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
     };
 
     const handleCustomSelect = (name, value) => {
         setFilter(prev => ({ ...prev, [name]: value }));
         setActiveDropdown(null);
         setPage(0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleQuickSelect = (name, value) => {
@@ -569,6 +573,23 @@ const GameListPage = () => {
             minMetaScore: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : prev.minMetaScore,
             minDiscountRate: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : (prev.minDiscountRate === '1' ? '' : prev.minDiscountRate)
         }));
+        setPage(0);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleResetAllFilters = () => {
+        setFilter({
+            keyword: '', genre: '', minDiscountRate: '', minMetaScore: '',
+            platform: '', isPlusExclusive: false, inCatalog: false,
+            sort: 'lastUpdated,desc', minPrice: '', maxPrice: '',
+            minPlayTime: '', maxPlayTime: '',
+            isAllTimeLow: false, isPs5ProEnhanced: false,
+            isBestSeller: false, isMostDownloaded: false,
+            isClosingSoon: false, isNewDiscount: false
+        });
+        setSearchInput('');
+        setPriceRange({ min: '', max: '' });
+        setSelectedPlayTimeId(null);
         setPage(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -1356,9 +1377,17 @@ const GameListPage = () => {
                             );
                         }) : (
                             !loading && (
-                                <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
+                                <div className="col-span-full text-center py-20 flex flex-col items-center gap-5">
                                     <Gamepad2 className="w-12 h-12 text-muted" />
-                                    <p className="text-secondary">검색 결과가 없습니다.</p>
+                                    <p className="text-secondary font-bold">검색 결과가 없습니다.</p>
+                                    <button
+                                        onClick={handleResetAllFilters}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-divider rounded-xl text-sm font-bold text-secondary hover:text-primary hover:bg-surface-hover hover:border-divider-strong transition-all shadow-sm active:scale-95"
+                                    >
+                                        <X className="w-4 h-4 shrink-0" />
+                                        <span className="hidden sm:inline">필터 전체 초기화</span>
+                                        <span className="sm:hidden">초기화</span>
+                                    </button>
                                 </div>
                             )
                         )
@@ -1520,7 +1549,7 @@ const GameListPage = () => {
                                     <button onClick={() => handleQuickSelect('inCatalog', !filter.inCatalog)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.inCatalog ? 'bg-[var(--bento-yellow-from)] border-[color:var(--bento-yellow-border)] text-yellow-600 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
                                         <Layers className="w-4 h-4 text-yellow-500" /> 스페셜 카탈로그
                                     </button>
-                                    <button onClick={() => handleFilterChange('isPs5ProEnhanced', !filter.isPs5ProEnhanced)} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all ${filter.isPs5ProEnhanced ? 'bg-primary border-primary text-[color:var(--color-bg-base)] shadow-glow' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                    <button onClick={() => handleQuickSelect('isPs5ProEnhanced', !filter.isPs5ProEnhanced)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm transition-all ${filter.isPs5ProEnhanced ? 'bg-primary border-primary text-[color:var(--color-bg-base)] shadow-glow' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
                                         <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-base' : 'text-primary'}`} /> PS5 Pro 향상
                                     </button>
                                 </div>

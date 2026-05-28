@@ -36,3 +36,7 @@ coverage
 *.sln
 *.sw?
 Thumbs.db
+
+# 클로드 관련 파일
+.claudeignore
+CLAUDE.md

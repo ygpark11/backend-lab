@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Target, TrendingDown, ShieldAlert, Crosshair, Edit2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
     const [manualPrice, setManualPrice] = useState('');
+    const [inputError, setInputError] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) {
+            setManualPrice('');
+            setInputError('');
+        }
+    }, [isOpen]);
 
     if (!isOpen || !game) return null;
 
@@ -47,18 +55,31 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
     const handleManualSubmit = (e) => {
         e.preventDefault();
         const price = parseInt(manualPrice.replace(/[^0-9]/g, ''), 10);
-        if (price >= game.currentPrice) {
-            toast.error("현재 가격보다 낮은 금액을 입력해주세요!");
+        if (!price || price <= 0) {
+            setInputError('0원은 설정할 수 없습니다.');
             return;
         }
-        if (price > 0 && price < game.currentPrice) {
-            onSubmit(price);
+        if (price >= game.currentPrice) {
+            setInputError(`현재가(${game.currentPrice.toLocaleString()}원)보다 낮아야 합니다.`);
+            return;
         }
+        onSubmit(price);
     };
 
     const handleInputChange = (e) => {
         const value = e.target.value.replace(/[^0-9]/g, '');
-        setManualPrice(value ? Number(value).toLocaleString() : '');
+        const num = value ? Number(value) : 0;
+        setManualPrice(value ? num.toLocaleString() : '');
+
+        if (!value) {
+            setInputError('');
+        } else if (num <= 0) {
+            setInputError('0원은 설정할 수 없습니다.');
+        } else if (num >= game.currentPrice) {
+            setInputError(`현재가(${game.currentPrice.toLocaleString()}원)보다 낮아야 합니다.`);
+        } else {
+            setInputError('');
+        }
     };
 
     const handleBackgroundClick = (e) => {
@@ -88,6 +109,17 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                     </button>
                 </div>
 
+                <div className="flex items-center justify-center gap-2.5 px-5 py-2.5 bg-base border-b border-divider">
+                    <span className="text-xs text-secondary font-bold">현재가</span>
+                    <span className="text-sm font-black text-primary">{game.currentPrice.toLocaleString()}<span className="text-xs font-bold text-secondary ml-0.5">원</span></span>
+                    {game.discountRate > 0 && (
+                        <span className="text-[10px] font-black text-white bg-ps-blue px-1.5 py-0.5 rounded">-{game.discountRate}%</span>
+                    )}
+                    {game.originalPrice > game.currentPrice && (
+                        <span className="text-xs text-secondary font-bold line-through">{game.originalPrice.toLocaleString()}원</span>
+                    )}
+                </div>
+
                 <div className="p-5 space-y-5">
                     <div className="bg-surface rounded-xl p-4 border border-divider shadow-sm flex flex-col items-center justify-center text-center gap-2 relative z-10">
                         <ShieldAlert className={`w-8 h-8 ${defenseTier?.includes('S') || defenseTier?.includes('A') ? 'text-red-600 dark:text-red-500' : 'text-green-600 dark:text-green-500'}`} />
@@ -106,7 +138,7 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                                 </div>
                                 <div className="text-secondary text-xs mt-0.5">{target1Desc}</div>
                             </div>
-                            <span className="text-ps-blue font-black relative z-10">{target1Price.toLocaleString()}원</span>
+                            <span className="text-ps-blue font-black text-base relative z-10 shrink-0">{target1Price.toLocaleString()}<span className="text-xs font-bold ml-0.5">원</span></span>
                             <TriangleShape className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 text-ps-blue opacity-0 group-hover:opacity-10 translate-x-4 group-hover:translate-x-0 transition-all duration-500 pointer-events-none" />
                         </button>
 
@@ -115,7 +147,7 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                                 <div className="text-primary font-bold text-sm flex items-center gap-1.5"><Target className="w-4 h-4 text-purple-600 dark:text-purple-500"/> {target2Title}</div>
                                 <div className="text-secondary text-xs mt-0.5">{target2Desc}</div>
                             </div>
-                            <span className="text-purple-700 dark:text-purple-500 font-black relative z-10">{target2Price.toLocaleString()}원</span>
+                            <span className="text-purple-700 dark:text-purple-500 font-black text-base relative z-10 shrink-0">{target2Price.toLocaleString()}<span className="text-xs font-bold ml-0.5">원</span></span>
                             <CircleShape className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 text-purple-600 dark:text-purple-500 opacity-0 group-hover:opacity-10 translate-x-4 group-hover:translate-x-0 transition-all duration-500 pointer-events-none" />
                         </button>
 
@@ -127,7 +159,7 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                                 </div>
                                 <div className="text-secondary text-xs mt-0.5">{target3Desc}</div>
                             </div>
-                            <span className="text-red-700 dark:text-red-500 font-black relative z-10">{target3Price.toLocaleString()}원</span>
+                            <span className="text-red-700 dark:text-red-500 font-black text-base relative z-10 shrink-0">{target3Price.toLocaleString()}<span className="text-xs font-bold ml-0.5">원</span></span>
                             <XShape className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 text-red-600 dark:text-red-500 opacity-0 group-hover:opacity-10 translate-x-4 group-hover:translate-x-0 transition-all duration-500 pointer-events-none" />
                         </button>
                     </div>
@@ -136,25 +168,35 @@ const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
                         <form onSubmit={handleManualSubmit} className="flex items-center gap-2">
                             <div className="relative flex-1">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Edit2 className="w-4 h-4 text-secondary" />
+                                    <Edit2 className={`w-4 h-4 ${inputError ? 'text-red-500' : 'text-secondary'}`} />
                                 </div>
                                 <input
                                     type="text"
                                     value={manualPrice}
                                     onChange={handleInputChange}
                                     placeholder="직접 입력 (예: 25,000)"
-                                    className="w-full bg-surface border border-divider rounded-xl py-2.5 pl-9 pr-8 text-sm text-primary placeholder-secondary focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all"
+                                    className={`w-full bg-surface border rounded-xl py-2.5 pl-9 pr-8 text-sm text-primary placeholder-secondary focus:outline-none transition-all ${
+                                        inputError
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                                            : 'border-divider focus:border-ps-blue focus:ring-1 focus:ring-ps-blue'
+                                    }`}
                                 />
                                 <span className="absolute inset-y-0 right-0 pr-3 flex items-center text-secondary text-sm pointer-events-none">원</span>
                             </div>
                             <button
                                 type="submit"
-                                disabled={!manualPrice}
-                                className="px-4 py-2.5 bg-ps-blue hover:bg-blue-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-30 disabled:hover:bg-ps-blue whitespace-nowrap shadow-sm"
+                                disabled={!manualPrice || !!inputError}
+                                className="px-4 py-2.5 bg-ps-blue hover:bg-blue-600 text-white text-sm font-bold rounded-xl transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-ps-blue whitespace-nowrap shadow-sm"
                             >
                                 설정
                             </button>
                         </form>
+                        {inputError && (
+                            <p className="mt-1.5 text-xs text-red-500 font-bold flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3 shrink-0" />
+                                {inputError}
+                            </p>
+                        )}
                     </div>
 
                 </div>

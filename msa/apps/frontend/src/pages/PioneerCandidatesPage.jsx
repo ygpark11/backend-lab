@@ -83,7 +83,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                         ${isUnlocked
                         ? 'grayscale-0 scale-125 brightness-110 z-10'
                         : (isHolding
-                            ? 'grayscale-0 scale-110 brightness-100 blur-[2px]'
+                            ? 'grayscale-0 scale-110 brightness-75'
                             : 'grayscale-[80%] contrast-125 brightness-90 scale-100 group-hover:grayscale-0 group-hover:brightness-110')}
                     `}
                 />
@@ -210,9 +210,9 @@ const PioneerCandidatesPage = () => {
 
             {/* 배경 오로라 이펙트 */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
-                <div className="absolute inset-0 z-20 mix-blend-screen dark:mix-blend-screen opacity-60">
-                    <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[60px] sm:blur-[120px] animate-[pulse_10s_ease-in-out_infinite]"></div>
-                    <div className="absolute bottom-[10%] right-[10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[60px] sm:blur-[120px] animate-[pulse_8s_ease-in-out_infinite]"></div>
+                <div className="absolute inset-0 z-20 opacity-60">
+                    <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[10%] right-[10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
                 </div>
             </div>
 
@@ -230,21 +230,21 @@ const PioneerCandidatesPage = () => {
 
                     <div className="flex items-center gap-4 sm:gap-6 relative z-10">
                         <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[var(--bento-blue-from)] flex items-center justify-center border border-[color:var(--bento-blue-border)] shadow-sm shrink-0">
-                            <Pickaxe className="w-6 h-6 sm:w-8 sm:h-8 text-blue-700 dark:text-blue-500 drop-shadow-sm group-hover:scale-110 transition-transform" />
+                            <Pickaxe className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 drop-shadow-sm group-hover:scale-110 transition-transform" />
                         </div>
                         <div>
-                            <h2 className="text-blue-700 dark:text-blue-500 font-bold text-xs sm:text-sm tracking-wider flex items-center gap-1.5 mb-1 sm:mb-2">
+                            <h2 className="text-blue-500 font-bold text-xs sm:text-sm tracking-wider flex items-center gap-1.5 mb-1 sm:mb-2">
                                 <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4"/> NEW ARRIVALS
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'PIONEER' }); }}
-                                    className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors p-0.5 ml-1"
+                                    className="text-blue-500 hover:text-blue-400 transition-colors p-0.5 ml-1"
                                 >
                                     <Info className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                                 </button>
                             </h2>
                             <h3 className="text-primary font-black text-xl sm:text-2xl lg:text-3xl leading-tight mt-1">
                                 진열장에 방금 입고된 따끈따끈한<br/>
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">미발굴 데이터</span> 캡슐
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">미발굴 데이터</span> 캡슐
                             </h3>
                         </div>
                     </div>
@@ -275,7 +275,7 @@ const PioneerCandidatesPage = () => {
                             <div className="py-20 sm:py-32 flex flex-col items-center justify-center text-center px-4 animate-fadeIn relative z-10">
                                 <div className="bg-surface border border-divider p-8 sm:p-12 rounded-3xl flex flex-col items-center shadow-lg backdrop-blur-md max-w-lg w-full">
                                     <div className="w-20 h-20 sm:w-24 sm:h-24 bg-[var(--bento-blue-from)] rounded-full flex items-center justify-center backdrop-blur-sm border border-[color:var(--bento-blue-border)] mb-6 shadow-sm">
-                                        <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-700 dark:text-blue-500 opacity-80" />
+                                        <Gamepad2 className="w-8 h-8 sm:w-10 sm:h-10 text-blue-500 opacity-80" />
                                     </div>
                                     <h3 className="text-lg sm:text-2xl font-black text-primary mb-2 drop-shadow-sm">
                                         현재 탐지된 신규 캡슐이 없습니다.

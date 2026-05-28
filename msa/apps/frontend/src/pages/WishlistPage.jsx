@@ -45,6 +45,8 @@ const WishlistPage = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
+    const [onSaleOnly, setOnSaleOnly] = useState(false);
+
     const [isDonationOpen, setIsDonationOpen] = useState(false);
 
     const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
@@ -201,6 +203,8 @@ const WishlistPage = () => {
         navigate(`/games?genre=${encodeURIComponent(genre)}`, { state: null });
     };
 
+    const displayedGames = onSaleOnly ? games.filter(g => g.discountRate > 0) : games;
+
     const totalSavings = games.reduce((acc, game) => {
         if (!game.originalPrice || !game.currentPrice) return acc;
         const saving = game.originalPrice - game.currentPrice;
@@ -217,6 +221,19 @@ const WishlistPage = () => {
     return (
         <div className="min-h-screen bg-base text-primary relative transition-colors duration-500">
             <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." />
+
+            {/* Aurora 배경 */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[120px] md:animate-[pulse_9s_ease-in-out_infinite]" />
+                <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-ps-blue/5 rounded-full blur-[100px] md:animate-[pulse_11s_ease-in-out_infinite]" />
+            </div>
+
+            {/* PS 심볼 워터마크 */}
+            <div className="absolute top-20 right-10 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
+                <Triangle className="w-40 h-40 stroke-[2px]" />
+                <Heart className="w-40 h-40 stroke-[2px]" />
+                <Square className="w-40 h-40 stroke-[2px]" />
+            </div>
 
             <div className="pt-24 md:pt-32 px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">
                 <div className="grid grid-cols-1 md:flex md:flex-row gap-5 mb-10">
@@ -294,11 +311,28 @@ const WishlistPage = () => {
                     )}
                 </div>
 
+                {/* 필터 토글 */}
+                {games.length > 0 && (
+                    <div className="flex items-center gap-2 mb-5">
+                        <button
+                            onClick={() => setOnSaleOnly(prev => !prev)}
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                                onSaleOnly
+                                    ? 'bg-ps-blue text-white border-ps-blue shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                                    : 'bg-surface text-secondary border-divider hover:text-primary hover:bg-surface-hover'
+                            }`}
+                        >
+                            <TrendingDown className="w-3.5 h-3.5" />
+                            할인 중만 보기
+                        </button>
+                    </div>
+                )}
+
                 {/* 🎮 찜한 게임 카드 리스트 */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {games.length > 0 ? games.map((game, index) => {
+                    {displayedGames.length > 0 ? displayedGames.map((game, index) => {
                         const realGameId = game.gameId || game.id;
-                        const isLastElement = games.length === index + 1;
+                        const isLastElement = !onSaleOnly && displayedGames.length === index + 1;
                         const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
                         const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                         const isLastCall = daysLeft >= 0 && daysLeft <= 1;
@@ -366,7 +400,7 @@ const WishlistPage = () => {
                                     {game.pioneerName && (
                                         <div className="self-start inline-flex items-center gap-1.5 mb-3 -ml-4 bg-surface border-y border-r border-divider border-l-[4px] border-l-ps-blue py-1 pl-3 pr-4 rounded-r-lg shadow-md">
                                             <Pickaxe className="w-3.5 h-3.5 text-ps-blue drop-shadow-sm" />
-                                            <span className="text-[10.5px] sm:text-xs font-black text-primary truncate max-w-[130px] sm:max-w-[160px]">
+                                            <span className="text-[10.5px] sm:text-xs font-black text-ps-blue truncate max-w-[130px] sm:max-w-[160px]">
                                                 {game.pioneerName}
                                             </span>
                                         </div>
@@ -411,16 +445,26 @@ const WishlistPage = () => {
                         );
                     }) : (
                         !loading && (
-                            <div className="col-span-full text-center py-24 flex flex-col items-center justify-center gap-4 border border-divider rounded-2xl bg-surface shadow-sm">
-                                <Heart className="w-16 h-16 text-secondary animate-pulse" />
-                                <div>
-                                    <p className="text-xl text-primary font-bold mb-2">아직 찜한 게임이 없습니다</p>
-                                    <p className="text-secondary text-sm mb-6">마음에 드는 게임을 찾아 하트를 켜주세요!</p>
-                                    <button onClick={() => navigate('/games')} className="px-8 py-3 bg-red-600 text-white rounded-full font-bold hover:bg-red-700 transition shadow-lg hover:shadow-red-500/20 flex items-center gap-2 mx-auto">
-                                        <Gamepad2 className="w-4 h-4"/> 게임 구경하러 가기
+                            onSaleOnly ? (
+                                <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
+                                    <TrendingDown className="w-12 h-12 text-muted" />
+                                    <p className="text-secondary font-bold">현재 할인 중인 찜 게임이 없습니다.</p>
+                                    <button onClick={() => setOnSaleOnly(false)} className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-divider rounded-xl text-sm font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-all active:scale-95">
+                                        전체 보기
                                     </button>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="col-span-full text-center py-24 flex flex-col items-center justify-center gap-4 border border-divider rounded-2xl bg-surface shadow-sm">
+                                    <Heart className="w-16 h-16 text-secondary animate-pulse" />
+                                    <div>
+                                        <p className="text-xl text-primary font-bold mb-2">아직 찜한 게임이 없습니다</p>
+                                        <p className="text-secondary text-sm mb-6">마음에 드는 게임을 찾아 하트를 켜주세요!</p>
+                                        <button onClick={() => navigate('/games')} className="px-8 py-3 bg-ps-blue text-white rounded-full font-bold hover:bg-blue-600 transition shadow-lg flex items-center gap-2 mx-auto">
+                                            <Gamepad2 className="w-4 h-4"/> 게임 구경하러 가기
+                                        </button>
+                                    </div>
+                                </div>
+                            )
                         )
                     )}
                 </div>
@@ -433,7 +477,7 @@ const WishlistPage = () => {
                 )}
 
                 {loading && page > 0 && (
-                    <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div></div>
+                    <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ps-blue"></div></div>
                 )}
 
                 {/* 하단 플로팅 버튼 영역 */}

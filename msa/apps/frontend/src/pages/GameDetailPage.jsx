@@ -274,6 +274,22 @@ export default function GameDetailPage() {
     };
 
     const handleShare = async () => {
+        const shareData = {
+            title: game.title,
+            text: `${game.title} - ${game.currentPrice.toLocaleString()}원`,
+            url: window.location.href,
+        };
+
+        if (navigator.share && navigator.canShare?.(shareData)) {
+            try {
+                await navigator.share(shareData);
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') return;
+                // 공유 실패 시 클립보드로 폴백
+            }
+        }
+
         try {
             await navigator.clipboard.writeText(window.location.href);
             toast.success('링크가 복사되었습니다!', { style: { borderRadius: '10px', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }, icon: <Check className="w-5 h-5 text-green-500" /> });
@@ -365,7 +381,7 @@ export default function GameDetailPage() {
                     {/* ========================================== */}
                     <div className="lg:col-span-4 lg:sticky lg:top-24 h-fit space-y-5">
                         <div className={`rounded-2xl overflow-hidden shadow-2xl border relative group bg-base ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider'}`}>
-                            <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover aspect-[3/4]" />
+                            <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover h-[42vh] lg:h-auto lg:aspect-[3/4]" />
                             {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse"></div>}
                             {isNew && <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-lg z-10">NEW</span>}
                             {isClosingSoon && <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> 막차!</span>}
@@ -555,6 +571,23 @@ export default function GameDetailPage() {
                             </div>
                         </div>
 
+                        {game.defenseTier && (
+                            <div className={`lg:hidden mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                                game.defenseTier.includes('S') || game.defenseTier.includes('A')
+                                    ? 'border-red-500/30 bg-red-500/5'
+                                    : 'border-green-500/30 bg-green-500/5'
+                            }`}>
+                                <ShieldAlert className={`w-5 h-5 shrink-0 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`} />
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold uppercase tracking-widest text-secondary">할인 방어력</span>
+                                        <span className={`text-base font-black ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</span>
+                                    </div>
+                                    <p className="text-xs text-secondary font-bold truncate">{game.defenseMessage}</p>
+                                </div>
+                            </div>
+                        )}
+
                         {isDiscrepancyWarning && (
                             <div className="mb-4 flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-fadeIn">
                                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 animate-pulse" />
@@ -568,6 +601,12 @@ export default function GameDetailPage() {
                                 </div>
                             </div>
                         )}
+
+                        {/* 역대 가격 추이 */}
+                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
+                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
+                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                        </div>
 
                         {/* 3. 벤토 그리드 대시보드 (평가/플레이타임) */}
                         <div className="grid grid-cols-2 gap-4 mb-8">
@@ -772,14 +811,9 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        {/* 5. 심층 정보 영역 (차트, 커뮤니티, 상세설명) */}
+                        {/* 5. 심층 정보 영역 (커뮤니티, 상세설명) */}
                         <div className="space-y-6">
                             {game.scouterTotalWatchers > 0 && <StealthPanel watchersCount={game.scouterTotalWatchers} averagePrice={game.scouterAverageTargetPrice} isLiked={isLiked} />}
-
-                            <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md">
-                                <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
-                                <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
-                            </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                 <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md flex flex-col">
@@ -844,8 +878,15 @@ export default function GameDetailPage() {
                 {game.relatedGames && game.relatedGames.length > 0 && (
                     <div className="mt-16 pt-10 border-t border-divider">
                         <h3 className="text-xl font-black text-primary mb-6 flex items-center gap-2"><Sparkles className="w-5 h-5 text-yellow-500" />이 게임을 좋아한다면</h3>
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+                        <div className="hidden lg:grid grid-cols-5 gap-4">
                             {game.relatedGames.map(related => <RelatedGameCard key={related.id} game={related} />)}
+                        </div>
+                        <div className="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            {game.relatedGames.map(related => (
+                                <div key={related.id} className="shrink-0 snap-center w-[42vw] sm:w-[32vw]">
+                                    <RelatedGameCard game={related} />
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}
@@ -916,7 +957,7 @@ export default function GameDetailPage() {
         return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-backdrop backdrop-blur-sm animate-fadeIn p-0 md:p-8" onClick={handleClose}>
                 <div
-                    className="w-full h-full md:h-auto md:max-h-full max-w-6xl overflow-y-auto bg-base md:rounded-2xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong hover:[&::-webkit-scrollbar-thumb]:bg-muted"
+                    className="w-full h-full md:h-auto md:max-h-full max-w-6xl overflow-y-auto bg-base md:rounded-2xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong hover:[&::-webkit-scrollbar-thumb]:bg-muted animate-in fade-in zoom-in-[97%] slide-in-from-bottom-4 duration-300 ease-out"
                     onClick={e => e.stopPropagation()}
                 >
                     <SEO title={game.title} description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원`} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
