@@ -331,7 +331,7 @@ export default function GameDetailPage() {
     };
 
     const mcDiff = (game.mcMetaScore && game.mcUserScore) ? Math.abs(game.mcMetaScore - (game.mcUserScore * 10)) : 0;
-    const igdbDiff = (game.igdbCriticScore && game.igdbUserScore) ? Math.abs(game.igdbCriticScore - (game.igdbUserScore * 10)) : 0;
+    const igdbDiff = (game.igdbCriticScore && game.igdbUserScore) ? Math.abs(game.igdbCriticScore - game.igdbUserScore) : 0;
     const isDiscrepancyWarning = mcDiff >= 15 || igdbDiff >= 15;
 
     const formatPlayTime = (hours) => {
@@ -588,6 +588,12 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
+                        {/* 역대 가격 추이 */}
+                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
+                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
+                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                        </div>
+
                         {isDiscrepancyWarning && (
                             <div className="mb-4 flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-fadeIn">
                                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 animate-pulse" />
@@ -601,12 +607,6 @@ export default function GameDetailPage() {
                                 </div>
                             </div>
                         )}
-
-                        {/* 역대 가격 추이 */}
-                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
-                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
-                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
-                        </div>
 
                         {/* 3. 벤토 그리드 대시보드 (평가/플레이타임) */}
                         <div className="grid grid-cols-2 gap-4 mb-8">
