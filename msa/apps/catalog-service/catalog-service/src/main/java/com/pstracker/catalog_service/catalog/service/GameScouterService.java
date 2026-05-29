@@ -114,13 +114,18 @@ public class GameScouterService {
             // 신작인데 현재 할인 중 (이벤트 기반: 정가→할인 전환 발생)
             if (isOnSale) {
                 String plusNote = isPlusExclusive ? " (PS Plus 전용)" : "";
+                if (discountCount >= 2) {
+                    return new String[]{"신작 재할인",
+                            String.format("출시 %d개월차. %d번째 할인 중 (%d%%%s). 패턴 형성 중입니다.",
+                                    monthsSinceRelease, discountCount, curRate, plusNote)};
+                }
                 return new String[]{"신작 첫 할인",
                         String.format("출시 %d개월만에 %d%%%s 첫 신호 포착. 향후 패턴은 미지수입니다.",
                                 monthsSinceRelease, curRate, plusNote)};
             }
             // 신작인데 과거 할인 이력은 있고, 현재는 정가로 복귀
             return new String[]{"N급 신작",
-                    String.format("출시 %d개월차. 한 번 할인 후 현재 정가.", monthsSinceRelease)};
+                    String.format("출시 %d개월차. %d번 할인 후 현재 정가.", monthsSinceRelease, discountCount)};
         }
 
         // ─────────────────────────────────────────────────────────
@@ -154,6 +159,11 @@ public class GameScouterService {
         // 메시지 구조: [역사 패턴 요약]. [현재 상태 맥락 해석].[콜드 스타트 주의]
         // 역사 요약을 앞에 배치 (모바일 truncate 환경 고려)
         // ─────────────────────────────────────────────────────────
+
+        // 할인 이력은 있으나 유효한 최저가를 산출할 수 없는 경우 (데이터 품질 이상)
+        if (!hasValidLowest) {
+            return new String[]{"분석 불가", "가격 이력 데이터가 유효하지 않습니다."};
+        }
 
         String freqText = buildFreqText(monthsPerDiscount);
 
@@ -191,7 +201,6 @@ public class GameScouterService {
      */
     private String buildFreqText(double monthsPerDiscount) {
         if (monthsPerDiscount >= 12) return "할인이 드뭅니다 (연 1회 미만)";
-        if (monthsPerDiscount >= 6)  return String.format("약 %.0f개월에 1회 꼴", monthsPerDiscount);
         if (monthsPerDiscount >= 2)  return String.format("약 %.0f개월에 1회 꼴", monthsPerDiscount);
         return "자주 세일하는 편 (2개월 이내 1회)";
     }
