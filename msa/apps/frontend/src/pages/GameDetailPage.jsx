@@ -948,7 +948,7 @@ export default function GameDetailPage() {
 
             {/* Modal Components */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
-            <TargetPriceModal isOpen={isTargetModalOpen} onClose={() => setIsTargetModalOpen(false)} game={game} defenseTier={game.defenseTier} onSubmit={(price) => handleTargetSubmit(price)} />
+            {isTargetModalOpen && <TargetPriceModal onClose={() => setIsTargetModalOpen(false)} game={game} defenseTier={game.defenseTier} onSubmit={(price) => handleTargetSubmit(price)} />}
             <HelpModal isOpen={helpInfo.isOpen} type={helpInfo.type} onClose={() => setHelpInfo({ isOpen: false, type: null })} />
         </div>
     );

@@ -216,11 +216,12 @@ const PioneerCandidatesPage = () => {
                 </div>
             </div>
 
-            <PSFactoryLoader
-                isOpen={isFactoryModalOpen}
-                onClose={() => setIsFactoryModalOpen(false)}
-                gameName={extractingGame?.title?.replace(/\s*\([^)]*한국어[^)]*\)|\s*\([^)]*중국어[^)]*\)|\s*\([^)]*영어[^)]*\)/gi, '').trim() || '알 수 없는 원석'}
-            />
+            {isFactoryModalOpen && (
+                <PSFactoryLoader
+                    onClose={() => setIsFactoryModalOpen(false)}
+                    gameName={extractingGame?.title?.replace(/\s*\([^)]*한국어[^)]*\)|\s*\([^)]*중국어[^)]*\)|\s*\([^)]*영어[^)]*\)/gi, '').trim() || '알 수 없는 원석'}
+                />
+            )}
 
             <div className="pt-24 md:pt-32 px-4 sm:px-6 md:px-10 pb-24 max-w-7xl mx-auto relative z-10">
 

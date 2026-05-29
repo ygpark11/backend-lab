@@ -606,7 +606,7 @@ const Navbar = () => {
         </nav>
 
             <GuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
-            <LegalModal isOpen={isLegalOpen} onClose={() => setIsLegalOpen(false)} />
+            {isLegalOpen && <LegalModal onClose={() => setIsLegalOpen(false)} />}
             <NoticeModal isOpen={isNoticeOpen} onClose={() => setIsNoticeOpen(false)} />
         </>
     );

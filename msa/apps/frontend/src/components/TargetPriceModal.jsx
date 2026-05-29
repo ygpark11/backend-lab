@@ -1,19 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Target, TrendingDown, ShieldAlert, Crosshair, Edit2, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const TargetPriceModal = ({ isOpen, onClose, game, defenseTier, onSubmit }) => {
+const TargetPriceModal = ({ onClose, game, defenseTier, onSubmit }) => {
     const [manualPrice, setManualPrice] = useState('');
     const [inputError, setInputError] = useState('');
 
-    useEffect(() => {
-        if (!isOpen) {
-            setManualPrice('');
-            setInputError('');
-        }
-    }, [isOpen]);
-
-    if (!isOpen || !game) return null;
+    if (!game) return null;
 
     const bestPrice = (game.lowestPrice && game.lowestPrice > 0)
         ? Math.min(game.lowestPrice, game.currentPrice)

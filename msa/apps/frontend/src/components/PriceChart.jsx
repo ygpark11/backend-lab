@@ -24,7 +24,7 @@ const renderPSButton = (cx, cy, verdict, isActive = false) => {
                     <circle cx={cx} cy={cy} r={5 * scale} fill={innerFill} stroke="#22C55E" strokeWidth={strokeW} />
                 </g>
             );
-        case 'GOOD_OFFER':
+        case 'GOOD_OFFER': {
             const tR = 6 * scale;
             const points = `${cx},${cy - tR} ${cx - tR * 0.866},${cy + tR * 0.5} ${cx + tR * 0.866},${cy + tR * 0.5}`;
             return (
@@ -33,7 +33,8 @@ const renderPSButton = (cx, cy, verdict, isActive = false) => {
                     <polygon points={points} fill={innerFill} stroke="#D97706" strokeWidth={strokeW} strokeLinejoin="round" />
                 </g>
             );
-        case 'WAIT':
+        }
+        case 'WAIT': {
             const xR = 4 * scale;
             return (
                 <g className="transition-all duration-300">
@@ -42,8 +43,9 @@ const renderPSButton = (cx, cy, verdict, isActive = false) => {
                           stroke="#EF4444" strokeWidth={strokeW + 0.5} strokeLinecap="round" />
                 </g>
             );
+        }
         case 'TRACKING':
-        default:
+        default: {
             const sR = 4.5 * scale;
             return (
                 <g className="transition-all duration-300">
@@ -51,6 +53,7 @@ const renderPSButton = (cx, cy, verdict, isActive = false) => {
                     <rect x={cx - sR} y={cy - sR} width={sR * 2} height={sR * 2} fill={innerFill} stroke="#3B82F6" strokeWidth={strokeW} rx={1} />
                 </g>
             );
+        }
     }
 };
 
@@ -119,7 +122,7 @@ export default function PriceChart({ historyData, lowestPrice }) {
                 discountRate: item.discountRate || 0,
                 verdict: item.verdict || 'TRACKING'
             };
-        } catch (e) {
+        } catch {
             return null;
         }
     }).filter(Boolean);

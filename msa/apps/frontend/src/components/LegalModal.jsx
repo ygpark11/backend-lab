@@ -1,16 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Shield, FileText } from 'lucide-react';
 
-const LegalModal = ({ isOpen, onClose, defaultTab = 'terms' }) => {
+const LegalModal = ({ onClose, defaultTab = 'terms' }) => {
     const [activeTab, setActiveTab] = useState(defaultTab);
-
-    useEffect(() => {
-        if (isOpen) {
-            setActiveTab(defaultTab);
-        }
-    }, [isOpen, defaultTab]);
-
-    if (!isOpen) return null;
 
     return (
         <div

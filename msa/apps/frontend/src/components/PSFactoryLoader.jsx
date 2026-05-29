@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Circle, Triangle, Square, X as XIcon, Settings } from 'lucide-react';
 
-const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
+const PSFactoryLoader = ({ onClose, gameName }) => {
     const [step, setStep] = useState(0);
     const [isYellow, setIsYellow] = useState(false);
 
-    const scenarios = [
+    const scenarios = useMemo(() => [
         { time: 0, text: `진열장에서 [${gameName}]의 잠금을 해제했습니다! 공장으로 이송 중...` },
         { time: 8000, text: "추출된 데이터를 온전히 담아낼 투명 패키지 케이스를 성형하는 중..." },
         { time: 16000, text: "고해상도 아트워크와 원석 데이터를 블루레이 디스크에 정밀하게 굽는 중..." },
@@ -13,23 +13,18 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
         { time: 34000, text: "케이스를 닫고 플레이스테이션 공식 정품 인증 홀로그램 씰을 꾹꾹 눌러 붙이는 중..." },
         { time: 44000, text: "완벽하게 포장된 타이틀을 메인 진열장으로 보내기 위해 컨베이어 벨트에 올리는 중..." },
         { time: 54000, text: "최종 데이터 정합성 검증 중... 트래커가 열심히 일하고 있습니다!" }
-    ];
+    ], [gameName]);
 
     useEffect(() => {
-        if (!isOpen) return;
-
-        setStep(0);
-        setIsYellow(false);
-
-        const timers = scenarios.map((scenario, index) => {
-            return setTimeout(() => {
+        const timers = scenarios.map((scenario, index) =>
+            setTimeout(() => {
                 setStep(index);
                 if (index === 3) {
                     setIsYellow(true);
                     setTimeout(() => setIsYellow(false), 2500);
                 }
-            }, scenario.time);
-        });
+            }, scenario.time)
+        );
 
         const fallbackTimer = setTimeout(() => {
             setStep(scenarios.length - 1);
@@ -39,9 +34,7 @@ const PSFactoryLoader = ({ isOpen, onClose, gameName }) => {
             timers.forEach(clearTimeout);
             clearTimeout(fallbackTimer);
         };
-    }, [isOpen, gameName]);
-
-    if (!isOpen) return null;
+    }, [scenarios]);
 
     return (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-glass backdrop-blur-xl animate-fadeIn p-4 sm:p-8 overflow-hidden">
