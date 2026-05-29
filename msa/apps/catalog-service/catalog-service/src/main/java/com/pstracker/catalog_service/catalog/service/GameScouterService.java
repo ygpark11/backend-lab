@@ -119,6 +119,14 @@ public class GameScouterService {
                             String.format("출시 %d개월차. %d번째 할인 중 (%d%%%s). 패턴 형성 중입니다.",
                                     monthsSinceRelease, discountCount, curRate, plusNote)};
                 }
+                // 수집 시작이 출시 후 2개월 이상 늦으면 이전 할인 이력이 누락됐을 수 있음
+                boolean lateTracking = (monthsSinceRelease - tracked) >= 2;
+                if (lateTracking) {
+                    return new String[]{"신작 할인",
+                            String.format("출시 %d개월차 %d%%%s 할인 중. %d.%02d 이전 이력은 미확인입니다.",
+                                    monthsSinceRelease, curRate, plusNote,
+                                    trackingStart.getYear(), trackingStart.getMonthValue())};
+                }
                 return new String[]{"신작 첫 할인",
                         String.format("출시 %d개월만에 %d%%%s 첫 신호 포착. 향후 패턴은 미지수입니다.",
                                 monthsSinceRelease, curRate, plusNote)};
@@ -165,7 +173,7 @@ public class GameScouterService {
             return new String[]{"분석 불가", "가격 이력 데이터가 유효하지 않습니다."};
         }
 
-        String freqText = buildFreqText(monthsPerDiscount);
+        String freqText = buildFreqText(monthsPerDiscount, discountCount);
 
         // 현재 상태를 역사 기준으로 해석 (프론트에서 이미 표시하는 수치 단순 반복 지양)
         String currentStateText = buildCurrentStateText(
@@ -199,7 +207,8 @@ public class GameScouterService {
      * 할인 빈도를 자연어로 표현합니다.
      * monthsPerDiscount = 추적 기간 / 확인된 할인 횟수 (보수적 보정 적용)
      */
-    private String buildFreqText(double monthsPerDiscount) {
+    private String buildFreqText(double monthsPerDiscount, int discountCount) {
+        if (discountCount == 1) return "아직 관측 1회 — 패턴 판단은 이릅니다";
         if (monthsPerDiscount >= 12) return "할인이 드뭅니다 (연 1회 미만)";
         if (monthsPerDiscount >= 2)  return String.format("약 %.0f개월에 1회 꼴", monthsPerDiscount);
         return "자주 세일하는 편 (2개월 이내 1회)";
