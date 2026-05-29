@@ -72,15 +72,24 @@ export default function MyPage() {
         const fetchMyPageData = async () => {
             setIsLoading(true);
             try {
-                const [profileRes, gamesRes, settingsRes] = await Promise.all([
+                const [profileRes, gamesRes, settingsRes] = await Promise.allSettled([
                     client.get('/api/v1/members/me/profile'),
                     client.get('/api/v1/members/me/pioneered'),
                     client.get('/api/v1/members/me/settings')
                 ]);
 
-                setProfile(profileRes.data);
-                setPioneeredGames(gamesRes.data);
-                setSettings(settingsRes.data);
+                if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data);
+                else console.error("마이페이지 데이터 로딩 실패:", profileRes.reason);
+
+                if (gamesRes.status === 'fulfilled') setPioneeredGames(gamesRes.value.data);
+                else console.error("발굴 게임 로딩 실패:", gamesRes.reason);
+
+                if (settingsRes.status === 'fulfilled') setSettings(settingsRes.value.data);
+                else console.error("설정 로딩 실패:", settingsRes.reason);
+
+                if (profileRes.status === 'rejected') {
+                    toast.error("데이터를 불러오지 못했습니다.");
+                }
             } catch (error) {
                 console.error("마이페이지 데이터 로딩 실패:", error);
                 toast.error("데이터를 불러오지 못했습니다.");
@@ -189,10 +198,25 @@ export default function MyPage() {
         );
     }
 
-    const highestTrophy = profile?.trophies.find(t => t.unlocked && t.tier === 'PLATINUM') ||
-        profile?.trophies.find(t => t.unlocked && t.tier === 'GOLD') ||
-        profile?.trophies.find(t => t.unlocked && t.tier === 'SILVER') ||
-        profile?.trophies.find(t => t.unlocked && t.tier === 'BRONZE');
+    if (!profile) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-base transition-colors duration-500">
+                <XIcon className="w-10 h-10 text-secondary" />
+                <p className="font-bold text-sm text-secondary">프로필을 불러올 수 없습니다.</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="mt-2 px-4 py-2 text-xs font-bold rounded-lg border bg-surface border-divider text-primary hover:bg-surface-hover transition-colors"
+                >
+                    다시 시도
+                </button>
+            </div>
+        );
+    }
+
+    const highestTrophy = profile.trophies?.find(t => t.unlocked && t.tier === 'PLATINUM') ||
+        profile.trophies?.find(t => t.unlocked && t.tier === 'GOLD') ||
+        profile.trophies?.find(t => t.unlocked && t.tier === 'SILVER') ||
+        profile.trophies?.find(t => t.unlocked && t.tier === 'BRONZE');
 
     const avatarStyle = highestTrophy ? getTrophyStyle(highestTrophy.tier) : getTrophyStyle('DEFAULT');
     const AvatarIcon = avatarStyle.icon;
