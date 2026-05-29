@@ -172,6 +172,40 @@ class GameScouterServiceTest {
         }
 
         @Test
+        @DisplayName("신작, 출시 4개월차에 2번째 할인 중 → 신작 재할인")
+        void new_game_second_discount_returns_신작_재할인() {
+            int salePrice = discountedPrice(30);
+            var r = sut.calculateDefenseTier(
+                    OP, salePrice, salePrice, false,
+                    TODAY.minusMonths(4),
+                    List.of(
+                            full(TODAY.minusMonths(4)),
+                            sale(TODAY.minusMonths(3), salePrice, 30),
+                            full(TODAY.minusMonths(2)),
+                            sale(TODAY.minusDays(5), salePrice, 30)));
+
+            assertThat(r[0]).isEqualTo("신작 재할인");
+            assertThat(r[1]).contains("2번째 할인").contains("30%");
+        }
+
+        @Test
+        @DisplayName("신작, 추적 시작이 출시 2개월 이상 늦음 + 현재 할인 → 신작 할인 (이전 이력 미확인)")
+        void new_game_late_tracking_returns_신작_할인() {
+            // 출시 5개월차, 1개월 전부터 수집 시작 (lateTracking = 5-1=4 >= 2)
+            int salePrice = discountedPrice(20);
+            var r = sut.calculateDefenseTier(
+                    OP, salePrice, salePrice, false,
+                    TODAY.minusMonths(5),
+                    List.of(
+                            full(TODAY.minusMonths(1)),
+                            sale(TODAY.minusDays(5), salePrice, 20)));
+
+            assertThat(r[0]).isEqualTo("신작 할인");
+            assertThat(r[0]).isNotEqualTo("신작 첫 할인");
+            assertThat(r[1]).doesNotContain("첫 신호").contains("이전 이력은 미확인");
+        }
+
+        @Test
         @DisplayName("원래 버그 재현: 신작 첫 할인인데 N급 신작으로 잘못 표시되던 케이스")
         void regression_new_game_on_first_sale_was_wrongly_N_grade() {
             // 버그: discountCount <= 1 조건이 현재 할인 중인 게임(discountCount=1)을
@@ -589,8 +623,8 @@ class GameScouterServiceTest {
     class FrequencyTests {
 
         @Test
-        @DisplayName("12개월 추적, 1번 할인 → 연 1회 미만")
-        void once_in_12_months_is_rare() {
+        @DisplayName("12개월 추적, 1번 할인 → 관측 1회 (패턴 판단 이름)")
+        void once_in_12_months_single_observation() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
                     OP, OP, lowest, false,
@@ -600,6 +634,26 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(6), lowest, 30),
                             full(TODAY.minusMonths(4))));
 
+            // discountCount=1 → 빈도 판단 대신 "아직 관측 1회" 안내
+            assertThat(r[1]).contains("아직 관측 1회");
+            assertThat(r[1]).doesNotContain("연 1회 미만").doesNotContain("개월에 1회");
+        }
+
+        @Test
+        @DisplayName("24개월 추적, 2번 할인 → 연 1회 미만 (관측 2회 이상, 빈도 판단 신뢰)")
+        void rare_discount_with_multiple_observations() {
+            int lowest = discountedPrice(30);
+            var r = sut.calculateDefenseTier(
+                    OP, OP, lowest, false,
+                    TODAY.minusMonths(36),
+                    List.of(
+                            full(TODAY.minusMonths(24)),
+                            sale(TODAY.minusMonths(18), lowest, 30),
+                            full(TODAY.minusMonths(15)),
+                            sale(TODAY.minusMonths(6), lowest, 30),
+                            full(TODAY.minusMonths(3))));
+
+            // discountCount=2, monthsPerDiscount=24/2=12 → "연 1회 미만"
             assertThat(r[1]).contains("연 1회 미만");
         }
 
@@ -656,6 +710,30 @@ class GameScouterServiceTest {
                             full(TODAY)));
 
             assertThat(r[1]).contains("자주 세일하는 편");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 데이터 품질 이상
+    // ═══════════════════════════════════════════════════════════
+    @Nested
+    @DisplayName("데이터 품질 이상")
+    class DataQualityTests {
+
+        @Test
+        @DisplayName("discountRate > 0인데 price가 정가와 동일 → 유효 최저가 없음 → 분석 불가")
+        void invalid_lowest_price_returns_분석_불가() {
+            // discountRate=20이지만 실제 price=OP (데이터 품질 이상)
+            // → safeLowest=OP, hasValidLowest=false → Layer 4 가드에서 차단
+            var r = sut.calculateDefenseTier(
+                    OP, OP, null, false,
+                    TODAY.minusMonths(18),
+                    List.of(
+                            full(TODAY.minusMonths(12)),
+                            sale(TODAY.minusMonths(3), OP, 20),
+                            full(TODAY.minusMonths(1))));
+
+            assertThat(r[0]).isEqualTo("분석 불가");
         }
     }
 
