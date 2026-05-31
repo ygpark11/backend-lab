@@ -37,10 +37,10 @@ const PSFactoryLoader = ({ onClose, gameName }) => {
     }, [scenarios]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-glass backdrop-blur-xl animate-fadeIn p-4 sm:p-8 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base/95 animate-fadeIn p-4 sm:p-8 overflow-hidden">
 
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
-                <Settings className="absolute w-96 h-96 text-ps-blue" style={{ animation: 'spin 30s linear infinite', top: '-10%', left: '-10%' }} />
+                <Settings className="absolute w-96 h-96 text-ps-blue will-change-transform transform-gpu" style={{ animation: 'spin 30s linear infinite', top: '-10%', left: '-10%' }} />
             </div>
 
             <div className="absolute top-6 w-full text-center px-4 animate-slideDown z-50">
@@ -65,33 +65,33 @@ const PSFactoryLoader = ({ onClose, gameName }) => {
                 `}>
 
                     <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
-                        <div className="w-full h-[2px] bg-ps-blue shadow-[0_0_20px_rgba(59,130,246,1)]" style={{ animation: 'gpu-scan 3s linear infinite' }}></div>
+                        <div className="w-full h-[2px] bg-ps-blue shadow-[0_0_20px_rgba(59,130,246,1)] will-change-transform transform-gpu" style={{ animation: 'gpu-scan 3s linear infinite' }}></div>
                     </div>
 
                     {/* 네모 (비활성 상태: text-muted 로 뚜렷하게) */}
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
-                        <Square className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-all duration-700 
+                        <Square className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-all duration-700 will-change-transform transform-gpu
                             ${step >= 1 ? 'text-[#E8789C] drop-shadow-[0_0_15px_rgba(232,120,156,0.6)] scale-110 animate-pulse' : 'text-muted scale-90'}
                         `} />
                     </div>
 
                     {/* 동그라미 */}
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
-                        <Circle className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-all duration-700 
+                        <Circle className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-all duration-700 will-change-transform transform-gpu
                             ${step >= 2 ? 'text-[#FF3E3E] drop-shadow-[0_0_15px_rgba(255,62,62,0.6)] scale-110' : 'text-muted scale-90'}
                         `} style={{ animation: step >= 2 ? 'spin 2.5s linear infinite' : 'none' }} />
                     </div>
 
                     {/* 세모 */}
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
-                        <Triangle className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-colors duration-300 
+                        <Triangle className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[3px] transition-colors duration-300 will-change-transform transform-gpu
                             ${step >= 3 ? (isYellow ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.9)] animate-bounce' : 'text-[#00A39D] drop-shadow-[0_0_15px_rgba(0,163,157,0.6)] scale-110') : 'text-muted scale-90'}
                         `} style={{ animation: step >= 3 ? (isYellow ? 'none' : 'bounce 2.5s infinite') : 'none' }} />
                     </div>
 
                     {/* 엑스 */}
                     <div className="relative flex justify-center items-center w-12 h-12 z-10">
-                        <XIcon className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[4px] transition-all duration-700 
+                        <XIcon className={`w-10 h-10 sm:w-12 sm:h-12 stroke-[4px] transition-all duration-700 will-change-transform transform-gpu
                             ${step >= 4 ? 'text-[#4E6CBB] drop-shadow-[0_0_20px_rgba(78,108,187,0.8)] scale-110' : 'text-muted scale-90'}
                         `} style={{ animation: step >= 4 ? 'spin 4.5s linear infinite reverse' : 'none' }} />
                     </div>

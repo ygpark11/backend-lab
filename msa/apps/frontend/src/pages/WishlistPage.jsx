@@ -173,7 +173,7 @@ const WishlistPage = () => {
                 detail: { gameId: Number(gameId), liked: false }
             }));
 
-        } catch (error) {
+        } catch {
             toast.dismiss(toastId);
             toast.error("삭제 실패", { duration: 3000 });
         }
@@ -197,13 +197,9 @@ const WishlistPage = () => {
         }
     };
 
-    const handleGenreClick = (e, genre) => {
-        e.stopPropagation();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        navigate(`/games?genre=${encodeURIComponent(genre)}`, { state: null });
-    };
 
-    const displayedGames = onSaleOnly ? games.filter(g => g.discountRate > 0) : games;
+    const onSaleGames = games.filter(g => g.discountRate > 0);
+    const displayedGames = onSaleOnly ? onSaleGames : games;
 
     const totalSavings = games.reduce((acc, game) => {
         if (!game.originalPrice || !game.currentPrice) return acc;
@@ -314,14 +310,23 @@ const WishlistPage = () => {
                     <div className="flex items-center gap-2 mb-5">
                         <button
                             onClick={() => setOnSaleOnly(prev => !prev)}
-                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${
                                 onSaleOnly
-                                    ? 'bg-ps-blue text-white border-ps-blue shadow-[0_0_12px_rgba(59,130,246,0.4)]'
-                                    : 'bg-surface text-secondary border-divider hover:text-primary hover:bg-surface-hover'
+                                    ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
+                                    : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
                             }`}
                         >
-                            <TrendingDown className="w-3.5 h-3.5" />
+                            <TrendingDown className="w-4 h-4" />
                             할인 중만 보기
+                            {onSaleGames.length > 0 && (
+                                <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${
+                                    onSaleOnly
+                                        ? 'bg-white/20 text-white'
+                                        : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                }`}>
+                                    {onSaleGames.length}
+                                </span>
+                            )}
                         </button>
                     </div>
                 )}

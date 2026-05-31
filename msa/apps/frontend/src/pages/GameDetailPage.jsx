@@ -169,7 +169,7 @@ export default function GameDetailPage() {
                             toast.success("삭제 완료!", { id: loadId });
                             navigate('/games', { replace: true, state: null });
                             window.location.reload();
-                        } catch (err) {
+                        } catch {
                             toast.error("삭제 실패: 권한을 확인하세요.", { id: loadId });
                         }
                     }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-xs font-bold transition-colors">
@@ -293,7 +293,7 @@ export default function GameDetailPage() {
         try {
             await navigator.clipboard.writeText(window.location.href);
             toast.success('링크가 복사되었습니다!', { style: { borderRadius: '10px', background: 'var(--color-bg-surface)', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }, icon: <Check className="w-5 h-5 text-green-500" /> });
-        } catch (err) {
+        } catch {
             toast.error('링크 복사에 실패했습니다.');
         }
     };
@@ -304,7 +304,7 @@ export default function GameDetailPage() {
             await adminApi.refreshGame(id);
             toast.success("수집 요청 완료! 잠시 후 새로고침 됩니다.", { id: loadId });
             setTimeout(() => window.location.reload(), 4000);
-        } catch (err) {
+        } catch {
             toast.error("수집 요청 실패: 관리자 권한을 확인하세요.", { id: loadId });
         }
     };
@@ -342,14 +342,6 @@ export default function GameDetailPage() {
         if (m === 0) return `${h}h`;
         return `${h}h ${m}m`;
     };
-
-    const tagStyles = [
-        "text-cyan-400 border-cyan-500/40 hover:shadow-[0_0_15px_rgba(34,211,238,0.6)]",
-        "text-pink-400 border-pink-500/40 hover:shadow-[0_0_15px_rgba(236,72,153,0.6)]",
-        "text-purple-400 border-purple-500/40 hover:shadow-[0_0_15px_rgba(168,85,247,0.6)]",
-        "text-yellow-400 border-yellow-500/40 hover:shadow-[0_0_15px_rgba(234,179,8,0.6)]",
-        "text-green-400 border-green-500/40 hover:shadow-[0_0_15px_rgba(34,197,94,0.6)]"
-    ];
 
     const glowStyle = {
         'BUY_NOW': 'border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.15)]',

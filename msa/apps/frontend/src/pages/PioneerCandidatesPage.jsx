@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 
 import client from '../api/client';
@@ -18,7 +18,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
     const holdTimer = useRef(null);
     const progressInterval = useRef(null);
 
-    const particles = useMemo(() => {
+    const [particles] = useState(() => {
         const types = ['triangle', 'circle', 'x', 'square'];
         const colors = ['text-[#00A39D]', 'text-[#FF3E3E]', 'text-[#4E6CBB]', 'text-[#E8789C]'];
         return Array.from({ length: 16 }).map((_, i) => {
@@ -26,9 +26,9 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
             const distance = 120 + Math.random() * 100;
             return { id: i, type: types[i % 4], color: colors[i % 4], x: Math.cos(angle) * distance, y: Math.sin(angle) * distance, delay: Math.random() * 0.4 };
         });
-    }, []);
+    });
 
-    const startHold = (e) => {
+    const startHold = () => {
         if (!isAuthenticated) { openLoginModal(); return; }
         if (isUnlocked) return;
 
@@ -171,7 +171,7 @@ const PioneerCandidatesPage = () => {
         try {
             const response = await client.get('/api/v1/scraping/candidates');
             setCandidates(response.data);
-        } catch (err) {
+        } catch {
             setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
             toast.error("데이터 로딩 실패");
         } finally { setLoading(false); }
@@ -256,7 +256,7 @@ const PioneerCandidatesPage = () => {
 
                 {!error && (
                     candidates.length > 0 ? (
-                        <div className="relative p-4 sm:p-6 md:p-8 bg-glass backdrop-blur-2xl rounded-2xl sm:rounded-[3rem] border border-divider shadow-2xl overflow-hidden mt-4 animate-fadeIn transition-colors duration-500">
+                        <div className="relative p-4 sm:p-6 md:p-8 bg-glass backdrop-blur-md rounded-2xl sm:rounded-[3rem] border border-divider shadow-2xl overflow-hidden mt-4 animate-fadeIn transition-colors duration-500">
                             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-ps-blue to-transparent opacity-50 shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
                             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
 

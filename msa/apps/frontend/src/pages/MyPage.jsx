@@ -148,7 +148,7 @@ export default function MyPage() {
                     </div>
                 ), { duration: 3000, position: 'top-center' });
             }
-        } catch (error) {
+        } catch {
             setSettings(settings); // 롤백
             toast.error("설정 변경에 실패했습니다.");
         }

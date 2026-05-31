@@ -240,7 +240,7 @@ const formatSaleEndDate = (dateStr) => {
     return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 };
 
-const PricingCard = ({ tier, name, price, discountPrice, discountRate, saleEndDate, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick, onMonthlyGamesClick }) => {
+const PricingCard = ({ name, price, discountPrice, discountRate, saleEndDate, historyData, benefits, theme, icon: Icon, onCatalogClick, onExclusiveClick, onMonthlyGamesClick }) => {
 
     const themeStyles = {
         basic: {
