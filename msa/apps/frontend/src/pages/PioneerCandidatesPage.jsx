@@ -343,10 +343,15 @@ const PioneerCandidatesPage = () => {
                                     <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} onDelete={handleDeleteCandidate} isAuthenticated={isAuthenticated} isAdmin={isAdmin} openLoginModal={openLoginModal} />
                                 ))}
                             </div>
-                            {hasNext && (
+                            {hasNext ? (
                                 <div ref={sentinelRef} className="flex justify-center items-center py-8 gap-2 text-secondary text-xs font-bold">
                                     <RefreshCw className={`w-4 h-4 text-ps-blue ${isFetchingMore ? 'animate-spin' : ''}`} />
                                     <span className="text-ps-blue">캡슐 탐색 중...</span>
+                                </div>
+                            ) : (
+                                <div className="text-center text-muted text-sm font-bold mt-8 p-6 bg-surface border border-divider rounded-2xl animate-fadeIn">
+                                    <Lock className="w-6 h-6 mx-auto mb-3 opacity-30 stroke-[2]" />
+                                    진열장의 모든 봉인 캡슐을 탐색했습니다.
                                 </div>
                             )}
                         </div>
