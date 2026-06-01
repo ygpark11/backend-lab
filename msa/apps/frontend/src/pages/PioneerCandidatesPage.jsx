@@ -11,12 +11,18 @@ import SEO from '../components/common/SEO';
 import {useAuth} from '../contexts/AuthContext';
 import PSFactoryLoader from '../components/PSFactoryLoader';
 
+const renderParticleIcon = (type, color) => {
+    const cls = `w-8 h-8 sm:w-10 sm:h-10 stroke-[4px] drop-shadow-[0_0_15px_currentColor] ${color}`;
+    if (type === 'triangle') return <Triangle className={cls} />;
+    if (type === 'circle') return <Circle className={cls} />;
+    if (type === 'x') return <XIcon className={cls} />;
+    return <Square className={cls} />;
+};
+
 const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => {
     const [isHolding, setIsHolding] = useState(false);
-    const [progress, setProgress] = useState(0);
     const [isUnlocked, setIsUnlocked] = useState(false);
     const holdTimer = useRef(null);
-    const progressInterval = useRef(null);
 
     const [particles] = useState(() => {
         const types = ['triangle', 'circle', 'x', 'square'];
@@ -33,22 +39,10 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
         if (isUnlocked) return;
 
         setIsHolding(true);
-        setProgress(0);
-
-        // 1.5초(1500ms) 동안 프로그레스 바 차오르게 설정
-        progressInterval.current = setInterval(() => {
-            setProgress((prev) => {
-                if (prev >= 100) { clearInterval(progressInterval.current); return 100; }
-                return prev + (100 / (1500 / 15));
-            });
-        }, 15);
 
         holdTimer.current = setTimeout(() => {
-            clearInterval(progressInterval.current);
             setIsHolding(false);
-            setProgress(100);
             setIsUnlocked(true);
-
             setTimeout(() => { onExtract(game); }, 1000);
         }, 1500);
     };
@@ -57,16 +51,6 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
         if (isUnlocked) return;
         setIsHolding(false);
         clearTimeout(holdTimer.current);
-        clearInterval(progressInterval.current);
-        setProgress(0);
-    };
-
-    const renderParticleIcon = (type, color) => {
-        const cls = `w-8 h-8 sm:w-10 sm:h-10 stroke-[4px] drop-shadow-[0_0_15px_currentColor] ${color}`;
-        if (type === 'triangle') return <Triangle className={cls} />;
-        if (type === 'circle') return <Circle className={cls} />;
-        if (type === 'x') return <XIcon className={cls} />;
-        return <Square className={cls} />;
     };
 
     return (
@@ -94,7 +78,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                 <div className={`absolute inset-0 z-20 pointer-events-none transition-transform duration-800 ease-[cubic-bezier(0.25,1,0.5,1)] origin-top
                     ${isUnlocked ? '-translate-y-[105%] opacity-0' : 'translate-y-0 opacity-100'}
                 `}>
-                    <div className="absolute inset-0 backdrop-blur-[1px] bg-gradient-to-b from-white/10 via-transparent to-black/10 rounded-xl overflow-hidden border border-white/10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/10 rounded-xl overflow-hidden border border-white/10"></div>
                 </div>
 
                 <div className={`absolute inset-0 z-30 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-300 ${isHolding && !isUnlocked ? 'opacity-100' : 'opacity-0'}`}>
@@ -102,8 +86,8 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                     {particles.map((p) => (
                         <div
                             key={p.id}
-                            className="absolute animate-blackhole"
-                            style={Object.assign({ animationDelay: `${p.delay}s` }, { '--startX': `${p.x}px`, '--startY': `${p.y}px` })}
+                            className="absolute animate-blackhole will-change-transform transform-gpu"
+                            style={{ animationDelay: `${p.delay}s`, '--startX': `${p.x}px`, '--startY': `${p.y}px` }}
                         >
                             {renderParticleIcon(p.type, p.color)}
                         </div>
@@ -140,8 +124,11 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                     >
                         {/* 프로그레스 바 채우기 */}
                         <div
-                            className="absolute left-0 top-0 h-full w-full origin-left bg-gradient-to-r from-ps-blue to-cyan-400 transition-none opacity-90 shadow-[0_0_15px_rgba(59,130,246,1)] transform-gpu will-change-transform"
-                            style={{ transform: `scaleX(${progress / 100})` }}
+                            className="absolute left-0 top-0 h-full w-full origin-left bg-gradient-to-r from-ps-blue to-cyan-400 opacity-90 shadow-[0_0_15px_rgba(59,130,246,1)] transform-gpu will-change-transform"
+                            style={{
+                                transform: isUnlocked ? 'scaleX(1)' : (!isHolding ? 'scaleX(0)' : undefined),
+                                animation: (isHolding && !isUnlocked) ? 'hold-progress 1.5s linear forwards' : 'none'
+                            }}
                         ></div>
 
                         <div className={`relative z-10 flex items-center justify-center gap-1.5 tracking-wide whitespace-nowrap ${isHolding ? 'text-white drop-shadow-md' : ''}`}>
@@ -211,8 +198,8 @@ const PioneerCandidatesPage = () => {
             {/* 배경 오로라 이펙트 */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
                 <div className="absolute inset-0 z-20 opacity-60">
-                    <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
-                    <div className="absolute bottom-[10%] right-[10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[60px] sm:blur-[120px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
+                    <div className="absolute top-[10%] left-[10%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[80px] md:animate-[pulse_10s_ease-in-out_infinite]"></div>
+                    <div className="absolute bottom-[10%] right-[10%] w-[50%] h-[50%] bg-cyan-500/20 rounded-full blur-[80px] md:animate-[pulse_8s_ease-in-out_infinite]"></div>
                 </div>
             </div>
 
@@ -256,7 +243,7 @@ const PioneerCandidatesPage = () => {
 
                 {!error && (
                     candidates.length > 0 ? (
-                        <div className="relative p-4 sm:p-6 md:p-8 bg-glass backdrop-blur-md rounded-2xl sm:rounded-[3rem] border border-divider shadow-2xl overflow-hidden mt-4 animate-fadeIn transition-colors duration-500">
+                        <div className="relative p-4 sm:p-6 md:p-8 bg-glass rounded-2xl sm:rounded-[3rem] border border-divider shadow-2xl overflow-hidden mt-4 animate-fadeIn transition-colors duration-500">
                             <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-ps-blue to-transparent opacity-50 shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
                             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
 

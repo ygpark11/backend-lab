@@ -108,7 +108,7 @@ const PSFactoryLoader = ({ onClose, gameName }) => {
 
                     <div className="w-full mt-6 flex flex-col items-center gap-2 max-w-md">
                         <div className="relative h-2 w-full bg-surface rounded-full overflow-hidden border border-divider shadow-inner">
-                            <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(59,130,246,0.6)_10px,rgba(59,130,246,0.6)_20px)] animate-[progress_2s_linear_infinite]"></div>
+                            <div className="absolute top-0 bottom-0 left-[-40px] right-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(59,130,246,0.6)_10px,rgba(59,130,246,0.6)_20px)] will-change-transform transform-gpu" style={{ animation: 'progress-stripe 2s linear infinite' }}></div>
                             <div className="absolute inset-0 bg-gradient-to-r from-base via-transparent to-base pointer-events-none"></div>
                         </div>
 

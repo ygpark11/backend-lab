@@ -183,9 +183,14 @@ html { scrollbar-gutter: stable; }
     }
     .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: var(--color-brand-blue); }
 
-    @keyframes progress {
-        0% { background-position: 0 0; }
-        100% { background-position: 40px 0; }
+    @keyframes progress-stripe {
+        from { transform: translateX(0); }
+        to { transform: translateX(40px); }
+    }
+
+    @keyframes hold-progress {
+        from { transform: scaleX(0); }
+        to { transform: scaleX(1); }
     }
 
     @keyframes gpu-scan {
