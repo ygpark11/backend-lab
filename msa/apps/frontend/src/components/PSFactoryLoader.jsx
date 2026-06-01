@@ -37,7 +37,7 @@ const PSFactoryLoader = ({ onClose, gameName }) => {
     }, [scenarios]);
 
     return (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base/95 animate-fadeIn p-4 sm:p-8 overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-base animate-fadeIn p-4 sm:p-8 overflow-hidden">
 
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.04]">
                 <Settings className="absolute w-96 h-96 text-ps-blue will-change-transform transform-gpu" style={{ animation: 'spin 30s linear infinite', top: '-10%', left: '-10%' }} />
