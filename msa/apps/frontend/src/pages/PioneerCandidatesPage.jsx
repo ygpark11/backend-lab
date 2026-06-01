@@ -55,7 +55,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
 
     return (
         <div
-            className={`relative group rounded-xl overflow-hidden shadow-lg border transition-all duration-800 ease-out flex flex-col h-full bg-base
+            className={`relative group rounded-xl overflow-hidden shadow-lg border transition-[transform,border-color,box-shadow] duration-300 ease-out flex flex-col h-full bg-base
             ${isUnlocked ? 'border-ps-blue shadow-[0_0_50px_rgba(59,130,246,0.8)] z-50 scale-105' : 'border-divider hover:border-ps-blue hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'}
         `}>
             {/* 게임 포스터 영역 */}
@@ -63,19 +63,23 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.title}
-                    className={`absolute inset-0 w-full h-full object-cover transition-all duration-800 ease-[cubic-bezier(0.25,1,0.5,1)]
+                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
                         ${isUnlocked
-                        ? 'grayscale-0 scale-125 brightness-110 z-10'
+                        ? 'scale-125 z-10'
                         : (isHolding
-                            ? 'grayscale-0 scale-110 brightness-75'
-                            : 'grayscale-[80%] contrast-125 brightness-90 scale-100 group-hover:grayscale-0 group-hover:brightness-110')}
+                            ? 'scale-110'
+                            : 'scale-100 group-hover:scale-105')}
                     `}
                 />
 
-                <div className={`absolute inset-0 pointer-events-none transition-opacity duration-500 bg-ps-blue/20 mix-blend-overlay ${isUnlocked || isHolding ? 'opacity-0' : 'opacity-100 group-hover:opacity-0'}`}></div>
+                {/* 봉인 오버레이 — grayscale filter 대체 */}
+                <div className={`absolute inset-0 pointer-events-none transition-opacity duration-500
+                    bg-gradient-to-b from-[rgba(5,10,30,0.68)] to-[rgba(2,6,18,0.82)]
+                    ${isUnlocked || isHolding ? 'opacity-0' : 'opacity-100 group-hover:opacity-0'}
+                `} />
 
                 {/* 스마트 글래스 스캔 이펙트 */}
-                <div className={`absolute inset-0 z-20 pointer-events-none transition-transform duration-800 ease-[cubic-bezier(0.25,1,0.5,1)] origin-top
+                <div className={`absolute inset-0 z-20 pointer-events-none transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] origin-top
                     ${isUnlocked ? '-translate-y-[105%] opacity-0' : 'translate-y-0 opacity-100'}
                 `}>
                     <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/10 rounded-xl overflow-hidden border border-white/10"></div>
@@ -106,7 +110,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
             </div>
 
             {/* 정보 및 제어부 */}
-            <div className={`p-4 flex flex-col flex-grow bg-base relative z-40 transition-all duration-600 border-t border-divider
+            <div className={`p-4 flex flex-col flex-grow bg-base relative z-40 transition-[transform,opacity] duration-500 border-t border-divider
                 ${isUnlocked ? 'translate-y-10 opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}
             `}>
                 <h3 className={`text-sm font-black leading-snug line-clamp-2 h-[2.8em] mb-4 transition-colors ${isHolding ? 'text-ps-blue animate-pulse' : 'text-primary'}`}>
@@ -116,7 +120,7 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                 <div className="mt-auto">
                     <button
                         onMouseDown={startHold} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={startHold} onTouchEnd={endHold}
-                        className={`relative w-full overflow-hidden border-2 py-3 rounded-lg text-xs font-black transition-all touch-none select-none
+                        className={`relative w-full overflow-hidden border-2 py-3 rounded-lg text-xs font-black transition-[border-color,background-color,box-shadow,transform,color] duration-200 touch-none select-none
                             ${isHolding
                             ? 'border-ps-blue scale-95 bg-[var(--bento-blue-from)] shadow-[0_0_20px_rgba(59,130,246,0.5)] text-ps-blue'
                             : 'border-divider-strong bg-surface text-secondary hover:bg-[var(--bento-blue-from)] hover:border-[color:var(--bento-blue-border-hover)] hover:text-ps-blue shadow-sm'}
