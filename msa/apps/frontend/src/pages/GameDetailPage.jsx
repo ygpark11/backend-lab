@@ -168,7 +168,6 @@ export default function GameDetailPage() {
                             await adminApi.deleteGame(id);
                             toast.success("삭제 완료!", { id: loadId });
                             navigate('/games', { replace: true, state: null });
-                            window.location.reload();
                         } catch {
                             toast.error("삭제 실패: 권한을 확인하세요.", { id: loadId });
                         }
