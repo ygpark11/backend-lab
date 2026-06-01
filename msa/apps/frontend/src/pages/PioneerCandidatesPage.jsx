@@ -2,13 +2,15 @@ import React, {useEffect, useRef, useState} from 'react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 
 import client from '../api/client';
+import {adminApi} from '../api/adminApi';
 import toast from 'react-hot-toast';
-import {Circle, Cpu, Gamepad2, Lock, Pickaxe, RefreshCw, Square, Triangle, Unlock, X as XIcon, Info} from 'lucide-react';
+import {Circle, Cpu, Gamepad2, Lock, Pickaxe, RefreshCw, Square, Trash2, Triangle, Unlock, X as XIcon, Info} from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import HelpModal from '../components/common/HelpModal';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import {useAuth} from '../contexts/AuthContext';
+import {useCurrentUser} from '../hooks/useCurrentUser';
 import PSFactoryLoader from '../components/PSFactoryLoader';
 
 const renderParticleIcon = (type, color) => {
@@ -19,7 +21,7 @@ const renderParticleIcon = (type, color) => {
     return <Square className={cls} />;
 };
 
-const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => {
+const CandidateCard = ({ game, onExtract, onDelete, isAuthenticated, isAdmin, openLoginModal }) => {
     const [isHolding, setIsHolding] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
     const holdTimer = useRef(null);
@@ -106,6 +108,14 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
                         {isHolding ? <Unlock className="w-3 h-3 animate-pulse"/> : <Lock className="w-3 h-3 text-red-500"/>}
                         {isHolding ? '디코딩 중...' : '봉인 데이터'}
                     </span>
+                    {isAdmin && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(game); }}
+                            className="pointer-events-auto absolute top-2 right-2 p-1.5 rounded-lg bg-black/70 border border-white/20 text-red-400 hover:bg-red-500/20 hover:border-red-400 transition-all"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -149,26 +159,103 @@ const CandidateCard = ({ game, onExtract, isAuthenticated, openLoginModal }) => 
 const PioneerCandidatesPage = () => {
     const navigate = useTransitionNavigate();
     const { isAuthenticated, openLoginModal } = useAuth();
+    const { isAdmin } = useCurrentUser();
     const [candidates, setCandidates] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+    const [hasNext, setHasNext] = useState(false);
     const [error, setError] = useState(null);
     const [isFactoryModalOpen, setIsFactoryModalOpen] = useState(false);
     const [extractingGame, setExtractingGame] = useState(null);
+    const sentinelRef = useRef(null);
+    const pageRef = useRef(0);
+    const isFetchingMoreRef = useRef(false);
 
     const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
 
-    const fetchCandidates = async () => {
-        setLoading(true); setError(null);
+    const fetchPage = async (pageNum, replace = false) => {
         try {
-            const response = await client.get('/api/v1/scraping/candidates');
-            setCandidates(response.data);
+            const response = await client.get(`/api/v1/scraping/candidates?page=${pageNum}`);
+            const { content, hasNext } = response.data;
+            pageRef.current = pageNum;
+            setHasNext(hasNext);
+            if (replace) setCandidates(content);
+            else setCandidates(prev => [...prev, ...content]);
         } catch {
-            setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
+            if (replace) setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
             toast.error("데이터 로딩 실패");
-        } finally { setLoading(false); }
+        }
     };
 
-    useEffect(() => { fetchCandidates(); }, []);
+    const handleRefresh = async () => {
+        setLoading(true); setError(null);
+        await fetchPage(0, true);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        const init = async () => {
+            try {
+                const response = await client.get('/api/v1/scraping/candidates?page=0');
+                const { content, last } = response.data;
+                pageRef.current = 0;
+                setHasNext(!last);
+                setCandidates(content);
+            } catch {
+                setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
+                toast.error("데이터 로딩 실패");
+            } finally {
+                setLoading(false);
+            }
+        };
+        init();
+    }, []);
+
+    useEffect(() => {
+        const sentinel = sentinelRef.current;
+        if (!sentinel || !hasNext) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && !isFetchingMoreRef.current) {
+                    isFetchingMoreRef.current = true;
+                    setIsFetchingMore(true);
+                    fetchPage(pageRef.current + 1).finally(() => {
+                        isFetchingMoreRef.current = false;
+                        setIsFetchingMore(false);
+                    });
+                }
+            },
+            { rootMargin: '200px' }
+        );
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [hasNext]);
+
+    const handleDeleteCandidate = async (game) => {
+        toast((t) => (
+            <span className="flex flex-col gap-2 text-sm">
+                <span><strong>{game.title}</strong> 후보를 삭제할까요?</span>
+                <div className="flex gap-2">
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            const loadId = toast.loading("삭제 중...");
+                            try {
+                                await adminApi.deleteCandidate(game.psStoreId);
+                                setCandidates(prev => prev.filter(c => c.psStoreId !== game.psStoreId));
+                                toast.success("삭제 완료!", { id: loadId });
+                            } catch {
+                                toast.error("삭제 실패", { id: loadId });
+                            }
+                        }}
+                        className="px-3 py-1 bg-red-500 text-white rounded font-bold text-xs hover:bg-red-600"
+                    >삭제</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1 bg-gray-200 text-gray-800 rounded font-bold text-xs hover:bg-gray-300">취소</button>
+                </div>
+            </span>
+        ), { duration: 6000 });
+    };
 
     const handleExtractStart = async (game) => {
         setExtractingGame(game);
@@ -240,7 +327,7 @@ const PioneerCandidatesPage = () => {
                             </h3>
                         </div>
                     </div>
-                    <button onClick={fetchCandidates} className="mt-5 sm:mt-0 relative z-10 flex items-center gap-2 bg-surface hover:bg-[var(--bento-blue-from)] hover:text-ps-blue border border-divider hover:border-[color:var(--bento-blue-border-hover)] px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary w-full sm:w-auto justify-center shadow-sm">
+                    <button onClick={handleRefresh} className="mt-5 sm:mt-0 relative z-10 flex items-center gap-2 bg-surface hover:bg-[var(--bento-blue-from)] hover:text-ps-blue border border-divider hover:border-[color:var(--bento-blue-border-hover)] px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary w-full sm:w-auto justify-center shadow-sm">
                         <RefreshCw className={`w-4 h-4 transition-transform duration-700 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} /> 레이더 재스캔
                     </button>
                 </div>
@@ -253,9 +340,15 @@ const PioneerCandidatesPage = () => {
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 relative z-10">
                                 {candidates.map((game) => (
-                                    <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} isAuthenticated={isAuthenticated} openLoginModal={openLoginModal} />
+                                    <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} onDelete={handleDeleteCandidate} isAuthenticated={isAuthenticated} isAdmin={isAdmin} openLoginModal={openLoginModal} />
                                 ))}
                             </div>
+                            {hasNext && (
+                                <div ref={sentinelRef} className="flex justify-center items-center py-8 gap-2 text-secondary text-xs font-bold">
+                                    <RefreshCw className={`w-4 h-4 text-ps-blue ${isFetchingMore ? 'animate-spin' : ''}`} />
+                                    <span className="text-ps-blue">캡슐 탐색 중...</span>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center py-24 sm:py-32 bg-glass backdrop-blur-md rounded-2xl sm:rounded-[3rem] border border-dashed border-divider mt-4 relative overflow-hidden shadow-sm animate-fadeIn">

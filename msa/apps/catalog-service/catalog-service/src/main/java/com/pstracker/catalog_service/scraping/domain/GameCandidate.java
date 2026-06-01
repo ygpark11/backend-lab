@@ -26,18 +26,10 @@ public class GameCandidate extends BaseTimeEntity {
     @Column(name = "image_url")
     private String imageUrl;
 
-    @Column(name = "is_hidden", nullable = false)
-    private boolean isHidden = false;
-
     @Builder
     public GameCandidate(String psStoreId, String title, String imageUrl) {
         this.psStoreId = psStoreId;
         this.title = title;
         this.imageUrl = imageUrl;
-        this.isHidden = false;
-    }
-
-    public void sendToIncinerator() {
-        this.isHidden = true;
     }
 }

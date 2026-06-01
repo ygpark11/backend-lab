@@ -1182,6 +1182,10 @@ def check_if_busy():
 def set_rating_running(state):
     global is_rating_running
     is_rating_running = state
+    # rating 완료 후 대기 중인 VIP 요청이 있으면 즉시 처리
+    if not state and not urgent_queue.empty() and not is_vip_running and not is_batch_running:
+        threading.Thread(target=run_vip_only_logic, daemon=True).start()
+        logger.info("[VIP Worker] rating 완료 후 밀린 VIP 요청 처리 시작")
 
 if __name__ == '__main__':
     threading.Thread(target=rating_worker.start_polling, args=(BASE_URL, CRAWLER_SECRET_KEY, check_if_busy, set_rating_running, crawler_lock), daemon=True).start()

@@ -9,6 +9,7 @@ import com.pstracker.catalog_service.global.security.JwtTokenProvider;
 import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccessHandler;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
+import com.pstracker.catalog_service.scraping.service.ScrapingQueueService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,9 @@ public class AdminControllerTest {
 
     @MockitoBean
     private InsightsService insightsService;
+
+    @MockitoBean
+    private ScrapingQueueService scrapingQueueService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -106,5 +110,38 @@ public class AdminControllerTest {
         mockMvc.perform(delete("/api/v1/admin/games/{gameId}", 1L)
                         .with(csrf()))
                 .andExpect(status().isUnauthorized()); // 401 실패 (성공!)
+    }
+
+    // ── deleteCandidate ──────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("성공: 관리자(ADMIN)가 후보 게임 삭제 요청 시 204 반환")
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void deleteCandidate_Success_Admin() throws Exception {
+        // given
+        String psStoreId = "PPSA-TEST-001";
+        doNothing().when(scrapingQueueService).deleteCandidate(psStoreId);
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/admin/scraping/candidates/{psStoreId}", psStoreId)
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("실패: 일반 유저(USER)가 후보 게임 삭제 요청 시 403 Forbidden")
+    @WithMockUser(username = "user", roles = "USER")
+    void deleteCandidate_Fail_User() throws Exception {
+        mockMvc.perform(delete("/api/v1/admin/scraping/candidates/{psStoreId}", "PPSA-TEST-001")
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패: 로그인 안 한 사용자가 후보 게임 삭제 요청 시 401 Unauthorized")
+    void deleteCandidate_Fail_Anonymous() throws Exception {
+        mockMvc.perform(delete("/api/v1/admin/scraping/candidates/{psStoreId}", "PPSA-TEST-001")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
     }
 }

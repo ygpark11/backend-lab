@@ -11,5 +11,9 @@ export const adminApi = {
 
     clearInsightsCache: async () => {
         return await client.post('/api/v1/admin/insights/refresh');
+    },
+
+    deleteCandidate: async (psStoreId) => {
+        return await client.delete(`/api/v1/admin/scraping/candidates/${psStoreId}`);
     }
 };

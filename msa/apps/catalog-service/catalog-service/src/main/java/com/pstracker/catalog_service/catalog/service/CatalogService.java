@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -316,7 +317,8 @@ public class CatalogService {
      * @return 검색 결과 페이지
      */
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
-        Page<GameSearchResultDto> result = gameRepository.searchGames(condition, pageable);
+        Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
+        Page<GameSearchResultDto> result = gameRepository.searchGames(condition, safe);
         if (!result.isEmpty()) {
             enrichSearchResults(result.getContent(), memberId);
         }

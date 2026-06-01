@@ -11,6 +11,7 @@ import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,7 +87,8 @@ public class WishlistService {
      * @return 찜 목록 페이지
      */
     public Page<WishlistDto> getMyWishlist(Long memberId, Pageable pageable) {
-        Page<WishlistDto> result = wishlistRepository.findAllByMemberId(memberId, pageable);
+        Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
+        Page<WishlistDto> result = wishlistRepository.findAllByMemberId(memberId, safe);
 
         if (!result.isEmpty()) {
             markGameGenre(result.getContent());

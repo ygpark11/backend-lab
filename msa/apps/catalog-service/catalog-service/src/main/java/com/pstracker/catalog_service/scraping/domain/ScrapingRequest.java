@@ -25,7 +25,7 @@ public class ScrapingRequest extends BaseTimeEntity {
     private Member member;
 
     // 아직 Game이 없으므로 String
-    @Column(name = "ps_store_id", nullable = false)
+    @Column(name = "ps_store_id", nullable = false, unique = true)
     private String psStoreId;
 
     @Column(name = "target_url", nullable = false, length = 500)

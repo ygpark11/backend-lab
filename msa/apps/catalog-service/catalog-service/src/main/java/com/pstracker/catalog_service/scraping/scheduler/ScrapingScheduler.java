@@ -38,7 +38,7 @@ public class ScrapingScheduler {
             log.debug("Crawler Trigger Response: {}", response);
         } catch (Exception e) {
             log.error("Hand 서버 통신 실패 (psStoreId: {})", request.getPsStoreId(), e);
-            // 통신 실패 시 상태를 FAILED로 롤백하는 별도 처리 필요
+            scrapingQueueManager.markRequestAsFailed(request.getId(), e.getMessage());
         }
     }
 }

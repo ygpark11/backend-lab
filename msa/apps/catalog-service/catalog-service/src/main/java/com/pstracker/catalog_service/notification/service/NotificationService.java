@@ -5,6 +5,7 @@ import com.pstracker.catalog_service.notification.dto.NotificationListResponse;
 import com.pstracker.catalog_service.notification.dto.NotificationResponse;
 import com.pstracker.catalog_service.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -35,8 +36,9 @@ public class NotificationService {
      * 전체 알림 목록 조회 (Slice 페이징 - 무한 스크롤)
      */
     public NotificationListResponse getAllNotifications(Long memberId, Pageable pageable) {
+        Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
         Slice<Notification> slice = notificationRepository
-                .findByMemberIdOrderByCreatedAtDesc(memberId, pageable);
+                .findByMemberIdOrderByCreatedAtDesc(memberId, safe);
         List<NotificationResponse> content = slice.getContent()
                 .stream()
                 .map(NotificationResponse::from)

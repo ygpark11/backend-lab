@@ -21,4 +21,10 @@ public class ScrapingQueueManager {
                     return request;
                 }).orElse(null);
     }
+
+    @Transactional
+    public void markRequestAsFailed(Long requestId, String errorMessage) {
+        scrapingRequestRepository.findById(requestId)
+                .ifPresent(request -> request.markAsFailed(errorMessage));
+    }
 }

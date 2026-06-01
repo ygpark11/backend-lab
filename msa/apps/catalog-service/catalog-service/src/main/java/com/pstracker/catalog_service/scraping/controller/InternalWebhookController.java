@@ -9,7 +9,6 @@ import com.pstracker.catalog_service.scraping.service.RatingScrapingService;
 import com.pstracker.catalog_service.scraping.service.ScrapingWebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -19,9 +18,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/internal/scraping")
 @RequiredArgsConstructor
 public class InternalWebhookController {
-
-    @Value("${crawler.secret-key}")
-    private String internalSecretKey;
 
     private final ScrapingWebhookService scrapingWebhookService;
     private final RankingService rankingService;
