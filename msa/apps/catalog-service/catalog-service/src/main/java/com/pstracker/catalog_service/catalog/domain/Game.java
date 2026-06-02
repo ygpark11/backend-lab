@@ -132,6 +132,10 @@ public class Game {
     @Column(name = "vibe_tags", columnDefinition = "json")
     private List<String> vibeTags;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "search_keywords", columnDefinition = "json")
+    private List<String> searchKeywords;
+
     @ElementCollection(targetClass = Platform.class, fetch = FetchType.LAZY)
     @CollectionTable(
             name = "game_platforms",
@@ -356,5 +360,28 @@ public class Game {
         this.hltbMainStory = main;
         this.hltbMainExtra = extra;
         this.hltbCompletionist = completionist;
+    }
+
+    /**
+     * AI가 생성한 검색 키워드(축약어/한글명) 업데이트
+     * - null·공백·50자 초과·game name/englishName과 동일한 값 제거
+     * - 소문자 정규화(대소문자 구분 없는 JSON_SEARCH를 위해)
+     * - 최대 8개 저장
+     */
+    public void updateSearchKeywords(List<String> keywords) {
+        if (keywords == null) return;
+
+        Set<String> excluded = new HashSet<>();
+        if (hasText(this.name)) excluded.add(this.name.toLowerCase().replaceAll("\\s+", ""));
+        if (hasText(this.englishName)) excluded.add(this.englishName.toLowerCase().replaceAll("\\s+", ""));
+
+        this.searchKeywords = keywords.stream()
+                .filter(k -> k != null && !k.isBlank())
+                .map(k -> k.trim().toLowerCase())
+                .filter(k -> k.length() <= 50)
+                .filter(k -> !excluded.contains(k.replaceAll("\\s+", "")))
+                .distinct()
+                .limit(5)
+                .toList();
     }
 }

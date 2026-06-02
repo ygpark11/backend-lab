@@ -6,9 +6,9 @@ import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -37,8 +37,8 @@ public class AiDescriptionScheduler {
         int totalSuccess = 0;
 
         for (int i = 0; i < MAX_API_CALLS_PER_DAY; i++) {
-            // 1. DB에서 대상 게임 5개만 조회
-            List<Game> targetGames = gameRepository.findTop5ByDescriptionEqualsOrVibeTagsIsNull(TARGET_DESCRIPTION);
+            // 1. DB에서 대상 게임 5개만 조회 (description, vibeTags, searchKeywords 중 하나라도 없으면 포함)
+            List<Game> targetGames = gameRepository.findTop5NeedingAiUpdate(TARGET_DESCRIPTION, PageRequest.of(0, 5));
 
             if (targetGames.isEmpty()) {
                 log.info("모든 게임의 데이터가 최신화되었습니다. 루프 종료.");
@@ -75,9 +75,12 @@ public class AiDescriptionScheduler {
                 AiService.AiInsightDto aiData = insightMap.get(game.getId());
                 if (aiData != null) {
                     game.updateAiInsights(aiData.summary(), aiData.vibeTags());
+                    game.updateSearchKeywords(aiData.searchKeywords());
                     totalSuccess++;
                 } else {
+                    // AI 응답에 해당 게임이 누락된 경우 — 빈 값으로 처리해 다음 배치에서 중복 처리 방지
                     game.updateAiInsights(game.getDescription(), List.of("#미분류"));
+                    game.updateSearchKeywords(List.of());
                 }
             }
 

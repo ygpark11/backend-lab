@@ -128,12 +128,18 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         if (!hasText(keyword)) return null;
 
         String strippedKeyword = keyword.strip().replaceAll("\\s+", "");
+        String jsonPattern = "%" + strippedKeyword.toLowerCase() + "%";
 
         return Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.name)
                     .containsIgnoreCase(strippedKeyword)
                 .or(Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.englishName)
                     .containsIgnoreCase(strippedKeyword))
-                .or(game.chosungName.containsIgnoreCase(strippedKeyword));
+                .or(game.chosungName.containsIgnoreCase(strippedKeyword))
+                .or(Expressions.booleanTemplate(
+                        "JSON_SEARCH({0}, 'one', {1}) IS NOT NULL",
+                        game.searchKeywords,
+                        jsonPattern
+                ));
     }
 
     private BooleanExpression priceBetween(Integer minPrice, Integer maxPrice) {

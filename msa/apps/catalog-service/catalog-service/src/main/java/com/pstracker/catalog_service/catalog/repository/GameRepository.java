@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -103,7 +105,8 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("UPDATE Game g SET g.mostDownloadedRank = :rank WHERE g.psStoreId = :psStoreId")
     int updateMostDownloadedRank(@Param("psStoreId") String psStoreId, @Param("rank") Integer rank);
 
-    List<Game> findTop5ByDescriptionEqualsOrVibeTagsIsNull(String description);
+    @Query("SELECT g FROM Game g WHERE g.description = :description OR g.vibeTags IS NULL OR g.searchKeywords IS NULL ORDER BY g.id ASC")
+    List<Game> findTop5NeedingAiUpdate(@Param("description") String description, Pageable pageable);
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.saleEndDate BETWEEN CURRENT_DATE AND :tomorrow")
     long countClosingSoonGames(@Param("tomorrow") LocalDate tomorrow);
