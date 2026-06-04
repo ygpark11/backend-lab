@@ -3,6 +3,8 @@ package com.pstracker.catalog_service.catalog.dto;
 import com.pstracker.catalog_service.catalog.domain.Platform;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class GameSearchCondition {
     // 검색어 (게임명 - 한글/영문)
@@ -43,4 +45,7 @@ public class GameSearchCondition {
 
     private Double minPlayTime;
     private Double maxPlayTime;
+
+    // 바이브 태그 필터 (OR 조합)
+    private List<String> vibeTags;
 }

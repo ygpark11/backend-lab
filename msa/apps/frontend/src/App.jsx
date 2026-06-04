@@ -11,6 +11,7 @@ import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
 import MyPage from './pages/MyPage';
 import PsPlusPricingPage from './pages/PsPlusPricingPage';
 import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
+import CurationPage from './pages/CurationPage';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
@@ -40,6 +41,7 @@ function AppRoutes() {
 
                 <Route element={<Layout />}>
                     <Route path="/games" element={<GameListPage />} />
+                    <Route path="/curation" element={<CurationPage />} />
                     <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
                     <Route path="/ps-plus" element={<PsPlusPricingPage />} />

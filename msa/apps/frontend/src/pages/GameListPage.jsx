@@ -147,7 +147,10 @@ const GameListPage = () => {
         isBestSeller: searchParams.get('isBestSeller') === 'true',
         isMostDownloaded: searchParams.get('isMostDownloaded') === 'true',
         isClosingSoon: searchParams.get('isClosingSoon') === 'true',
-        isNewDiscount: searchParams.get('isNewDiscount') === 'true'
+        isNewDiscount: searchParams.get('isNewDiscount') === 'true',
+        // 큐레이션 전용 히든 필터 (UI 없음, URL → API 전달 전용)
+        vibeTags: searchParams.getAll('vibeTags'),
+        minUserScore: searchParams.get('minUserScore') || '',
     }));
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
@@ -174,8 +177,13 @@ const GameListPage = () => {
                 ...(currentFilter.isMostDownloaded && { isMostDownloaded: true }),
                 ...(currentFilter.isClosingSoon && { isClosingSoon: true }),
                 ...(currentFilter.isNewDiscount && { isNewDiscount: true }),
+                ...(currentFilter.minUserScore && { minUserScore: currentFilter.minUserScore }),
             };
-            const response = await client.get('/api/v1/games/search', { params });
+            // vibeTags는 배열 반복 파라미터라 URLSearchParams.append로 직렬화
+            const sp = new URLSearchParams();
+            Object.entries(params).forEach(([k, v]) => v !== undefined && v !== null && sp.append(k, String(v)));
+            (currentFilter.vibeTags || []).forEach(t => sp.append('vibeTags', t));
+            const response = await client.get('/api/v1/games/search?' + sp.toString());
 
             if (pageNumber === 0) {
                 setGames(response.data.content);
@@ -388,7 +396,9 @@ const GameListPage = () => {
                     !prev.isBestSeller &&
                     !prev.isMostDownloaded &&
                     !prev.isClosingSoon &&
-                    !prev.isNewDiscount;
+                    !prev.isNewDiscount &&
+                    (prev.vibeTags || []).length === 0 &&
+                    prev.minUserScore === '';
 
                 if (isAlreadyDefault) return prev;
 
@@ -407,7 +417,9 @@ const GameListPage = () => {
                     isBestSeller: false,
                     isMostDownloaded: false,
                     isClosingSoon: false,
-                    isNewDiscount: false
+                    isNewDiscount: false,
+                    vibeTags: [],
+                    minUserScore: '',
                 };
             });
         } else {
@@ -429,8 +441,13 @@ const GameListPage = () => {
             const urlIsMostDownloaded = searchParams.get('isMostDownloaded') === 'true';
             const urlIsClosingSoon = searchParams.get('isClosingSoon') === 'true';
             const urlIsNewDiscount = searchParams.get('isNewDiscount') === 'true';
+            const urlVibeTags = searchParams.getAll('vibeTags');
+            const urlMinUserScore = searchParams.get('minUserScore') || '';
 
             setFilter(prev => {
+                const prevVibeTagsStr = (prev.vibeTags || []).join(',');
+                const urlVibeTagsStr = urlVibeTags.join(',');
+
                 if (
                     prev.keyword === urlKeyword &&
                     prev.genre === urlGenre &&
@@ -449,7 +466,9 @@ const GameListPage = () => {
                     prev.isBestSeller === urlIsBestSeller &&
                     prev.isMostDownloaded === urlIsMostDownloaded &&
                     prev.isClosingSoon === urlIsClosingSoon &&
-                    prev.isNewDiscount === urlIsNewDiscount
+                    prev.isNewDiscount === urlIsNewDiscount &&
+                    prevVibeTagsStr === urlVibeTagsStr &&
+                    prev.minUserScore === urlMinUserScore
                 ) {
                     return prev;
                 }
@@ -470,7 +489,9 @@ const GameListPage = () => {
                     isBestSeller: urlIsBestSeller,
                     isMostDownloaded: urlIsMostDownloaded,
                     isClosingSoon: urlIsClosingSoon,
-                    isNewDiscount: urlIsNewDiscount
+                    isNewDiscount: urlIsNewDiscount,
+                    vibeTags: urlVibeTags,
+                    minUserScore: urlMinUserScore,
                 };
             });
         }
@@ -496,12 +517,17 @@ const GameListPage = () => {
         if (filter.isMostDownloaded) params.isMostDownloaded = 'true';
         if (filter.isClosingSoon) params.isClosingSoon = 'true';
         if (filter.isNewDiscount) params.isNewDiscount = 'true';
+        if (filter.minUserScore) params.minUserScore = filter.minUserScore;
+
+        // vibeTags는 반복 파라미터라 URLSearchParams로 직접 빌드
+        const newSp = new URLSearchParams(params);
+        (filter.vibeTags || []).forEach(t => newSp.append('vibeTags', t));
 
         const currentParamsStr = searchParams.toString();
-        const newParamsStr = new URLSearchParams(params).toString();
+        const newParamsStr = newSp.toString();
 
         if (currentParamsStr !== newParamsStr) {
-            setSearchParams(params, { replace: true });
+            setSearchParams(newSp, { replace: true });
         }
     }, [filter]);
 
@@ -532,7 +558,10 @@ const GameListPage = () => {
         filter.minPlayTime, filter.maxPlayTime,
         filter.isAllTimeLow, filter.keyword, filter.isPs5ProEnhanced,
         filter.isBestSeller, filter.isMostDownloaded, filter.isClosingSoon,
-        filter.isNewDiscount
+        filter.isNewDiscount,
+        // vibeTags는 배열이라 join()으로 변화 감지
+        (filter.vibeTags || []).join(','),
+        filter.minUserScore,
     ]);
 
     const getActiveSpecialFilters = () => {
@@ -558,6 +587,8 @@ const GameListPage = () => {
         if (filter.isPs5ProEnhanced) active.push('isPs5ProEnhanced');
         if (filter.inCatalog) active.push('inCatalog');
         if (filter.isPlusExclusive) active.push('isPlusExclusive');
+        // 큐레이션 테마 파도타기 (vibeTags 또는 minUserScore 조건으로 진입 시)
+        if ((filter.vibeTags || []).length > 0 || filter.minUserScore) active.push('curationMode');
 
         return active;
     };
@@ -569,6 +600,7 @@ const GameListPage = () => {
             isAllTimeLow: false, isBestSeller: false, isMostDownloaded: false,
             isClosingSoon: false, isNewDiscount: false, isPs5ProEnhanced: false,
             inCatalog: false, isPlusExclusive: false,
+            vibeTags: [], minUserScore: '',
             // 갓겜 세팅이나 전체 할인 세팅이었을 경우에만 초기화
             minMetaScore: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : prev.minMetaScore,
             minDiscountRate: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : (prev.minDiscountRate === '1' ? '' : prev.minDiscountRate)
@@ -585,7 +617,8 @@ const GameListPage = () => {
             minPlayTime: '', maxPlayTime: '',
             isAllTimeLow: false, isPs5ProEnhanced: false,
             isBestSeller: false, isMostDownloaded: false,
-            isClosingSoon: false, isNewDiscount: false
+            isClosingSoon: false, isNewDiscount: false,
+            vibeTags: [], minUserScore: '',
         });
         setSearchInput('');
         setPriceRange({ min: '', max: '' });
@@ -875,6 +908,37 @@ const GameListPage = () => {
                         </button>
                     </div>
                 );
+
+            case 'curationMode': {
+                // 큐레이션 테마 파도타기 (vibeTags / minUserScore 조건 진입)
+                const vibeLabels = (filter.vibeTags || [])
+                    .map(t => t.replace(/^#/, ''))
+                    .slice(0, 3)
+                    .join(' · ');
+                return (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-indigo-border,rgba(99,102,241,0.3))] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-indigo-border-hover,rgba(99,102,241,0.6))] hover:shadow-[0_0_25px_rgba(99,102,241,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-indigo-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-indigo-500/10 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/30">
+                                <Sparkles className="w-6 h-6 text-indigo-500 drop-shadow-sm" />
+                            </div>
+                            <div>
+                                <div className="text-indigo-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Waves className="w-3 h-3"/> CURATION SURFING</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg break-keep">
+                                    {vibeLabels
+                                        ? <>'<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">{vibeLabels}</span>' 테마 게임 모아보기</>
+                                        : <>큐레이션 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">감성 취향</span> 게임 모아보기</>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => { setFilter(prev => ({ ...prev, vibeTags: [], minUserScore: '' })); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+                );
+            }
 
             default:
                 // 특수 필터가 하나도 없을 때 (기본 배너)

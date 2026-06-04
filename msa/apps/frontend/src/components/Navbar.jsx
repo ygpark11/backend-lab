@@ -9,6 +9,7 @@ import {
     Bell,
     BellOff,
     CheckCheck,
+    Flame,
     Gamepad2,
     Heart,
     HelpCircle,
@@ -340,8 +341,11 @@ const Navbar = () => {
 
                     {/* 데스크톱 메뉴 */}
                     <div className="hidden md:flex items-center gap-2">
-                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/games') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Gamepad2 className="w-4 h-4" /> 게임 목록
+                        </button>
+                        <button onClick={() => navigateAndScroll('/curation')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/curation') ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                            <Flame className="w-4 h-4" /> 큐레이션
                         </button>
                         <button onClick={() => navigateAndScroll('/discover')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Sparkles className="w-4 h-4" /> 신작 수집소
@@ -547,8 +551,12 @@ const Navbar = () => {
                             <div className="absolute top-full right-0 mt-3 w-52 bg-base border border-divider rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-50 origin-top-right">
                                 {/* 모바일 핵심 서비스 영역 */}
                                 <div className="p-2 border-b border-divider bg-surface">
-                                    <button onClick={() => { navigateAndScroll('/games'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/games') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                    <button onClick={() => { navigateAndScroll('/games'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold transition-all ${location.pathname === '/games' ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-blue-from)] p-1.5 rounded-lg border border-[color:var(--bento-blue-border)] shadow-sm"><Gamepad2 className="w-4 h-4 text-ps-blue" /></div> 게임 목록
+                                    </button>
+
+                                    <button onClick={() => { navigateAndScroll('/curation'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/curation') ? 'bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                        <div className="bg-amber-500/10 p-1.5 rounded-lg border border-amber-500/20 shadow-sm"><Flame className="w-4 h-4 text-amber-500" /></div> 큐레이션
                                     </button>
 
                                     <button onClick={() => { navigateAndScroll('/discover'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/discover') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>

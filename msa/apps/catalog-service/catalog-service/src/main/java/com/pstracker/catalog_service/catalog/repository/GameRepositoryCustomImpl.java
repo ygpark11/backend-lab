@@ -62,7 +62,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         mostDownloadedEq(condition.getIsMostDownloaded()),
                         isClosingSoon(condition.getIsClosingSoon()),
                         isNewDiscount(condition.getIsNewDiscount()),
-                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime())
+                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
+                        vibeTagsContains(condition.getVibeTags())
                 )
                 .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
                 .offset(pageable.getOffset())
@@ -88,7 +89,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         mostDownloadedEq(condition.getIsMostDownloaded()),
                         isClosingSoon(condition.getIsClosingSoon()),
                         isNewDiscount(condition.getIsNewDiscount()),
-                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime())
+                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
+                        vibeTagsContains(condition.getVibeTags())
                 );
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
@@ -230,6 +232,20 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         gamePriceHistory.createdAt.goe(today.atStartOfDay()),
                         gamePriceHistory.createdAt.lt(today.plusDays(1).atStartOfDay())
                 ).exists();
+    }
+
+    private BooleanExpression vibeTagsContains(List<String> vibeTags) {
+        if (vibeTags == null || vibeTags.isEmpty()) return null;
+        BooleanExpression result = null;
+        for (String tag : vibeTags) {
+            BooleanExpression condition = Expressions.booleanTemplate(
+                    "JSON_SEARCH({0}, 'one', {1}) IS NOT NULL",
+                    game.vibeTags,
+                    tag
+            );
+            result = (result == null) ? condition : result.or(condition);
+        }
+        return result;
     }
 
     private BooleanExpression playTimeBetween(Double minPlayTime, Double maxPlayTime) {
