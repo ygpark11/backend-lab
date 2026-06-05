@@ -356,7 +356,7 @@ function CategorySection({ categoryName, themes, onViewAll }) {
                     <ThemePanel
                         key={theme.id}
                         theme={theme}
-                        onViewAll={() => onViewAll(theme.params)}
+                        onViewAll={() => onViewAll(theme.params, theme.copy)}
                         onEmpty={handleEmpty}
                     />
                 ))}
@@ -371,8 +371,11 @@ function CategorySection({ categoryName, themes, onViewAll }) {
 const CurationPage = () => {
     const navigate = useTransitionNavigate();
 
-    const handleViewAll = (params) => {
-        navigate('/games?' + buildSearchParams(params).toString());
+    const handleViewAll = (params, themeCopy) => {
+        const sp = buildSearchParams(params);
+        sp.set('curation', 'true');
+        if (themeCopy) sp.set('curationTheme', themeCopy);
+        navigate('/games?' + sp.toString());
     };
 
     return (

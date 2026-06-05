@@ -106,7 +106,10 @@ const GameListPage = () => {
     const [showFilter, setShowFilter] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
-    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+    const [priceRange, setPriceRange] = useState({
+        min: searchParams.get('minPrice') || '',
+        max: searchParams.get('maxPrice') || '',
+    });
 
     const [selectedPlayTimeId, setSelectedPlayTimeId] = useState(() => {
         const min = searchParams.get('minPlayTime');
@@ -151,6 +154,9 @@ const GameListPage = () => {
         // 큐레이션 전용 히든 필터 (UI 없음, URL → API 전달 전용)
         vibeTags: searchParams.getAll('vibeTags'),
         minUserScore: searchParams.get('minUserScore') || '',
+        // 큐레이션 진입 표시 (UI 전용, API 미전달)
+        curation: searchParams.get('curation') === 'true',
+        curationTheme: searchParams.get('curationTheme') || '',
     }));
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
@@ -349,6 +355,11 @@ const GameListPage = () => {
         }, 500);
     }, []);
 
+    // 큐레이션 등 외부에서 진입 시 항상 최상단에서 시작
+    useEffect(() => {
+        window.scrollTo({ top: 0 });
+    }, []);
+
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
@@ -398,7 +409,9 @@ const GameListPage = () => {
                     !prev.isClosingSoon &&
                     !prev.isNewDiscount &&
                     (prev.vibeTags || []).length === 0 &&
-                    prev.minUserScore === '';
+                    prev.minUserScore === '' &&
+                    !prev.curation &&
+                    prev.curationTheme === '';
 
                 if (isAlreadyDefault) return prev;
 
@@ -420,6 +433,8 @@ const GameListPage = () => {
                     isNewDiscount: false,
                     vibeTags: [],
                     minUserScore: '',
+                    curation: false,
+                    curationTheme: '',
                 };
             });
         } else {
@@ -443,6 +458,8 @@ const GameListPage = () => {
             const urlIsNewDiscount = searchParams.get('isNewDiscount') === 'true';
             const urlVibeTags = searchParams.getAll('vibeTags');
             const urlMinUserScore = searchParams.get('minUserScore') || '';
+            const urlCuration = searchParams.get('curation') === 'true';
+            const urlCurationTheme = searchParams.get('curationTheme') || '';
 
             setFilter(prev => {
                 const prevVibeTagsStr = (prev.vibeTags || []).join(',');
@@ -468,7 +485,9 @@ const GameListPage = () => {
                     prev.isClosingSoon === urlIsClosingSoon &&
                     prev.isNewDiscount === urlIsNewDiscount &&
                     prevVibeTagsStr === urlVibeTagsStr &&
-                    prev.minUserScore === urlMinUserScore
+                    prev.minUserScore === urlMinUserScore &&
+                    prev.curation === urlCuration &&
+                    prev.curationTheme === urlCurationTheme
                 ) {
                     return prev;
                 }
@@ -492,6 +511,8 @@ const GameListPage = () => {
                     isNewDiscount: urlIsNewDiscount,
                     vibeTags: urlVibeTags,
                     minUserScore: urlMinUserScore,
+                    curation: urlCuration,
+                    curationTheme: urlCurationTheme,
                 };
             });
         }
@@ -518,6 +539,8 @@ const GameListPage = () => {
         if (filter.isClosingSoon) params.isClosingSoon = 'true';
         if (filter.isNewDiscount) params.isNewDiscount = 'true';
         if (filter.minUserScore) params.minUserScore = filter.minUserScore;
+        if (filter.curation) params.curation = 'true';
+        if (filter.curationTheme) params.curationTheme = filter.curationTheme;
 
         // vibeTags는 반복 파라미터라 URLSearchParams로 직접 빌드
         const newSp = new URLSearchParams(params);
@@ -565,6 +588,9 @@ const GameListPage = () => {
     ]);
 
     const getActiveSpecialFilters = () => {
+        // 큐레이션 진입 시 다른 배너를 모두 무시하고 curationMode 단독 표시
+        if (filter.curation) return ['curationMode'];
+
         const active = [];
         if (filter.isAllTimeLow) active.push('isAllTimeLow');
         if (filter.minMetaScore === '85' && filter.minDiscountRate === '50') active.push('mustPlay');
@@ -601,6 +627,7 @@ const GameListPage = () => {
             isClosingSoon: false, isNewDiscount: false, isPs5ProEnhanced: false,
             inCatalog: false, isPlusExclusive: false,
             vibeTags: [], minUserScore: '',
+            curation: false, curationTheme: '',
             // 갓겜 세팅이나 전체 할인 세팅이었을 경우에만 초기화
             minMetaScore: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : prev.minMetaScore,
             minDiscountRate: prev.minMetaScore === '85' && prev.minDiscountRate === '50' ? '' : (prev.minDiscountRate === '1' ? '' : prev.minDiscountRate)
@@ -619,6 +646,7 @@ const GameListPage = () => {
             isBestSeller: false, isMostDownloaded: false,
             isClosingSoon: false, isNewDiscount: false,
             vibeTags: [], minUserScore: '',
+            curation: false, curationTheme: '',
         });
         setSearchInput('');
         setPriceRange({ min: '', max: '' });
@@ -910,11 +938,12 @@ const GameListPage = () => {
                 );
 
             case 'curationMode': {
-                // 큐레이션 테마 파도타기 (vibeTags / minUserScore 조건 진입)
+                // 큐레이션 테마 파도타기 (curation=true 진입, 또는 vibeTags / minUserScore 조건)
                 const vibeLabels = (filter.vibeTags || [])
                     .map(t => t.replace(/^#/, ''))
                     .slice(0, 3)
                     .join(' · ');
+                const displayLabel = filter.curationTheme || vibeLabels;
                 return (
                     <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-[color:var(--bento-indigo-border,rgba(99,102,241,0.3))] p-4 sm:p-5 flex items-center justify-between hover:border-[color:var(--bento-indigo-border-hover,rgba(99,102,241,0.6))] hover:shadow-[0_0_25px_rgba(99,102,241,0.15)] group transition-all">
                         <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-indigo-500/10 to-transparent"></div>
@@ -926,14 +955,14 @@ const GameListPage = () => {
                             <div>
                                 <div className="text-indigo-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Waves className="w-3 h-3"/> CURATION SURFING</div>
                                 <div className="text-primary font-black text-sm sm:text-base lg:text-lg break-keep">
-                                    {vibeLabels
-                                        ? <>'<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">{vibeLabels}</span>' 테마 게임 모아보기</>
+                                    {displayLabel
+                                        ? <>'<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">{displayLabel}</span>' 테마 게임 모아보기</>
                                         : <>큐레이션 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">감성 취향</span> 게임 모아보기</>
                                     }
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({ ...prev, vibeTags: [], minUserScore: '' })); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                        <button onClick={() => { setFilter(prev => ({ ...prev, vibeTags: [], minUserScore: '', curation: false, curationTheme: '' })); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>
