@@ -962,7 +962,7 @@ const GameListPage = () => {
                                 </div>
                             </div>
                         </div>
-                        <button onClick={() => { setFilter(prev => ({ ...prev, vibeTags: [], minUserScore: '', curation: false, curationTheme: '' })); setPage(0); }} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                        <button onClick={handleResetAllFilters} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
                             <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
                         </button>
                     </div>

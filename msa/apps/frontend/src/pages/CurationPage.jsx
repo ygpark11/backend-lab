@@ -406,7 +406,10 @@ const CurationPage = () => {
                         <Flame className="w-4 h-4 text-amber-500" />
                         <span className="text-xs font-bold tracking-widest uppercase text-secondary">PS-TRACKER PICKS</span>
                     </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary mb-2">지금 사야 할 게임</h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-primary mb-2 leading-tight break-keep">
+                        테마로 찾는 지금의{' '}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500">PICK</span>
+                    </h1>
                     <p className="text-secondary text-sm sm:text-base">데이터가 검증한 지금 이 순간의 명작들</p>
                 </div>
 
