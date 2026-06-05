@@ -563,19 +563,17 @@ export default function GameDetailPage() {
                         </div>
 
                         {game.defenseTier && (
-                            <div className={`lg:hidden mb-4 flex items-center gap-3 px-4 py-3 rounded-xl border ${
+                            <div className={`lg:hidden mb-4 px-4 py-3 rounded-xl border ${
                                 game.defenseTier.includes('S') || game.defenseTier.includes('A')
                                     ? 'border-red-500/30 bg-red-500/5'
                                     : 'border-green-500/30 bg-green-500/5'
                             }`}>
-                                <ShieldAlert className={`w-5 h-5 shrink-0 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold uppercase tracking-widest text-secondary">할인 방어력</span>
-                                        <span className={`text-base font-black ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</span>
-                                    </div>
-                                    <p className="text-xs text-secondary font-bold truncate">{game.defenseMessage}</p>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                    <ShieldAlert className={`w-4 h-4 shrink-0 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`} />
+                                    <span className="text-xs font-bold uppercase tracking-widest text-secondary">할인 방어력</span>
+                                    <span className={`text-base font-black ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</span>
                                 </div>
+                                <p className="text-xs text-secondary font-bold break-keep">{game.defenseMessage}</p>
                             </div>
                         )}
 
