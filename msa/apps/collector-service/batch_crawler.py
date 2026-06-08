@@ -223,9 +223,11 @@ def run_with_watchdog(bm, url):
             )
             watchdog_fired.set()
 
-            # 1단계: Playwright API로 컨텍스트 graceful 종료
-            try: bm.context.close()
-            except: pass
+            # 1단계: Playwright API로 컨텍스트 graceful 종료 (5초 타임아웃)
+            # context.close() 자체가 교착 상태일 때 블로킹되는 것을 방지하기 위해 별도 스레드에서 실행
+            t = threading.Thread(target=lambda: bm.context.close(), daemon=True)
+            t.start()
+            t.join(timeout=5)
 
             # 2단계: 10초 후에도 main thread가 안 깨어나면 → Chromium 프로세스 SIGKILL
             # (이벤트 루프 자체가 완전 교착된 경우 context.close()도 블로킹됨)
@@ -1183,7 +1185,10 @@ def set_rating_running(state):
     global is_rating_running
     is_rating_running = state
     # rating 완료 후 대기 중인 VIP 요청이 있으면 즉시 처리
-    if not state and not urgent_queue.empty() and not is_vip_running and not is_batch_running:
+    if not state and not urgent_queue.empty():
+        with crawler_lock:
+            if is_vip_running or is_batch_running or is_ranking_running:
+                return
         threading.Thread(target=run_vip_only_logic, daemon=True).start()
         logger.info("[VIP Worker] rating 완료 후 밀린 VIP 요청 처리 시작")
 
