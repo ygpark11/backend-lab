@@ -926,7 +926,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "originalPrice": best_offer_data["originalPrice"], "currentPrice": best_offer_data["currentPrice"],
             "discountRate": best_offer_data["discountRate"], "saleEndDate": best_offer_data["saleEndDate"],
             "isPlusExclusive": best_offer_data["isPlusExclusive"], "inCatalog": is_in_catalog_global, "platforms": platforms,
-            "isPs5ProEnhanced": is_ps5_pro_enhanced, "editionFeatures": edition_features
+            "isPs5ProEnhanced": is_ps5_pro_enhanced, "editionContents": edition_features
         }
 
         # 오리지널 API(JAVA_API_URL)로 데이터 전송
