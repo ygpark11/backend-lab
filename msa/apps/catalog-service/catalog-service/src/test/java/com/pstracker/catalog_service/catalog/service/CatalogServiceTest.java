@@ -222,7 +222,8 @@ public class CatalogServiceTest {
                 false,
                 false,
                 List.of("PS5"),
-                false
+                false,
+                null
         );
     }
 }

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -135,6 +136,10 @@ public class Game {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "search_keywords", columnDefinition = "json")
     private List<String> searchKeywords;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "edition_contents", columnDefinition = "json")
+    private List<String> editionContents;
 
     @ElementCollection(targetClass = Platform.class, fetch = FetchType.LAZY)
     @CollectionTable(
@@ -360,6 +365,35 @@ public class Game {
         this.hltbMainStory = main;
         this.hltbMainExtra = extra;
         this.hltbCompletionist = completionist;
+    }
+
+    /**
+     * 에디션 구성품 목록 업데이트
+     * - null: 크롤러가 DOM 자체를 찾지 못한 경우 → 기존 값 유지
+     * - 빈 리스트 + 기존 데이터 있음: 크롤러 수집 실패로 간주 → 기존 값 유지
+     * - 빈 리스트 + 기존 데이터 없음: 구성품 정보 없는 게임 → null 유지 (변경 없음)
+     * - 비어있지 않은 리스트: 정규화 후 저장
+     * - 기존 값과 동일: dirty marking 방지를 위해 건너뜀
+     * @return 실제 값이 변경되었으면 true
+     */
+    public boolean updateEditionContents(List<String> contents) {
+        if (contents == null) return false;
+
+        List<String> normalized = contents.stream()
+                .filter(c -> c != null && !c.isBlank())
+                .map(String::trim)
+                .distinct()
+                .sorted()   // 순서 무관 비교를 위해 정렬 (크롤러 응답 순서가 달라도 동일 데이터로 처리)
+                .toList();
+        List<String> toStore = normalized.isEmpty() ? null : normalized;
+
+        // 빈 배열로 왔는데 기존 데이터가 있으면 → 크롤러 수집 실패로 간주하여 기존 값 보호
+        if (toStore == null && this.editionContents != null) return false;
+
+        if (Objects.equals(this.editionContents, toStore)) return false;
+
+        this.editionContents = toStore;
+        return true;
     }
 
     /**

@@ -165,8 +165,11 @@ public record GameDetailResponse(
             Integer currentPrice,
             Integer discountRate,
             @JsonProperty("isPlusExclusive") boolean isPlusExclusive,
-            PriceVerdict priceVerdict
-    ) implements Serializable {}
+            PriceVerdict priceVerdict,
+            List<String> editionContents
+    ) implements Serializable {
+        private static final long serialVersionUID = 2L;
+    }
 
     public record PriceHistoryDto(
             LocalDate date,

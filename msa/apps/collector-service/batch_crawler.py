@@ -882,13 +882,51 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         ps_store_id = target_url.split("/")[-1].split("?")[0]
 
+        # [Edition Features 추출] 에디션 구성품 목록 (mfeUpsell 영역)
+        edition_features = []
+        try:
+            upsell_section = page.locator('div[data-qa="mfeUpsell"]')
+            if upsell_section.count() > 0:
+                articles = upsell_section.locator("article")
+                for i in range(articles.count()):
+                    article = articles.nth(i)
+
+                    link_loc = article.locator("a[href*='/product/']")
+                    if link_loc.count() == 0:
+                        continue
+                    href = link_loc.first.get_attribute("href")
+                    if not href:
+                        continue
+                    if href.split("?")[0].split("/")[-1] != ps_store_id:
+                        continue
+
+                    # 무료/데모 에디션 필터링
+                    btn_meta = article.locator("button[data-telemetry-meta]")
+                    if btn_meta.count() > 0:
+                        try:
+                            meta_json = json.loads(btn_meta.first.get_attribute("data-telemetry-meta") or "{}")
+                            price_detail = meta_json.get("productDetail", [{}])[0].get("productPriceDetail", [{}])[0]
+                            if price_detail.get("originalPriceValue", -1) == 0:
+                                break
+                        except Exception as e:
+                            logger.warning(f"[features] 가격 메타 파싱 실패: {e}")
+
+                    features_loc = article.locator("ul[data-qa$='#features'] > li")
+                    for j in range(features_loc.count()):
+                        text = features_loc.nth(j).text_content().strip()
+                        if text:
+                            edition_features.append(text)
+                    break
+        except Exception as e:
+            logger.warning(f"[features] 에디션 구성품 추출 실패, 빈 배열로 처리: {e}")
+
         payload = {
             "psStoreId": ps_store_id, "title": title, "englishTitle": english_title, "publisher": publisher,
             "imageUrl": image_url, "description": "Full Data Crawler", "genreIds": genre_ids, "releaseDate": release_date,
             "originalPrice": best_offer_data["originalPrice"], "currentPrice": best_offer_data["currentPrice"],
             "discountRate": best_offer_data["discountRate"], "saleEndDate": best_offer_data["saleEndDate"],
             "isPlusExclusive": best_offer_data["isPlusExclusive"], "inCatalog": is_in_catalog_global, "platforms": platforms,
-            "isPs5ProEnhanced": is_ps5_pro_enhanced
+            "isPs5ProEnhanced": is_ps5_pro_enhanced, "editionFeatures": edition_features
         }
 
         # 오리지널 API(JAVA_API_URL)로 데이터 전송

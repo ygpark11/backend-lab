@@ -42,6 +42,24 @@ public class GameReadService {
         }
     }
 
+    /**
+     * 같은 familyId를 공유하는 다른 에디션들의 캐시를 일괄 무효화.
+     * editionContents가 변경된 경우에만 호출해야 함.
+     * 이미 단건 evict된 currentGameId는 제외.
+     */
+    public void evictFamilyGameDetailCaches(String familyId, Long currentGameId) {
+        if (familyId == null) return;
+        var cache = cacheManager.getCache(GlobalCacheConfig.GAME_DETAIL_CACHE);
+        if (cache == null) return;
+
+        gameRepository.findIdsByFamilyId(familyId).stream()
+                .filter(id -> !id.equals(currentGameId))
+                .forEach(id -> {
+                    cache.evict(id);
+                    log.debug("🧹 Family Cache Evicted for Game ID: {}", id);
+                });
+    }
+
     @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
     public GameDetailResponse getBaseGameDetail(Long gameId) {
         Game game = gameRepository.findByIdWithGenres(gameId)
@@ -87,7 +105,7 @@ public class GameReadService {
                     return new GameDetailResponse.FamilyGameDto(
                             g.getId(), g.getName(), g.getOriginalPrice(),
                             g.getCurrentPrice(), g.getDiscountRate(), g.isPlusExclusive(),
-                            verdict
+                            verdict, g.getEditionContents()
                     );
                 })
                 .toList();

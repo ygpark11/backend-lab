@@ -67,6 +67,7 @@ public class CatalogService {
         Integer oldOriginalPrice = game.getOriginalPrice();
 
         updateGameMetadata(game, request, genreEntities);
+        boolean editionContentsChanged = game.updateEditionContents(request.getEditionContents());
         updateGameRatingsFromIgdb(game, request);
 
         game.updatePriceSearchInfo(
@@ -87,7 +88,13 @@ public class CatalogService {
 
         gameRepository.save(game);
         processPriceInfo(game, request);
-        gameReadService.evictGameDetailCache(game.getId()); // 다음 조회 시 최신 데이터로 재캐싱
+        gameReadService.evictGameDetailCache(game.getId());
+
+        // editionContents 변경 시에만 같은 family 게임들의 캐시도 무효화
+        // (다른 에디션 상세 페이지의 familyGames 배열 안에 있는 이 게임의 contents가 stale해지기 때문)
+        if (editionContentsChanged) {
+            gameReadService.evictFamilyGameDetailCaches(game.getFamilyId(), game.getId());
+        }
 
         // 신규 게임 또는 최근 출시(1개월 이내)면 메타크리틱/HLTB 스크래핑 큐에 등록
         boolean isRecentRelease = request.getReleaseDate() != null

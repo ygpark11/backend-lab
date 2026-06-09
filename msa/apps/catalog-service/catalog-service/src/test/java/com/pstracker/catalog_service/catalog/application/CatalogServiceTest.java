@@ -1,6 +1,9 @@
 package com.pstracker.catalog_service.catalog.application;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
+import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
@@ -10,12 +13,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 public class CatalogServiceTest {
@@ -23,18 +29,19 @@ public class CatalogServiceTest {
     @InjectMocks
     private CatalogService catalogService;
 
-    @Mock
-    private GameReadService gameReadService;
+    @Mock private GameReadService gameReadService;
+    @Mock private GameRepository gameRepository;
+    @Mock private GamePriceHistoryRepository priceHistoryRepository;
+    @Mock private IgdbApiClient igdbApiClient;
 
-    @Mock
-    private GameRepository gameRepository;
+    // ========== deleteGame ==========
 
     @Test
     @DisplayName("게임 삭제 성공: 존재하는 ID 요청 시 삭제 및 캐시 초기화 메서드가 호출된다")
     void deleteGame_Success() {
         // given
         Long gameId = 1L;
-        Game mockGame = Game.create("PPSA000", "Elden Ring", "Elden Ring", "FromSoftware", "img.jpg", "desc", LocalDate.of(2026,1,1));
+        Game mockGame = Game.create("PPSA000", "Elden Ring", "Elden Ring", "FromSoftware", "img.jpg", "desc", LocalDate.of(2026, 1, 1));
 
         given(gameRepository.findById(gameId)).willReturn(Optional.of(mockGame));
 
@@ -42,10 +49,7 @@ public class CatalogServiceTest {
         catalogService.deleteGame(gameId);
 
         // then
-        // 1. 해당 게임 객체를 정확히 DB에서 지웠는지 검증
         verify(gameRepository, times(1)).delete(mockGame);
-
-        // 2. 삭제 후 캐시 제거 로직이 호출되었는지 완벽하게 검증!
         verify(gameReadService, times(1)).evictGameDetailCache(gameId);
     }
 
@@ -61,5 +65,88 @@ public class CatalogServiceTest {
         assertThatThrownBy(() -> catalogService.deleteGame(invalidId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("해당 게임을 찾을 수 없습니다");
+    }
+
+    // ========== upsertGameData — editionContents ==========
+
+    @Test
+    @DisplayName("upsertGameData: editionContents 신규 수집 시 family 캐시 무효화가 호출된다")
+    void upsertGameData_NewEditionContents_EvictsFamilyCache() {
+        // given: 기존에 editionContents가 없는 게임
+        Game existingGame = createExistingGame();
+        CollectRequestDto request = buildRequest();
+        request.setEditionContents(List.of("기본 게임", "DLC 팩"));
+
+        given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
+        given(igdbApiClient.searchGame(any())).willReturn(null);
+        given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
+
+        // when
+        catalogService.upsertGameData(request);
+
+        // then: editionContents가 null → ["기본 게임", "DLC 팩"]으로 변경됐으므로 family evict 호출
+        verify(gameReadService).evictFamilyGameDetailCaches(existingGame.getFamilyId(), existingGame.getId());
+    }
+
+    @Test
+    @DisplayName("upsertGameData: editionContents가 동일하면 family 캐시 무효화가 호출되지 않는다")
+    void upsertGameData_SameEditionContents_NoFamilyEviction() {
+        // given: 기존에 동일한 editionContents가 있는 게임
+        Game existingGame = createExistingGame();
+        existingGame.updateEditionContents(List.of("기본 게임"));
+
+        CollectRequestDto request = buildRequest();
+        request.setEditionContents(List.of("기본 게임")); // 동일 내용
+
+        given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
+        given(igdbApiClient.searchGame(any())).willReturn(null);
+        given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
+
+        // when
+        catalogService.upsertGameData(request);
+
+        // then: 변경 없으므로 family evict 미호출
+        verify(gameReadService, never()).evictFamilyGameDetailCaches(any(), any());
+    }
+
+    @Test
+    @DisplayName("upsertGameData: 가격이 0이면 처리를 건너뛰고 어떤 저장도 발생하지 않는다")
+    void upsertGameData_ZeroPrice_SkipsAllProcessing() {
+        // given
+        CollectRequestDto request = buildRequest();
+        request.setCurrentPrice(0);
+
+        // when
+        catalogService.upsertGameData(request);
+
+        // then
+        verify(gameRepository, never()).findByPsStoreIdWithGenres(any());
+        verify(gameRepository, never()).save(any());
+        verify(gameReadService, never()).evictGameDetailCache(any());
+    }
+
+    // ========== helpers ==========
+
+    /** id가 세팅된 기존 게임 엔티티 생성. 최근 출시 아님(2개월 전) → crawlJob 재등록 없음. */
+    private Game createExistingGame() {
+        Game game = Game.create(
+                "HP0700-PPSA001-GAME", "Test Game", "Test Game EN",
+                "Publisher", "img.jpg", "desc",
+                LocalDate.now().minusMonths(2)
+        );
+        ReflectionTestUtils.setField(game, "id", 1L);
+        return game;
+    }
+
+    /** 기본 수집 요청 DTO. genreIds=null 이라 genreRepository 호출 없음. */
+    private CollectRequestDto buildRequest() {
+        CollectRequestDto dto = new CollectRequestDto();
+        dto.setPsStoreId("HP0700-PPSA001-GAME");
+        dto.setTitle("Test Game");
+        dto.setOriginalPrice(69900);
+        dto.setCurrentPrice(69900);
+        dto.setDiscountRate(0);
+        dto.setReleaseDate(LocalDate.now().minusMonths(2));
+        return dto;
     }
 }

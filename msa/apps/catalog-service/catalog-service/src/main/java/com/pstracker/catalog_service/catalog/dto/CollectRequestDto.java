@@ -41,4 +41,6 @@ public class CollectRequestDto {
 
     @JsonProperty("isPs5ProEnhanced")
     private boolean isPs5ProEnhanced;
+
+    private List<String> editionContents;
 }

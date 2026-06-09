@@ -63,6 +63,9 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     List<Game> findByFamilyIdOrderByOriginalPriceAsc(String familyId);
 
+    @Query("SELECT g.id FROM Game g WHERE g.familyId = :familyId")
+    List<Long> findIdsByFamilyId(@Param("familyId") String familyId);
+
     boolean existsByPsStoreId(String psStoreId);
 
     long countByPioneerMemberId(Long pioneerMemberId);

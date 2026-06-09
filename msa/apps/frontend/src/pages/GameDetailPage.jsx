@@ -25,6 +25,7 @@ import {
     Crosshair,
     ExternalLink,
     Gamepad2,
+    Gem,
     Heart,
     HelpCircle,
     Layers,
@@ -342,6 +343,14 @@ export default function GameDetailPage() {
         return `${h}h ${m}m`;
     };
 
+    const myEditionContents = game.familyGames?.find(e => e.id === game.id)?.editionContents ?? [];
+    const maxPlayTime = Math.max(game.hltbCompletionist || 0, game.hltbMainExtra || 0, game.hltbMainStory || 0);
+    const voteTotal = voteCounts.likes + voteCounts.dislikes;
+    const likePercent = voteTotal > 0 ? Math.round((voteCounts.likes / voteTotal) * 100) : 0;
+    const pricePosition = (game.lowestPrice > 0 && game.originalPrice > game.lowestPrice)
+        ? Math.min(100, Math.max(0, Math.round((game.originalPrice - game.currentPrice) / (game.originalPrice - game.lowestPrice) * 100)))
+        : null;
+
     const glowStyle = {
         'BUY_NOW': 'border-green-500/50 shadow-[0_0_30px_rgba(34,197,94,0.15)]',
         'GOOD_OFFER': 'border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.15)]',
@@ -355,6 +364,13 @@ export default function GameDetailPage() {
         if (percentage >= 75) return 'text-green-600 dark:text-green-400';
         if (percentage >= 50) return 'text-yellow-600 dark:text-yellow-400';
         return 'text-red-600 dark:text-red-400';
+    };
+    const getScoreBarBg = (score, scale) => {
+        if (!score) return '';
+        const pct = scale === 10 ? score * 10 : score;
+        if (pct >= 75) return 'bg-green-500/70';
+        if (pct >= 50) return 'bg-yellow-500/70';
+        return 'bg-red-500/70';
     };
 
     const pageContent = (
@@ -534,6 +550,38 @@ export default function GameDetailPage() {
                                 </div>
                             </div>
 
+                            {/* 가격 포지션 트래커 */}
+                            {pricePosition !== null && (
+                                <div className="mt-5 pt-4 border-t border-white/5">
+                                    <div className="relative">
+                                        <div className="w-full h-1.5 bg-base/60 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full transition-[width] duration-700 ease-out"
+                                                style={{
+                                                    width: `${pricePosition}%`,
+                                                    background: pricePosition >= 80
+                                                        ? 'linear-gradient(to right, #3b82f6, #22c55e)'
+                                                        : 'linear-gradient(to right, #3b82f6, #eab308)'
+                                                }}
+                                            />
+                                        </div>
+                                        {/* 현재가 위치: verdict 심볼이 트랙 위 마커로 올라탐 */}
+                                        <div
+                                            className="absolute -top-[5px] -translate-x-1/2 pointer-events-none"
+                                            style={{ left: `clamp(8px, ${pricePosition}%, calc(100% - 8px))` }}
+                                        >
+                                            {renderMiniVerdictIcon(game.priceVerdict)}
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between mt-4 text-[10px] font-bold">
+                                        <span className="text-muted">정가 {game.originalPrice.toLocaleString()}원</span>
+                                        <span className={pricePosition >= 100 ? 'text-green-500 font-black' : pricePosition >= 90 ? 'text-green-500' : 'text-secondary'}>
+                                            {pricePosition >= 100 ? '역대 최저!' : pricePosition >= 90 ? '역대 최저 근접!' : pricePosition > 0 ? `${pricePosition}% 할인 달성` : '할인 미적용'}
+                                        </span>
+                                        <span className="text-green-500">최저 {game.lowestPrice.toLocaleString()}원</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {game.defenseTier && (
@@ -551,88 +599,126 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
+                        {/* 현재 에디션 구성품 */}
+                        {myEditionContents.length > 0 && (
+                            <div className="mb-6 animate-fadeIn">
+                                <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-1.5">
+                                    <Gem className="w-4 h-4 text-ps-blue" /> 이 에디션에 포함된 항목
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {myEditionContents.map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-surface border border-divider rounded-xl px-3 py-2.5 shadow-sm">
+                                            <Gem className="w-3.5 h-3.5 text-ps-blue shrink-0" />
+                                            <span className="text-xs font-bold text-secondary break-keep leading-tight">{item}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* 에디션 비교 패널 */}
                         {game.familyGames && game.familyGames.length > 1 && (
                             <div className="mb-8 animate-fadeIn">
                                 <h3 className="text-sm font-bold text-primary mb-3 flex items-center gap-1.5"><Layers className="w-4 h-4 text-ps-blue" /> 에디션 비교 및 선택</h3>
                                 <div className="bg-surface border border-divider rounded-2xl p-2 shadow-inner">
-                                    <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong hover:[&::-webkit-scrollbar-thumb]:bg-muted [&::-webkit-scrollbar-thumb]:rounded-full">
+                                    <div className="flex flex-col gap-2 sm:max-h-[500px] sm:overflow-y-auto sm:pr-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong hover:[&::-webkit-scrollbar-thumb]:bg-muted [&::-webkit-scrollbar-thumb]:rounded-full">
                                         {game.familyGames.map((edition) => {
                                             const isCurrent = edition.id === game.id;
                                             const priceGap = edition.currentPrice - game.currentPrice;
                                             const isHigherTier = edition.originalPrice > game.originalPrice;
                                             const isLowerTier = edition.originalPrice < game.originalPrice;
+                                            const hasContents = edition.editionContents?.length > 0;
 
                                             return (
                                                 <button
                                                     key={edition.id}
                                                     onClick={() => navigate(`/games/${edition.id}`, { replace: true, state: location.state })}
-                                                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl border transition-all text-left group shrink-0 ${
+                                                    className={`flex flex-col p-3.5 rounded-xl border transition-all text-left group shrink-0 ${
                                                         isCurrent
-                                                            ? 'bg-blue-50/90 dark:bg-blue-900/40 border-ps-blue ring-1 ring-ps-blue shadow-sm cursor-default'
-                                                            : 'bg-base border-divider hover:border-divider-strong hover:shadow-sm cursor-pointer'
+                                                            ? 'bg-blue-100 dark:bg-blue-900/40 border-ps-blue ring-2 ring-ps-blue shadow-sm cursor-default'
+                                                            : 'bg-base border-divider hover:border-divider-strong hover:shadow-sm active:scale-[0.98] cursor-pointer'
                                                     }`}
                                                     disabled={isCurrent}
                                                 >
-                                                    <div className="flex-1 pr-4 mb-3 sm:mb-0 min-w-0">
-                                                        {isCurrent && (
-                                                            <span className="inline-block text-[9px] font-black text-white bg-ps-blue px-2 py-0.5 rounded mb-1.5 shadow-sm">
-                                                                CURRENT
-                                                            </span>
-                                                        )}
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
-                                                            <p className={`text-xs sm:text-sm font-bold truncate ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
-                                                                {edition.name}
-                                                            </p>
+                                                    {/* 상단 행: 에디션명 + 가격 배지 */}
+                                                    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between w-full">
+                                                        <div className="flex-1 min-w-0">
+                                                            {isCurrent && (
+                                                                <span className="inline-block text-[9px] font-black text-white bg-ps-blue px-2 py-0.5 rounded mb-1.5 shadow-sm">
+                                                                    CURRENT
+                                                                </span>
+                                                            )}
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
+                                                                <p className={`text-xs sm:text-sm font-bold truncate flex-1 min-w-0 ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
+                                                                    {edition.name}
+                                                                </p>
+                                                                {!isCurrent && isHigherTier && hasContents && (
+                                                                    <span className="shrink-0 text-[9px] font-black text-ps-blue bg-ps-blue/10 border border-ps-blue/20 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                                                        +{edition.editionContents.length}개
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 flex-wrap justify-end sm:shrink-0">
+                                                            {!isCurrent && isHigherTier && priceGap < 0 && (
+                                                                <span className="flex items-center gap-1 text-[10px] font-black text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
+                                                                    <Sparkles className="w-3 h-3 text-green-500" /> 상위판이 더 저렴!
+                                                                </span>
+                                                            )}
+                                                            {!isCurrent && isLowerTier && priceGap > 0 && (
+                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                    <AlertTriangle className="w-3 h-3 text-red-500" /> 하위판인데 더 비쌈
+                                                                </span>
+                                                            )}
+                                                            {!isCurrent && isHigherTier && priceGap >= 0 && (
+                                                                (priceGap <= 15000 && edition.discountRate > 0) ? (
+                                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                        <ArrowUpRight className="w-3 h-3 text-yellow-600 dark:text-yellow-500" /> +{priceGap.toLocaleString()}원 업그레이드
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-secondary bg-surface border border-divider px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                        <Plus className="w-3 h-3 text-muted" /> {priceGap.toLocaleString()}원 추가
+                                                                    </span>
+                                                                )
+                                                            )}
+                                                            {!isCurrent && isLowerTier && priceGap < 0 && (
+                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                                                                    <TrendingDown className="w-3 h-3 text-blue-500" /> {Math.abs(priceGap).toLocaleString()}원 절약
+                                                                </span>
+                                                            )}
+                                                            {edition.discountRate > 0 && (
+                                                                <span className="text-[10px] font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
+                                                                    -{edition.discountRate}%
+                                                                </span>
+                                                            )}
+                                                            <div className="flex flex-col text-right min-w-[50px] shrink-0">
+                                                                {edition.discountRate > 0 && <span className="text-[9px] text-muted line-through leading-none">{edition.originalPrice.toLocaleString()}원</span>}
+                                                                <span className={`text-sm font-black ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
+                                                                    {edition.currentPrice.toLocaleString()}원
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex items-center justify-end gap-2 shrink-0 flex-wrap sm:flex-nowrap border-t sm:border-t-0 border-divider pt-2 sm:pt-0">
-
-                                                        {!isCurrent && isHigherTier && priceGap < 0 && (
-                                                            <span className="flex items-center gap-1 text-[10px] font-black text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(34,197,94,0.15)] whitespace-nowrap shrink-0">
-                                                                <Sparkles className="w-3 h-3 text-green-500" /> 상위판이 더 저렴!
-                                                            </span>
-                                                        )}
-
-                                                        {!isCurrent && isLowerTier && priceGap > 0 && (
-                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-500/10 border border-red-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
-                                                                <AlertTriangle className="w-3 h-3 text-red-500" /> 하위판인데 더 비쌈
-                                                            </span>
-                                                        )}
-
-                                                        {!isCurrent && isHigherTier && priceGap >= 0 && (
-                                                            (priceGap <= 15000 && edition.discountRate > 0) ? (
-                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-yellow-600 dark:text-yellow-500 bg-yellow-500/10 border border-yellow-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
-                                                                    <ArrowUpRight className="w-3 h-3 text-yellow-600 dark:text-yellow-500" /> +{priceGap.toLocaleString()}원 업그레이드
-                                                                </span>
-                                                            ) : (
-                                                                <span className="flex items-center gap-1 text-[10px] font-bold text-secondary bg-surface border border-divider px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
-                                                                    <Plus className="w-3 h-3 text-muted" /> {priceGap.toLocaleString()}원 추가
-                                                                </span>
-                                                            )
-                                                        )}
-
-                                                        {!isCurrent && isLowerTier && priceGap < 0 && (
-                                                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-500/10 border border-blue-500/30 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
-                                                                <TrendingDown className="w-3 h-3 text-blue-500" /> {Math.abs(priceGap).toLocaleString()}원 절약
-                                                            </span>
-                                                        )}
-
-                                                        {edition.discountRate > 0 && (
-                                                            <span className="text-[10px] font-black text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded border border-green-500/20 whitespace-nowrap shrink-0">
-                                                                -{edition.discountRate}%
-                                                            </span>
-                                                        )}
-
-                                                        <div className="flex flex-col text-right min-w-[50px] shrink-0">
-                                                            {edition.discountRate > 0 && <span className="text-[9px] text-muted line-through leading-none">{edition.originalPrice.toLocaleString()}원</span>}
-                                                            <span className={`text-sm font-black ${isCurrent ? 'text-primary' : 'text-secondary group-hover:text-primary'}`}>
-                                                                {edition.currentPrice.toLocaleString()}원
-                                                            </span>
-                                                        </div>
-                                                    </div>
+                                                    {/* 구성품 리스트 */}
+                                                    {hasContents && (
+                                                        <ul className="w-full mt-3 pt-3 border-t border-divider/50 space-y-1.5">
+                                                            {edition.editionContents.map((item, idx) => (
+                                                                <li key={idx} className="flex items-start gap-2">
+                                                                    <div className={`mt-0.5 shrink-0 w-4 h-4 rounded-full flex items-center justify-center ${
+                                                                        isCurrent
+                                                                            ? 'bg-ps-blue/20 border border-ps-blue/30'
+                                                                            : 'bg-surface border border-divider'
+                                                                    }`}>
+                                                                        <Check className={`w-2.5 h-2.5 stroke-[3] ${isCurrent ? 'text-ps-blue' : 'text-muted'}`} />
+                                                                    </div>
+                                                                    <span className={`text-[11px] font-bold break-keep ${isCurrent ? 'text-secondary' : 'text-muted'}`}>{item}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
                                                 </button>
                                             );
                                         })}
@@ -641,19 +727,7 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        {/* 주시자 현황 */}
-                        {game.scouterTotalWatchers > 0 && (
-                            <div className="mb-8">
-                                <StealthPanel watchersCount={game.scouterTotalWatchers} averagePrice={game.scouterAverageTargetPrice} isLiked={isLiked} />
-                            </div>
-                        )}
-
-                        {/* 역대 가격 추이 */}
-                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
-                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
-                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
-                        </div>
-
+                        {/* 요주의 경고 (평가 엇갈림) */}
                         {isDiscrepancyWarning && (
                             <div className="mb-4 flex items-center gap-2.5 bg-red-500/10 border border-red-500/30 px-4 py-3 rounded-xl shadow-[0_0_15px_rgba(239,68,68,0.15)] animate-fadeIn">
                                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 animate-pulse" />
@@ -668,99 +742,139 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        {/* 3. 벤토 그리드 대시보드 (평가/플레이타임) */}
-                        <div className="grid grid-cols-2 gap-4 mb-8">
-
+                        {/* 평가 대시보드 (Metacritic + IGDB) */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
                             <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
                                 <Triangle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-green-500/20 transition-colors" />
-
                                 <div className="relative z-10 flex justify-between items-center mb-6">
                                     <span className="bg-black dark:bg-white text-white dark:text-black font-black text-xs px-2.5 py-0.5 rounded shadow-sm tracking-wide">M</span>
                                     <span className="text-xs font-bold text-secondary tracking-wide">Metacritic</span>
                                 </div>
-
                                 <div className="relative z-10 flex flex-col gap-4">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
-                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.mcMetaCount)} reviews</span>
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
+                                                <span className="text-[11px] text-muted font-bold">{formatCount(game.mcMetaCount)} reviews</span>
+                                            </div>
+                                            <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
+                                                {game.mcMetaScore || '-'}
+                                            </div>
                                         </div>
-                                        <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
-                                            {game.mcMetaScore || '-'}
-                                        </div>
+                                        {game.mcMetaScore > 0 && (
+                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${getScoreBarBg(game.mcMetaScore, 100)}`} style={{ width: `${game.mcMetaScore}%` }} />
+                                            </div>
+                                        )}
                                     </div>
-
                                     <div className="w-full h-px bg-divider/50"></div>
-
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
-                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.mcUserCount)} ratings</span>
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
+                                                <span className="text-[11px] text-muted font-bold">{formatCount(game.mcUserCount)} ratings</span>
+                                            </div>
+                                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
+                                                {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
+                                            </div>
                                         </div>
-                                        <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
-                                            {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
-                                        </div>
+                                        {game.mcUserScore > 0 && (
+                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${getScoreBarBg(game.mcUserScore, 10)}`} style={{ width: `${game.mcUserScore * 10}%` }} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
                                 <Circle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-purple-500/20 transition-colors" />
-
                                 <div className="relative z-10 flex justify-between items-center mb-6">
                                     <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-xs px-2.5 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm tracking-wide">IGDB</span>
                                     <span className="text-xs font-bold text-secondary tracking-wide">Community</span>
                                 </div>
-
                                 <div className="relative z-10 flex flex-col gap-4">
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
-                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbCriticCount)} reviews</span>
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
+                                                <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbCriticCount)} reviews</span>
+                                            </div>
+                                            <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
+                                                {game.igdbCriticScore || '-'}
+                                            </div>
                                         </div>
-                                        <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
-                                            {game.igdbCriticScore || '-'}
-                                        </div>
+                                        {game.igdbCriticScore > 0 && (
+                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${getScoreBarBg(game.igdbCriticScore, 100)}`} style={{ width: `${game.igdbCriticScore}%` }} />
+                                            </div>
+                                        )}
                                     </div>
-
                                     <div className="w-full h-px bg-divider/50"></div>
-
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
-                                            <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbUserCount)} ratings</span>
+                                    <div className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
+                                                <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbUserCount)} ratings</span>
+                                            </div>
+                                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
+                                                {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
+                                            </div>
                                         </div>
-                                        <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
-                                            {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
-                                        </div>
+                                        {game.igdbUserScore > 0 && (
+                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                                <div className={`h-full rounded-full ${getScoreBarBg(game.igdbUserScore, 100)}`} style={{ width: `${game.igdbUserScore}%` }} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="col-span-2 bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group">
-                                <div className="absolute -top-10 -right-10 w-32 h-32 bg-ps-blue/5 rounded-full blur-2xl group-hover:bg-ps-blue/10 transition-colors duration-700 pointer-events-none"></div>
-                                <Square className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-ps-blue/20 transition-colors pointer-events-none" />
+                        {/* 역대 가격 추이 */}
+                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
+                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
+                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                        </div>
 
-                                <div className="relative z-10">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 tracking-wider">
-                                            <Clock className="w-4 h-4 text-ps-blue" /> Playtime Radar
-                                        </h3>
-                                        <span className="text-[9px] font-black text-white bg-secondary/80 dark:bg-white/20 px-2 py-0.5 rounded shadow-inner tracking-widest">HLTB Average</span>
+                        {/* 주시자 현황 */}
+                        {game.scouterTotalWatchers > 0 && (
+                            <div className="mb-8">
+                                <StealthPanel watchersCount={game.scouterTotalWatchers} averagePrice={game.scouterAverageTargetPrice} isLiked={isLiked} />
+                            </div>
+                        )}
+
+                        {/* Playtime Radar */}
+                        <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group mb-8">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-ps-blue/5 rounded-full blur-2xl group-hover:bg-ps-blue/10 transition-colors duration-700 pointer-events-none"></div>
+                            <Square className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-ps-blue/20 transition-colors pointer-events-none" />
+                            <div className="relative z-10">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-primary flex items-center gap-1.5 tracking-wider">
+                                        <Clock className="w-4 h-4 text-ps-blue" /> Playtime Radar
+                                    </h3>
+                                    <span className="text-[9px] font-black text-white bg-secondary/80 dark:bg-white/20 px-2 py-0.5 rounded shadow-inner tracking-widest">HLTB Average</span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                                    <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-ps-blue/5 hover:border-ps-blue/30 transition-colors">
+                                        <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">MAIN</span>
+                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbMainStory)}</span>
+                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
+                                            <div className="h-full bg-ps-blue/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbMainStory ? Math.round((game.hltbMainStory / maxPlayTime) * 100) : 0}%` }} />
+                                        </div>
                                     </div>
-
-                                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-ps-blue/5 hover:border-ps-blue/30 transition-colors">
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">MAIN</span>
-                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbMainStory)}</span>
+                                    <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-purple-500/5 hover:border-purple-500/30 transition-colors">
+                                        <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">+EXTRA</span>
+                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbMainExtra)}</span>
+                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
+                                            <div className="h-full bg-purple-500/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbMainExtra ? Math.round((game.hltbMainExtra / maxPlayTime) * 100) : 0}%` }} />
                                         </div>
-                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-purple-500/5 hover:border-purple-500/30 transition-colors">
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">+EXTRA</span>
-                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbMainExtra)}</span>
-                                        </div>
-                                        <div className="flex flex-col items-center justify-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-yellow-500/5 hover:border-yellow-500/30 transition-colors">
-                                            <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">100%</span>
-                                            <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm">{formatPlayTime(game.hltbCompletionist)}</span>
+                                    </div>
+                                    <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-yellow-500/5 hover:border-yellow-500/30 transition-colors">
+                                        <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">100%</span>
+                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbCompletionist)}</span>
+                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
+                                            <div className="h-full bg-yellow-500/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbCompletionist ? Math.round((game.hltbCompletionist / maxPlayTime) * 100) : 0}%` }} />
                                         </div>
                                     </div>
                                 </div>
@@ -786,12 +900,23 @@ export default function GameDetailPage() {
                                 <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md flex flex-col">
                                     <h4 className="text-xs font-bold text-secondary mb-4 flex items-center justify-between uppercase tracking-widest">
                                         <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> 유저 평가</span>
-                                        <span className="bg-base px-2 py-0.5 rounded shadow-inner border border-divider">{voteCounts.likes + voteCounts.dislikes} Votes</span>
+                                        <span className="bg-base px-2 py-0.5 rounded shadow-inner border border-divider">{voteTotal} Votes</span>
                                     </h4>
-                                    <div className="flex gap-3 mb-4">
-                                        <button onClick={() => handleVote('LIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center ${userVote === 'LIKE' ? 'bg-green-500/10 border-green-500/50' : 'bg-base border-divider'}`}><Circle className={`w-6 h-6 mb-1 ${userVote === 'LIKE' ? 'text-green-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.likes}</span></button>
-                                        <button onClick={() => handleVote('DISLIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center ${userVote === 'DISLIKE' ? 'bg-red-500/10 border-red-500/50' : 'bg-base border-divider'}`}><X className={`w-6 h-6 mb-1 ${userVote === 'DISLIKE' ? 'text-red-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.dislikes}</span></button>
+                                    <div className="flex gap-3 mb-3">
+                                        <button onClick={() => handleVote('LIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center active:scale-95 transition-transform ${userVote === 'LIKE' ? 'bg-green-500/10 border-green-500/50' : 'bg-base border-divider'}`}><Circle className={`w-6 h-6 mb-1 ${userVote === 'LIKE' ? 'text-green-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.likes}</span></button>
+                                        <button onClick={() => handleVote('DISLIKE')} className={`flex-1 p-3 rounded-xl border flex flex-col items-center active:scale-95 transition-transform ${userVote === 'DISLIKE' ? 'bg-red-500/10 border-red-500/50' : 'bg-base border-divider'}`}><X className={`w-6 h-6 mb-1 ${userVote === 'DISLIKE' ? 'text-red-500' : 'text-secondary'}`} /><span className="font-black text-lg">{voteCounts.dislikes}</span></button>
                                     </div>
+                                    {voteTotal > 0 && (
+                                        <div>
+                                            <div className="flex justify-between text-[10px] font-black mb-1.5">
+                                                <span className="text-green-500">○ {likePercent}%</span>
+                                                <span className="text-red-500">{100 - likePercent}% ×</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-base rounded-full overflow-hidden">
+                                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${likePercent}%` }} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="bg-surface p-5 rounded-2xl border border-divider text-center shadow-md flex flex-col items-center justify-center relative overflow-hidden group">
                                     <Server className="w-8 h-8 text-yellow-600 dark:text-yellow-500 mb-2 group-hover:scale-110 transition-transform" />
