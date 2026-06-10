@@ -133,6 +133,7 @@ const InsightsPage = () => {
 
     const hasClosingSoon = stats.closingSoonCount > 0;
     const hasNewDeals = stats.newDiscountCount > 0;
+    const ptTotal = (stats.ptShortCount || 0) + (stats.ptMediumCount || 0) + (stats.ptLongCount || 0) + (stats.ptEpicCount || 0);
 
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
@@ -374,11 +375,18 @@ const InsightsPage = () => {
                                         <h3 className="text-sm font-black text-primary">주말 컷</h3>
                                     </div>
                                 </div>
-                                <div className="flex items-end justify-between">
-                                    <div className="text-3xl font-black text-primary tracking-tighter">
-                                        {stats.ptShortCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-3xl font-black text-primary tracking-tighter">
+                                            {stats.ptShortCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                    {ptTotal > 0 && (
+                                        <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                            <div className="h-full bg-yellow-500/70 rounded-full" style={{ width: `${Math.round((stats.ptShortCount || 0) / ptTotal * 100)}%` }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -393,11 +401,18 @@ const InsightsPage = () => {
                                         <h3 className="text-sm font-black text-primary">정주행</h3>
                                     </div>
                                 </div>
-                                <div className="flex items-end justify-between">
-                                    <div className="text-3xl font-black text-primary tracking-tighter">
-                                        {stats.ptMediumCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-3xl font-black text-primary tracking-tighter">
+                                            {stats.ptMediumCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                    {ptTotal > 0 && (
+                                        <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                            <div className="h-full bg-blue-500/70 rounded-full" style={{ width: `${Math.round((stats.ptMediumCount || 0) / ptTotal * 100)}%` }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -412,11 +427,18 @@ const InsightsPage = () => {
                                         <h3 className="text-sm font-black text-primary">각 잡고</h3>
                                     </div>
                                 </div>
-                                <div className="flex items-end justify-between">
-                                    <div className="text-3xl font-black text-primary tracking-tighter">
-                                        {stats.ptLongCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-3xl font-black text-primary tracking-tighter">
+                                            {stats.ptLongCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                    {ptTotal > 0 && (
+                                        <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                            <div className="h-full bg-purple-500/70 rounded-full" style={{ width: `${Math.round((stats.ptLongCount || 0) / ptTotal * 100)}%` }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -431,11 +453,18 @@ const InsightsPage = () => {
                                         <h3 className="text-sm font-black text-primary">타임머신</h3>
                                     </div>
                                 </div>
-                                <div className="flex items-end justify-between">
-                                    <div className="text-3xl font-black text-primary tracking-tighter">
-                                        {stats.ptEpicCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex items-end justify-between">
+                                        <div className="text-3xl font-black text-primary tracking-tighter">
+                                            {stats.ptEpicCount?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
                                     </div>
-                                    <ChevronRight className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" />
+                                    {ptTotal > 0 && (
+                                        <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                            <div className="h-full bg-orange-500/70 rounded-full" style={{ width: `${Math.round((stats.ptEpicCount || 0) / ptTotal * 100)}%` }} />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

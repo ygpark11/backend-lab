@@ -1352,7 +1352,6 @@ const GameListPage = () => {
                         Array.from({ length: 10 }).map((_, idx) => <SkeletonCard key={idx} />)
                     ) : (
                         games.length > 0 ? games.map((game, index) => {
-                            const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
                             const isLastElement = games.length === index + 1;
 
                             const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
@@ -1363,13 +1362,15 @@ const GameListPage = () => {
                             const rankToDisplay = filter.isBestSeller ? game.bestSellerRank
                                 : filter.isMostDownloaded ? game.mostDownloadedRank
                                     : null;
+                            const currentPrice = game.currentPrice || game.price;
+                            const isAtAllTimeLow = game.allTimeLowPrice > 0 && currentPrice > 0 && currentPrice <= game.allTimeLowPrice;
 
                             return (
                                 <div
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${isPlatinum ? 'border-[color:var(--bento-yellow-border-hover)] shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
+                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${isAtAllTimeLow ? 'border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                                 >
                                     <div
                                         className="aspect-[3/4] overflow-hidden relative shrink-0 bg-base"
@@ -1395,9 +1396,8 @@ const GameListPage = () => {
                                         )}
 
                                         {isNew && <span className={`absolute left-2 bg-green-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-20 transition-all ${rankToDisplay ? 'top-8' : 'top-2'}`}>NEW</span>}
-                                        {isPlatinum && <div className="absolute top-2 right-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
-                                        {isLastCall && <span className="absolute top-2 right-10 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
-                                        {isClosing && <span className="absolute top-2 right-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
+                                        {isLastCall && <span className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
+                                        {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
 
                                         <button onClick={(e) => handleLike(e, game.id)} className={`absolute bottom-12 right-2 p-2 rounded-full transition-all transform hover:scale-110 z-20 shadow-lg backdrop-blur-sm ${game.liked ? 'bg-red-500/20 text-red-500' : 'bg-glass text-secondary hover:bg-[var(--bento-red-from)] hover:text-red-500'}`}>
                                             <Heart className={`w-5 h-5 ${game.liked ? 'fill-current' : ''}`} />
@@ -1418,7 +1418,10 @@ const GameListPage = () => {
                                         <div className="flex flex-wrap gap-1 mb-2 min-h-[22px] items-center">
                                             {game.isPs5ProEnhanced && <span className="text-[10px] px-1.5 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">PRO</span>}
                                             {game.genres && game.genres.length > 0 ? (
-                                                game.genres.map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)
+                                                <>
+                                                    {game.genres.slice(0, 2).map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)}
+                                                    {game.genres.length > 2 && <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-muted border-divider">+{game.genres.length - 2}</span>}
+                                                </>
                                             ) : (
                                                 <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-secondary border-divider">미분류</span>
                                             )}
@@ -1437,6 +1440,7 @@ const GameListPage = () => {
 
                                         <div className="mt-auto relative z-20">
                                             {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-muted line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                            {isAtAllTimeLow && <p className="text-[9px] font-black text-red-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
                                             <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
                                                 <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
                                                     {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
