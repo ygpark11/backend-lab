@@ -345,6 +345,7 @@ export default function GameDetailPage() {
 
     const myEditionContents = game.familyGames?.find(e => e.id === game.id)?.editionContents ?? [];
     const maxPlayTime = Math.max(game.hltbCompletionist || 0, game.hltbMainExtra || 0, game.hltbMainStory || 0);
+    const showPlayTimeBars = [game.hltbMainStory, game.hltbMainExtra, game.hltbCompletionist].filter(v => v > 0).length >= 2;
     const voteTotal = voteCounts.likes + voteCounts.dislikes;
     const likePercent = voteTotal > 0 ? Math.round((voteCounts.likes / voteTotal) * 100) : 0;
     const pricePosition = (game.lowestPrice > 0 && game.originalPrice > game.lowestPrice)
@@ -574,11 +575,11 @@ export default function GameDetailPage() {
                                         </div>
                                     </div>
                                     <div className="flex justify-between mt-4 text-[10px] font-bold">
-                                        <span className="text-muted">정가 {game.originalPrice.toLocaleString()}원</span>
+                                        <span className="text-muted tracking-wider">정가</span>
                                         <span className={pricePosition >= 100 ? 'text-green-500 font-black' : pricePosition >= 90 ? 'text-green-500' : 'text-secondary'}>
                                             {pricePosition >= 100 ? '역대 최저!' : pricePosition >= 90 ? '역대 최저 근접!' : pricePosition > 0 ? `${pricePosition}% 할인 달성` : '할인 미적용'}
                                         </span>
-                                        <span className="text-green-500">최저 {game.lowestPrice.toLocaleString()}원</span>
+                                        <span className="text-green-500 tracking-wider">역대최저</span>
                                     </div>
                                 </div>
                             )}
@@ -757,12 +758,15 @@ export default function GameDetailPage() {
                                                 <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
                                                 <span className="text-[11px] text-muted font-bold">{formatCount(game.mcMetaCount)} reviews</span>
                                             </div>
-                                            <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
-                                                {game.mcMetaScore || '-'}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.mcMetaScore, 100)}`}>
+                                                    {game.mcMetaScore || '-'}
+                                                </span>
+                                                {game.mcMetaScore > 0 && <span className="text-[10px] font-bold text-muted">/ 100</span>}
                                             </div>
                                         </div>
                                         {game.mcMetaScore > 0 && (
-                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${getScoreBarBg(game.mcMetaScore, 100)}`} style={{ width: `${game.mcMetaScore}%` }} />
                                             </div>
                                         )}
@@ -774,12 +778,15 @@ export default function GameDetailPage() {
                                                 <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
                                                 <span className="text-[11px] text-muted font-bold">{formatCount(game.mcUserCount)} ratings</span>
                                             </div>
-                                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
-                                                {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.mcUserScore, 10)}`}>
+                                                    {game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : '-'}
+                                                </span>
+                                                {game.mcUserScore > 0 && <span className="text-[10px] font-bold text-muted">/ 10</span>}
                                             </div>
                                         </div>
                                         {game.mcUserScore > 0 && (
-                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${getScoreBarBg(game.mcUserScore, 10)}`} style={{ width: `${game.mcUserScore * 10}%` }} />
                                             </div>
                                         )}
@@ -800,12 +807,15 @@ export default function GameDetailPage() {
                                                 <span className="text-xs font-black text-secondary tracking-widest mb-0.5">CRITIC</span>
                                                 <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbCriticCount)} reviews</span>
                                             </div>
-                                            <div className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
-                                                {game.igdbCriticScore || '-'}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className={`text-3xl md:text-4xl font-black tracking-tighter ${getScoreColor(game.igdbCriticScore, 100)}`}>
+                                                    {game.igdbCriticScore || '-'}
+                                                </span>
+                                                {game.igdbCriticScore > 0 && <span className="text-[10px] font-bold text-muted">/ 100</span>}
                                             </div>
                                         </div>
                                         {game.igdbCriticScore > 0 && (
-                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${getScoreBarBg(game.igdbCriticScore, 100)}`} style={{ width: `${game.igdbCriticScore}%` }} />
                                             </div>
                                         )}
@@ -817,12 +827,15 @@ export default function GameDetailPage() {
                                                 <span className="text-xs font-black text-secondary tracking-widest mb-0.5">USER</span>
                                                 <span className="text-[11px] text-muted font-bold">{formatCount(game.igdbUserCount)} ratings</span>
                                             </div>
-                                            <div className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
-                                                {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className={`text-2xl md:text-3xl font-black tracking-tighter ${getScoreColor(game.igdbUserScore, 100)}`}>
+                                                    {game.igdbUserScore > 0 ? Math.round(game.igdbUserScore) : '-'}
+                                                </span>
+                                                {game.igdbUserScore > 0 && <span className="text-[10px] font-bold text-muted">/ 100</span>}
                                             </div>
                                         </div>
                                         {game.igdbUserScore > 0 && (
-                                            <div className="w-full h-0.5 bg-base rounded-full overflow-hidden">
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
                                                 <div className={`h-full rounded-full ${getScoreBarBg(game.igdbUserScore, 100)}`} style={{ width: `${game.igdbUserScore}%` }} />
                                             </div>
                                         )}
@@ -858,24 +871,30 @@ export default function GameDetailPage() {
                                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
                                     <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-ps-blue/5 hover:border-ps-blue/30 transition-colors">
                                         <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">MAIN</span>
-                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbMainStory)}</span>
-                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
-                                            <div className="h-full bg-ps-blue/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbMainStory ? Math.round((game.hltbMainStory / maxPlayTime) * 100) : 0}%` }} />
-                                        </div>
+                                        <span className={`text-lg sm:text-2xl font-black text-primary drop-shadow-sm ${showPlayTimeBars && game.hltbMainStory > 0 ? 'mb-3' : ''}`}>{formatPlayTime(game.hltbMainStory)}</span>
+                                        {showPlayTimeBars && game.hltbMainStory > 0 && (
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                                <div className="h-full bg-ps-blue/60 rounded-full" style={{ width: `${Math.round((game.hltbMainStory / maxPlayTime) * 100)}%` }} />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-purple-500/5 hover:border-purple-500/30 transition-colors">
                                         <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">+EXTRA</span>
-                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbMainExtra)}</span>
-                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
-                                            <div className="h-full bg-purple-500/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbMainExtra ? Math.round((game.hltbMainExtra / maxPlayTime) * 100) : 0}%` }} />
-                                        </div>
+                                        <span className={`text-lg sm:text-2xl font-black text-primary drop-shadow-sm ${showPlayTimeBars && game.hltbMainExtra > 0 ? 'mb-3' : ''}`}>{formatPlayTime(game.hltbMainExtra)}</span>
+                                        {showPlayTimeBars && game.hltbMainExtra > 0 && (
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                                <div className="h-full bg-purple-500/60 rounded-full" style={{ width: `${Math.round((game.hltbMainExtra / maxPlayTime) * 100)}%` }} />
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-col items-center bg-base/50 p-2.5 sm:p-4 rounded-xl border border-divider/50 shadow-inner hover:bg-yellow-500/5 hover:border-yellow-500/30 transition-colors">
                                         <span className="text-[9px] sm:text-[10px] font-black text-secondary tracking-widest mb-1">100%</span>
-                                        <span className="text-lg sm:text-2xl font-black text-primary drop-shadow-sm mb-3">{formatPlayTime(game.hltbCompletionist)}</span>
-                                        <div className="w-full h-1 bg-base rounded-full overflow-hidden">
-                                            <div className="h-full bg-yellow-500/60 rounded-full" style={{ width: `${maxPlayTime > 0 && game.hltbCompletionist ? Math.round((game.hltbCompletionist / maxPlayTime) * 100) : 0}%` }} />
-                                        </div>
+                                        <span className={`text-lg sm:text-2xl font-black text-primary drop-shadow-sm ${showPlayTimeBars && game.hltbCompletionist > 0 ? 'mb-3' : ''}`}>{formatPlayTime(game.hltbCompletionist)}</span>
+                                        {showPlayTimeBars && game.hltbCompletionist > 0 && (
+                                            <div className="w-full h-1 bg-divider/40 rounded-full overflow-hidden">
+                                                <div className="h-full bg-yellow-500/60 rounded-full" style={{ width: `${Math.round((game.hltbCompletionist / maxPlayTime) * 100)}%` }} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
