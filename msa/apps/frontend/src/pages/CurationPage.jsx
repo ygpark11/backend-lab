@@ -222,7 +222,8 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
             ref={ref}
             onClick={onViewAll}
             className={`
-                relative overflow-hidden rounded-2xl cursor-pointer group bg-surface
+                relative overflow-hidden rounded-2xl cursor-pointer group
+                ${theme.panel === 'xl' ? 'bg-base' : 'bg-surface'}
                 active:scale-95 sm:hover:-translate-y-0.5
                 transition-[opacity,transform,box-shadow] duration-300
                 ${colSpan} ${minHeight}
@@ -230,6 +231,19 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
             `}
             style={{ border: `1px solid ${theme.color.border}` }}
         >
+            {/* xl: 시네마틱 게임 커버 배경 */}
+            {theme.panel === 'xl' && games.length > 0 && (
+                <>
+                    <PSGameImage
+                        src={games[0].imageUrl}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover opacity-25 dark:opacity-40 blur-sm scale-110 group-hover:scale-[1.15] transition-transform duration-700 pointer-events-none select-none"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-base/95 via-base/60 to-transparent pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-base/50 via-transparent to-transparent pointer-events-none" />
+                </>
+            )}
+
             {/* ── 테마 컬러 배경 그라디언트 (base) ── */}
             <div
                 className="absolute inset-0 pointer-events-none"
@@ -336,6 +350,9 @@ function CategorySection({ categoryName, themes, onViewAll }) {
     const [emptyCount, setEmptyCount] = useState(0);
     const handleEmpty = useCallback(() => setEmptyCount(c => c + 1), []);
 
+    const categoryColor = themes[0]?.color;
+    const CategoryIcon = themes[0]?.Icon;
+
     // 모든 테마가 게임 없음으로 확정되면 섹션 자체를 렌더링하지 않음
     if (emptyCount >= themes.length) return null;
 
@@ -346,8 +363,11 @@ function CategorySection({ categoryName, themes, onViewAll }) {
         >
             {/* 챕터 구분 헤더 */}
             <div className="flex items-center gap-3 mb-3 sm:mb-4">
-                <h2 className="text-primary font-black text-base sm:text-lg tracking-tight shrink-0">{categoryName}</h2>
-                <div className="flex-1 h-px bg-divider" />
+                <div className="flex items-center gap-2 shrink-0">
+                    {CategoryIcon && <CategoryIcon className="w-4 h-4 shrink-0" style={{ color: categoryColor?.text }} />}
+                    <h2 className="text-primary font-black text-base sm:text-lg tracking-tight">{categoryName}</h2>
+                </div>
+                <div className="flex-1 h-px" style={{ background: categoryColor?.border ?? 'transparent' }} />
             </div>
 
             {/* 패널 그리드 */}
