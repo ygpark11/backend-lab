@@ -320,15 +320,15 @@ const WishlistPage = () => {
                             onClick={() => setActiveFilter(prev => prev === 'onSale' ? null : 'onSale')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
                                 activeFilter === 'onSale'
-                                    ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
-                                    : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                                    ? 'bg-ps-blue text-white border-ps-blue shadow-[0_0_14px_rgba(0,67,156,0.45)]'
+                                    : 'bg-[var(--bento-blue-from)] text-ps-blue border-[color:var(--bento-blue-border)] hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'
                             }`}
                         >
                             <TrendingDown className="w-3.5 h-3.5" />
                             할인 중만 보기
                             {onSaleGames.length > 0 && (
                                 <span className={`font-black px-1.5 py-0.5 rounded-full ${
-                                    activeFilter === 'onSale' ? 'bg-white/20 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                    activeFilter === 'onSale' ? 'bg-white/20 text-white' : 'bg-ps-blue/15 text-ps-blue'
                                 }`}>
                                     {onSaleGames.length}
                                 </span>
