@@ -7,6 +7,8 @@ import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
+import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -391,7 +393,7 @@ public class CatalogService {
         gameReadService.evictGameDetailCache(gameId);
     }
 
-    /** 검색 결과에 장르·찜 여부를 일괄 세팅 (gameIds 추출 1회) */
+    /** 검색 결과에 장르·찜 여부·가격 판정을 일괄 세팅 (gameIds 추출 1회) */
     private void enrichSearchResults(List<GameSearchResultDto> games, Long memberId) {
         List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
 
@@ -406,6 +408,19 @@ public class CatalogService {
             Set<Long> likedIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
             games.forEach(dto -> dto.setLiked(likedIds.contains(dto.getId())));
         }
+
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countGroupByGameId(gameIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],
+                        arr -> ((Long) arr[1]).intValue()
+                ));
+        games.forEach(dto -> {
+            int historySize = historyCountMap.getOrDefault(dto.getId(), 0);
+            PriceVerdict verdict = PriceVerdictCalculator.forGame(
+                    dto.getPrice(), dto.getOriginalPrice(), dto.getAllTimeLowPrice(), historySize);
+            dto.setPriceVerdict(verdict.name());
+        });
     }
 
     /**

@@ -41,6 +41,7 @@ public class WishlistDto {
     private Integer displayScore;
     private String scoreSource;
     private String topVibeTag;
+    private String priceVerdict;
 
     private Integer mcMetaScore;
     private Double mcUserScore;

@@ -44,6 +44,7 @@ public class GameSearchResultDto implements Serializable {
     private Integer displayScore;
     private String scoreSource;
     private String topVibeTag;
+    private String priceVerdict;
 
     @QueryProjection
     public GameSearchResultDto(Long id, String name, String imageUrl,

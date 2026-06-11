@@ -8,8 +8,10 @@ import {differenceInCalendarDays, parseISO} from 'date-fns';
 import {
     AlertTriangle,
     CheckSquare,
+    Circle,
     Clock,
     ExternalLink,
+    Flame,
     Gamepad2,
     Heart,
     Info,
@@ -18,12 +20,12 @@ import {
     PiggyBank,
     Scale,
     Server,
-    Sparkles,
     Square,
     Timer,
     Trash2,
     TrendingDown,
-    Triangle
+    Triangle,
+    X
 } from 'lucide-react';
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
@@ -340,17 +342,18 @@ const WishlistPage = () => {
                         const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                         const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                         const isClosing = !isLastCall && daysLeft <= 3;
-                        const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
                         const isSelectedForCompare = compareList.some(item => (item.gameId || item.id) === realGameId);
+                        const isAtAllTimeLow = game.lowestPrice > 0 && game.currentPrice > 0 && game.currentPrice <= game.lowestPrice;
 
                         return (
                             <div
                                 key={realGameId}
                                 ref={isLastElement ? lastGameElementRef : null}
                                 onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
-                                className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full 
+                                className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full
                                     ${isSelectedForCompare ? 'ring-2 ring-ps-blue shadow-[0_0_20px_rgba(0,67,156,0.6)] border-ps-blue' :
-                                    isPlatinum ? 'border-[color:var(--bento-yellow-border-hover)] shadow-[0_0_30px_rgba(250,204,21,0.2)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
+                                    isAtAllTimeLow ? 'border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.15)]' :
+                                    'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                             >
                                 <div
                                     className="aspect-[3/4] overflow-hidden relative shrink-0"
@@ -358,11 +361,10 @@ const WishlistPage = () => {
                                     <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>
 
-                                    {isPlatinum && <div className="absolute top-2 left-2 z-20"><Sparkles className="w-5 h-5 text-yellow-300 animate-pulse drop-shadow-md" /></div>}
-                                    {isNew && !isPlatinum && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
+                                    {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
 
-                                    {isLastCall && <span className="absolute top-2 right-10 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
-                                    {isClosing && <span className="absolute top-2 right-10 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
+                                    {isLastCall && <span className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
+                                    {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
 
                                     <button onClick={(e) => handleRemove(e, realGameId, game.name)} className="absolute top-2 right-2 p-2 rounded-full bg-black/60 hover:bg-red-600 text-gray-300 hover:text-white transition-all transform hover:scale-110 shadow-lg z-20"><Trash2 className="w-4 h-4" /></button>
 
@@ -382,6 +384,12 @@ const WishlistPage = () => {
                                         </span>
                                     ) : game.isPlusExclusive ? (
                                         <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
+                                    ) : game.priceVerdict && game.priceVerdict !== 'TRACKING' ? (
+                                        <div className="absolute bottom-2 left-2 z-10 bg-black/40 backdrop-blur-sm rounded-full p-1">
+                                            {game.priceVerdict === 'BUY_NOW' && <Circle className="w-4 h-4 text-green-400 fill-green-400/20 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" strokeWidth={2.5} />}
+                                            {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-4 h-4 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" strokeWidth={2.5} />}
+                                            {game.priceVerdict === 'WAIT' && <X className="w-4 h-4 text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]" strokeWidth={2.5} />}
+                                        </div>
                                     ) : null}
                                 </div>
                                 <div className="p-4 flex flex-col flex-1 bg-transparent relative z-20">
@@ -394,7 +402,10 @@ const WishlistPage = () => {
                                         )}
 
                                         {game.genres && game.genres.length > 0 ? (
-                                            game.genres.map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)
+                                            <>
+                                                {game.genres.slice(0, 2).map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)}
+                                                {game.genres.length > 2 && <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-muted border-divider">+{game.genres.length - 2}</span>}
+                                            </>
                                         ) : (
                                             <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface-hover text-secondary border-divider">미분류</span>
                                         )}
@@ -415,6 +426,7 @@ const WishlistPage = () => {
 
                                     <div className="mt-auto relative z-20">
                                         {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-secondary line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
+                                        {isAtAllTimeLow && <p className="text-[9px] font-black text-red-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
                                         <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
                                             <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
                                                 {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}

@@ -5,8 +5,11 @@ import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
 import com.pstracker.catalog_service.catalog.dto.WishlistDto;
 import com.pstracker.catalog_service.catalog.repository.GameGenreRepository;
+import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
+import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,7 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
     private final GameRepository gameRepository;
     private final GameGenreRepository gameGenreRepository;
+    private final GamePriceHistoryRepository priceHistoryRepository;
     private final MemberRepository memberRepository; // Proxy 조회용
 
     /**
@@ -98,20 +102,29 @@ public class WishlistService {
     }
 
     /**
-     * 게임 검색 결과에 장르 정보 매핑
+     * 찜 목록에 장르 정보 및 가격 판정 매핑
      * - 게임 ID 리스트로 한 번에 조회하여 N+1 문제 방지
      */
     private void markGameGenre(List<WishlistDto> wishlist) {
         List<Long> gameIds = wishlist.stream().map(WishlistDto::getGameId).toList();
 
         List<GameGenreResultDto> gameGenres = gameGenreRepository.findGameGenres(gameIds);
-
         Map<Long, List<String>> gameGenreMap = gameGenres.stream()
                 .collect(Collectors.groupingBy(
                         GameGenreResultDto::getGameId, Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+        wishlist.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of())));
 
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countGroupByGameId(gameIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],
+                        arr -> ((Long) arr[1]).intValue()
+                ));
         wishlist.forEach(dto -> {
-            dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of()));
+            int historySize = historyCountMap.getOrDefault(dto.getGameId(), 0);
+            PriceVerdict verdict = PriceVerdictCalculator.forGame(
+                    dto.getCurrentPrice(), dto.getOriginalPrice(), dto.getLowestPrice(), historySize);
+            dto.setPriceVerdict(verdict.name());
         });
     }
 }

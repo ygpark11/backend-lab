@@ -13,6 +13,7 @@ import {
     Check,
     ChevronDown,
     ChevronRight,
+    Circle,
     CircleDollarSign,
     Clock,
     Download,
@@ -1411,6 +1412,12 @@ const GameListPage = () => {
                                             </span>
                                         ) : game.isPlusExclusive ? (
                                             <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
+                                        ) : game.priceVerdict && game.priceVerdict !== 'TRACKING' ? (
+                                            <div className="absolute bottom-2 left-2 z-10 bg-black/40 backdrop-blur-sm rounded-full p-1">
+                                                {game.priceVerdict === 'BUY_NOW' && <Circle className="w-4 h-4 text-green-400 fill-green-400/20 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" strokeWidth={2.5} />}
+                                                {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-4 h-4 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" strokeWidth={2.5} />}
+                                                {game.priceVerdict === 'WAIT' && <X className="w-4 h-4 text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]" strokeWidth={2.5} />}
+                                            </div>
                                         ) : null}
                                     </div>
 
