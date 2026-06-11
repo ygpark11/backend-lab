@@ -1364,14 +1364,12 @@ const GameListPage = () => {
                                 : filter.isMostDownloaded ? game.mostDownloadedRank
                                     : null;
                             const currentPrice = game.currentPrice || game.price;
-                            const isAtAllTimeLow = game.allTimeLowPrice > 0 && currentPrice > 0 && currentPrice <= game.allTimeLowPrice;
-
                             return (
                                 <div
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${isAtAllTimeLow ? 'border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.15)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
+                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${game.priceVerdict === 'BUY_NOW' ? 'border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                                 >
                                     <div
                                         className="aspect-[3/4] overflow-hidden relative shrink-0 bg-base"
@@ -1406,19 +1404,14 @@ const GameListPage = () => {
 
                                         {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
 
-                                        {game.inCatalog ? (
+                                        {game.inCatalog && (
                                             <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(250,204,21,0.6)] z-10 flex items-center gap-1 animate-pulse-slow">
                                                 <Gamepad2 className="w-3 h-3 fill-black" /> EXTRA
                                             </span>
-                                        ) : game.isPlusExclusive ? (
+                                        )}
+                                        {!game.inCatalog && game.isPlusExclusive && (
                                             <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
-                                        ) : game.priceVerdict && game.priceVerdict !== 'TRACKING' ? (
-                                            <div className="absolute bottom-2 left-2 z-10 bg-black/40 backdrop-blur-sm rounded-full p-1">
-                                                {game.priceVerdict === 'BUY_NOW' && <Circle className="w-4 h-4 text-green-400 fill-green-400/20 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" strokeWidth={2.5} />}
-                                                {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-4 h-4 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" strokeWidth={2.5} />}
-                                                {game.priceVerdict === 'WAIT' && <X className="w-4 h-4 text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]" strokeWidth={2.5} />}
-                                            </div>
-                                        ) : null}
+                                        )}
                                     </div>
 
                                     <div className="p-4 flex flex-col flex-1 bg-transparent relative z-20">
@@ -1446,8 +1439,10 @@ const GameListPage = () => {
                                         </h3>
 
                                         <div className="mt-auto relative z-20">
+                                            {game.priceVerdict === 'BUY_NOW' && <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
+                                            {game.priceVerdict === 'GOOD_OFFER' && <p className="text-[9px] font-black text-amber-500 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingDown className="w-2.5 h-2.5" />괜찮은 가격</p>}
+                                            {game.priceVerdict === 'WAIT' && <p className="text-[9px] font-black text-red-400/80 tracking-wider flex items-center gap-0.5 mb-0.5"><Clock className="w-2.5 h-2.5" />지금비싼편</p>}
                                             {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-muted line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
-                                            {isAtAllTimeLow && <p className="text-[9px] font-black text-red-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
                                             <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
                                                 <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
                                                     {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}

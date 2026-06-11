@@ -47,7 +47,7 @@ const WishlistPage = () => {
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
 
-    const [onSaleOnly, setOnSaleOnly] = useState(false);
+    const [activeFilter, setActiveFilter] = useState(null); // null | 'onSale' | 'buyNow' | 'goodOffer'
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
 
@@ -201,7 +201,13 @@ const WishlistPage = () => {
 
 
     const onSaleGames = games.filter(g => g.discountRate > 0);
-    const displayedGames = onSaleOnly ? onSaleGames : games;
+    const buyNowGames = games.filter(g => g.priceVerdict === 'BUY_NOW');
+    const goodOfferGames = games.filter(g => g.priceVerdict === 'GOOD_OFFER');
+    const displayedGames =
+        activeFilter === 'onSale' ? onSaleGames :
+        activeFilter === 'buyNow' ? buyNowGames :
+        activeFilter === 'goodOffer' ? goodOfferGames :
+        games;
 
     const totalSavings = games.reduce((acc, game) => {
         if (!game.originalPrice || !game.currentPrice) return acc;
@@ -309,24 +315,60 @@ const WishlistPage = () => {
 
                 {/* 필터 토글 */}
                 {games.length > 0 && (
-                    <div className="flex items-center gap-2 mb-5">
+                    <div className="flex flex-wrap items-center gap-2 mb-5">
                         <button
-                            onClick={() => setOnSaleOnly(prev => !prev)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition-all active:scale-95 ${
-                                onSaleOnly
+                            onClick={() => setActiveFilter(prev => prev === 'onSale' ? null : 'onSale')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                                activeFilter === 'onSale'
                                     ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
                                     : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
                             }`}
                         >
-                            <TrendingDown className="w-4 h-4" />
+                            <TrendingDown className="w-3.5 h-3.5" />
                             할인 중만 보기
                             {onSaleGames.length > 0 && (
-                                <span className={`text-xs font-black px-1.5 py-0.5 rounded-full ${
-                                    onSaleOnly
-                                        ? 'bg-white/20 text-white'
-                                        : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                <span className={`font-black px-1.5 py-0.5 rounded-full ${
+                                    activeFilter === 'onSale' ? 'bg-white/20 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
                                 }`}>
                                     {onSaleGames.length}
+                                </span>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={() => setActiveFilter(prev => prev === 'buyNow' ? null : 'buyNow')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                                activeFilter === 'buyNow'
+                                    ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
+                                    : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                            }`}
+                        >
+                            <Flame className="w-3.5 h-3.5" />
+                            역대최저만
+                            {buyNowGames.length > 0 && (
+                                <span className={`font-black px-1.5 py-0.5 rounded-full ${
+                                    activeFilter === 'buyNow' ? 'bg-white/20 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                }`}>
+                                    {buyNowGames.length}
+                                </span>
+                            )}
+                        </button>
+
+                        <button
+                            onClick={() => setActiveFilter(prev => prev === 'goodOffer' ? null : 'goodOffer')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                                activeFilter === 'goodOffer'
+                                    ? 'bg-amber-500 text-white border-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.45)]'
+                                    : 'bg-[var(--bento-amber-from)] text-amber-600 dark:text-amber-400 border-[color:var(--bento-amber-border)] hover:border-[color:var(--bento-amber-border-hover)] hover:[box-shadow:var(--bento-amber-shadow)]'
+                            }`}
+                        >
+                            <Triangle className="w-3.5 h-3.5" />
+                            괜찮은 가격
+                            {goodOfferGames.length > 0 && (
+                                <span className={`font-black px-1.5 py-0.5 rounded-full ${
+                                    activeFilter === 'goodOffer' ? 'bg-white/20 text-white' : 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                }`}>
+                                    {goodOfferGames.length}
                                 </span>
                             )}
                         </button>
@@ -337,14 +379,12 @@ const WishlistPage = () => {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {displayedGames.length > 0 ? displayedGames.map((game, index) => {
                         const realGameId = game.gameId || game.id;
-                        const isLastElement = !onSaleOnly && displayedGames.length === index + 1;
+                        const isLastElement = !activeFilter && displayedGames.length === index + 1;
                         const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
                         const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
                         const isLastCall = daysLeft >= 0 && daysLeft <= 1;
                         const isClosing = !isLastCall && daysLeft <= 3;
                         const isSelectedForCompare = compareList.some(item => (item.gameId || item.id) === realGameId);
-                        const isAtAllTimeLow = game.lowestPrice > 0 && game.currentPrice > 0 && game.currentPrice <= game.lowestPrice;
-
                         return (
                             <div
                                 key={realGameId}
@@ -352,7 +392,7 @@ const WishlistPage = () => {
                                 onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
                                 className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full
                                     ${isSelectedForCompare ? 'ring-2 ring-ps-blue shadow-[0_0_20px_rgba(0,67,156,0.6)] border-ps-blue' :
-                                    isAtAllTimeLow ? 'border-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.15)]' :
+                                    game.priceVerdict === 'BUY_NOW' ? 'border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]' :
                                     'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                             >
                                 <div
@@ -378,19 +418,14 @@ const WishlistPage = () => {
                                     </button>
 
                                     {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
-                                    {game.inCatalog ? (
+                                    {game.inCatalog && (
                                         <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(250,204,21,0.6)] z-10 flex items-center gap-1 animate-pulse-slow">
                                             <Gamepad2 className="w-3 h-3 fill-black" /> EXTRA
                                         </span>
-                                    ) : game.isPlusExclusive ? (
+                                    )}
+                                    {!game.inCatalog && game.isPlusExclusive && (
                                         <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
-                                    ) : game.priceVerdict && game.priceVerdict !== 'TRACKING' ? (
-                                        <div className="absolute bottom-2 left-2 z-10 bg-black/40 backdrop-blur-sm rounded-full p-1">
-                                            {game.priceVerdict === 'BUY_NOW' && <Circle className="w-4 h-4 text-green-400 fill-green-400/20 drop-shadow-[0_0_5px_rgba(74,222,128,0.8)]" strokeWidth={2.5} />}
-                                            {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-4 h-4 text-yellow-400 fill-yellow-400/20 drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]" strokeWidth={2.5} />}
-                                            {game.priceVerdict === 'WAIT' && <X className="w-4 h-4 text-red-400 drop-shadow-[0_0_5px_rgba(248,113,113,0.8)]" strokeWidth={2.5} />}
-                                        </div>
-                                    ) : null}
+                                    )}
                                 </div>
                                 <div className="p-4 flex flex-col flex-1 bg-transparent relative z-20">
 
@@ -425,8 +460,10 @@ const WishlistPage = () => {
                                     </h3>
 
                                     <div className="mt-auto relative z-20">
+                                        {game.priceVerdict === 'BUY_NOW' && <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
+                                        {game.priceVerdict === 'GOOD_OFFER' && <p className="text-[9px] font-black text-amber-500 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingDown className="w-2.5 h-2.5" />괜찮은 가격</p>}
+                                        {game.priceVerdict === 'WAIT' && <p className="text-[9px] font-black text-red-400/80 tracking-wider flex items-center gap-0.5 mb-0.5"><Clock className="w-2.5 h-2.5" />지금비싼편</p>}
                                         {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-secondary line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
-                                        {isAtAllTimeLow && <p className="text-[9px] font-black text-red-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
                                         <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
                                             <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
                                                 {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
@@ -460,11 +497,17 @@ const WishlistPage = () => {
                         );
                     }) : (
                         !loading && (
-                            onSaleOnly ? (
+                            activeFilter ? (
                                 <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
-                                    <TrendingDown className="w-12 h-12 text-muted" />
-                                    <p className="text-secondary font-bold">현재 할인 중인 찜 게임이 없습니다.</p>
-                                    <button onClick={() => setOnSaleOnly(false)} className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-divider rounded-xl text-sm font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-all active:scale-95">
+                                    {activeFilter === 'onSale' && <TrendingDown className="w-12 h-12 text-muted" />}
+                                    {activeFilter === 'buyNow' && <Flame className="w-12 h-12 text-muted" />}
+                                    {activeFilter === 'goodOffer' && <Triangle className="w-12 h-12 text-muted" />}
+                                    <p className="text-secondary font-bold">
+                                        {activeFilter === 'onSale' && '현재 할인 중인 찜 게임이 없습니다.'}
+                                        {activeFilter === 'buyNow' && '역대최저 가격인 찜 게임이 없습니다.'}
+                                        {activeFilter === 'goodOffer' && '괜찮은 가격인 찜 게임이 없습니다.'}
+                                    </p>
+                                    <button onClick={() => setActiveFilter(null)} className="flex items-center gap-2 px-5 py-2.5 bg-surface border border-divider rounded-xl text-sm font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-all active:scale-95">
                                         전체 보기
                                     </button>
                                 </div>
