@@ -328,7 +328,7 @@ const Navbar = () => {
             <nav className={`fixed top-0 w-full z-50 bg-glass backdrop-blur-md border-b border-divider h-16 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
             <div className="max-w-7xl mx-auto px-3 sm:px-6 h-full flex items-center justify-between">
 
-                <div className="flex items-center gap-2 md:gap-4 lg:gap-8 shrink-0">
+                <div className="flex items-center gap-2 md:gap-4 lg:gap-4 shrink-0">
                     {/* 로고 */}
                     <div className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group" onClick={handleLogoClick}>
                         <div className="bg-ps-blue p-1.5 rounded-lg transition-transform duration-300 md:group-hover:rotate-12 active:scale-95 active:rotate-12 shadow-[0_0_10px_rgba(0,112,209,0.5)]">
@@ -340,24 +340,24 @@ const Navbar = () => {
                     </div>
 
                     {/* 데스크톱 메뉴 */}
-                    <div className="hidden md:flex items-center gap-2">
-                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                    <div className="hidden lg:flex items-center gap-2">
+                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Gamepad2 className="w-4 h-4" /> 게임 목록
                         </button>
-                        <button onClick={() => navigateAndScroll('/curation')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/curation') ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/curation')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/curation') ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Flame className="w-4 h-4" /> 큐레이션
                         </button>
-                        <button onClick={() => navigateAndScroll('/discover')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/discover')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Sparkles className="w-4 h-4" /> 신작 수집소
                         </button>
-                        <button onClick={() => navigateAndScroll('/insights')} className={`px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/insights')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Activity className="w-4 h-4" /> 통계 인사이트
                         </button>
                     </div>
                 </div>
 
                 {/* 우측 유틸리티 영역 */}
-                <div className="flex items-center gap-0.5 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-0.5 sm:gap-2 lg:gap-1 shrink-0">
 
                     <button
                         onClick={() => navigateAndScroll('/ps-plus')}
@@ -522,11 +522,11 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        <button onClick={() => navigateAndScroll('/profile')} className={`hidden md:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary md:hover:text-primary md:hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/profile')} className={`hidden lg:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
-                        <button onClick={handleLogout} className="hidden md:flex items-center gap-2 text-sm font-bold text-secondary p-2 rounded-lg transition-colors md:hover:text-red-500 md:hover:bg-surface-hover active:text-red-500">
+                        <button onClick={handleLogout} className="hidden lg:flex items-center gap-2 text-sm font-bold text-secondary p-2 rounded-lg transition-colors hover:text-red-500 hover:bg-surface-hover active:text-red-500">
                             <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
@@ -542,7 +542,7 @@ const Navbar = () => {
                         </button>
                     )}
 
-                    <div className="relative md:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
+                    <div className="relative lg:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
                         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-surface-hover text-primary' : 'text-secondary hover:bg-surface-hover'}`}>
                             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
