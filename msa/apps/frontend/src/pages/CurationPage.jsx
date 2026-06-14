@@ -201,7 +201,7 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
 
     if (loaded && games.length === 0) return null;
 
-    const colSpan = theme.panel === 'xl' ? 'col-span-1 sm:col-span-2' : 'col-span-1';
+    const colSpan = theme.panel === 'xl' ? 'col-span-2' : 'col-span-1';
     // xl: 모바일에서도 md보다 뚜렷하게 크게 — featured 위계 유지
     const minHeight = theme.panel === 'xl'
         ? 'min-h-[230px] sm:min-h-[260px]'
@@ -321,11 +321,8 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
                         {games.slice(0, 3).map(game => (
                             <div
                                 key={game.id}
-                                className="rounded-lg overflow-hidden shrink-0 shadow-sm"
-                                style={{
-                                    width: '40px', height: '52px',
-                                    outline: `1px solid ${theme.color.border}`,
-                                }}
+                                className="w-[40px] h-[52px] sm:w-[48px] sm:h-[64px] rounded-lg overflow-hidden shrink-0 shadow-sm"
+                                style={{ outline: `1px solid ${theme.color.border}` }}
                             >
                                 <PSGameImage
                                     src={game.imageUrl}
@@ -371,7 +368,7 @@ function CategorySection({ categoryName, themes, onViewAll }) {
             </div>
 
             {/* 패널 그리드 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {themes.map(theme => (
                     <ThemePanel
                         key={theme.id}

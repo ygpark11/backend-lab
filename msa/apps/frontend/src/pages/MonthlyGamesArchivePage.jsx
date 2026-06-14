@@ -251,7 +251,7 @@ const MonthlyGamesArchivePage = () => {
                                 return (
                                     <div key={monthData.targetMonth} className="flex flex-col lg:flex-row gap-6 lg:gap-12 relative animate-fadeIn group/month" style={{ animationDelay: `${(index % 5) * 50}ms` }}>
 
-                                        <div className="hidden lg:block absolute left-[15px] top-[40px] bottom-[-40px] w-[2px] bg-gradient-to-b from-divider-strong via-divider to-transparent rounded-full z-0"></div>
+                                        {index < pages.length - 1 && <div className="hidden lg:block absolute left-[15px] top-[40px] bottom-[-40px] w-[2px] bg-gradient-to-b from-divider-strong via-divider to-transparent rounded-full z-0"></div>}
 
                                         <div className="lg:w-[160px] flex-shrink-0 relative z-10">
                                             <div className="lg:sticky lg:top-24 inline-flex lg:flex items-center gap-3 bg-glass backdrop-blur-md px-4 py-2 lg:px-0 lg:py-0 lg:bg-transparent lg:backdrop-blur-none border border-divider lg:border-none rounded-full shadow-sm lg:shadow-none transition-all">

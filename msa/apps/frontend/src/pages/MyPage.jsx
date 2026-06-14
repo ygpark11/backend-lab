@@ -295,13 +295,13 @@ export default function MyPage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 w-full">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 mt-4 w-full">
                                 {[
                                     { icon: Triangle, textClass: 'text-[#00A39D]', bgClass: 'bg-[#00A39D]/10', label: '절약 대기', value: `₩${(displayedSaved / 1000).toFixed(0)}K`, valSize: 'text-sm sm:text-lg' },
                                     { icon: XIcon, textClass: 'text-[#4E6CBB]', bgClass: 'bg-[#4E6CBB]/10', label: '발굴 데이터', value: `${displayedPioneered}EA`, valSize: 'text-sm sm:text-lg' },
                                     { icon: Square, textClass: 'text-[#E8789C]', bgClass: 'bg-[#E8789C]/10', label: '합류 일자', value: profile.joinDate.replace(/-/g, '.').substring(2), valSize: 'text-xs sm:text-base mt-auto sm:mt-0' }
                                 ].map((stat, i) => (
-                                    <div key={i} className="p-2 sm:p-3 rounded-lg flex flex-col items-center sm:items-start relative overflow-hidden group transition-colors duration-300 border shadow-sm bg-surface border-divider hover:border-divider-strong">
+                                    <div key={i} className={`p-2 sm:p-3 rounded-lg flex flex-col items-center sm:items-start relative overflow-hidden group transition-colors duration-300 border shadow-sm bg-surface border-divider hover:border-divider-strong${i === 2 ? ' col-span-2 sm:col-span-1' : ''}`}>
                                         <div className={`absolute -bottom-4 -right-4 w-14 h-14 rounded-full blur-xl ${stat.bgClass} opacity-50 group-hover:opacity-80 transition-opacity`}></div>
                                         <stat.icon className={`absolute -bottom-2 -right-2 w-10 h-10 stroke-[3px] transition-colors opacity-20 ${stat.textClass}`} />
 
@@ -390,7 +390,7 @@ export default function MyPage() {
                             ) : (
                                 <div className="flex gap-3 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory px-1 -mx-1 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong">
                                     {pioneeredGames.map(game => (
-                                        <div key={game.id} onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })} className="w-[130px] sm:w-[160px] shrink-0 snap-start group cursor-pointer">
+                                        <div key={game.id} onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })} className="w-[130px] sm:w-[160px] shrink-0 snap-center group cursor-pointer">
                                             <div
                                                 className="relative aspect-[3/4] rounded-lg overflow-hidden border shadow-sm mb-2 transition-transform duration-300 group-hover:-translate-y-1 group-hover:border-ps-blue bg-base border-divider"
                                             >
@@ -506,7 +506,7 @@ export default function MyPage() {
                                         </div>
 
                                         <div className="relative z-10 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all duration-500 shadow-inner w-full sm:w-max mt-1 bg-base border-divider group-hover:border-[color:var(--bento-blue-border-hover)] group-hover:bg-[var(--bento-blue-from)]">
-                                            <span className="text-xs sm:text-sm font-mono font-bold tracking-wider drop-shadow-sm transition-colors duration-500 text-ps-blue relative">
+                                            <span className="text-xs sm:text-sm font-mono font-bold tracking-wider drop-shadow-sm transition-colors duration-500 text-ps-blue relative break-all">
                                                 pstracker.help@gmail.com
                                                 <div className="absolute -inset-x-2 -inset-y-1 bg-ps-blue/10 blur rounded opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             </span>

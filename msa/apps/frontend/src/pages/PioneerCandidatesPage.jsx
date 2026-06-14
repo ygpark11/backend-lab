@@ -61,7 +61,7 @@ const CandidateCard = ({ game, onExtract, onDelete, isAuthenticated, isAdmin, op
             ${isUnlocked ? 'border-ps-blue shadow-[0_0_50px_rgba(59,130,246,0.8)] z-50 scale-105' : 'border-divider hover:border-ps-blue hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]'}
         `}>
             {/* 게임 포스터 영역 */}
-            <div className="aspect-[3/4] overflow-hidden relative bg-black shrink-0">
+            <div className="aspect-[3/4] max-h-[220px] overflow-hidden relative bg-black shrink-0">
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.title}

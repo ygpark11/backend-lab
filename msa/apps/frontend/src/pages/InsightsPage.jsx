@@ -167,7 +167,7 @@ const InsightsPage = () => {
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Radio className="w-4 h-4 text-ps-blue" /> Market Radar
                             </h2>
-                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'RADAR' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'RADAR' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
                                 <Info className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -255,7 +255,7 @@ const InsightsPage = () => {
                                     </div>
                                 </div>
 
-                                <div className="relative z-10 flex items-center gap-6 md:gap-10 w-full md:w-auto bg-base md:bg-transparent p-4 md:p-0 rounded-xl border border-divider md:border-0">
+                                <div className="relative z-10 flex items-center gap-6 md:gap-10 w-full md:w-auto">
                                     <div>
                                         <p className="text-[10px] text-secondary font-bold uppercase mb-1">할인 중인 타이틀</p>
                                         <p className="text-2xl font-black text-primary">{stats.totalDiscountedGames?.toLocaleString()}<span className="text-xs text-secondary font-medium ml-1">개</span></p>
@@ -280,7 +280,7 @@ const InsightsPage = () => {
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Trophy className="w-4 h-4 text-ps-blue" /> PlayStation Charts
                             </h2>
-                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'CHARTS' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'CHARTS' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
                                 <Info className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -358,7 +358,7 @@ const InsightsPage = () => {
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-ps-blue" /> Playtime Distribution
                             </h2>
-                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'PLAYTIME' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'PLAYTIME' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
                                 <Info className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -478,7 +478,7 @@ const InsightsPage = () => {
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Globe className="w-4 h-4 text-ps-blue" /> PlayStation Ecosystem
                             </h2>
-                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'ECOSYSTEM' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'ECOSYSTEM' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
                                 <Info className="w-3.5 h-3.5" />
                             </button>
                         </div>
@@ -545,7 +545,7 @@ const InsightsPage = () => {
                             <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
                                 <Database className="w-4 h-4 text-ps-blue" /> System Matrix
                             </h2>
-                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'MATRIX' }); }} className="text-muted hover:text-primary transition-colors p-0.5">
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'MATRIX' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
                                 <Info className="w-3.5 h-3.5" />
                             </button>
                         </div>

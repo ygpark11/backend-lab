@@ -134,7 +134,7 @@ const PsPlusPricingPage = () => {
                             <button
                                 key={btn.id}
                                 onClick={() => setSelectedDuration(btn.id)}
-                                className={`relative px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2
+                                className={`relative px-4 sm:px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 flex items-center gap-2
                                     ${selectedDuration === btn.id
                                     ? 'bg-primary text-[color:var(--color-bg-base)] shadow-md'
                                     : 'text-secondary hover:text-primary'}`}

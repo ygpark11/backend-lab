@@ -389,7 +389,7 @@ export default function GameDetailPage() {
                     {/* ========================================== */}
                     <div className="lg:col-span-4 lg:sticky lg:top-24 h-fit space-y-5">
                         <div className={`rounded-2xl overflow-hidden shadow-2xl border relative group bg-base ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider'}`}>
-                            <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover h-[42vh] lg:h-auto lg:aspect-[3/4]" />
+                            <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover h-[50vw] max-h-[320px] lg:h-auto lg:aspect-[3/4]" />
                             {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse"></div>}
                             {isNew && <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-lg z-10">NEW</span>}
                             {isClosingSoon && <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> 막차!</span>}
@@ -1003,7 +1003,7 @@ export default function GameDetailPage() {
                 )}
             </div>
 
-            <div className="lg:hidden fixed bottom-0 left-0 w-full p-3 sm:p-4 bg-base/90 backdrop-blur-xl border-t border-divider z-[60] animate-slideUp">
+            {!isModal && <div className="lg:hidden fixed bottom-0 left-0 w-full p-3 sm:p-4 bg-base/90 backdrop-blur-xl border-t border-divider z-[60] animate-slideUp">
                 <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
                     {/* 가격 정보 요약 */}
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -1058,7 +1058,7 @@ export default function GameDetailPage() {
                         </a>
                     </div>
                 </div>
-            </div>
+            </div>}
 
             {/* Modal Components */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
