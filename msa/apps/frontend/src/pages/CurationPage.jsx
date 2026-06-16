@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     AlarmClock, Banknote, Brain, ChevronRight, Circle, Clock, Crosshair,
-    Flame, Gamepad2, Sparkles, Square, Triangle, Trophy,
-    TrendingDown, Users, X as XIcon,
+    Flame, Gamepad2, Heart, Map as MapIcon, Sparkles, Square, Triangle, Trophy,
+    TrendingDown, Users, X as XIcon, Zap,
 } from 'lucide-react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import PSGameImage from '../components/common/PSGameImage';
@@ -101,15 +101,27 @@ const THEMES = [
       color: { text: '#22c55e', glow: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.3)' },
       params: { vibeTags: ['#접대용최고', '#연인과함께', '#우정파괴'], minDiscountRate: 50, sort: 'discountRate,desc' } },
 
-    // 장르 × 데이터
-    { id: 19, panel: 'md', Icon: Crosshair, category: '장르 × 데이터',
-      copy: 'JRPG 입문각, 지금이 타이밍', subtitle: 'RPG + 30~100시간 + 2.5만원 이하 + 평점 75+',
-      color: { text: '#f97316', glow: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)' },
-      params: { genre: 'RPG', minPlayTime: 30, maxPlayTime: 100, maxPrice: 25000, minMetaScore: 75, sort: 'discountRate,desc' } },
-    { id: 20, panel: 'md', Icon: Crosshair, category: '장르 × 데이터',
-      copy: '오픈월드 정주행 지금 해', subtitle: '어드벤처 + 30~100시간 + 50% 이상 할인',
-      color: { text: '#f97316', glow: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)' },
-      params: { genre: 'Adventure', minPlayTime: 30, maxPlayTime: 100, minDiscountRate: 50, sort: 'discountRate,desc' } },
+    // AI 감성 취향 추가
+    { id: 19, panel: 'xl', Icon: MapIcon, category: 'AI 감성 취향',
+      copy: '광활한 세계를 발로 누벼라', subtitle: '오픈월드 + 40시간 이상 + 30% 이상 할인',
+      color: { text: '#6366f1', glow: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+      params: { vibeTags: ['#오픈월드'], minPlayTime: 40, minDiscountRate: 30, sort: 'discountRate,desc' } },
+    { id: 20, panel: 'md', Icon: Zap, category: 'AI 감성 취향',
+      copy: '손이 기억하는 타격감 갓겜', subtitle: '타격감 + 피지컬 요구 + 30% 이상 할인',
+      color: { text: '#6366f1', glow: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+      params: { vibeTags: ['#타격감원탑', '#피지컬요구'], minDiscountRate: 30, sort: 'discountRate,desc' } },
+    { id: 21, panel: 'md', Icon: Brain, category: 'AI 감성 취향',
+      copy: '두뇌 풀가동: 전략·턴제 명작', subtitle: '전략적 선택 & 턴제 전투 + 평점 75+ + 30% 이상 할인',
+      color: { text: '#6366f1', glow: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+      params: { vibeTags: ['#전략적선택', '#턴제전투'], minMetaScore: 75, minDiscountRate: 30, sort: 'discountRate,desc' } },
+    { id: 22, panel: 'md', Icon: Heart, category: 'AI 감성 취향',
+      copy: '지친 하루 끝, 힐링 게임 특가', subtitle: '힐링 & 가볍게 즐기는 게임 + 30% 이상 할인',
+      color: { text: '#6366f1', glow: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+      params: { vibeTags: ['#힐링테라피', '#뇌빼고가능'], minDiscountRate: 30, sort: 'discountRate,desc' } },
+    { id: 23, panel: 'md', Icon: Crosshair, category: 'AI 감성 취향',
+      copy: '방아쇠 당기면 해소되는 슈터 명작', subtitle: '총격전 맛집 + 평점 75+ + 30% 이상 할인',
+      color: { text: '#6366f1', glow: 'rgba(99,102,241,0.12)', border: 'rgba(99,102,241,0.3)' },
+      params: { vibeTags: ['#총격전맛집'], minMetaScore: 75, minDiscountRate: 30, sort: 'discountRate,desc' } },
 ];
 
 // 카테고리별로 그룹화 (THEMES 순서 보존)
