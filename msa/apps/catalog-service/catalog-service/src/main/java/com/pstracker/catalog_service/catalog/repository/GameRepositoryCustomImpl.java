@@ -238,11 +238,13 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         if (vibeTags == null || vibeTags.isEmpty()) return null;
         BooleanExpression result = null;
         for (String tag : vibeTags) {
-            BooleanExpression condition = Expressions.booleanTemplate(
+            // JSON_CONTAINS는 MySQL에서 0/1(integer)을 반환하므로
+            // Hibernate 6 semantic validator를 통과하려면 numberTemplate + .eq(1) 사용
+            BooleanExpression condition = Expressions.numberTemplate(Integer.class,
                     "JSON_CONTAINS({0}, JSON_QUOTE({1}))",
                     game.vibeTags,
                     tag
-            );
+            ).eq(1);
             result = (result == null) ? condition : result.or(condition);
         }
         return result;
