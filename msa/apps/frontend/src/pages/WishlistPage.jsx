@@ -144,19 +144,18 @@ const WishlistPage = () => {
 
     const handleRemove = (e, gameId, gameName) => {
         e.stopPropagation();
-        toast((t) => (
-            <div className="flex flex-col gap-2 min-w-[200px]">
+        toast.custom((t) => (
+            <div className={`bg-base border border-divider shadow-xl rounded-2xl p-4 flex flex-col gap-2 min-w-[220px] transition-all ${t.visible ? 'animate-fadeIn' : 'opacity-0'}`}>
                 <div className="flex items-center gap-2 font-bold text-primary"><AlertTriangle className="w-5 h-5 text-red-500" /><span>삭제하시겠습니까?</span></div>
-                <p className="text-sm text-secondary mb-2">'{gameName}'을(를) 목록에서 제거합니다.</p>
+                <p className="text-sm text-secondary mb-1">'{gameName}'을(를) 목록에서 제거합니다.</p>
                 <div className="flex gap-2">
-                    <button onClick={() => { toast.dismiss(t.id); performDelete(gameId); }} className="flex-1 bg-red-500 text-white py-1.5 rounded text-sm font-bold hover:bg-red-600 transition">네, 삭제</button>
-                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 bg-surface border border-divider text-secondary py-1.5 rounded text-sm font-bold hover:bg-surface-hover hover:text-primary transition">취소</button>
+                    <button onClick={() => { toast.dismiss(t.id); performDelete(gameId); }} className="flex-1 bg-red-500 text-white py-1.5 rounded-lg text-sm font-bold hover:bg-red-600 transition active:scale-95">네, 삭제</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 bg-surface-hover border border-divider text-secondary py-1.5 rounded-lg text-sm font-bold hover:text-primary transition active:scale-95">취소</button>
                 </div>
             </div>
         ), {
             duration: 5000,
             position: 'top-center',
-            style: { background: 'var(--color-bg-surface)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border-default)', color: 'var(--color-text-primary)' }
         });
     };
 
@@ -169,7 +168,7 @@ const WishlistPage = () => {
             setTotalElements(prev => Math.max(0, prev - 1));
 
             toast.dismiss(toastId);
-            toast.success("삭제되었습니다 🗑️", { duration: 3000 });
+            toast.success("삭제되었습니다", { duration: 3000 });
 
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
                 detail: { gameId: Number(gameId), liked: false }
@@ -191,10 +190,7 @@ const WishlistPage = () => {
         } else {
             const result = addToCompare(game);
             if (result === 'MAX') {
-                toast.error("결승전(VS)은 딱 2개까지만 고를 수 있습니다!", {
-                    duration: 3000,
-                    style: { background: 'var(--color-bg-surface)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-default)' }
-                });
+                toast.error("결승전(VS)은 딱 2개까지만 고를 수 있습니다!", { duration: 3000 });
             }
         }
     };
