@@ -2,6 +2,8 @@ package com.pstracker.catalog_service.catalog.application;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
@@ -13,12 +15,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.*;
 import static org.mockito.Mockito.never;
@@ -123,6 +129,46 @@ public class CatalogServiceTest {
         verify(gameRepository, never()).findByPsStoreIdWithGenres(any());
         verify(gameRepository, never()).save(any());
         verify(gameReadService, never()).evictGameDetailCache(any());
+    }
+
+    // ========== searchGames — curation 분기 ==========
+
+    @Test
+    @DisplayName("searchGames: curation=true 이면 gameReadService.searchGamesForCuration에 위임한다")
+    void searchGames_CurationTrue_DelegatesToGameReadService() {
+        // given
+        GameSearchCondition condition = new GameSearchCondition();
+        condition.setCuration(true);
+        Pageable pageable = PageRequest.of(0, 3);
+
+        given(gameReadService.searchGamesForCuration(any(), any())).willReturn(Page.empty());
+
+        // when
+        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, null);
+
+        // then
+        verify(gameReadService, times(1)).searchGamesForCuration(eq(condition), any(Pageable.class));
+        verify(gameRepository, never()).searchGames(any(), any());
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    @DisplayName("searchGames: curation=false 이면 gameRepository.searchGames를 직접 호출한다")
+    void searchGames_CurationFalse_CallsRepository() {
+        // given
+        GameSearchCondition condition = new GameSearchCondition();
+        condition.setCuration(false);
+        Pageable pageable = PageRequest.of(0, 20);
+
+        given(gameRepository.searchGames(any(), any())).willReturn(Page.empty());
+
+        // when
+        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, null);
+
+        // then
+        verify(gameRepository, times(1)).searchGames(eq(condition), any(Pageable.class));
+        verify(gameReadService, never()).searchGamesForCuration(any(), any());
+        assertThat(result).isNotNull();
     }
 
     // ========== helpers ==========

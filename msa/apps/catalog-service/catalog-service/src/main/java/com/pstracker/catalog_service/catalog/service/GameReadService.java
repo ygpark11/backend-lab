@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
+import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,26 @@ public class GameReadService {
     private final GameRepository gameRepository;
     private final GamePriceHistoryRepository priceHistoryRepository;
     private final CacheManager cacheManager;
+
+    /**
+     * 큐레이션 테마 미리보기 검색 (캐시 적용).
+     * enrichSearchResults(장르·가격판정·찜 여부 세팅)를 거치지 않은 raw 결과를 캐싱.
+     * CurationPage 미리보기는 imageUrl·name만 사용하므로 enrichment 불필요.
+     * sort가 달라도 다른 캐시 항목이 되도록 pageable.sort를 키에 포함.
+     */
+    @Cacheable(cacheNames = GlobalCacheConfig.CURATION_CACHE,
+               key = "#condition.curationCacheKey() + '_' + #pageable.sort.toString()")
+    public Page<GameSearchResultDto> searchGamesForCuration(GameSearchCondition condition, Pageable pageable) {
+        return gameRepository.searchGames(condition, pageable);
+    }
+
+    public void refreshCurationCache() {
+        var cache = cacheManager.getCache(GlobalCacheConfig.CURATION_CACHE);
+        if (cache != null) {
+            cache.clear();
+            log.info("큐레이션 로컬 캐시(Caffeine) 전체 초기화 완료.");
+        }
+    }
 
     public void evictGameDetailCache(Long gameId) {
         if (gameId != null) {

@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.subscription.service;
 
 import com.pstracker.catalog_service.catalog.dto.GameIdMappingDto;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.scraping.domain.GameCandidate;
@@ -20,6 +21,9 @@ import com.pstracker.catalog_service.subscription.repository.PsPlusMonthlyHistor
 import com.pstracker.catalog_service.subscription.repository.PsPlusPricingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,8 +51,9 @@ public class SubscriptionService {
     private final GameRepository gameRepository;
     private final GameCandidateRepository gameCandidateRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final CacheManager cacheManager;
 
-
+    @Cacheable(cacheNames = GlobalCacheConfig.PS_PLUS_PRICING_CACHE, key = "'pricing'")
     public PsPlusPricingResponse getLatestPricing() {
         List<PsPlusPricing> pricing = psPlusPricingRepository.findAll();
 
@@ -150,7 +155,16 @@ public class SubscriptionService {
                 .toList();
     }
 
+    public void refreshPsPlusPricingCache() {
+        var cache = cacheManager.getCache(GlobalCacheConfig.PS_PLUS_PRICING_CACHE);
+        if (cache != null) {
+            cache.clear();
+            log.info("PS Plus 가격 로컬 캐시(Caffeine) 전체 초기화 완료.");
+        }
+    }
+
     @Transactional
+    @CacheEvict(cacheNames = GlobalCacheConfig.PS_PLUS_PRICING_CACHE, allEntries = true)
     public void upsertPsPlusPrices(PsPlusCollectRequest request) {
         if (request.getData() == null || request.getData().isEmpty()) {
             log.warn("수집된 PS Plus 데이터가 없습니다.");

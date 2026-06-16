@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Platform;
 import lombok.Data;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Data
 public class GameSearchCondition {
@@ -48,4 +49,29 @@ public class GameSearchCondition {
 
     // 바이브 태그 필터 (OR 조합)
     private List<String> vibeTags;
+
+    // 큐레이션 테마 미리보기 여부 (UI 없음, CurationPage에서만 true로 전달)
+    private Boolean curation;
+
+    /**
+     * 큐레이션 캐시 키 생성.
+     * 동일한 필터 조합이면 항상 같은 키를 반환하도록 vibeTags는 정렬 후 결합.
+     * sort(정렬 기준)는 Pageable에서 오므로 @Cacheable key 표현식에서 별도로 추가.
+     */
+    public String curationCacheKey() {
+        String sortedTags = (vibeTags == null || vibeTags.isEmpty()) ? ""
+                : vibeTags.stream().sorted().collect(Collectors.joining(","));
+        return String.join("_",
+                sortedTags,
+                str(minDiscountRate), str(minMetaScore), str(minUserScore),
+                str(minPrice), str(maxPrice),
+                str(minPlayTime), str(maxPlayTime),
+                str(isAllTimeLow), str(inCatalog), str(isPs5ProEnhanced),
+                str(isClosingSoon), str(genre)
+        );
+    }
+
+    private String str(Object val) {
+        return val == null ? "" : String.valueOf(val);
+    }
 }

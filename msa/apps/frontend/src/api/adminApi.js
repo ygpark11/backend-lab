@@ -9,8 +9,8 @@ export const adminApi = {
         return await client.post(`/api/v1/admin/games/${gameId}/refresh`);
     },
 
-    clearInsightsCache: async () => {
-        return await client.post('/api/v1/admin/insights/refresh');
+    clearAllCaches: async () => {
+        return await client.post('/api/v1/admin/cache/refresh');
     },
 
     deleteCandidate: async (psStoreId) => {

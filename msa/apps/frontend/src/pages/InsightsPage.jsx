@@ -87,7 +87,7 @@ const InsightsPage = () => {
                         const loadId = toast.loading('기존 캐시 삭제 및 데이터 재수집 중...');
 
                         try {
-                            await adminApi.clearInsightsCache();
+                            await adminApi.clearAllCaches();
                             const response = await client.get('/api/v1/insights/summary');
                             setStats(response.data);
                             toast.success('최신 데이터로 갱신되었습니다!', { id: loadId });

@@ -20,6 +20,8 @@ public class GlobalCacheConfig {
 
     public static final String GAME_DETAIL_CACHE = "gameDetailCache";
     public static final String INSIGHTS_CACHE = "insightsCache";
+    public static final String CURATION_CACHE = "curationCache";
+    public static final String PS_PLUS_PRICING_CACHE = "psPlusPricingCache";
 
     public static final String INSIGHT_KEY_ALL_TIME_LOW = "'allTimeLow'";
     public static final String INSIGHT_KEY_MUST_PLAY = "'mustPlay'";
@@ -58,8 +60,26 @@ public class GlobalCacheConfig {
         CaffeineCacheMetrics.monitor(meterRegistry, insightsNative, INSIGHTS_CACHE);
         CaffeineCache insightsCache = new CaffeineCache(INSIGHTS_CACHE, insightsNative);
 
+        // 3. PS Plus 구독 가격 캐시 (단일 항목, 가격 변경 시 또는 일배치 완료 시 초기화)
+        Cache<Object, Object> psPlusPricingNative = Caffeine.newBuilder()
+                .expireAfterWrite(24, TimeUnit.HOURS)
+                .maximumSize(1)
+                .recordStats()
+                .build();
+        CaffeineCacheMetrics.monitor(meterRegistry, psPlusPricingNative, PS_PLUS_PRICING_CACHE);
+        CaffeineCache psPlusPricingCache = new CaffeineCache(PS_PLUS_PRICING_CACHE, psPlusPricingNative);
+
+        // 4. 큐레이션 테마 미리보기 캐시 (테마 20개 고정, 일배치 완료 시 초기화)
+        Cache<Object, Object> curationNative = Caffeine.newBuilder()
+                .expireAfterWrite(24, TimeUnit.HOURS)
+                .maximumSize(30)
+                .recordStats()
+                .build();
+        CaffeineCacheMetrics.monitor(meterRegistry, curationNative, CURATION_CACHE);
+        CaffeineCache curationCache = new CaffeineCache(CURATION_CACHE, curationNative);
+
         SimpleCacheManager manager = new SimpleCacheManager();
-        manager.setCaches(List.of(gameDetailCache, insightsCache));
+        manager.setCaches(List.of(gameDetailCache, insightsCache, psPlusPricingCache, curationCache));
         return manager;
     }
 }

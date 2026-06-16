@@ -6,6 +6,7 @@ import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameVoteService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.insights.service.InsightsService;
+import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +30,7 @@ public class CatalogController {
     private final CrawlerScheduler scheduler;
     private final InsightsService insightsService;
     private final GameVoteService gameVoteService;
+    private final SubscriptionService subscriptionService;
 
     // 데이터 적재 API
     @PostMapping("/collect")
@@ -76,8 +78,10 @@ public class CatalogController {
 
     @PostMapping("/batch-complete")
     public ResponseEntity<String> onCrawlerBatchCompleted() {
-        log.info("Insights 통계 캐시를 갱신");
+        log.info("일배치 완료 — 전체 로컬 캐시 초기화");
         insightsService.refreshInsightsCache();
+        catalogService.refreshCurationCache();
+        subscriptionService.refreshPsPlusPricingCache();
         return ResponseEntity.ok("Cache cleared successfully");
     }
 

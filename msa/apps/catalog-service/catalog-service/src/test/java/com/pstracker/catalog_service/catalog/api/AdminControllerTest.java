@@ -10,6 +10,7 @@ import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccess
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import com.pstracker.catalog_service.scraping.service.ScrapingQueueService;
+import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.mockito.Mockito.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminController.class)
@@ -42,6 +44,9 @@ public class AdminControllerTest {
 
     @MockitoBean
     private ScrapingQueueService scrapingQueueService;
+
+    @MockitoBean
+    private SubscriptionService subscriptionService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
@@ -63,53 +68,111 @@ public class AdminControllerTest {
 
     @BeforeEach
     void setupSecurityMocks() throws Exception {
-        // 1. 401(인증 실패) 핸들러가 호출되면 -> 응답에 401 상태 코드를 심어라!
         doAnswer(invocation -> {
-            HttpServletResponse response = invocation.getArgument(1); // 메서드의 2번째 인자가 response
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            HttpServletResponse response = invocation.getArgument(1);
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return null;
         }).when(jwtAuthenticationEntryPoint).commence(any(), any(), any());
 
-        // 2. 403(권한 없음) 핸들러가 호출되면 -> 응답에 403 상태 코드를 심어라!
         doAnswer(invocation -> {
             HttpServletResponse response = invocation.getArgument(1);
-            response.sendError(HttpServletResponse.SC_FORBIDDEN); // 403
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return null;
         }).when(customAccessDeniedHandler).handle(any(), any(), any());
     }
 
+    // ── deleteGame ───────────────────────────────────────────────────────────
+
     @Test
-    @DisplayName("성공: 관리자(ADMIN) 권한으로 삭제 요청 시 204 반환")
-    @WithMockUser(username = "admin", roles = "ADMIN") // ADMIN 권한 부여
+    @DisplayName("성공: 관리자(ADMIN) 권한으로 게임 삭제 요청 시 204 반환")
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void deleteGame_Success_Admin() throws Exception {
-        // given
         Long gameId = 1L;
         doNothing().when(catalogService).deleteGame(gameId);
 
-        // when & then
         mockMvc.perform(delete("/api/v1/admin/games/{gameId}", gameId)
-                        .with(csrf())) // CSRF 토큰 주입
-                .andExpect(status().isNoContent()); // 204 성공
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
     }
 
     @Test
-    @DisplayName("실패: 일반 유저(USER)가 삭제 요청 시 403 Forbidden")
-    @WithMockUser(username = "user", roles = "USER") // USER 권한 부여
+    @DisplayName("실패: 일반 유저(USER)가 게임 삭제 요청 시 403 Forbidden")
+    @WithMockUser(username = "user", roles = "USER")
     void deleteGame_Fail_User() throws Exception {
-        // when & then
-        // SecurityConfig의 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN") 규칙에 걸려야 함
         mockMvc.perform(delete("/api/v1/admin/games/{gameId}", 1L)
                         .with(csrf()))
-                .andExpect(status().isForbidden()); // 403 실패 (성공!)
+                .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("실패: 로그인 안 한 사용자가 삭제 요청 시 401 Unauthorized")
+    @DisplayName("실패: 로그인 안 한 사용자가 게임 삭제 요청 시 401 Unauthorized")
     void deleteGame_Fail_Anonymous() throws Exception {
-        // when & then
         mockMvc.perform(delete("/api/v1/admin/games/{gameId}", 1L)
                         .with(csrf()))
-                .andExpect(status().isUnauthorized()); // 401 실패 (성공!)
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ── refreshGame ──────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("성공: 관리자(ADMIN)가 단일 게임 재수집 요청 시 200 반환")
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void refreshGame_Success_Admin() throws Exception {
+        Long gameId = 1L;
+        doNothing().when(catalogService).triggerSingleGameRefresh(gameId);
+
+        mockMvc.perform(post("/api/v1/admin/games/{gameId}/refresh", gameId)
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("실패: 일반 유저(USER)가 단일 게임 재수집 요청 시 403 Forbidden")
+    @WithMockUser(username = "user", roles = "USER")
+    void refreshGame_Fail_User() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/games/{gameId}/refresh", 1L)
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패: 로그인 안 한 사용자가 단일 게임 재수집 요청 시 401 Unauthorized")
+    void refreshGame_Fail_Anonymous() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/games/{gameId}/refresh", 1L)
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ── refreshAllCaches ─────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("성공: 관리자(ADMIN)가 전체 캐시 초기화 요청 시 200 반환")
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void refreshAllCaches_Success_Admin() throws Exception {
+        doNothing().when(insightsService).refreshInsightsCache();
+        doNothing().when(catalogService).refreshCurationCache();
+        doNothing().when(subscriptionService).refreshPsPlusPricingCache();
+
+        mockMvc.perform(post("/api/v1/admin/cache/refresh")
+                        .with(csrf()))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("실패: 일반 유저(USER)가 전체 캐시 초기화 요청 시 403 Forbidden")
+    @WithMockUser(username = "user", roles = "USER")
+    void refreshAllCaches_Fail_User() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/cache/refresh")
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("실패: 로그인 안 한 사용자가 전체 캐시 초기화 요청 시 401 Unauthorized")
+    void refreshAllCaches_Fail_Anonymous() throws Exception {
+        mockMvc.perform(post("/api/v1/admin/cache/refresh")
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
     }
 
     // ── deleteCandidate ──────────────────────────────────────────────────────
@@ -118,11 +181,9 @@ public class AdminControllerTest {
     @DisplayName("성공: 관리자(ADMIN)가 후보 게임 삭제 요청 시 204 반환")
     @WithMockUser(username = "admin", roles = "ADMIN")
     void deleteCandidate_Success_Admin() throws Exception {
-        // given
         String psStoreId = "PPSA-TEST-001";
         doNothing().when(scrapingQueueService).deleteCandidate(psStoreId);
 
-        // when & then
         mockMvc.perform(delete("/api/v1/admin/scraping/candidates/{psStoreId}", psStoreId)
                         .with(csrf()))
                 .andExpect(status().isNoContent());

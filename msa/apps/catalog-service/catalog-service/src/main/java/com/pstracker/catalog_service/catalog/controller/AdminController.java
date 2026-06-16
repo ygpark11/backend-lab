@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.controller;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.scraping.service.ScrapingQueueService;
+import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ public class AdminController {
     private final CatalogService catalogService;
     private final InsightsService insightsService;
     private final ScrapingQueueService scrapingQueueService;
+    private final SubscriptionService subscriptionService;
 
     @DeleteMapping("/games/{gameId}")
     public ResponseEntity<Void> deleteGame(@PathVariable Long gameId) {
@@ -30,10 +32,12 @@ public class AdminController {
         return ResponseEntity.ok("재수집 요청이 완료되었습니다. (로그를 확인하세요)");
     }
 
-    @PostMapping("/insights/refresh")
-    public ResponseEntity<String> refreshInsightsCache() {
+    @PostMapping("/cache/refresh")
+    public ResponseEntity<String> refreshAllCaches() {
         insightsService.refreshInsightsCache();
-        return ResponseEntity.ok("Insights 통계 로컬 캐시가 성공적으로 초기화되었습니다.");
+        catalogService.refreshCurationCache();
+        subscriptionService.refreshPsPlusPricingCache();
+        return ResponseEntity.ok("전체 로컬 캐시가 성공적으로 초기화되었습니다.");
     }
 
     @DeleteMapping("/scraping/candidates/{psStoreId}")

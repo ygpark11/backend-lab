@@ -239,7 +239,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         BooleanExpression result = null;
         for (String tag : vibeTags) {
             BooleanExpression condition = Expressions.booleanTemplate(
-                    "JSON_SEARCH({0}, 'one', {1}) IS NOT NULL",
+                    "JSON_CONTAINS({0}, JSON_QUOTE({1}))",
                     game.vibeTags,
                     tag
             );

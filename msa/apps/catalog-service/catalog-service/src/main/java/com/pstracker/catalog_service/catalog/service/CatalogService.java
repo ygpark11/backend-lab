@@ -7,9 +7,9 @@ import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
+import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
-import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -327,11 +327,20 @@ public class CatalogService {
      */
     public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
+
+        if (Boolean.TRUE.equals(condition.getCuration())) {
+            return gameReadService.searchGamesForCuration(condition, safe);
+        }
+
         Page<GameSearchResultDto> result = gameRepository.searchGames(condition, safe);
         if (!result.isEmpty()) {
             enrichSearchResults(result.getContent(), memberId);
         }
         return result;
+    }
+
+    public void refreshCurationCache() {
+        gameReadService.refreshCurationCache();
     }
 
     /**

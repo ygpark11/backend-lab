@@ -139,7 +139,7 @@ function buildSearchParams(params) {
 }
 
 async function fetchThemeGames(params) {
-    const sp = buildSearchParams({ ...params, size: 3, page: 0 });
+    const sp = buildSearchParams({ ...params, size: 3, page: 0, curation: true });
     const res = await client.get('/api/v1/games/search?' + sp.toString());
     return {
         games: res.data.content || [],
