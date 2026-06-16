@@ -1003,7 +1003,7 @@ export default function GameDetailPage() {
                 )}
             </div>
 
-            {!isModal && <div className="lg:hidden fixed bottom-0 left-0 w-full p-3 sm:p-4 bg-base/90 backdrop-blur-xl border-t border-divider z-[60] animate-slideUp">
+            <div className={`lg:hidden w-full p-3 sm:p-4 bg-base/90 backdrop-blur-xl border-t border-divider z-[60] animate-slideUp ${isModal ? 'sticky bottom-0' : 'fixed bottom-0 left-0'}`}>
                 <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
                     {/* 가격 정보 요약 */}
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -1058,7 +1058,7 @@ export default function GameDetailPage() {
                         </a>
                     </div>
                 </div>
-            </div>}
+            </div>
 
             {/* Modal Components */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
