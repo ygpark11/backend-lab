@@ -185,12 +185,14 @@ graph TD
   * **1GB RAM 환경에서의 선택 이유:** 기존 Tomcat 플랫폼 스레드(기본 200개)는 스레드당 수백 KB~1MB 수준의 스택 메모리를 점유하여 스레드 자체가 무시할 수 없는 메모리 부담이 되는 반면, 가상 스레드는 수십 KB 단위로 생성되어 스레드 메모리 부담이 실질적으로 제거됨. I/O 대기 중 캐리어 스레드를 반납하는 구조로 1개 코어의 처리 효율도 향상.
   * **ThreadLocal 비상속 문제 해결:** 가상 스레드는 부모의 `ThreadLocal`(JPA 세션)을 상속하지 않음을 확인하고, 엔티티 대신 **QueryDSL DTO 프로젝션**으로 전환하여 세션 의존 자체를 제거. `fetch join + limit` 시 Hibernate가 LIMIT을 무시하고 전체 로우를 메모리에 올리는 문제도 **2-Query 패턴(목록 조회 → 장르 배치 IN 쿼리)** 으로 함께 해결.
 
-**5. 리소스 제약과 데이터 특성을 고려한 2-Tier 로컬 캐싱 및 파이프라인 연동 (Local Cache & Event-Driven Eviction)**
-* **Problem:** B2C 카탈로그 서비스 특성상 메인 페이지와 통계(Insights) 페이지는 읽기(Read) 요청이 가장 빈번하지만, 1GB RAM 환경에서는 별도의 외부 캐시 서버(Redis)를 구축하는 것이 불가능(OOM 위험)함. 또한, 게임의 기본 정보는 '일 단위'로 변하지만, 유저의 찜/투표 여부는 '실시간'으로 변하기 때문에 단순한 전체 캐싱(Full Caching)은 데이터 정합성을 훼손함.
-* **Solution:** 외부 인프라 의존도를 낮추고 데이터 생명주기(Lifecycle)에 맞춘 하이브리드 캐싱 전략 구축.
-  * **초경량 로컬 캐시 (Caffeine Cache):** Spring Boot 내부에 L1 로컬 캐시를 도입하여 DB I/O를 획기적으로 최소화.
+**5. 리소스 제약과 데이터 특성을 고려한 4-Cache 로컬 캐싱 및 파이프라인 연동 (Local Cache & Event-Driven Eviction)**
+* **Problem:** B2C 카탈로그 서비스 특성상 게임 상세·통계·큐레이션·구독 가격 페이지에서 읽기(Read) 요청이 집중되지만, 1GB RAM 환경에서 별도의 외부 캐시 서버(Redis)를 구축하는 것은 불가능(OOM 위험)함. 또한 게임의 기본 정보는 '일 단위'로 변하지만, 유저의 찜/투표 여부는 '실시간'으로 변하기 때문에 단순한 전체 캐싱(Full Caching)은 데이터 정합성을 훼손함.
+* **Solution:** 외부 인프라 의존도를 낮추고 데이터 생명주기(Lifecycle)에 맞춘 4-Cache 하이브리드 전략 구축.
+  * **초경량 로컬 캐시 (Caffeine Cache):** Spring Boot 내부에 L1 로컬 캐시 4개(`gameDetailCache`, `insightsCache`, `curationCache`, `psPlusPricingCache`)를 도입하여 DB I/O를 최소화.
   * **정적/동적 데이터 생명주기 분리 (2-Tier Architecture):** 매일 1회 업데이트되는 '게임 메타 정보와 가격 이력'은 `@Cacheable`을 통해 로컬 메모리에 캐싱하고, '유저의 찜/투표 상태' 등 실시간 정보는 API 호출 시점에 DB에서 별도 조회하여 캐시된 객체에 동적으로 조립(`withDynamicData`)하여 반환.
-  * **배치 파이프라인 기반의 능동적 캐시 갱신 (Webhook Trigger):** 수집 서버(Worker Node)의 일일 배치가 완전히 종료되는 즉시, 메인 서버(Main Node)의 내부 웹훅 API를 호출하여 인사이트(통계) 캐시를 일괄 무효화 및 재생성. 이를 통해 무거운 통계 쿼리의 DB 부하를 사전에 방지하고, 유저에게 첫 요청(First-hit penalty)부터 지연 없는 최신 데이터를 제공.
+  * **AOP Self-invocation 해결:** `@Cacheable` 메서드를 동일 클래스에서 호출 시 Spring AOP 프록시가 개입하지 않아 캐시가 무시되는 문제를 `CatalogService(쓰기/조율)` + `GameReadService(읽기/캐시)` 빈 분리로 해결.
+  * **쓰기 경로 즉시 무효화 (`@CacheEvict`):** PS Plus 구독 가격처럼 배치 주기와 무관하게 수시로 갱신될 수 있는 데이터는 쓰기(`upsertPsPlusPrices`) 시점에 `@CacheEvict`로 즉시 무효화하여 정합성 보장. 게임 상세의 가격 갱신(`upsertGameData`)도 동일한 패턴 적용.
+  * **배치 파이프라인 기반의 일괄 캐시 초기화 (Webhook Trigger):** 수집 서버(Worker Node)의 일일 배치가 완전히 종료되는 즉시, 메인 서버(Main Node)의 내부 웹훅 API를 호출하여 4개 캐시를 전부 무효화. 무거운 통계·큐레이션 쿼리의 DB 부하를 사전에 방지하고, 첫 요청(First-hit penalty)부터 지연 없는 최신 데이터 제공.
 ---
 
 ### 🔐 인증 및 보안 (Auth & Security)
@@ -301,7 +303,7 @@ graph TD
 
 **1. Run All Services 로컬 전용 통합 설정 파일을 사용**
 ```bash
-docker compose -f docker-compose-local-dev.yml up -d --build
+docker compose -f docker-compose-local.yml up -d --build
 ```
 
 **2. 접속 확인**
@@ -318,7 +320,7 @@ docker compose -f docker-compose-local-dev.yml up -d --build
 - 역할: API Hosting, Database, Frontend, Alloy Monitoring
 ```bash
 # Run Brain Services
-docker compose -f docker-compose.brain.yml up -d --build
+docker compose -f docker-compose-brain.yml up -d --build
 ```
 
 **② Node 2: Hand Server (10.0.0.61)**

@@ -143,6 +143,15 @@ Grafana 대시보드에서 중점적으로 보는 지표들입니다.
 
    `GlobalCacheConfig`의 `recordStats()` + Micrometer 수동 바인딩(`CaffeineCacheMetrics.monitor()`)으로 아래 지표를 Prometheus에 노출합니다.
 
+   현재 운영 중인 캐시 4개:
+
+   | 캐시명 | 용도 | TTL | 상한 |
+   |--------|------|-----|------|
+   | `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 2,000건 |
+   | `insightsCache` | 통계 대시보드 | 24h | 50건 |
+   | `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 |
+   | `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 |
+
    | 패널 | PromQL | 정상 기준 |
    |------|--------|---------|
    | Hit Rate | `rate(cache_gets_total{result="hit"}[5m]) / rate(cache_gets_total[5m])` | 서비스 안정 후 70% 이상 |
@@ -152,6 +161,7 @@ Grafana 대시보드에서 중점적으로 보는 지표들입니다.
    **운영 판단 기준**
    - Hit Rate가 배포 직후 낮은 것은 콜드 스타트로 정상. 하루 이후에도 50% 미만이면 TTL 또는 `maximumSize` 조정 검토.
    - Evictions이 크롤러 배치 완료 시간대에 맞춰 스파이크가 뜨면 캐시 무효화 정상 동작. 배치 이후에도 0이면 `evictGameDetailCache()` 미호출 버그 의심.
+   - `psPlusPricingCache`는 PS Plus 가격 갱신 시 `@CacheEvict`로 즉시 무효화되므로, 배치와 무관하게 Eviction이 발생할 수 있음.
 
 ---
 
