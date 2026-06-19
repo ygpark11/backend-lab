@@ -568,8 +568,15 @@ def crawl_phase0_new_releases(bm):
         human_like_delay(2, 4)
         human_like_scroll(page)
 
-        page.wait_for_selector("a[href*='/concept/'], a[href*='/product/']", state="attached", timeout=15000)
+        try:
+            page.wait_for_selector("a[href*='/concept/'], a[href*='/product/']", state="attached", timeout=15000)
+        except PlaywrightTimeoutError:
+            logger.warning("[Phase 0] wait_for_selector 타임아웃 - locator.all()로 직접 수집 시도")
+
         links = page.locator("a[href*='/concept/'], a[href*='/product/']").all()
+        if not links:
+            logger.error("[Phase 0] 게임 링크를 찾을 수 없음 - 페이지 로딩 실패")
+            return
 
         for link in links:
             href = link.get_attribute("href")
@@ -633,7 +640,7 @@ def crawl_phase0_new_releases(bm):
                     for ed in editions:
                         try:
                             ed_name = ed.locator("h3[data-qa$='#editionName']").inner_text(timeout=1000).strip()
-                            if any(x in ed_name for x in ["체험판", "Demo", "Trial", "BETA"]):
+                            if any(x in ed_name for x in ["체험판", "Demo", "Trial", "BETA", "데모"]):
                                 continue
 
                             ed_price_loc = ed.locator("span[data-qa$='#finalPrice']")
