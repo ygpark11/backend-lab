@@ -14,8 +14,6 @@ from datetime import datetime
 
 # [Playwright Imports]
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
-from playwright.async_api import async_playwright, TimeoutError as AsyncPlaywrightTimeoutError
-import asyncio
 from flask import Flask, jsonify, request
 import requests
 import ranking_crawler
@@ -162,74 +160,6 @@ class BrowserManager:
     def increment(self):
         self.request_count += 1
 
-# --- [2-B. 비동기 브라우저 매니저 + Circuit Breaker] ---
-class AsyncBrowserManager:
-    """async_playwright 기반 브라우저 매니저. asyncio.Lock으로 재시작 구간 보호."""
-    def __init__(self, p):
-        self.p = p
-        self.browser = None
-        self.context = None
-        self._lock = asyncio.Lock()
-        self.request_count = 0
-
-    async def start(self):
-        self.browser, self.context = await self._create_browser()
-
-    async def _create_browser(self):
-        logger.info("크롬 브라우저 시작 [Async] (메모리 최적화 + 스텔스)")
-        DESKTOP_USER_AGENTS = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
-        ]
-        browser = await self.p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage",
-                "--disable-gpu", "--disable-extensions",
-                "--disable-blink-features=AutomationControlled",
-                "--js-flags=--max-old-space-size=256"
-            ]
-        )
-        context = await browser.new_context(
-            user_agent=random.choice(DESKTOP_USER_AGENTS),
-            viewport={"width": 1920, "height": 1080},
-            locale="ko-KR",
-            timezone_id="Asia/Seoul"
-        )
-        return browser, context
-
-    async def acquire_context(self):
-        """컨텍스트 반환. 재시작 필요 시 Lock으로 보호하여 두 탭 동시 접근 차단."""
-        async with self._lock:
-            if self.request_count >= CONF["restart_interval"]:
-                logger.info("OS 메모리 반환 대기 중... [Async] (10초 숨고르기)")
-                try: await self.context.close()
-                except: pass
-                try: await self.browser.close()
-                except: pass
-                self.context = None
-                self.browser = None
-                gc.collect()
-                await asyncio.sleep(10)
-                try:
-                    self.browser, self.context = await self._create_browser()
-                except Exception as e:
-                    logger.error(f"[AsyncBM] 브라우저 재시작 실패, 5초 후 재시도: {e}")
-                    await asyncio.sleep(5)
-                    self.browser, self.context = await self._create_browser()
-                self.request_count = 0
-            self.request_count += 1
-            return self.context
-
-    async def close(self):
-        try: await self.context.close()
-        except: pass
-        try: await self.browser.close()
-        except: pass
-
-
 def setup_page(context):
     if context is None:
         raise RuntimeError("브라우저 컨텍스트가 존재하지 않습니다. (메모리 부족 의심)")
@@ -256,30 +186,6 @@ def setup_page(context):
     page.route("**/*", route_intercept)
     return page
 
-# --- [2-C. async 페이지 셋업] ---
-async def setup_page_async(context):
-    """async 버전 setup_page. 이미지/미디어/CSS 차단 + webdriver 우회."""
-    page = await context.new_page()
-    page.set_default_timeout(CONF['timeout'])
-    await page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
-
-    async def route_intercept(route):
-        r_type = route.request.resource_type
-        if r_type in ["image", "media"]:
-            await route.abort()
-            return
-        if CONF.get("block_fonts", False) and r_type == "font":
-            await route.abort()
-            return
-        if r_type == "stylesheet":
-            await route.abort()
-            return
-        await route.continue_()
-
-    await page.route("**/*", route_intercept)
-    return page
-
-
 # --- [3. 공통 유틸리티 및 검증] ---
 def human_like_delay(min_sec=None, max_sec=None):
     s_min = min_sec if min_sec is not None else CONF["sleep_min"]
@@ -292,20 +198,6 @@ def human_like_scroll(page):
         human_like_delay(1, 2)
         page.evaluate("window.scrollBy(0, document.body.scrollHeight / 3)")
         human_like_delay(0.5, 1.5)
-    except: pass
-
-async def human_like_delay_async(min_sec=None, max_sec=None):
-    """비동기 딜레이. await로 이벤트 루프를 블록하지 않고 다른 탭에 제어 양보."""
-    s_min = min_sec if min_sec is not None else CONF["sleep_min"]
-    s_max = max_sec if max_sec is not None else CONF["sleep_max"]
-    await asyncio.sleep(random.uniform(s_min, s_max))
-
-async def human_like_scroll_async(page):
-    try:
-        await page.evaluate("window.scrollBy(0, document.body.scrollHeight / 4)")
-        await human_like_delay_async(1, 2)
-        await page.evaluate("window.scrollBy(0, document.body.scrollHeight / 3)")
-        await human_like_delay_async(0.5, 1.5)
     except: pass
 
 def verify_secret(req_data):
@@ -725,8 +617,7 @@ def crawl_phase0_new_releases(bm):
                     "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
                 )
                 is_free_game = False
-                img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', next_data_text)
-                image_url_from_html = img_match.group(1).split("?")[0] if img_match else ""
+                image_url_from_html = extract_gamehub_image_url(next_data_text)
 
                 # isFree/basePrice는 이스케이프 여부 무관하게 두 형태 모두 체크
                 if ('"isFree":true' in next_data_text or '"basePrice":"무료"' in next_data_text
@@ -805,11 +696,11 @@ def crawl_phase0_new_releases(bm):
 
                 image_url = ""
                 try:
-                    temp_html_img = page.content()
-                    match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', temp_html_img)
-                    if match: image_url = match.group(1).split("?")[0]
-                    del temp_html_img
-
+                    prod_next_data = page.evaluate(
+                        "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
+                    )
+                    if prod_next_data:
+                        image_url = extract_gamehub_image_url(prod_next_data)
                     if not image_url:
                         img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
                         if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
@@ -829,6 +720,23 @@ def crawl_phase0_new_releases(bm):
             except: pass
             bm.increment()
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
+
+def extract_gamehub_image_url(json_text: str) -> str:
+    """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART role의 이미지 URL을 추출합니다.
+    단순 첫 번째 vulcan URL 매칭 시 BACKGROUND_LAYER_ART가 잘못 선택되는 버그를 방지합니다.
+    """
+    # role 필드가 url 필드보다 먼저 오는 경우 (일반적인 JSON 순서)
+    m = re.search(
+        r'"role"\s*:\s*"GAMEHUB_COVER_ART"[^}]*?"url"\s*:\s*"(https://image\.api\.playstation\.com/vulcan/[^"]+)"',
+        json_text
+    )
+    if not m:
+        # url 필드가 role 필드보다 먼저 오는 경우 (방어적 폴백)
+        m = re.search(
+            r'"url"\s*:\s*"(https://image\.api\.playstation\.com/vulcan/[^"]+)"[^}]*?"role"\s*:\s*"GAMEHUB_COVER_ART"',
+            json_text
+        )
+    return m.group(1).split("?")[0] if m else ""
 
 def mine_english_title(html_content):
     try:
@@ -895,8 +803,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
         )
         english_title = mine_english_title(next_data_text) if next_data_text else None
-        img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', next_data_text)
-        image_url = img_match.group(1).split("?")[0] if img_match else ""
+        image_url = extract_gamehub_image_url(next_data_text) if next_data_text else ""
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
@@ -1067,198 +974,6 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         return None
 
 
-# --- [6-B. crawl_detail_and_send 비동기 버전 (Phase 1/2 병렬탭 전용)] ---
-# ranking_crawler.py + VIP + Flask 단건 API는 기존 sync 버전 crawl_detail_and_send 사용
-async def crawl_detail_and_send_async(page, target_url, verbose=False):
-    try:
-        await page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
-
-        if "/error" in page.url:
-            logger.warning(f"단종 의심 (URL 리다이렉트): {target_url}")
-            return {"is_delisted": True, "ps_store_id": target_url.split("/")[-1].split("?")[0]}
-
-        try:
-            await page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=30000)
-        except AsyncPlaywrightTimeoutError:
-            try:
-                await page.reload(wait_until="commit")
-                await page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=20000)
-            except AsyncPlaywrightTimeoutError:
-                return None
-
-        title = await page.locator("[data-qa='mfe-game-title#name']").inner_text()
-        title = title.strip()
-
-        next_data_text = await page.evaluate(
-            "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
-        )
-        english_title = mine_english_title(next_data_text) if next_data_text else None
-        img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', next_data_text)
-        image_url = img_match.group(1).split("?")[0] if img_match else ""
-
-        publisher = "Batch Crawler"
-        if await page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
-            publisher = (await page.locator("[data-qa='mfe-game-title#publisher']").first.inner_text()).strip()
-
-        try: await page.wait_for_selector("[data-qa^='mfeCtaMain#offer']", timeout=15000)
-        except: pass
-
-        product_tags = await page.locator("[data-qa^='mfe-game-title#productTag']").all()
-        platform_set = set()
-        is_ps5_pro_enhanced = False
-        for el in product_tags:
-            raw_text = (await el.text_content()).strip().upper()
-            if "PS5" in raw_text: platform_set.add("PS5")
-            if "PS4" in raw_text: platform_set.add("PS4")
-            if "VR2" in raw_text: platform_set.add("PS_VR2")
-            elif "VR" in raw_text: platform_set.add("PS_VR")
-            if not is_ps5_pro_enhanced:
-                try:
-                    inner = await el.inner_text()
-                    if "PS5 Pro 성능 향상" in inner or "PS5 Pro Enhanced" in inner:
-                        is_ps5_pro_enhanced = True
-                except: pass
-        platforms = list(platform_set)
-
-        if not is_ps5_pro_enhanced:
-            try:
-                for el in await page.locator("[data-qa^='mfe-compatibility-notices#notices']").all():
-                    t = await el.inner_text()
-                    if "PS5 Pro 성능 향상" in t or "PS5 Pro Enhanced" in t:
-                        is_ps5_pro_enhanced = True
-                        break
-            except: pass
-
-        genre_ids = ""
-        try: genre_ids = await page.locator("[data-qa='gameInfo#releaseInformation#genre-value']").inner_text()
-        except: pass
-
-        release_date = None
-        try:
-            if await page.locator("[data-qa='gameInfo#releaseInformation#releaseDate-value']").count() > 0:
-                raw_date = (await page.locator("[data-qa='gameInfo#releaseInformation#releaseDate-value']").first.inner_text()).strip()
-                parts = raw_date.split("/")
-                if len(parts) == 3: release_date = f"{parts[0]}-{parts[1].zfill(2)}-{parts[2].zfill(2)}"
-                else: release_date = raw_date.replace("/", "-")
-        except: pass
-
-        best_offer_data = None
-        min_price = float('inf')
-        is_in_catalog_global = False
-
-        for i in range(3):
-            try:
-                offer_loc = page.locator(f"[data-qa='mfeCtaMain#offer{i}']")
-                if not await offer_loc.is_visible(): continue
-
-                offer_text = await offer_loc.inner_text()
-                try:
-                    radio = offer_loc.locator("input[type='radio']")
-                    if await radio.count() > 0 and "UPSELL_PS_PLUS_GAME_CATALOG" in (await radio.get_attribute("value") or ""):
-                        is_in_catalog_global = True
-                except: pass
-
-                if not is_in_catalog_global and ("게임 카탈로그" in offer_text or "스페셜에 가입" in offer_text):
-                    is_in_catalog_global = True
-
-                try:
-                    price_loc = offer_loc.locator(f"[data-qa='mfeCtaMain#offer{i}#finalPrice']")
-                    if not await price_loc.is_visible(): continue
-                    current_price = int(re.sub(r'[^0-9]', '', (await price_loc.inner_text()).strip()))
-                    if current_price == 0: continue
-                except: continue
-
-                original_price = current_price
-                try:
-                    orig_loc = offer_loc.locator(f"[data-qa='mfeCtaMain#offer{i}#originalPrice']")
-                    if await orig_loc.is_visible(): original_price = int(re.sub(r'[^0-9]', '', await orig_loc.inner_text()))
-                except: pass
-
-                is_plus_exclusive = False
-                try:
-                    if await offer_loc.locator(".psw-c-t-ps-plus").count() > 0: is_plus_exclusive = True
-                except: pass
-
-                sale_end_date = None
-                try:
-                    desc_loc = offer_loc.locator(f"[data-qa='mfeCtaMain#offer{i}#discountDescriptor']")
-                    if await desc_loc.is_visible():
-                        match = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', await desc_loc.inner_text())
-                        if match: sale_end_date = f"{match.group(1)}-{match.group(2).zfill(2)}-{match.group(3).zfill(2)}"
-                except: pass
-
-                if current_price < min_price:
-                    min_price = current_price
-                    discount_rate = int(round(((original_price - current_price) / original_price) * 100)) if original_price > current_price else 0
-                    best_offer_data = {
-                        "originalPrice": original_price, "currentPrice": current_price,
-                        "discountRate": discount_rate, "saleEndDate": sale_end_date, "isPlusExclusive": is_plus_exclusive
-                    }
-            except: continue
-
-        if not best_offer_data: return None
-
-        if not image_url:
-            try:
-                img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
-                if await img_loc.count() > 0: image_url = (await img_loc.first.get_attribute("src")).split("?")[0]
-            except: pass
-
-        ps_store_id = target_url.split("/")[-1].split("?")[0]
-
-        edition_features = []
-        try:
-            upsell_section = page.locator('div[data-qa="mfeUpsell"]')
-            if await upsell_section.count() > 0:
-                articles = upsell_section.locator("article")
-                for i in range(await articles.count()):
-                    article = articles.nth(i)
-                    link_loc = article.locator("a[href*='/product/']")
-                    if await link_loc.count() == 0: continue
-                    href = await link_loc.first.get_attribute("href")
-                    if not href: continue
-                    if href.split("?")[0].split("/")[-1] != ps_store_id: continue
-
-                    btn_meta = article.locator("button[data-telemetry-meta]")
-                    if await btn_meta.count() > 0:
-                        try:
-                            meta_json = json.loads((await btn_meta.first.get_attribute("data-telemetry-meta")) or "{}")
-                            price_detail = meta_json.get("productDetail", [{}])[0].get("productPriceDetail", [{}])[0]
-                            if price_detail.get("originalPriceValue", -1) == 0: break
-                        except Exception as e:
-                            logger.warning(f"[features-async] 가격 메타 파싱 실패: {e}")
-
-                    features_loc = article.locator("ul[data-qa$='#features'] > li")
-                    for j in range(await features_loc.count()):
-                        text = (await features_loc.nth(j).text_content()).strip()
-                        if text: edition_features.append(text)
-                    break
-        except Exception as e:
-            logger.warning(f"[features-async] 에디션 구성품 추출 실패: {e}")
-
-        payload = {
-            "psStoreId": ps_store_id, "title": title, "englishTitle": english_title, "publisher": publisher,
-            "imageUrl": image_url, "description": "Full Data Crawler", "genreIds": genre_ids, "releaseDate": release_date,
-            "originalPrice": best_offer_data["originalPrice"], "currentPrice": best_offer_data["currentPrice"],
-            "discountRate": best_offer_data["discountRate"], "saleEndDate": best_offer_data["saleEndDate"],
-            "isPlusExclusive": best_offer_data["isPlusExclusive"], "inCatalog": is_in_catalog_global, "platforms": platforms,
-            "isPs5ProEnhanced": is_ps5_pro_enhanced, "editionContents": edition_features
-        }
-
-        # Java API 전송: run_in_executor로 이벤트 루프 블로킹 방지
-        try:
-            loop = asyncio.get_event_loop()
-            res = await loop.run_in_executor(None, lambda: session.post(JAVA_API_URL, json=payload, timeout=30))
-            if res.status_code == 200: logger.info(f"Sent: {title} ({payload['currentPrice']} KRW)")
-            else: logger.error(f"Server Error ({res.status_code}): {title}")
-        except Exception as e: logger.error(f"Network Error sending {title}: {e}")
-
-        return payload
-    except Exception as e:
-        logger.error(f"   [Async] Error: {target_url} -> {e}")
-        return None
-
-
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
 def fetch_update_targets():
     try:
@@ -1309,108 +1024,6 @@ def refresh_java_server_cache():
     except Exception as e: logger.error(f"Network Error while clearing cache: {e}")
 
 
-# --- [8-A. 비동기 워치독 + Phase 1/2 병렬 엔진] ---
-async def run_with_watchdog_async(page, url):
-    """asyncio.wait_for 기반 워치독. 타임아웃 시 페이지를 about:blank로 초기화."""
-    try:
-        return await asyncio.wait_for(
-            crawl_detail_and_send_async(page, url),
-            timeout=CRAWL_WATCHDOG_SEC
-        )
-    except asyncio.TimeoutError:
-        logger.error(f"[Watchdog-Async] {CRAWL_WATCHDOG_SEC}s 초과 → 페이지 초기화: {url.split('/')[-1][:20]}")
-        try: await page.goto("about:blank", timeout=5000)
-        except: pass
-        return None
-    except Exception as e:
-        logger.error(f"[Async] Crawl error {url}: {e}")
-        return None
-
-
-async def run_phase1_and_2_async(targets, visited_urls, collected_deals, delisted_games):
-    """
-    Phase 1 + Phase 2를 asyncio.Semaphore(2) 기반 2탭 병렬로 실행.
-    - Java ConnectionPool 패턴: Semaphore로 동시 슬롯 수 제한
-    - Java CompletableFuture.allOf 패턴: asyncio.gather로 전체 태스크 동시 실행
-    """
-    sem = asyncio.Semaphore(2)
-    total_processed = 0
-
-    async with async_playwright() as p:
-        bm = AsyncBrowserManager(p)
-        await bm.start()
-
-        async def process_url(url):
-            nonlocal total_processed
-            async with sem:
-                context = await bm.acquire_context()
-                page = await setup_page_async(context)
-                try:
-                    res = await run_with_watchdog_async(page, url)
-                    if res:
-                        if res.get("is_delisted"):
-                            delisted_games.append(res)
-                        else:
-                            total_processed += 1
-                            if res.get("discountRate", 0) > 0:
-                                collected_deals.append(res)
-                    visited_urls.add(url)
-                finally:
-                    try: await page.close()
-                    except: pass
-
-        # [Phase 1] 타겟 병렬 수집 — asyncio.gather = CompletableFuture.allOf
-        if targets:
-            logger.info(f"[Phase 1] Updating {len(targets)} games... (탭 2개 병렬, Semaphore={sem._value})")
-            tasks = [process_url(url) for url in targets]
-            await asyncio.gather(*tasks)
-            logger.info(f"[Phase 1] 완료. 처리: {total_processed}개")
-
-        # [Phase 2] 신규 게임 탐색
-        logger.info("🔭 [Phase 2] Starting Deep Discovery ... (탭 2개 병렬)")
-        base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-        search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
-
-        for current_page_num in range(1, 11):
-            logger.info(f"Scanning Category Page {current_page_num}/10")
-            page_candidates = []
-
-            # 카테고리 목록 페이지: 탭 1개로 순차 스캔
-            async with sem:
-                context = await bm.acquire_context()
-                cat_page = await setup_page_async(context)
-                try:
-                    target_list_url = f"{base_category_path}/{current_page_num}{search_params}"
-                    await cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
-                    try: await cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
-                    except:
-                        await cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
-                        await cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
-
-                    await human_like_scroll_async(cat_page)
-
-                    for el in await cat_page.locator("a[href*='/product/']").all():
-                        url = await el.get_attribute("href")
-                        if url:
-                            full_url = f"https://store.playstation.com{url}" if url.startswith("/") else url
-                            if "/ko-kr/product/" in full_url and full_url not in visited_urls:
-                                if full_url not in page_candidates: page_candidates.append(full_url)
-                except Exception as e:
-                    logger.warning(f"List load failed: {e}")
-                finally:
-                    try: await cat_page.close()
-                    except: pass
-
-            if page_candidates:
-                logger.info(f"Found {len(page_candidates)} new candidates.")
-                tasks = [process_url(url) for url in page_candidates]
-                await asyncio.gather(*tasks)
-
-        await bm.close()
-
-    return total_processed
-
-
 # --- [8. 메인 배치 로직] ---
 def run_batch_crawler_logic():
     """
@@ -1451,13 +1064,84 @@ def run_batch_crawler_logic():
             except: pass
 
         gc.collect()
-        logger.info("[Sync 구간 종료] Pre-Phase + Phase 0 완료. 브라우저 반환 후 async 전환.")
+        logger.info("[Sync 구간 종료] Pre-Phase + Phase 0 완료. Phase 1/2 순차 수집 시작.")
 
-        # ── Async 구간: Phase 1 + Phase 2 (탭 2개 병렬) ───────────────────
+        # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
-        total_processed_count = asyncio.run(
-            run_phase1_and_2_async(targets, visited_urls, collected_deals, delisted_games)
-        )
+
+        with sync_playwright() as p:
+            bm = BrowserManager(p)
+
+            # [Phase 1] 백엔드 타겟 갱신
+            if targets:
+                logger.info(f"[Phase 1] Updating {len(targets)} games...")
+                for url in targets:
+                    check_and_run_vip(bm)
+                    res = run_with_watchdog(bm, url)
+                    if res:
+                        if res.get("is_delisted"):
+                            delisted_games.append(res)
+                        else:
+                            total_processed_count += 1
+                            if res.get("discountRate", 0) > 0:
+                                collected_deals.append(res)
+                    visited_urls.add(url)
+                logger.info(f"[Phase 1] 완료. 처리: {total_processed_count}개")
+
+            # [Phase 2] Deep Discovery
+            logger.info("🔭 [Phase 2] Starting Deep Discovery ...")
+            base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
+            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+
+            for current_page_num in range(1, 11):
+                logger.info(f"Scanning Category Page {current_page_num}/10")
+                page_candidates = []
+
+                context = bm.get_context()
+                cat_page = setup_page(context)
+                try:
+                    target_list_url = f"{base_category_path}/{current_page_num}{search_params}"
+                    cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
+                    try:
+                        cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                    except:
+                        cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
+                        cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+
+                    human_like_scroll(cat_page)
+
+                    for el in cat_page.locator("a[href*='/product/']").all():
+                        href = el.get_attribute("href")
+                        if href:
+                            full_url = f"https://store.playstation.com{href}" if href.startswith("/") else href
+                            if "/ko-kr/product/" in full_url and full_url not in visited_urls:
+                                if full_url not in page_candidates:
+                                    page_candidates.append(full_url)
+                except Exception as e:
+                    logger.warning(f"List load failed: {e}")
+                finally:
+                    try: cat_page.close()
+                    except: pass
+                bm.increment()
+
+                if page_candidates:
+                    logger.info(f"Found {len(page_candidates)} new candidates.")
+                    for url in page_candidates:
+                        check_and_run_vip(bm)
+                        res = run_with_watchdog(bm, url)
+                        if res:
+                            if res.get("is_delisted"):
+                                delisted_games.append(res)
+                            else:
+                                total_processed_count += 1
+                                if res.get("discountRate", 0) > 0:
+                                    collected_deals.append(res)
+                        visited_urls.add(url)
+
+            try: bm.context.close()
+            except: pass
+            try: bm.browser.close()
+            except: pass
 
         logger.info("[System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
