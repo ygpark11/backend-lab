@@ -260,7 +260,7 @@ def setup_page(context):
 async def setup_page_async(context):
     """async 버전 setup_page. 이미지/미디어/CSS 차단 + webdriver 우회."""
     page = await context.new_page()
-    await page.set_default_timeout(CONF['timeout'])
+    page.set_default_timeout(CONF['timeout'])
     await page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
 
     async def route_intercept(route):
@@ -820,7 +820,7 @@ def crawl_phase0_new_releases(bm):
                     "psStoreId": ps_store_id,
                     "title": title,
                     "imageUrl": image_url
-                }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
+                }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
 
         except Exception as e:
             logger.error(f"[Phase 0] {url} 분석 실패: {e}")
