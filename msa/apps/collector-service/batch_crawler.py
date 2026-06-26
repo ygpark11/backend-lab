@@ -609,12 +609,16 @@ def crawl_phase0_new_releases(bm):
             human_like_scroll(page)
 
             if "/concept/" in url:
-                html_content = page.content()
+                next_data_text = page.evaluate(
+                    "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
+                )
                 is_free_game = False
-                img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_content)
+                img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', next_data_text)
                 image_url_from_html = img_match.group(1).split("?")[0] if img_match else ""
 
-                if '"isFree":true' in html_content or '"basePrice":"무료"' in html_content:
+                # isFree/basePrice는 이스케이프 여부 무관하게 두 형태 모두 체크
+                if ('"isFree":true' in next_data_text or '"basePrice":"무료"' in next_data_text
+                        or '\\"isFree\\":true' in next_data_text or '\\"basePrice\\":\\"무료\\"' in next_data_text):
                     is_free_game = True
                 else:
                     # 안전망: 화면에 렌더링된 메인 버튼 텍스트도 확인 (기다리지 않음)
@@ -627,8 +631,6 @@ def crawl_phase0_new_releases(bm):
                                 if "무료" in price_text or price_text == "0원":
                                     is_free_game = True
                     except: pass
-
-                del html_content
 
                 if is_free_game:
                     logger.info(f"[Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
@@ -719,7 +721,11 @@ def crawl_phase0_new_releases(bm):
 def mine_english_title(html_content):
     try:
         # 1. 정규식 매칭 실패 시 즉시 종료
+        # __NEXT_DATA__ 기반 추출 시 invariantName이 이중 직렬화된 JSON 안에 있어 \"로 이스케이프됨
+        # → 일반 따옴표로 먼저 시도, 실패 시 이스케이프 따옴표로 재시도
         match = re.search(r'"invariantName"\s*:\s*"([^"]+)"', html_content)
+        if not match:
+            match = re.search(r'\\"invariantName\\"\s*:\s*\\"([^\\"]+)\\"', html_content)
         if not match:
             return None
 
@@ -772,12 +778,13 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
 
-        # HTML 한 번만 가져와서 영문 제목 + 이미지 URL 동시 추출
-        html_snapshot = page.content()
-        english_title = mine_english_title(html_snapshot)
-        img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', html_snapshot)
+        # __NEXT_DATA__ 태그만 추출해서 영문 제목 + 이미지 URL 동시 추출 (page.content() 대비 약 2배 경량)
+        next_data_text = page.evaluate(
+            "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
+        )
+        english_title = mine_english_title(next_data_text) if next_data_text else None
+        img_match = re.search(r'(https://image\.api\.playstation\.com/vulcan/[^"\'\s>]+)', next_data_text)
         image_url = img_match.group(1).split("?")[0] if img_match else ""
-        del html_snapshot
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
@@ -827,7 +834,6 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         best_offer_data = None
         min_price = float('inf')
         is_in_catalog_global = False
-        time.sleep(0.5)
 
         for i in range(3):
             try:
