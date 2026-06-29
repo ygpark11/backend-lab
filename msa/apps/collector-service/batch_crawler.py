@@ -1087,9 +1087,11 @@ def run_batch_crawler_logic():
 
             # [Phase 1] 백엔드 타겟 갱신
             if targets:
-                logger.info(f"[Phase 1] Updating {len(targets)} games...")
-                for url in targets:
+                total_targets = len(targets)
+                logger.info(f"[Phase 1] Updating {total_targets} games...")
+                for i, url in enumerate(targets, 1):
                     check_and_run_vip(bm)
+                    logger.info(f"[Phase 1] ({i}/{total_targets}) 처리 중: {url.split('/')[-1][:25]}")
                     res = run_with_watchdog(bm, url)
                     if res:
                         if res.get("is_delisted"):
