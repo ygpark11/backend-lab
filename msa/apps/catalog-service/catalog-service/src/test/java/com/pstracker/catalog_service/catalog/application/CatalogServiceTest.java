@@ -4,17 +4,21 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.concurrent.Executor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +43,18 @@ public class CatalogServiceTest {
     @Mock private GameRepository gameRepository;
     @Mock private GamePriceHistoryRepository priceHistoryRepository;
     @Mock private IgdbApiClient igdbApiClient;
+    @Mock private Executor igdbExecutor;
+
+    @BeforeEach
+    void setUp() {
+        // 단위 테스트에서는 IGDB를 호출 스레드에서 동기 실행
+        // (병렬 실행 검증은 통합 테스트에서 별도 수행)
+        // lenient: deleteGame/searchGames 등 executor를 쓰지 않는 테스트에서 불필요한 stubbing 경고 방지
+        lenient().doAnswer(inv -> {
+            ((Runnable) inv.getArgument(0)).run();
+            return null;
+        }).when(igdbExecutor).execute(any());
+    }
 
     // ========== deleteGame ==========
 
@@ -129,6 +145,48 @@ public class CatalogServiceTest {
         verify(gameRepository, never()).findByPsStoreIdWithGenres(any());
         verify(gameRepository, never()).save(any());
         verify(gameReadService, never()).evictGameDetailCache(any());
+    }
+
+    // ========== upsertGameData — IGDB 병렬 처리 ==========
+
+    @Test
+    @DisplayName("upsertGameData: IGDB 응답이 있으면 게임에 평점이 반영된다")
+    void upsertGameData_IgdbSuccess_RatingsApplied() {
+        // given
+        Game existingGame = createExistingGame();
+        IgdbGameResponse igdbResponse = new IgdbGameResponse(
+                1L, "Test Game", 88.0, 30, 82.5, 900, null, 930);
+
+        given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
+        given(igdbApiClient.searchGame(any())).willReturn(igdbResponse);
+        given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
+
+        CollectRequestDto request = buildRequest();
+
+        // when
+        catalogService.upsertGameData(request);
+
+        // then
+        assertThat(existingGame.getIgdbCriticScore()).isEqualTo(88);  // Math.round(88.0)
+        assertThat(existingGame.getIgdbUserScore()).isEqualTo(82.5);
+    }
+
+    @Test
+    @DisplayName("upsertGameData: IGDB에서 예외가 발생해도 게임 저장은 정상 완료된다")
+    void upsertGameData_IgdbThrows_GameStillSaved() {
+        // given
+        Game existingGame = createExistingGame();
+
+        given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
+        given(igdbApiClient.searchGame(any())).willThrow(new RuntimeException("IGDB 서버 오류"));
+        given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
+
+        CollectRequestDto request = buildRequest();
+
+        // when & then: 예외 없이 완료되고 save가 호출돼야 함
+        org.assertj.core.api.Assertions.assertThatCode(() -> catalogService.upsertGameData(request))
+                .doesNotThrowAnyException();
+        verify(gameRepository, times(1)).save(existingGame);
     }
 
     // ========== searchGames — curation 분기 ==========

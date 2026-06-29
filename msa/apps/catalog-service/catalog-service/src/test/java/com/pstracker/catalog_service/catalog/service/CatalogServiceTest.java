@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
@@ -22,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.any;
@@ -203,6 +205,50 @@ public class CatalogServiceTest {
         // then
         Game after = gameRepository.findByPsStoreId("PROD-AUDIT-002").orElseThrow();
         assertThat(after.getLastUpdated()).isAfterOrEqualTo(firstUpdated);
+    }
+
+    @Test
+    @DisplayName("IGDB 응답이 있으면 평점이 Game에 반영되어야 한다.")
+    void upsert_IgdbSuccess_RatingsApplied() {
+        // given
+        IgdbGameResponse igdbResponse = new IgdbGameResponse(
+                1L, "Elden Ring", 90.5, 48, 87.3, 1200, null, 1248);
+        given(igdbApiClient.searchGame(any())).willReturn(igdbResponse);
+
+        CollectRequestDto request = createDto("PROD-IGDB-001", "Elden Ring", 70000, 70000, 0, null);
+
+        // when
+        catalogService.upsertGameData(request);
+        em.flush();
+        em.clear();
+
+        // then
+        Game game = gameRepository.findByPsStoreId("PROD-IGDB-001").orElseThrow();
+        assertThat(game.getIgdbCriticScore()).isEqualTo(91);   // Math.round(90.5)
+        assertThat(game.getIgdbCriticCount()).isEqualTo(48);
+        assertThat(game.getIgdbUserScore()).isEqualTo(87.3);
+        assertThat(game.getIgdbUserCount()).isEqualTo(1200);
+    }
+
+    @Test
+    @DisplayName("IGDB 호출이 별도 가상 스레드에서 실행된다. (병렬 실행 검증)")
+    void upsert_IgdbCalledOnSeparateThread() {
+        // given
+        String testThreadName = Thread.currentThread().getName();
+        AtomicReference<String> igdbThreadName = new AtomicReference<>();
+
+        given(igdbApiClient.searchGame(any())).willAnswer(inv -> {
+            igdbThreadName.set(Thread.currentThread().getName());
+            return null;
+        });
+
+        // when
+        catalogService.upsertGameData(createDto("PROD-IGDB-002", "Thread Test", 50000, 50000, 0, null));
+
+        // then: IGDB는 호출됐고, upsertGameData를 호출한 스레드와 다른 스레드에서 실행됐어야 함
+        assertThat(igdbThreadName.get())
+                .isNotNull()
+                .isNotEqualTo(testThreadName);
     }
 
     private CollectRequestDto createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {

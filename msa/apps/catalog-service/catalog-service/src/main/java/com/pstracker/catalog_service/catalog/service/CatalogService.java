@@ -23,6 +23,8 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,6 +47,7 @@ public class CatalogService {
     private final CrawlJobRepository crawlJobRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final IgdbApiClient igdbApiClient;
+    private final Executor igdbExecutor;
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
@@ -63,6 +66,12 @@ public class CatalogService {
             return;
         }
 
+        // IGDB 호출 선제 시작 — DB 작업과 병렬로 진행
+        String searchTitle = StringUtils.hasText(request.getEnglishTitle())
+                ? request.getEnglishTitle() : request.getTitle();
+        CompletableFuture<IgdbGameResponse> igdbFuture =
+                CompletableFuture.supplyAsync(() -> fetchIgdbSafely(searchTitle), igdbExecutor);
+
         Set<Genre> genreEntities = resolveGenres(request.getGenreIds());
         Game game = findOrCreateGame(request);
         boolean isNewGame = game.getId() == null;
@@ -70,7 +79,9 @@ public class CatalogService {
 
         updateGameMetadata(game, request, genreEntities);
         boolean editionContentsChanged = game.updateEditionContents(request.getEditionContents());
-        updateGameRatingsFromIgdb(game, request);
+
+        // DB 작업이 끝난 시점에 IGDB 결과 합류 (이미 완료됐을 가능성 높음)
+        applyIgdbRatings(game, igdbFuture.join(), searchTitle);
 
         game.updatePriceSearchInfo(
                 request.getOriginalPrice(),
@@ -213,34 +224,28 @@ public class CatalogService {
     }
 
     /**
-     * IGDB API를 통한 평점 정보 업데이트
-     * @param game 게임 엔티티
-     * @param request 수집 요청 DTO
+     * IGDB 평점을 게임 엔티티에 적용한다.
+     * igdbInfo가 null(Miss/실패)이면 기존 값을 그대로 유지한다.
      */
-    private void updateGameRatingsFromIgdb(Game game, CollectRequestDto request) {
+    private void applyIgdbRatings(Game game, IgdbGameResponse igdbInfo, String searchTitle) {
+        if (igdbInfo == null) {
+            log.debug("IGDB Miss or Failed: {}", searchTitle);
+            return;
+        }
+        Integer criticScore = igdbInfo.criticScore() != null ? (int) Math.round(igdbInfo.criticScore()) : null;
+        game.updateIgdbRatings(criticScore, igdbInfo.criticCount(), igdbInfo.userScore(), igdbInfo.userCount());
+        log.debug("IGDB Ratings updated for: {}", searchTitle);
+    }
+
+    /**
+     * IGDB API 호출 — 예외 발생 시 null 반환 (내부 로직에 영향 없음)
+     */
+    private IgdbGameResponse fetchIgdbSafely(String searchTitle) {
         try {
-            String rawEnglishTitle = request.getEnglishTitle();
-            String searchTitle = StringUtils.hasText(rawEnglishTitle) ? rawEnglishTitle : request.getTitle();
-
-            log.debug("Fetching IGDB ratings for: {}", searchTitle);
-            IgdbGameResponse igdbInfo = igdbApiClient.searchGame(searchTitle);
-
-            if (igdbInfo != null) {
-                Integer criticScore = (igdbInfo.criticScore() != null) ? (int) Math.round(igdbInfo.criticScore()) : null;
-                Integer criticCount = igdbInfo.criticCount();
-                Double userScore = igdbInfo.userScore();
-                Integer userCount = igdbInfo.userCount();
-
-                game.updateIgdbRatings(criticScore, criticCount, userScore, userCount);
-
-                log.debug("IGDB Ratings updated: Critic={} ({}명), User={} ({}명)",
-                        criticScore, criticCount, userScore, userCount);
-            } else {
-                log.debug("IGDB Miss: {}", searchTitle);
-            }
+            return igdbApiClient.searchGame(searchTitle);
         } catch (Exception e) {
-            // 외부 API 장애가 내부 로직에 영향을 주지 않도록 처리
-            log.warn("IGDB Sync Failed for '{}': {}", request.getTitle(), e.getMessage());
+            log.warn("IGDB Sync Failed for '{}': {}", searchTitle, e.getMessage());
+            return null;
         }
     }
 
