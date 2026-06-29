@@ -723,17 +723,30 @@ def crawl_phase0_new_releases(bm):
 
 def extract_gamehub_image_url(json_text: str) -> str:
     """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART role의 이미지 URL을 추출합니다.
-    단순 첫 번째 vulcan URL 매칭 시 BACKGROUND_LAYER_ART가 잘못 선택되는 버그를 방지합니다.
+    - product 페이지: 일반 JSON ("role":"GAMEHUB_COVER_ART")
+    - concept 페이지: 이중 직렬화 JSON (\"role\":\"GAMEHUB_COVER_ART\")
     """
-    # role 필드가 url 필드보다 먼저 오는 경우 (일반적인 JSON 순서)
+    # Case 1: 일반 JSON, role → url 순서 (product 페이지)
     m = re.search(
         r'"role"\s*:\s*"GAMEHUB_COVER_ART"[^}]*?"url"\s*:\s*"(https://image\.api\.playstation\.com/vulcan/[^"]+)"',
         json_text
     )
     if not m:
-        # url 필드가 role 필드보다 먼저 오는 경우 (방어적 폴백)
+        # Case 2: 일반 JSON, url → role 순서
         m = re.search(
             r'"url"\s*:\s*"(https://image\.api\.playstation\.com/vulcan/[^"]+)"[^}]*?"role"\s*:\s*"GAMEHUB_COVER_ART"',
+            json_text
+        )
+    if not m:
+        # Case 3: 이중 직렬화 JSON, role → url 순서 (concept 페이지)
+        m = re.search(
+            r'\\"role\\"\s*:\s*\\"GAMEHUB_COVER_ART\\"[^}]*?\\"url\\"\s*:\s*\\"(https://image\.api\.playstation\.com/vulcan/[^\\"]+)\\"',
+            json_text
+        )
+    if not m:
+        # Case 4: 이중 직렬화 JSON, url → role 순서
+        m = re.search(
+            r'\\"url\\"\s*:\s*\\"(https://image\.api\.playstation\.com/vulcan/[^\\"]+)\\"[^}]*?\\"role\\"\s*:\s*\\"GAMEHUB_COVER_ART\\"',
             json_text
         )
     return m.group(1).split("?")[0] if m else ""
