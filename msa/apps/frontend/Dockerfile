@@ -1,5 +1,5 @@
 # Stage 1: Build (Node.js 환경)
-FROM node:22-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 WORKDIR /app
 
 # 캐싱을 위해 의존성 파일 먼저 복사

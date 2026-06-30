@@ -4,9 +4,9 @@ on:
   push:
     branches: [ "master" ]
     paths:
-      - 'msa/config.alloy'                           # Alloy 설정 파일
-      - 'msa/docker-compose-brain.yml'               # # 1호기 설정이 변경되거나
-      - '.github/workflows/deploy-observability.yml' # 이 파일 자체가 변경될 때만 실행
+      - 'msa/config.alloy'                           # Alloy 설정 파일이 바뀌거나
+      - 'msa/docker-compose-brain.yml'               # 신규 서버(A1) 설정이 변경되거나
+      - '.github/workflows/deploy-observability.yml' # 이 파일 자체가 변경될 때
 
 jobs:
   deploy-alloy:
@@ -21,11 +21,14 @@ jobs:
           script: |
             cd ~/backend-lab/msa
 
-            # 1. 최신 설정파일 받기
+            # 1. 최신 설정파일(config.alloy 등) 받기
             git pull origin master
 
-            # 2. Alloy 컨테이너만 콕 집어서 재시작 (이미지 빌드 필요 없음)
-            docker compose -f docker-compose-brain.yml up -d alloy
+            # 2. 최신 공식 이미지 당겨오기
+            docker compose -f docker-compose-brain.yml pull alloy
 
-            # 3. 불필요한 이미지 정리
+            # 3. Alloy 컨테이너 확실하게 재시작 (설정 파일 갱신 보장 옵션 추가)
+            docker compose -f docker-compose-brain.yml up -d --force-recreate alloy
+
+            # 4. 불필요한 이미지 찌꺼기 청소
             docker image prune -f

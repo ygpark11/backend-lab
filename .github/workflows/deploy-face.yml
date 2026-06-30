@@ -17,7 +17,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 2. QEMU 세팅 (ARM64 빌드를 위한 에뮬레이터)
+      # 2. QEMU 세팅 (ARM64 크로스 빌드를 위한 에뮬레이터)
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -41,7 +41,6 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-web:latest
-          # 👇 [핵심] 리액트 빌드 시점에 환경변수 주입 (Secrets -> ARG)
           build-args: |
             VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
             VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -56,7 +55,7 @@ jobs:
             VITE_BANK_ACCOUNT=${{ secrets.VITE_BANK_ACCOUNT }}
             VITE_BANK_HOLDER=${{ secrets.VITE_BANK_HOLDER }}
 
-      # 4. 서버 배포 (SSH)
+      # 6. 서버 배포 (SSH)
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
