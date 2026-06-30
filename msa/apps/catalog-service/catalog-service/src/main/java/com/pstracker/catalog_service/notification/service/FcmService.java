@@ -12,6 +12,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -88,7 +89,10 @@ public class FcmService {
                     List<SendResponse> responses = response.getResponses();
                     for (int j = 0; j < responses.size(); j++) {
                         if (!responses.get(j).isSuccessful()) {
-                            String errorCode = responses.get(j).getException().getMessagingErrorCode().name();
+                            String errorCode = Optional.ofNullable(responses.get(j).getException().getMessagingErrorCode())
+                                    .map(Enum::name)
+                                    .orElse("UNKNOWN_ERROR");
+
                             if ("UNREGISTERED".equals(errorCode) || "INVALID_ARGUMENT".equals(errorCode)) {
                                 deadTokens.add(batchFcmTokens.get(j));
                             }

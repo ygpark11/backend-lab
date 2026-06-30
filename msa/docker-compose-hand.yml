@@ -13,7 +13,7 @@ services:
       - "5000:5000"
     environment:
       - TZ=Asia/Seoul
-      - API_BASE_URL=http://10.0.0.161:8080
+      - API_BASE_URL=http://10.0.0.12:8080
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CRAWLER_MODE=LOW
       - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
