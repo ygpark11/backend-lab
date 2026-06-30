@@ -29,7 +29,6 @@ services:
   catalog-service:
     #build: ./apps/catalog-service/catalog-service
     image: ygpark1334/ps-tracker-api:latest
-    platform: linux/amd64
     container_name: ps-tracker-api
     env_file:
       - .env
@@ -64,7 +63,6 @@ services:
   frontend:
     #build: ./apps/frontend
     image: ygpark1334/ps-tracker-web:latest
-    platform: linux/amd64
     container_name: ps-tracker-web
     expose:
       - "80"
