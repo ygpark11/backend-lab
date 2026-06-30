@@ -62,9 +62,12 @@ jobs:
 
             # 1. 최신 이미지 당겨오기
             docker compose -f docker-compose-brain.yml pull frontend
-            
+
             # 2. 컨테이너 교체
             docker compose -f docker-compose-brain.yml up -d frontend
-            
-            # 3. 찌꺼기 청소
+
+            # 3. Caddy 실행 (이미 실행 중이면 무시됨)
+            docker compose -f docker-compose-brain.yml up -d caddy
+
+            # 4. 찌꺼기 청소
             docker image prune -f
