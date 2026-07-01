@@ -126,6 +126,40 @@
 * **문제 발생:** 랭킹 수집 크롤러가 DB 조회를 줄이기 위해 생성한 로컬 캐시 수첩(`concept_map.json`)이, 코드 배포(Container Down & Up) 때마다 함께 삭제되어 매 배포 후 첫 수집 시 30분 이상의 딜레이가 발생
 * **원인 분석:** 도커 컨테이너 내부의 파일 시스템은 휘발성(Ephemeral)이므로, 컨테이너가 재실행되면 내부에 쓰인 데이터도 초기화됨.
 * **해결 방안:** Docker Volume 마운트를 적용하여, 크롤러의 캐시 폴더를 Host OS(Ubuntu)의 영구 디렉토리와 동기화(`- ./crawler_data:/app/data`). 배포 후에도 캐시가 영구적으로 유지되도록 아키텍처 개선.
+
+### 🚀 Case 33. A1 ARM64 이전: 에뮬레이션 방식 vs 네이티브 빌드의 성능 격차
+* **배경:** 기존 AMD 1코어 1GB RAM 서버에서 Oracle A1 ARM64(2코어, 8GB RAM)로 메인 서버(1호기) 이전. 고사양 서버로의 이전임에도 불구하고 초기 배포 후 성능 체감이 거의 없었음.
+* **문제 발생:** docker-compose에 `platform: linux/arm64`를 추가하여 기존 AMD64 이미지를 A1에서 강제 실행했으나, 서버 사양 대비 API 응답속도·화면 로딩 속도에 유의미한 차이 없음.
+* **원인 분석:** `platform: linux/arm64` 옵션은 AMD64로 빌드된 이미지를 ARM64 서버에서 실행할 때 **QEMU 에뮬레이터를 런타임에 상시 가동**시킨다. 모든 CPU 명령어가 실시간으로 AMD64 → ARM64로 번역되어 실제 서버 성능의 30~50%만 발휘되는 상태였음.
+  * 고사양 서버로 이전했지만 '실시간 통역사'가 모든 연산을 가로막고 있던 셈.
+* **해결 방안:** CI/CD에서 **멀티 아키텍처 빌드(`linux/amd64,linux/arm64`)**를 적용하여 ARM64 전용 네이티브 바이너리 이미지를 별도 빌드.
+  * QEMU + Buildx를 사용해 ARM64 이미지를 CI 단계에서 미리 제작하여 Docker Hub에 푸시.
+  * A1 서버는 번역기 없이 자기 언어(ARM64 명령어)로 된 이미지를 직접 실행 → 에뮬레이션 오버헤드 0.
+  * docker-compose에서 `platform: linux/arm64` 제거 (네이티브 이미지이므로 불필요).
+* **Result:** 재배포 즉시 백엔드 및 프론트엔드 모두 체감 속도 향상. A1 서버 자원 100% 활용 달성.
+* **교훈:** 서버 스펙 업그레이드와 아키텍처에 맞는 네이티브 이미지 빌드는 별개의 작업이다. 멀티 아키텍처 빌드는 성능과 이식성(Portability)을 동시에 확보한다.
+
+### 💥 Case 34. ARM64 크로스 빌드 시 npm QEMU 크래시 (Illegal Instruction)
+* **문제 발생:** 멀티 아키텍처 이미지 빌드(`platforms: linux/amd64,linux/arm64`) 중 `npm ci` 단계에서 **4시간 36분 후** `qemu: uncaught target signal 4 (Illegal instruction)` 에러와 함께 CI/CD 파이프라인 강제 종료.
+* **원인 분석:** `FROM node:22-alpine`으로 ARM64 크로스 빌드 시 QEMU가 npm/V8 엔진이 사용하는 **AMD64 전용 SIMD 명령어(AVX 등)를 에뮬레이션하지 못해** Signal 4(SIGILL) 발생. Java(Gradle)는 JVM 바이트코드 레이어 덕분에 QEMU에서도 비교적 안정적이나, npm/webpack은 네이티브 CPU 명령어를 직접 사용하기 때문에 훨씬 취약함.
+* **해결 방안:** `FROM --platform=$BUILDPLATFORM node:22-alpine AS builder` 적용.
+  * `$BUILDPLATFORM`은 빌드가 실행되는 CI 러너(GitHub Actions, AMD64)의 플랫폼으로 자동 설정됨.
+  * Builder 스테이지(`npm ci`, `npm run build`)는 AMD64 GitHub Actions 러너 위에서 **QEMU 없이 네이티브로 실행**.
+  * 빌드된 정적 파일은 Final 스테이지(Nginx ARM64 이미지)에 복사되어 ARM64 네이티브로 실행됨.
+  * 로컬 `docker build .`도 `$BUILDPLATFORM`이 로컬 플랫폼으로 자동 설정되어 정상 동작 (자급자족 Dockerfile 유지).
+* **Result:** 4시간 36분 크래시 → 수 분 내 빌드 완료. CI/CD 정상화.
+
+### 🔒 Case 35. SSL 인증서 관리: Nginx + Certbot에서 Caddy로 전환
+* **기존 방식:** Nginx + Certbot 조합으로 Let's Encrypt 인증서 발급. crontab에서 주기적으로 `certbot renew` 및 `nginx reload`를 실행하여 갱신.
+* **문제 발생:**
+  * 갱신 자동화를 위한 crontab 설정이 서버마다 별도로 필요하며, A1 신규 서버 이전 시 재구성 부담 발생.
+  * certbot 컨테이너, 볼륨 마운트, crontab 등 관리 포인트 분산으로 운영 복잡도 증가.
+* **해결 방안:** **Caddy**로 리버스 프록시 교체.
+  * Caddyfile 3줄로 HTTPS 설정 완료.
+  * Let's Encrypt 인증서 발급, 갱신, HTTPS 리다이렉트를 Caddy 내부에서 **완전 자동화** (별도 crontab 불필요).
+  * 기존 certbot 컨테이너, crontab 설정 전부 제거.
+* **Result:** SSL 관련 운영 부담 0. 서버 이전 시 Caddyfile 1개만 복사하면 HTTPS 환경 완성.
+
 ---
 
 ## 5. Frontend & Network (프론트엔드 및 네트워크)

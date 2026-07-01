@@ -1,5 +1,5 @@
 # 1단계: 빌드 환경 (Builder)
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-jammy AS builder
 
 WORKDIR /app
 

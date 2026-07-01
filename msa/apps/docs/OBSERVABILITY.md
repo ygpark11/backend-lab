@@ -136,7 +136,7 @@ prometheus.remote_write "grafana_cloud_metrics" {
 ### 📊 주요 모니터링 지표 (Dashboard)
 Grafana 대시보드에서 중점적으로 보는 지표들입니다.
 
-1. JVM Heap Usage: 힙 메모리가 256MB 한계선에 근접하는지 감시.
+1. JVM Heap Usage: 힙 메모리가 512MB 한계선에 근접하는지 감시. (초기 1GB RAM 환경의 256MB에서 A1 서버 이전 후 512MB로 상향)
 2. HikariCP Connections: DB 커넥션 풀이 고갈되지 않는지 체크.
 3. Log Error Rate: ERROR 레벨 로그 발생 빈도 추적.
 4. **Caffeine Cache (로컬 캐시 성능)**

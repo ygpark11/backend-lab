@@ -8,7 +8,7 @@
 ## 1. 프로젝트 소개 (Introduction)
 **PS-Tracker**는 매일 변동하는 플레이스테이션 스토어의 게임 가격 정보를 수집하고, 사용자에게 최적의 구매 시점을 안내하는 개인화 서비스입니다.
 
-단순한 크롤링 프로젝트를 넘어, **"제한된 리소스(1GB RAM) 환경에서 고가용성 서비스를 구축하는 것"** 을 목표로 했습니다. MSA(Microservices Architecture)의 개념을 도입하여 수집 노드와 API 노드를 분리하였고, 데이터 수집부터 배포, 모니터링까지 전 과정을 자동화하여 1인 개발의 운영 효율을 극대화했습니다.
+단순한 크롤링 프로젝트를 넘어, **"제한된 리소스 환경에서 고가용성 서비스를 구축하고, 운영하며 점진적으로 개선하는 것"** 을 목표로 했습니다. Oracle Cloud Free Tier(1GB RAM)라는 제약에서 출발하여 MSA 아키텍처와 서버 분리로 안정성을 확보하고, 이후 ARM64 서버 이전·멀티 아키텍처 빌드 최적화·크롤러 샤딩까지 인프라를 단계적으로 발전시켰습니다. 데이터 수집부터 배포, 모니터링까지 전 과정을 자동화하여 1인 개발의 운영 효율을 극대화했습니다.
 
 * **개발 기간:** 2025.11 ~ (운영 중)
 * **개발 인원:** 1인 (Full Stack & DevOps)
@@ -38,7 +38,7 @@
 ## 2. 핵심 기술 성과 (Key Engineering Achievements)
 
 ### 🚀 자동화 및 아키텍처 (Automation & Architecture)
-* **이원화된 노드 아키텍처:** 메모리 부족(OOM) 문제를 해결하기 위해 **API 서버(Brain)** 와 **수집 서버(Hand)** 를 물리적으로 분리하고, 사설망(Private Network)을 통해 통신하도록 설계하여 안정성 확보.
+* **진화하는 노드 아키텍처:** 초기 단일 서버의 OOM 문제를 해결하기 위해 **API 서버(Brain)** 와 **수집 서버(Hand)** 를 물리적으로 분리(이원화)했으며, 이후 사용자 체감 성능 개선을 위해 메인 서버를 Oracle A1 ARM64(2코어, 8GB)로 업그레이드하고 크롤러는 샤딩을 통해 수평 확장하는 방향으로 아키텍처를 점진적으로 발전시켰습니다.
 * **스마트 수집 파이프라인:** 무조건적인 `INSERT`를 지양하고, 기존 데이터와 비교하여 **'유의미한 변동(가격, 할인 조건)'이 있을 때만 DB에 저장**하는 조건부 병합(Smart Upsert)로직을 구현하여 데이터 낭비 방지.
 * **CD 파이프라인 자동화 (Automated CD Pipeline):** GitHub Actions를 활용하여 코드 푸시부터 배포까지 전 과정을 자동화.
 
@@ -60,7 +60,7 @@
 
 ## 3. 시스템 아키텍처 (System Architecture)
 
-단일 서버의 리소스 한계(1GB RAM)를 극복하고 안정성을 확보하기 위해, **역할별로 물리적 서버를 분리한 이원화 아키텍처(Dual-Node Strategy)**를 채택했습니다.
+단일 서버의 리소스 한계(1GB RAM)를 극복하고 안정성을 확보하기 위해, **역할별로 물리적 서버를 분리한 이원화 아키텍처(Dual-Node Strategy)**로 시작했습니다. 이후 메인 서버를 Oracle A1 ARM64(2코어, 8GB)로 업그레이드하고, 크롤러 서버는 샤딩을 통한 수평 확장으로 수집 성능을 개선하는 방향으로 아키텍처를 발전시켰습니다.
 
 ```mermaid
 graph TD
@@ -81,8 +81,8 @@ graph TD
         
         %% Node 1: Brain (Main Server)
         subgraph Node_1 ["🖥️ Node 1: Brain Server"]
-            Nginx[Nginx Proxy]
-            Front[React App]
+            Caddy[Caddy Reverse Proxy]
+            Front[React App + Nginx]
             SB[Spring Boot API]
             MySQL[(MySQL DB)]
             Alloy[🕵️ Grafana Alloy]
@@ -96,9 +96,9 @@ graph TD
         end
 
         %% --- [Connections: Inbound] ---
-        User ==>|HTTPS :443| Nginx
-        Nginx -->|Static| Front
-        Nginx -->|Proxy| SB
+        User ==>|HTTPS :443| Caddy
+        Caddy -->|:80| Front
+        Front -->|/api Proxy| SB
         
         %% --- [Connections: Internal Logic] ---
         SB <-->|JPA| MySQL
@@ -131,12 +131,13 @@ graph TD
 
 ### 🏗️ 인프라 구성 (Infrastructure Topology)
 
-| 구분 | Node 1: Main Server (API/DB) | Node 2: Worker Server (Crawler) |
+| 구분 | Node 1: Main Server (API/DB) | Node 2/3: Worker Server (Crawler) |
 | :--- | :--- | :--- |
 | **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 리소스 집약적 작업(Headless Browser), 랭킹 수집 |
-| **IP 주소** | `10.0.0.161` (Private) | `10.0.0.61` (Private) |
-| **Tech Stack** | Java 21 (Spring Boot), MySQL 8.0, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) |
-| **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000/4444` (Private Only, 외부 접근 차단) |
+| **서버** | Oracle A1 ARM64 — 2코어, 8GB RAM | 기존 AMD 서버 재활용 (샤딩으로 수집 속도 개선) |
+| **IP 주소** | `10.0.0.12` (Private) | `10.0.0.61` (Private) |
+| **Tech Stack** | Java 21 (Spring Boot), MySQL 8.0, Caddy, Nginx(Frontend), React | Python 3.10, Playwright, Local Cache (JSON) |
+| **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000` (Private Only, 외부 접근 차단) |
 
 > **💡 핵심 전략: 리소스 격리 (Resource Isolation)**
 > 메모리 점유율이 높은 **Playwright(Chromium)** 과 **데이터베이스(MySQL)** 가 서로의 자원을 침범하여 서버가 다운되는 현상(OOM)을 방지하기 위해 물리적으로 격리했습니다.
@@ -282,7 +283,7 @@ graph TD
 | **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios                                   |
 | **Data & Core** | Python 3.10, Playwright, Manual Stealth (JS Injection)                            |
 | **Database** | MySQL 8.0 (Prod/Local 분리)                                                         |
-| **Infra & DevOps** | Oracle Cloud (ARM/AMD), Docker & Compose, Nginx, GitHub Actions                   |
+| **Infra & DevOps** | Oracle Cloud (A1 ARM64 + AMD), Docker & Compose, Caddy, GitHub Actions            |
 | **Monitoring** | Grafana Alloy, Grafana Cloud (Dashboard)                                          |
 | **External API** | Google Gemini 2.5 Flash, IGDB API, Discord Webhook, Firebase (FCM)                |
 | **Cache** | Caffeine (Local Cache for 1GB RAM Environment)                                    |
@@ -316,8 +317,8 @@ docker compose -f docker-compose-local.yml up -d --build
 ### ☁️ B. 운영 서버 환경 (Production - Distributed)
 리소스 효율과 안정성을 위해 **Brain(Node 1)**과 **Hand(Node 2)**로 역할을 분리하여 배포
 
-**① Node 1: Brain Server (10.0.0.161)**
-- 역할: API Hosting, Database, Frontend, Alloy Monitoring
+**① Node 1: Brain Server (10.0.0.12, Oracle A1 ARM64)**
+- 역할: API Hosting, Database, Frontend, Caddy (SSL 자동화), Alloy Monitoring
 ```bash
 # Run Brain Services
 docker compose -f docker-compose-brain.yml up -d --build
