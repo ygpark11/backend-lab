@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.global.client.config;
 
 import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
+import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
 import com.pstracker.catalog_service.global.client.gemini.GeminiApiClient;
 import com.pstracker.catalog_service.global.client.igdb.IgdbAuthClient;
 import com.pstracker.catalog_service.global.client.igdb.IgdbGameClient;
@@ -14,6 +15,8 @@ import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 외부 API 연동을 위한 @HttpExchange 클라이언트 빈 설정
@@ -30,8 +33,11 @@ public class HttpClientConfig {
     @Value("${igdb.api-url}")
     private String igdbApiUrl;
 
-    @Value("${crawler.base-url}")
-    private String crawlerBaseUrl;
+    @Value("${crawler.primary-url}")
+    private String crawlerPrimaryUrl;
+
+    @Value("${crawler.secondary-url:}")
+    private String crawlerSecondaryUrl;
 
     private static final int CONNECT_TIMEOUT_SECONDS = 5;
     private static final int DEFAULT_READ_TIMEOUT_SECONDS = 30;
@@ -71,9 +77,18 @@ public class HttpClientConfig {
     }
 
     @Bean
-    public CollectorApiClient collectorApiClient() {
+    public CollectorClientManager collectorClientManager() {
+        List<CollectorApiClient> clients = new ArrayList<>();
+        clients.add(createCollectorClient(crawlerPrimaryUrl));
+        if (crawlerSecondaryUrl != null && !crawlerSecondaryUrl.isBlank()) {
+            clients.add(createCollectorClient(crawlerSecondaryUrl));
+        }
+        return new CollectorClientManager(clients);
+    }
+
+    private CollectorApiClient createCollectorClient(String baseUrl) {
         RestClient restClient = baseBuilder(CONNECT_TIMEOUT_SECONDS, DEFAULT_READ_TIMEOUT_SECONDS)
-                .baseUrl(crawlerBaseUrl)
+                .baseUrl(baseUrl)
                 .build();
         return HttpServiceProxyFactory
                 .builderFor(RestClientAdapter.create(restClient))

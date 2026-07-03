@@ -36,7 +36,8 @@ services:
       - TZ=Asia/Seoul
       - SPRING_PROFILES_ACTIVE=prod
       - "JAVA_OPTS=-Xms256M -Xmx512M"
-      - CRAWLER_BASE_URL=http://10.0.0.61:5000
+      - CRAWLER_PRIMARY_URL=http://10.0.0.61:5000
+      - CRAWLER_SECONDARY_URL=http://10.0.0.161:5000
     volumes:
       - ./firebase-service-account.json:/app/firebase-service-account.json
       - ./logs/backend:/var/log/pstracker

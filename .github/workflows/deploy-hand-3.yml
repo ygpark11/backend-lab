@@ -1,0 +1,65 @@
+name: Deploy Hand-3 (Collector Shard B)
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'msa/apps/collector-service/**'   # 파이썬 코드가 바뀌거나
+      - 'msa/docker-compose-hand-3.yml'   # 3호기 설정이 바뀔 때
+      - '.github/workflows/deploy-hand-3.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: msa/apps/collector-service
+          file: msa/apps/collector-service/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-collector:latest
+
+      - name: Deploy to Server (Node 3) via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST_HAND_3 }}
+          username: ubuntu
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/backend-lab/msa
+
+            # 1. 최신 설정 받기
+            git pull origin master
+
+            # 2. 기존 컨테이너 강제 종료 및 삭제
+            docker compose -f docker-compose-hand-3.yml down
+
+            # 3. 호스트에 남아있는 좀비 크롬 프로세스 제거
+            sudo pkill -f "[c]hrome" || true
+            sudo pkill -f "[p]laywright" || true
+
+            # 4. 메모리 캐시 비우기 (OS 레벨 청소)
+            sudo sync && sudo sysctl -w vm.drop_caches=3 || true
+
+            # 5. 최신 이미지 당겨오기
+            docker compose -f docker-compose-hand-3.yml pull collector-service
+
+            # 6. 컨테이너 깨끗하게 새로 시작
+            docker compose -f docker-compose-hand-3.yml up -d collector-service
+
+            # 7. 도커 찌꺼기 이미지 정리
+            docker image prune -f

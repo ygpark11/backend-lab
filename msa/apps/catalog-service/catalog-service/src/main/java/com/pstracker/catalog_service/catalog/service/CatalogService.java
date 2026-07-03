@@ -6,7 +6,7 @@ import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
 import com.pstracker.catalog_service.catalog.repository.*;
-import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
+import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
 import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
@@ -51,7 +51,7 @@ public class CatalogService {
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
-    private final CollectorApiClient collectorApiClient;
+    private final CollectorClientManager clientManager;
 
     /**
      * 게임 데이터 수집 및 저장 (Upsert)
@@ -450,7 +450,7 @@ public class CatalogService {
         log.info("Triggering manual crawl for: {} ({})", game.getName(), targetUrl);
 
         try {
-            String response = collectorApiClient.triggerSingleCrawl(new SingleCrawlRequest(targetUrl, internalSecretKey));
+            String response = clientManager.getPrimary().triggerSingleCrawl(new SingleCrawlRequest(targetUrl, internalSecretKey));
             log.info("Crawler Response: {}", response);
         } catch (Exception e) {
             log.error("Crawler Trigger Failed: {}", e.getMessage());

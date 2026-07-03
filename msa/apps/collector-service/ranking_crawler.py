@@ -273,8 +273,12 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache, vip_helpers=
 
     return ps_store_ids
 
-def main(vip_helpers=None):
-    logger.info("랭킹 크롤러 시작")
+def main(vip_helpers=None, ranking_types=None):
+    """
+    ranking_types: 수집할 랭킹 타입 목록 (예: ["BEST_SELLER"]).
+                   None이면 전체 실행 (기존 동작 유지).
+    """
+    logger.info(f"랭킹 크롤러 시작 (types={ranking_types if ranking_types else 'ALL'})")
     concept_cache = load_cache()
     logger.info(f"로컬 캐시(수첩) 로드 완료: 기존 저장된 컨셉 {len(concept_cache)}개")
 
@@ -282,14 +286,16 @@ def main(vip_helpers=None):
         bm = BrowserManager(p)
 
         try:
-            best_seller_ids = collect_rankings("BEST_SELLER", TARGETS["BEST_SELLER"], bm, concept_cache, vip_helpers)
-            send_to_backend("BEST_SELLER", best_seller_ids)
+            if ranking_types is None or "BEST_SELLER" in ranking_types:
+                best_seller_ids = collect_rankings("BEST_SELLER", TARGETS["BEST_SELLER"], bm, concept_cache, vip_helpers)
+                send_to_backend("BEST_SELLER", best_seller_ids)
 
-            logger.info("서버 휴식 (10초 대기)")
-            time.sleep(10)
-
-            most_downloaded_ids = collect_rankings("MOST_DOWNLOADED", TARGETS["MOST_DOWNLOADED"], bm, concept_cache, vip_helpers)
-            send_to_backend("MOST_DOWNLOADED", most_downloaded_ids)
+            if ranking_types is None or "MOST_DOWNLOADED" in ranking_types:
+                if ranking_types is None:  # 둘 다 실행 시에만 인터벌 추가
+                    logger.info("서버 휴식 (10초 대기)")
+                    time.sleep(10)
+                most_downloaded_ids = collect_rankings("MOST_DOWNLOADED", TARGETS["MOST_DOWNLOADED"], bm, concept_cache, vip_helpers)
+                send_to_backend("MOST_DOWNLOADED", most_downloaded_ids)
 
         except Exception as e:
             logger.error(f"치명적 에러 발생: {e}")

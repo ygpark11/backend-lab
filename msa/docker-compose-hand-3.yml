@@ -1,0 +1,40 @@
+version: '3.8'
+services:
+  # Python Collector (Hand) — Shard B (3호기)
+  collector-service:
+    image: ygpark1334/ps-tracker-collector:latest
+    container_name: ps-tracker-collector
+    init: true
+
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=Asia/Seoul
+      - API_BASE_URL=http://10.0.0.12:8080
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - CRAWLER_MODE=LOW
+      - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
+      - SHARD_ID=1
+      - SHARD_TOTAL=2
+    shm_size: '1gb'
+    volumes:
+      - ./crawler_data:/app/data
+    networks:
+      - ps-network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  ps-network:
+    driver: bridge

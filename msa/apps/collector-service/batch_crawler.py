@@ -85,6 +85,10 @@ CONFIG = {
 CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
 logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Engine: Playwright (Manual Stealth)")
 
+SHARD_ID = int(os.getenv('SHARD_ID', '0'))
+SHARD_TOTAL = int(os.getenv('SHARD_TOTAL', '1'))
+logger.info(f"🔧 Shard Config: SHARD_ID={SHARD_ID}, SHARD_TOTAL={SHARD_TOTAL}")
+
 # [글로벌 상태 및 스레드 락]
 urgent_queue = queue.Queue()
 active_requests = set()
@@ -104,11 +108,11 @@ class BrowserManager:
     def _create_browser(self):
         logger.info("크롬 브라우저 시작 (메모리 최적화 + 스텔스 옵션)")
         DESKTOP_USER_AGENTS = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0",
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
         ]
         user_agent = random.choice(DESKTOP_USER_AGENTS)
 
@@ -1081,6 +1085,9 @@ def run_batch_crawler_logic():
 
         # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
+        if SHARD_TOTAL > 1:
+            targets = [t for i, t in enumerate(targets) if i % SHARD_TOTAL == SHARD_ID]
+            logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 1 타겟 필터 완료: {len(targets)}개")
 
         with sync_playwright() as p:
             bm = BrowserManager(p)
@@ -1108,7 +1115,9 @@ def run_batch_crawler_logic():
             base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
             search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
 
-            for current_page_num in range(1, 11):
+            phase2_pages = [p for p in range(1, 11) if (p - 1) % SHARD_TOTAL == SHARD_ID]
+            logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 2 담당 페이지: {phase2_pages}")
+            for current_page_num in phase2_pages:
                 logger.info(f"Scanning Category Page {current_page_num}/10")
                 page_candidates = []
 
@@ -1252,7 +1261,7 @@ def trigger_crawl():
     threading.Thread(target=run_batch_crawler_logic, daemon=True).start()
     return jsonify({"status": "started"}), 200
 
-def run_ranking_wrapper():
+def run_ranking_wrapper(ranking_types=None):
     global is_ranking_running
 
     try:
@@ -1265,7 +1274,7 @@ def run_ranking_wrapper():
             'secret_key': CRAWLER_SECRET_KEY
         }
 
-        ranking_crawler.main(vip_helpers)
+        ranking_crawler.main(vip_helpers, ranking_types)
     finally:
         with crawler_lock:
             is_ranking_running = False
@@ -1283,8 +1292,9 @@ def trigger_ranking_crawl():
             return jsonify({"status": "error", "message": "Other task is running"}), 409
         is_ranking_running = True  # 락 안에서 선점 설정 → 공백 제거
 
-    logger.info("[API] 랭킹 크롤러 백그라운드 실행 요청 수신")
-    threading.Thread(target=run_ranking_wrapper, daemon=True).start()
+    ranking_types = data.get('types', None)  # None이면 전체 실행 (하위 호환)
+    logger.info(f"[API] 랭킹 크롤러 백그라운드 실행 요청 수신 (types={ranking_types})")
+    threading.Thread(target=run_ranking_wrapper, args=(ranking_types,), daemon=True).start()
     return jsonify({"status": "started", "message": "Ranking crawler triggered"}), 200
 
 @app.route('/health', methods=['GET'])

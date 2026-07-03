@@ -16,12 +16,7 @@ spring:
     password: password
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-# 도커 내부망 파이썬 주소
-crawler:
-  url: http://collector-service:5000/run
-  queue-url: http://collector-service:5000/api/crawler/trigger
-  single-url: http://collector-service:5000/crawl/single
-  ranking-url: http://collector-service:5000/run-ranking
+# crawler.primary-url / secondary-url 은 환경변수로 주입 (application.yml 기본값 사용 가능)
 
 app:
   auth:

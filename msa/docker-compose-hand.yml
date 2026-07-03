@@ -17,6 +17,8 @@ services:
       - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
       - CRAWLER_MODE=LOW
       - CRAWLER_SECRET_KEY=${CRAWLER_SECRET_KEY}
+      - SHARD_ID=0
+      - SHARD_TOTAL=2
     shm_size: '1gb'
     volumes:
       - ./crawler_data:/app/data

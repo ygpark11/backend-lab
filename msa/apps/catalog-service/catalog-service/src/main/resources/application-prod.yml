@@ -38,11 +38,7 @@ logging:
 server:
   forward-headers-strategy: native
 
-crawler:
-  url: http://collector-service:5000/run
-  queue-url: http://collector-service:5000/api/crawler/trigger
-  single-url: http://collector-service:5000/crawl/single
-  ranking-url: http://collector-service:5000/run-ranking
+# crawler.primary-url / secondary-url / secret-key 은 docker-compose .env에서 주입
 
 app:
   auth:
