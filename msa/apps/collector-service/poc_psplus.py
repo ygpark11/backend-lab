@@ -17,12 +17,9 @@ USER_AGENTS = [
 def setup_stealth_page(context):
     page = context.new_page()
     page.set_default_timeout(30000)
-
-    # 🛡️ Webdriver 탐지 우회
     page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
 
     def route_intercept(route):
-        # 텍스트만 긁을 것이므로 무거운 자원 전면 차단 (1GB RAM 최적화)
         if route.request.resource_type in ["image", "media", "font"]:
             route.abort()
             return
@@ -39,7 +36,7 @@ def crawl_ps_plus_prices_no_click():
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True, # 클릭이 필요 없으므로 완전히 백그라운드에서 실행
+            headless=True,
             args=[
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
@@ -59,59 +56,119 @@ def crawl_ps_plus_prices_no_click():
         page = setup_stealth_page(context)
 
         try:
-            # 1. 페이지 접속 (domcontentloaded만 완료되면 즉시 다음 단계로)
+            # 1. 페이지 접속
+            t0 = time.time()
             page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
+            logger.info(f"  domcontentloaded: {time.time() - t0:.2f}s")
 
-            # 2. 티어 선택기 뼈대가 DOM에 붙을 때까지만 대기 (state="attached" 옵션 적용)
+            # 2. 티어 선택기 뼈대 대기 (SSR HTML이므로 즉시 통과)
             page.wait_for_selector(".service-hub-tier-selector", state="attached", timeout=15000)
 
-            # 보내주신 HTML 기준 고유 식별자 매핑
-            tiers = {"에센셜": "TIER_10", "스페셜": "TIER_20", "디럭스": "TIER_30"}
-            durations = {"1개월": "1_MONTH", "3개월": "3_MONTH", "12개월": "12_MONTH"}
+            # 3. [핵심] script[type="application/json"] 태그에 tierId 데이터가 있는지 확인
+            #    <script type="application/json"> 태그는 SSR(서버사이드) 데이터 → JS 실행 여부와 무관하게
+            #    초기 HTML 응답에 포함됨. 따라서 domcontentloaded 직후 바로 읽을 수 있음.
+            #    그러나 저사양 서버 환경에서 혹시라도 파싱이 지연될 경우를 대비해
+            #    "tierId 키가 실제로 파싱 가능한 상태"임을 확인하고 진행.
+            logger.info("  [대기] script[application/json] 안에 tierId 데이터 확인 중...")
+            page.wait_for_function(
+                """
+                () => {
+                    const scripts = document.querySelectorAll('script[type="application/json"]');
+                    return Array.from(scripts).some(s => {
+                        try {
+                            const d = JSON.parse(s.textContent);
+                            return !!(d.args && d.args.tierId);
+                        } catch(e) { return false; }
+                    });
+                }
+                """,
+                timeout=15000
+            )
+            logger.info(f"  tierId 데이터 확인 완료: {time.time() - t0:.2f}s")
 
-            for tier_name, tier_code in tiers.items():
-                logger.info(f"👉 [{tier_name}] 데이터 파싱 중...")
+            # 4. 모든 script 태그에서 tierId + 구독 offer 데이터 일괄 추출
+            script_data = page.evaluate("""
+                () => {
+                    const results = {};
+                    document.querySelectorAll('script[type="application/json"]').forEach(s => {
+                        try {
+                            const data = JSON.parse(s.textContent);
+                            const tierId = data.args && data.args.tierId;
+                            if (!tierId) return;
+                            const cache = data.cache && data.cache.ROOT_QUERY;
+                            if (!cache) return;
+                            for (const [key, val] of Object.entries(cache)) {
+                                if (!key.startsWith('tierSelectorOffersRetrieve') || !val || !val.offers) continue;
+                                const hasPrice = val.offers.some(o => o.price && o.price.basePriceValue !== undefined);
+                                if (!hasPrice) continue;
+                                if (!results[tierId]) results[tierId] = {};
+                                val.offers.forEach(offer => {
+                                    if (!offer.duration || !offer.price) return;
+                                    results[tierId][String(offer.duration.value)] = {
+                                        base: offer.price.basePriceValue,
+                                        sale: offer.price.discountedValue,
+                                        endDate: offer.price.promotionEndDate || null
+                                    };
+                                });
+                            }
+                        } catch(e) {}
+                    });
+                    return results;
+                }
+            """)
+
+            tier_map = {
+                "TIER_10": ("ESSENTIAL", "에센셜"),
+                "TIER_20": ("SPECIAL",   "스페셜"),
+                "TIER_30": ("DELUXE",    "디럭스"),
+            }
+            duration_label = {"1": "1개월", "3": "3개월", "12": "12개월"}
+            duration_map = {
+                "1":  ("price1Month",  "originalPrice1Month",  "saleEndDate1Month"),
+                "3":  ("price3Month",  "originalPrice3Month",  "saleEndDate3Month"),
+                "12": ("price12Month", "originalPrice12Month", "saleEndDate12Month"),
+            }
+
+            for tier_id, (tier_en, tier_kr) in tier_map.items():
+                tier_offers = script_data.get(tier_id, {})
+                if not tier_offers:
+                    logger.warning(f"⚠️  [{tier_kr}] 데이터 없음 — 사이트 구조 변경 의심")
+                    continue
+
+                logger.info(f"\n👉 [{tier_kr} / {tier_en}]")
                 tier_prices = {}
 
-                for duration_name, duration_code in durations.items():
-                    # 💡 핵심 로직: 해당 티어(TIER_X)와 기간(X_MONTH)을 가진 라디오 버튼의 부모 Label을 찾고, 그 안의 가격 태그를 조준
-                    label_loc = page.locator(f"label:has(input[name='tier-selector-offer-switcher-{tier_code}'][value='{duration_code}'])")
-                    price_loc = label_loc.locator("[data-qa$='#price']")
+                for months_str in sorted(tier_offers.keys(), key=lambda x: int(x)):
+                    if months_str not in duration_map:
+                        continue
+                    offer = tier_offers[months_str]
+                    price_key, orig_key, end_key = duration_map[months_str]
+                    label = duration_label.get(months_str, f"{months_str}개월")
 
-                    if price_loc.count() > 0:
-                        # .inner_text()는 화면에 숨겨져 있으면 값을 못 가져오지만, .text_content()는 무조건 가져옴
-                        raw_text = price_loc.first.text_content().strip()
-                        sale_price = int(re.sub(r'[^0-9]', '', raw_text))
+                    sale_price = offer["sale"]
+                    base_price = offer["base"]
 
-                        # 취소선 정가: 할인 시에만 존재 ([data-qa$='#strikethroughPrice'])
-                        strike_loc = label_loc.locator("[data-qa$='#strikethroughPrice']")
-                        if strike_loc.count() > 0:
-                            strike_text = strike_loc.first.text_content().strip()
-                            base_price = int(re.sub(r'[^0-9]', '', strike_text))
-                        else:
-                            base_price = sale_price  # 할인 없으면 정가 = 현재가
+                    sale_end_date = None
+                    end_date_raw = offer.get("endDate")
+                    if end_date_raw:
+                        m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(end_date_raw))
+                        if m:
+                            sale_end_date = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
 
-                        # 할인율 배지: 할인 시에만 존재 (.psw-badge--promo)
-                        badge_loc = label_loc.locator(".psw-badge--promo")
-                        discount_rate = badge_loc.first.text_content().strip() if badge_loc.count() > 0 else None
+                    tier_prices[price_key]  = sale_price
+                    tier_prices[orig_key]   = base_price
+                    tier_prices[end_key]    = sale_end_date
 
-                        tier_prices[duration_name] = {
-                            "base_price": base_price,
-                            "sale_price": sale_price,
-                            "discount_rate": discount_rate,
-                        }
-
-                        if discount_rate:
-                            logger.info(f"   ✔️ {duration_name}: {base_price:,}원 → {sale_price:,}원 ({discount_rate})")
-                        else:
-                            logger.info(f"   ✔️ {duration_name}: {sale_price:,}원 (할인 없음)")
+                    if sale_price < base_price:
+                        discount_rate = round((base_price - sale_price) / base_price * 100)
+                        logger.info(f"   ✔️  {label}: {base_price:,}원 → {sale_price:,}원 ({discount_rate}% 할인) | 종료: {sale_end_date or '없음'}")
                     else:
-                        logger.warning(f"   ⚠️ {duration_name} 가격을 찾을 수 없습니다.")
+                        logger.info(f"   ✔️  {label}: {sale_price:,}원 (할인 없음)")
 
-                result["data"][tier_name] = tier_prices
+                result["data"][tier_en] = tier_prices
 
             result["status"] = "SUCCESS"
-            logger.info("🎉 클릭 없는 고속 수집이 완료되었습니다.")
+            logger.info(f"\n🎉 수집 완료! 총 소요 시간: {time.time() - t0:.2f}s")
 
         except Exception as e:
             logger.error(f"파싱 중 에러 발생: {e}")
@@ -129,5 +186,5 @@ def crawl_ps_plus_prices_no_click():
 if __name__ == "__main__":
     import json
     result = crawl_ps_plus_prices_no_click()
-    print("\n=== 최종 수집 결과 ===")
+    print("\n=== 최종 수집 결과 (백엔드 전송 포맷) ===")
     print(json.dumps(result, ensure_ascii=False, indent=2))

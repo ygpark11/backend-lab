@@ -345,50 +345,74 @@ def crawl_ps_plus_prices_no_click(bm):
         page.goto(target_url, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_selector(".service-hub-tier-selector", state="attached", timeout=30000)
 
-        tiers = {"ESSENTIAL": "TIER_10", "SPECIAL": "TIER_20", "DELUXE": "TIER_30"}
-        durations = {
-            "price1Month":  ("originalPrice1Month",  "saleEndDate1Month",  "1_MONTH"),
-            "price3Month":  ("originalPrice3Month",  "saleEndDate3Month",  "3_MONTH"),
-            "price12Month": ("originalPrice12Month", "saleEndDate12Month", "12_MONTH"),
+        # <script type="application/json"> 태그에서 직접 추출
+        # MFE JS 렌더링 완료 여부와 무관하게 서버사이드 렌더링된 JSON을 즉시 파싱
+        script_data = page.evaluate("""
+            () => {
+                const results = {};
+                document.querySelectorAll('script[type="application/json"]').forEach(s => {
+                    try {
+                        const data = JSON.parse(s.textContent);
+                        const tierId = data.args && data.args.tierId;
+                        if (!tierId) return;
+                        const cache = data.cache && data.cache.ROOT_QUERY;
+                        if (!cache) return;
+                        for (const [key, val] of Object.entries(cache)) {
+                            if (!key.startsWith('tierSelectorOffersRetrieve') || !val || !val.offers) continue;
+                            const hasPrice = val.offers.some(o => o.price && o.price.basePriceValue !== undefined);
+                            if (!hasPrice) continue;
+                            if (!results[tierId]) results[tierId] = {};
+                            val.offers.forEach(offer => {
+                                if (!offer.duration || !offer.price) return;
+                                results[tierId][String(offer.duration.value)] = {
+                                    base: offer.price.basePriceValue,
+                                    sale: offer.price.discountedValue,
+                                    endDate: offer.price.promotionEndDate || null
+                                };
+                            });
+                        }
+                    } catch(e) {}
+                });
+                return results;
+            }
+        """)
+
+        tier_map = {"TIER_10": "ESSENTIAL", "TIER_20": "SPECIAL", "TIER_30": "DELUXE"}
+        duration_map = {
+            "1":  ("price1Month",  "originalPrice1Month",  "saleEndDate1Month"),
+            "3":  ("price3Month",  "originalPrice3Month",  "saleEndDate3Month"),
+            "12": ("price12Month", "originalPrice12Month", "saleEndDate12Month"),
         }
 
-        for tier_key, tier_code in tiers.items():
+        for tier_id, tier_name in tier_map.items():
+            tier_offers = script_data.get(tier_id, {})
+            if not tier_offers:
+                logger.warning(f"[{tier_name}] 구독 데이터를 찾을 수 없습니다.")
+                continue
+
             tier_prices = {}
-            for duration_key, (original_key, sale_end_key, duration_code) in durations.items():
-                label_loc = page.locator(f"label:has(input[name='tier-selector-offer-switcher-{tier_code}'][value='{duration_code}'])")
-                price_loc = label_loc.locator("[data-qa$='#price']")
+            for months_str, offer in tier_offers.items():
+                if months_str not in duration_map:
+                    continue
+                price_key, orig_key, end_key = duration_map[months_str]
+                sale_price = offer["sale"]
+                base_price = offer["base"]
 
-                if price_loc.count() > 0:
-                    raw_text = price_loc.first.text_content().strip()
-                    sale_price = int(re.sub(r'[^0-9]', '', raw_text))
-
-                    # 취소선 정가: 할인 시에만 존재
-                    strike_loc = label_loc.locator("[data-qa$='#strikethroughPrice']")
-                    if strike_loc.count() > 0:
-                        strike_text = strike_loc.first.text_content().strip()
-                        base_price = int(re.sub(r'[^0-9]', '', strike_text))
-
-                        # 프로모션 종료일: 할인 시 description 텍스트에서 추출
-                        sale_end_date = None
-                        desc_loc = label_loc.locator("[data-qa$='#description']")
-                        if desc_loc.count() > 0:
-                            desc_text = desc_loc.first.text_content()
-                            m = re.search(r'(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})', desc_text)
-                            if m:
-                                sale_end_date = f"{m.group(1)}-{m.group(2).zfill(2)}-{m.group(3).zfill(2)}"
-                            else:
-                                logger.warning(f"[{tier_key}] {duration_key} 프로모션 종료일 파싱 실패 — 문구 변경 확인 필요")
+                sale_end_date = None
+                end_date_raw = offer.get("endDate")
+                if end_date_raw:
+                    m = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(end_date_raw))
+                    if m:
+                        sale_end_date = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
                     else:
-                        base_price = sale_price  # 할인 없으면 정가 = 현재가
-                        sale_end_date = None
+                        logger.warning(f"[{tier_name}] {price_key} 프로모션 종료일 파싱 실패: {end_date_raw}")
 
-                    tier_prices[duration_key] = sale_price
-                    tier_prices[original_key] = base_price
-                    tier_prices[sale_end_key] = sale_end_date
-                else:
-                    logger.warning(f"{tier_key} - {duration_key} 가격을 찾을 수 없습니다.")
+                tier_prices[price_key] = sale_price
+                tier_prices[orig_key] = base_price
+                tier_prices[end_key] = sale_end_date
 
-            result_data[tier_key] = tier_prices
+            result_data[tier_name] = tier_prices
+            logger.info(f"[{tier_name}] 파싱 완료: {tier_prices}")
 
         logger.info(f"구독권 파싱 완료: {result_data}")
 
