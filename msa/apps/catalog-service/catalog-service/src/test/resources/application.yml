@@ -43,7 +43,8 @@ app:
     cookie-secure: false
 
 crawler:
-  base-url: http://collector-service:5000
+  primary-url: http://collector-service:5000
+  secondary-url: ""
   secret-key: "test-crawler-secret-key"
 
 igdb:
