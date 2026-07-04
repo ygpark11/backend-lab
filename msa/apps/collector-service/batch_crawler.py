@@ -750,11 +750,16 @@ def crawl_phase0_new_releases(bm):
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
 
 def extract_gamehub_image_url(json_text: str) -> str:
-    """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART role의 이미지 URL을 추출합니다.
-    - product 페이지: 일반 JSON ("role":"GAMEHUB_COVER_ART")
-    - concept 페이지: 이중 직렬화 JSON (\"role\":\"GAMEHUB_COVER_ART\")
+    """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART 이미지 URL 추출 (concept 페이지 / fallback 용).
+
+    product 페이지의 에디션별 정확한 이미지는 crawl_detail_and_send 내
+    page.evaluate() JS 방식으로 별도 처리함. 이 함수는 concept 페이지(Phase 0) 및
+    JS 방식 실패 시 fallback으로만 사용.
+
+    - 일반 JSON: product 페이지 ("role":"GAMEHUB_COVER_ART")
+    - 이중 직렬화: concept 페이지 (\"role\":\"GAMEHUB_COVER_ART\")
     """
-    # Case 1: 일반 JSON, role → url 순서 (product 페이지)
+    # Case 1: 일반 JSON, role → url 순서
     m = re.search(
         r'"role"\s*:\s*"GAMEHUB_COVER_ART"[^}]*?"url"\s*:\s*"(https://image\.api\.playstation\.com/vulcan/[^"]+)"',
         json_text
@@ -766,13 +771,13 @@ def extract_gamehub_image_url(json_text: str) -> str:
             json_text
         )
     if not m:
-        # Case 3: 이중 직렬화 JSON, role → url 순서 (concept 페이지)
+        # Case 3: 이중 직렬화, role → url 순서
         m = re.search(
             r'\\"role\\"\s*:\s*\\"GAMEHUB_COVER_ART\\"[^}]*?\\"url\\"\s*:\s*\\"(https://image\.api\.playstation\.com/vulcan/[^\\"]+)\\"',
             json_text
         )
     if not m:
-        # Case 4: 이중 직렬화 JSON, url → role 순서
+        # Case 4: 이중 직렬화, url → role 순서
         m = re.search(
             r'\\"url\\"\s*:\s*\\"(https://image\.api\.playstation\.com/vulcan/[^\\"]+)\\"[^}]*?\\"role\\"\s*:\s*\\"GAMEHUB_COVER_ART\\"',
             json_text
@@ -844,7 +849,34 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
         )
         english_title = mine_english_title(next_data_text) if next_data_text else None
-        image_url = extract_gamehub_image_url(next_data_text) if next_data_text else ""
+
+        # 에디션/번들 product-specific 이미지 추출
+        # script[type="application/json"] SSR 태그에서 product ID 기준으로 personalizedMeta 탐색
+        # (script 태그는 domcontentloaded 시 이미 존재 → 저사양 서버에서도 타이밍 무관)
+        ps_store_id_for_img = target_url.split("/")[-1].split("?")[0]
+        image_url = page.evaluate("""
+            (psStoreId) => {
+                const scripts = document.querySelectorAll('script[type="application/json"]');
+                for (const s of scripts) {
+                    const text = s.textContent;
+                    if (!text.includes(psStoreId)) continue;
+                    const unesc = text.replace(/\\\\"/g, '"').replace(/\\\\\//g, '/');
+                    let idx = unesc.indexOf('"id":"' + psStoreId + '"');
+                    if (idx === -1) idx = unesc.indexOf('"Product:' + psStoreId + '"');
+                    if (idx === -1) continue;
+                    const win = unesc.substring(idx, idx + 8000);
+                    const pmIdx = win.indexOf('"personalizedMeta"');
+                    if (pmIdx === -1) continue;
+                    const pmWin = win.substring(pmIdx, pmIdx + 2000);
+                    const m = pmWin.match(/"role"\\s*:\\s*"GAMEHUB_COVER_ART"[^}]{0,200}"url"\\s*:\\s*"(https:\\/\\/image\\.api\\.playstation\\.com\\/vulcan\\/[^"]+)"/);
+                    if (m) return m[1].split('?')[0];
+                }
+                return '';
+            }
+        """, ps_store_id_for_img) or ""
+        # fallback: 기존 __NEXT_DATA__ 텍스트 기반 추출 (단일 에디션 등)
+        if not image_url:
+            image_url = extract_gamehub_image_url(next_data_text) if next_data_text else ""
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
