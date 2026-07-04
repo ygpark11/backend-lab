@@ -99,7 +99,7 @@ const PsPlusPricingPage = () => {
 
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-0 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
-            <SEO title="PS Plus 요금제" description="PlayStation Plus 에센셜, 스페셜, 디럭스 구독권 가격 비교" />
+            <SEO title="PS Plus 요금제" description="PlayStation Plus 에센셜, 스페셜, 디럭스 구독권 가격 비교" url="https://ps-signal.com/ps-plus" />
 
             <div className="hidden md:block absolute top-[10%] left-[5%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 transition-colors duration-500"></div>
             <div className="hidden md:block absolute bottom-[10%] right-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-blue-500/10 transition-colors duration-500"></div>

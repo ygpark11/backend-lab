@@ -3,12 +3,13 @@ Allow: /
 Allow: /games
 Allow: /ps-plus
 Allow: /monthly-games
-Allow: /pioneers
+Allow: /discover
+Allow: /curation
 Allow: /insights
 
 # 프론트엔드 비공개 라우트 차단
 Disallow: /wishlist
-Disallow: /mypage
+Disallow: /profile
 
 # 백엔드 인증/유저 액션/개인정보/관리자 API 핀셋 차단
 Disallow: /oauth2/

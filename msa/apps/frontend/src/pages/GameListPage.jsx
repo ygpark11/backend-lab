@@ -1033,7 +1033,7 @@ const GameListPage = () => {
 
     return (
         <div className="min-h-screen text-primary relative transition-colors duration-500">
-            <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" />
+            <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" url="https://ps-signal.com/games" />
 
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
                 <div className="absolute inset-0 z-20 md:mix-blend-screen md:dark:mix-blend-screen opacity-40 md:opacity-50">

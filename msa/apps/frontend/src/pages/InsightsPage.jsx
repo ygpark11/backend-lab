@@ -35,6 +35,7 @@ import {useCurrentUser} from '../hooks/useCurrentUser';
 import {adminApi} from '../api/adminApi';
 import DonationModal from '../components/DonationModal';
 import HelpModal from '../components/common/HelpModal';
+import SEO from '../components/common/SEO';
 
 const formatCurrency = (amount) => {
     if (!amount) return '0';
@@ -137,6 +138,7 @@ const InsightsPage = () => {
 
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
+            <SEO title="인사이트" description="플레이스테이션 게임 가격 동향, 할인율 통계, 장르별 분석 데이터" url="https://ps-signal.com/insights" />
             <div className="hidden md:block absolute top-[10%] left-[5%] w-[40%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-cyan-500/10 dark:bg-cyan-500/5 transition-colors duration-500"></div>
             <div className="hidden md:block absolute bottom-[10%] right-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-emerald-500/10 dark:bg-emerald-500/5 transition-colors duration-500"></div>
 

@@ -16,6 +16,7 @@ const SEO = ({ title, description, image, url }) => {
             {/* 1. 기본 메타 태그 */}
             <title>{pageTitle}</title>
             <meta name="description" content={pageDesc} />
+            <link rel="canonical" href={pageUrl} />
 
             {/* 2. Open Graph (카카오톡, 페이스북, 디스코드 공유 시) */}
             <meta property="og:type" content="website" />

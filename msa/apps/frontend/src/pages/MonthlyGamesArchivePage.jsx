@@ -8,6 +8,7 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import HelpModal from '../components/common/HelpModal';
 import PSGameImage from '../components/common/PSGameImage';
+import SEO from '../components/common/SEO';
 
 // --- 유틸리티 함수 ---
 const formatTargetMonth = (targetMonth) => {
@@ -170,6 +171,7 @@ const MonthlyGamesArchivePage = () => {
 
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
+            <SEO title="월간 게임 아카이브" description="PS Plus 월간 무료 게임 전체 아카이브 — 역대 월간 게임 목록을 확인하세요." url="https://ps-signal.com/monthly-games" />
             {/* 배경 이펙트 */}
             <div className="hidden md:block absolute top-[5%] left-[5%] w-[30%] h-[40%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 transition-colors duration-500"></div>
             <div className="hidden md:block absolute bottom-[20%] right-[5%] w-[30%] h-[30%] rounded-full blur-[120px] pointer-events-none bg-ps-blue/10 transition-colors duration-500"></div>

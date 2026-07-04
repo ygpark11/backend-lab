@@ -218,7 +218,7 @@ const WishlistPage = () => {
 
     return (
         <div className="min-h-screen bg-base text-primary relative transition-colors duration-500">
-            <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." />
+            <SEO title="나의 찜 목록" description="내가 찜한 게임들의 가격 변동을 확인하세요." url="https://ps-signal.com/wishlist" />
 
             {/* Aurora 배경 + PS 심볼 워터마크 */}
             <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">

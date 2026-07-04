@@ -45,7 +45,6 @@ function AppRoutes() {
                     <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
                     <Route path="/ps-plus" element={<PsPlusPricingPage />} />
-                    <Route path="/ps-plus" element={<PsPlusPricingPage />} />
                     <Route path="/monthly-games" element={<MonthlyGamesArchivePage />} />
                     <Route
                         path="/wishlist"

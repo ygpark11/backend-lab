@@ -284,7 +284,7 @@ const PioneerCandidatesPage = () => {
 
     return (
         <div className="min-h-screen bg-base text-primary relative transition-colors duration-500">
-            <SEO title="신작 수집소" description="매일 새벽 발굴되는 플레이스테이션 신작들을 확인하고 트래커에 추가하세요." />
+            <SEO title="신작 수집소" description="매일 새벽 발굴되는 플레이스테이션 신작들을 확인하고 트래커에 추가하세요." url="https://ps-signal.com/discover" />
 
             {/* 배경 오로라 이펙트 */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">

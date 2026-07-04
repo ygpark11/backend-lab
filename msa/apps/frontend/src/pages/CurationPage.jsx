@@ -412,6 +412,7 @@ const CurationPage = () => {
             <SEO
                 title="큐레이션"
                 description="데이터로 검증된 PS 게임 테마 큐레이션 — 지금 사야 할 게임을 찾아드립니다."
+                url="https://ps-signal.com/curation"
             />
 
             {/* PS 심볼 워터마크 */}
