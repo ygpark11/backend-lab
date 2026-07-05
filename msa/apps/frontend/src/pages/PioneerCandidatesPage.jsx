@@ -244,9 +244,11 @@ const PioneerCandidatesPage = () => {
                             try {
                                 await adminApi.deleteCandidate(game.psStoreId);
                                 setCandidates(prev => prev.filter(c => c.psStoreId !== game.psStoreId));
-                                toast.success("삭제 완료!", { id: loadId });
+                                toast.dismiss(loadId);
+                                toast.success("삭제 완료!", { duration: 3000 });
                             } catch {
-                                toast.error("삭제 실패", { id: loadId });
+                                toast.dismiss(loadId);
+                                toast.error("삭제 실패", { duration: 3000 });
                             }
                         }}
                         className="px-3 py-1 bg-red-500 text-white rounded font-bold text-xs hover:bg-red-600"

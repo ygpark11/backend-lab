@@ -167,14 +167,16 @@ const WishlistPage = () => {
             setGames(prev => prev.filter(game => Number(game.gameId || game.id) !== Number(gameId)));
             setTotalElements(prev => Math.max(0, prev - 1));
 
-            toast.success("삭제되었습니다", { id: toastId, duration: 3000 });
+            toast.dismiss(toastId);
+            toast.success("삭제되었습니다", { duration: 3000 });
 
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
                 detail: { gameId: Number(gameId), liked: false }
             }));
 
         } catch {
-            toast.error("삭제 실패", { id: toastId, duration: 3000 });
+            toast.dismiss(toastId);
+            toast.error("삭제 실패", { duration: 3000 });
         }
     };
 
