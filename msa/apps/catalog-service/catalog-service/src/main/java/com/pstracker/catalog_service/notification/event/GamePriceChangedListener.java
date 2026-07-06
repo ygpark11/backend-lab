@@ -114,7 +114,7 @@ public class GamePriceChangedListener {
 
                 if (!memberTokens.isEmpty()) {
                     try {
-                        Map<String, String> fcmData = Map.of("url", "/games");
+                        Map<String, String> fcmData = Map.of("url", "/games?game=" + gameId);
 
                         fcmService.sendMulticastMessage(memberTokens, fcmTitles.get(i), fcmBodies.get(i), fcmData);
                     } catch (Exception e) {

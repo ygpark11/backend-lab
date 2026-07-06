@@ -361,6 +361,13 @@ const GameListPage = () => {
         window.scrollTo({ top: 0 });
     }, []);
 
+    // 알림 클릭으로 진입 시 (?game=123) 해당 게임 모달 자동 오픈
+    useEffect(() => {
+        const gameId = searchParams.get('game');
+        if (!gameId) return;
+        navigate(`/games/${gameId}`, { state: { background: location } });
+    }, []);
+
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;

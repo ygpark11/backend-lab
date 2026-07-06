@@ -62,6 +62,9 @@ crawler:
   secondary-url: ${CRAWLER_SECONDARY_URL:}
   secret-key: ${CRAWLER_SECRET_KEY}
 
+app:
+  base-url: https://ps-signal.com
+
 management:
   endpoints:
     web:

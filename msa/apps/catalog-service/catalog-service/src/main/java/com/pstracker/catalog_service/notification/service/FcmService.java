@@ -5,6 +5,7 @@ import com.pstracker.catalog_service.notification.domain.FcmToken;
 import com.pstracker.catalog_service.notification.repository.FcmTokenRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
@@ -18,6 +19,9 @@ import java.util.Optional;
 @Slf4j
 @RequiredArgsConstructor
 public class FcmService {
+
+    @Value("${app.base-url:https://ps-signal.com}")
+    private String appBaseUrl;
 
     private final FcmTokenRepository fcmTokenRepository;
 
@@ -72,12 +76,20 @@ public class FcmService {
             List<String> batchTokens = tokens.subList(i, endIndex);
             List<FcmToken> batchFcmTokens = targetTokens.subList(i, endIndex); // targetTokens 사용
 
+            String relativeUrl = fcmData.getOrDefault("url", "/");
+            String absoluteLink = appBaseUrl + relativeUrl;
+
             MulticastMessage message = MulticastMessage.builder()
                     .setNotification(com.google.firebase.messaging.Notification.builder()
                             .setTitle(title)
                             .setBody(body)
                             .build())
                     .putAllData(fcmData)
+                    .setWebpushConfig(WebpushConfig.builder()
+                            .setFcmOptions(WebpushFcmOptions.builder()
+                                    .setLink(absoluteLink)
+                                    .build())
+                            .build())
                     .addAllTokens(batchTokens)
                     .build();
 
