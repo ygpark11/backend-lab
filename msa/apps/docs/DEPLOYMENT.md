@@ -71,10 +71,12 @@ docker compose logs -f docker-compose-local.yml
 ## 3. 운영 서버 배포 (Production Deployment)
 운영 환경(Oracle Cloud)에서는 리소스 격리를 위해 **Brain(Node 1)** 과 **Hand(Node 2)** 로 서버를 물리적으로 분리하여 배포합니다.
 
-### 🏗️ 인프라 아키텍처 (Multi-Node)
+### 🏗️ 인프라 아키텍처 (3-Node Strategy)
 - Node 1 (Brain, A1 ARM64): `10.0.0.12` (Private IP) / API, DB, Frontend, Caddy, Alloy — Oracle A1 ARM64 2코어 8GB RAM
-- Node 2 (Hand): `10.0.0.61` (Private IP) / Python Crawler, Playwright (Headless)
-- Node 3 (예정): 기존 AMD 서버 재활용 / Python Crawler — Node 2와 샤딩 구성으로 수집 속도 개선
+- Node 2 (Collector Shard A, SHARD_ID=0): `10.0.0.61` (Private IP) / Python Crawler, Playwright — AMD 1코어 1GB RAM
+- Node 3 (Collector Shard B, SHARD_ID=1): Private (VCN 내부망) / Python Crawler, Playwright — AMD 1코어 1GB RAM (구 1호기 재활용)
+
+> **💡 샤딩 전략:** Java 백엔드가 스케줄러를 통해 두 수집기에 동시 배치 명령을 전송합니다. 각 수집기는 `SHARD_ID % SHARD_TOTAL` 조건으로 전체 게임 목록을 분할하여 처리하므로, 수집 시간이 절반 이하로 단축됩니다.
 
 #### ① Node 1: Brain Server 배포
 ```bash
@@ -86,19 +88,26 @@ docker compose -f docker-compose-brain.yml up -d
 docker image prune -f
 ```
 
-#### ② Node 2: Hand Server 배포
+#### ② Node 2: Collector Shard A 배포 (SHARD_ID=0)
 ```bash
 # 1. 최신 이미지 Pull & 실행
-docker compose -f docker-compose.hand.yml pull
-docker compose -f docker-compose.hand.yml up -d
+docker compose -f docker-compose-hand.yml pull
+docker compose -f docker-compose-hand.yml up -d
+```
+
+#### ③ Node 3: Collector Shard B 배포 (SHARD_ID=1)
+```bash
+# 1. 최신 이미지 Pull & 실행
+docker compose -f docker-compose-hand-3.yml pull
+docker compose -f docker-compose-hand-3.yml up -d
 ```
 
 #### 🧪 네트워크 연결 테스트
-Node 1(Brain)에서 Node 2(Hand)로 사설 통신이 가능한지 확인합니다.
+Node 1(Brain)에서 두 수집기로 사설 통신이 가능한지 확인합니다.
 ```bash
 # Node 1 터미널에서 실행
-curl -X POST [http://10.0.0.61:5000/run](http://10.0.0.61:5000/run)
-# 예상 응답: {"status": "started"}
+curl http://10.0.0.61:5000/health  # Node 2 헬스 체크
+# 예상 응답: {"status": "ok"}
 ```
 
 ---
@@ -163,7 +172,8 @@ graph TD
 | :--- | :--- | :--- |
 | `deploy-brain.yml` | Backend(Java) 빌드·테스트 및 Node 1 배포 | `apps/catalog-service/**` 변경 시 |
 | `deploy-face.yml` | Frontend(React) 빌드 및 Node 1 배포 | `apps/frontend/**` 변경 시 |
-| `deploy-hand.yml` | Crawler(Python) 빌드 및 Node 2 배포 | `apps/collector-service/**` 변경 시 |
+| `deploy-hand.yml` | Crawler(Python) 빌드 및 Node 2 (Shard A) 배포 | `apps/collector-service/**` 변경 시 |
+| `deploy-hand-3.yml` | Crawler(Python) 빌드 및 Node 3 (Shard B) 배포 | `apps/collector-service/**` 변경 시 |
 | `deploy-observability.yml` | Alloy(Monitoring) 설정 배포 및 재시작 | `config.alloy` 변경 시 |
 
 ### 🛠️ 빌드 타임 변수 주입 전략 (Frontend)

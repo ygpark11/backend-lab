@@ -66,6 +66,19 @@
     * 엔진 인스턴스를 계속 재사용하는 대신, 10건(Batch) 단위로 엔진을 **완전히 종료(Stop)하고 재생성**하여 메모리를 강제로 초기화함.
     * 이때 발생하는 프로세스 생성/종료 비용은 감수하되, `init: true`와의 조합으로 좀비 누적을 막고 메모리 스왑 현상을 원천 차단.
 
+### 🖼️ Case 37. PS Store 에디션·번들 상품 이미지 오추출 (Apollo Cache 구조 분석)
+* **문제 발생:** 에디션(Deluxe Edition), 번들 등 기본판 외 상품 수집 시, 해당 상품의 커버 이미지가 아닌 **기본판 이미지가 공통으로 추출**되는 버그 발생.
+* **원인 분석:** PS Store의 `__NEXT_DATA__` 내 Apollo 캐시에는 `GAMEHUB_COVER_ART` 역할의 이미지 항목이 두 개 존재.
+  1. **concept 레벨 항목 (공통):** 페이지 상단에 위치하며, 어떤 에디션 페이지를 열어도 기본판 이미지를 반환하는 공유 캐시 항목.
+  2. **personalizedMeta 항목 (상품별):** 해당 product ID와 연결된 상품별 이미지를 포함.
+  * Python 정규식으로 `__NEXT_DATA__` 텍스트를 파싱할 경우, 먼저 매칭되는 concept 레벨 항목을 반환하여 항상 기본판 이미지를 가져오는 문제.
+  * 추가 난관: `__APOLLO_STATE__`는 이중 직렬화된 JSON으로 `\"` / `\/` 이스케이프가 혼재하여 단순 정규식 처리 불가.
+* **해결 방안:** Python 텍스트 파싱에서 **`page.evaluate()` JavaScript 방식**으로 전환.
+  * `script[type="application/json"]` 태그를 전부 순회하며 해당 product ID가 포함된 스크립트를 특정.
+  * 스크립트 내에서 `"id":"<psStoreId>"` 위치를 찾고, 그 이후 8,000자 내의 `personalizedMeta` → `GAMEHUB_COVER_ART` → `url` 경로로 상품별 이미지를 추출.
+  * `script[type="application/json"]`은 SSR(서버사이드 렌더링) 데이터로, `domcontentloaded` 시점에 이미 파싱 완료된 상태. MFE 렌더링 타이밍 문제 없음. 기존 Python 정규식 방식은 fallback으로만 유지.
+* **Result:** 에디션 A, 에디션 B, 기본판 3가지 케이스 모두 올바른 상품별 이미지 추출 확인.
+
 ---
 
 ## 3. Backend & Database (백엔드 및 DB)
@@ -148,6 +161,16 @@
   * 빌드된 정적 파일은 Final 스테이지(Nginx ARM64 이미지)에 복사되어 ARM64 네이티브로 실행됨.
   * 로컬 `docker build .`도 `$BUILDPLATFORM`이 로컬 플랫폼으로 자동 설정되어 정상 동작 (자급자족 Dockerfile 유지).
 * **Result:** 4시간 36분 크래시 → 수 분 내 빌드 완료. CI/CD 정상화.
+
+### 🔀 Case 36. 크롤러 수평 확장: SHARD_ID 기반 샤딩 구성
+* **배경:** 게임 DB가 2,500개 이상으로 증가하면서 단일 수집기로 전체 배치를 처리하는 데 14시간 이상 소요. 수집기 추가를 통한 수평 확장이 필요했으며, 기존 메인 서버(1호기 AMD)를 3호기 수집기로 재활용하는 것이 최적 방안으로 결정.
+* **문제 발생:** 단순히 수집기를 두 대 띄울 경우, 두 서버가 동일한 게임 목록 전체를 중복 수집하는 문제 발생.
+* **해결 방안:** `SHARD_ID` / `SHARD_TOTAL` 환경변수를 도입한 게임 목록 분할 전략.
+  * Node 2 (SHARD_ID=0, SHARD_TOTAL=2): 전체 게임 중 짝수 인덱스(0, 2, 4, ...) 게임만 처리.
+  * Node 3 (SHARD_ID=1, SHARD_TOTAL=2): 전체 게임 중 홀수 인덱스(1, 3, 5, ...) 게임만 처리.
+  * Java 백엔드 스케줄러가 자정(00:00)에 두 수집기에 동시 배치 명령을 전송. 각 수집기는 자신의 SHARD_ID 기준으로 필터링된 목록만 수신.
+  * `docker-compose-hand-3.yml` + `deploy-hand-3.yml` 워크플로우를 별도로 구성하여 3호기 독립 배포 가능.
+* **Result:** 수집 처리 시간 14시간 → 7시간 이하로 단축. 향후 SHARD_TOTAL만 늘리면 추가 수집기 서버를 바로 편입 가능(수평 확장 준비 완료).
 
 ### 🔒 Case 35. SSL 인증서 관리: Nginx + Certbot에서 Caddy로 전환
 * **기존 방식:** Nginx + Certbot 조합으로 Let's Encrypt 인증서 발급. crontab에서 주기적으로 `certbot renew` 및 `nginx reload`를 실행하여 갱신.
