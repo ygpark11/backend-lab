@@ -336,10 +336,12 @@ const WishlistPage = () => {
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
                                 activeFilter === 'buyNow'
                                     ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
-                                    : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                                    : activeFilter !== 'buyNow' && buyNowGames.length > 0
+                                        ? 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-green-500/50 shadow-[0_0_12px_rgba(34,197,94,0.35)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                                        : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
                             }`}
                         >
-                            <Flame className="w-3.5 h-3.5" />
+                            <Flame className={`w-3.5 h-3.5 ${activeFilter !== 'buyNow' && buyNowGames.length > 0 ? 'animate-pulse' : ''}`} />
                             역대최저만
                             {buyNowGames.length > 0 && (
                                 <span className={`font-black px-1.5 py-0.5 rounded-full ${
