@@ -1,30 +1,29 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import RouteChangeTracker from "./components/common/RouteChangeTracker";
 import { Toaster } from 'react-hot-toast';
 import PSLoader from './components/PSLoader';
 import Layout from './components/Layout';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LoginModal from './components/LoginModal';
+import BootingScreen from './components/BootingScreen';
+import { onForegroundMessage } from './utils/fcm';
 import GameListPage from './pages/GameListPage';
 import WishlistPage from './pages/WishlistPage';
 import GameDetailPage from './pages/GameDetailPage';
-import InsightsPage from "./pages/InsightsPage.jsx";
+import InsightsPage from './pages/InsightsPage';
 import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
 import MyPage from './pages/MyPage';
 import PsPlusPricingPage from './pages/PsPlusPricingPage';
 import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
 import CurationPage from './pages/CurationPage';
 
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import LoginModal from './components/LoginModal';
-import BootingScreen from './components/BootingScreen';
-
-import React, { useState, useEffect } from 'react';
-import { onForegroundMessage } from './utils/fcm';
-
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
     const background = location.state && location.state.background;
 
+    // 인증 상태 확인 중 (null = 로딩)
     if (isAuthenticated === null) {
         return (
             <div className="min-h-screen bg-ps-black text-white flex items-center justify-center">
@@ -57,6 +56,7 @@ function AppRoutes() {
                 </Route>
             </Routes>
 
+            {/* background location 패턴: 게임 상세를 모달처럼 오버레이 */}
             {background && (
                 <Routes>
                     <Route path="/games/:id" element={<GameDetailPage />} />

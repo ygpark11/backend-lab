@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e \"require\\('eslint-plugin-react'\\); console.log\\('installed'\\)\")"
+      "Bash(node -e \"require\\('eslint-plugin-react'\\); console.log\\('installed'\\)\")",
+      "Bash(npm run:*)",
+      "Bash(npx vite:*)",
+      "Bash(./node_modules/.bin/vite build:*)",
+      "Bash(node \"node_modules/vite/bin/vite.js\" build)",
+      "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/components/common/PSGameImage.jsx src/pages/PioneerCandidatesPage.jsx)",
+      "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/pages/PioneerCandidatesPage.jsx src/pages/GameDetailPage.jsx src/pages/GameListPage.jsx)",
+      "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/pages/PioneerCandidatesPage.jsx)"
     ]
   }
 }

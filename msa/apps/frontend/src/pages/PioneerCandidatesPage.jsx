@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {memo, useCallback, useEffect, useRef, useState} from 'react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 
 import client from '../api/client';
@@ -21,7 +21,7 @@ const renderParticleIcon = (type, color) => {
     return <Square className={cls} />;
 };
 
-const CandidateCard = ({ game, onExtract, onDelete, isAuthenticated, isAdmin, openLoginModal }) => {
+const CandidateCard = memo(({ game, onExtract, onDelete, isAuthenticated, isAdmin, openLoginModal }) => {
     const [isHolding, setIsHolding] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
     const holdTimer = useRef(null);
@@ -92,7 +92,7 @@ const CandidateCard = ({ game, onExtract, onDelete, isAuthenticated, isAdmin, op
                     {particles.map((p) => (
                         <div
                             key={p.id}
-                            className="absolute animate-blackhole will-change-transform transform-gpu"
+                            className={`absolute will-change-transform transform-gpu ${isHolding && !isUnlocked ? 'animate-blackhole' : ''}`}
                             style={{ animationDelay: `${p.delay}s`, '--startX': `${p.x}px`, '--startY': `${p.y}px` }}
                         >
                             {renderParticleIcon(p.type, p.color)}
@@ -154,7 +154,7 @@ const CandidateCard = ({ game, onExtract, onDelete, isAuthenticated, isAdmin, op
             </div>
         </div>
     );
-};
+});
 
 const PioneerCandidatesPage = () => {
     const navigate = useTransitionNavigate();
@@ -232,7 +232,7 @@ const PioneerCandidatesPage = () => {
         return () => observer.disconnect();
     }, [hasNext]);
 
-    const handleDeleteCandidate = async (game) => {
+    const handleDeleteCandidate = useCallback(async (game) => {
         toast((t) => (
             <span className="flex flex-col gap-2 text-sm">
                 <span><strong>{game.title}</strong> 후보를 삭제할까요?</span>
@@ -257,9 +257,9 @@ const PioneerCandidatesPage = () => {
                 </div>
             </span>
         ), { duration: 6000 });
-    };
+    }, []);
 
-    const handleExtractStart = async (game) => {
+    const handleExtractStart = useCallback(async (game) => {
         setExtractingGame(game);
         setIsFactoryModalOpen(true);
         try {
@@ -280,7 +280,7 @@ const PioneerCandidatesPage = () => {
             toast.error(errorMessage);
             setIsFactoryModalOpen(false);
         }
-    };
+    }, []);
 
     if (loading) return <div className="min-h-screen bg-base pt-32 flex justify-center transition-colors duration-500"><PSLoader /></div>;
 

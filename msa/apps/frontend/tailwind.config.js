@@ -77,6 +77,7 @@ export default {
                     '100%': { transform: 'translateY(0)', opacity: '1' },
                 },
                 shimmer: {
+                    '0%': { transform: 'translateX(-100%)' },
                     '100%': { transform: 'translateX(100%)' },
                 }
             },
@@ -87,6 +88,7 @@ export default {
                 'fadeIn': 'fadeIn 0.3s ease-out forwards',
                 'fadeOut': 'fadeOut 0.3s ease-in forwards',
                 'slideDown': 'slideDown 0.4s ease-out forwards',
+                'shimmer': 'shimmer 1.6s ease-in-out infinite',
             }
         },
     },

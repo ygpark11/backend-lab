@@ -333,7 +333,7 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
                         {games.slice(0, 3).map(game => (
                             <div
                                 key={game.id}
-                                className="w-[40px] h-[52px] sm:w-[48px] sm:h-[64px] rounded-lg overflow-hidden shrink-0 shadow-sm"
+                                className="relative w-[40px] h-[52px] sm:w-[48px] sm:h-[64px] rounded-lg overflow-hidden shrink-0 shadow-sm"
                                 style={{ outline: `1px solid ${theme.color.border}` }}
                             >
                                 <PSGameImage

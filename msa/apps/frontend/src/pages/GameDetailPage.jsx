@@ -79,7 +79,7 @@ const renderMiniVerdictIcon = (verdict) => {
 
 const BackgroundHero = ({ imageUrl }) => (
     <div className="absolute top-0 left-0 w-full h-[120vh] max-h-[1000px] z-0 pointer-events-none select-none overflow-hidden md:rounded-t-2xl">
-        <PSGameImage src={imageUrl} className="absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-25 dark:opacity-45 blur-[10px] dark:brightness-[0.7]" />
+        <PSGameImage src={imageUrl} priority className="absolute inset-0 w-full h-full object-cover transition-all duration-700 opacity-25 dark:opacity-45 blur-[10px] dark:brightness-[0.7]" />
         <div className="absolute inset-0 bg-gradient-to-t from-base via-base/80 to-transparent"></div>
         <div className="absolute inset-0 bg-gradient-to-r from-base/80 via-base/40 to-transparent"></div>
 
@@ -389,7 +389,7 @@ export default function GameDetailPage() {
                     {/* ========================================== */}
                     <div className="lg:col-span-4 lg:sticky lg:top-24 h-fit space-y-5">
                         <div className={`rounded-2xl overflow-hidden shadow-2xl border relative group bg-base ${isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider'}`}>
-                            <PSGameImage src={game.imageUrl} alt={game.title} className="w-full object-cover h-[50vw] max-h-[320px] lg:h-auto lg:aspect-[3/4]" />
+                            <PSGameImage src={game.imageUrl} alt={game.title} priority className="w-full object-cover h-[50vw] max-h-[320px] lg:h-auto lg:aspect-[3/4]" />
                             {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse"></div>}
                             {isNew && <span className="absolute top-3 left-3 bg-green-500 text-white text-xs font-black px-2.5 py-1.5 rounded-lg shadow-lg z-10">NEW</span>}
                             {isClosingSoon && <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> 막차!</span>}
