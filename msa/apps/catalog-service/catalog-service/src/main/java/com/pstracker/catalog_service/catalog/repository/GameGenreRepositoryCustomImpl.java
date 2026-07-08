@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
-import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
-import com.pstracker.catalog_service.catalog.dto.QGameGenreResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameGenreResult;
+import com.pstracker.catalog_service.catalog.dto.QGameGenreResult;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
@@ -16,9 +16,9 @@ public class GameGenreRepositoryCustomImpl implements GameGenreRepositoryCustom 
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public List<GameGenreResultDto> findGameGenres(List<Long> gameIds) {
+    public List<GameGenreResult> findGameGenres(List<Long> gameIds) {
         return queryFactory
-                .select(new QGameGenreResultDto(
+                .select(new QGameGenreResult(
                         gameGenre.game.id,
                         genre.name
                 ))

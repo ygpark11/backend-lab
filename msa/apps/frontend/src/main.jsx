@@ -16,6 +16,17 @@ Sentry.init({
     tracesSampleRate: 1.0,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    // 광고 차단기로 인한 서드파티 에러 필터링
+    ignoreErrors: [
+        /googlesyndication/,
+        /doubleclick\.net/,
+        /googleadservices/,
+    ],
+    denyUrls: [
+        /pagead2\.googlesyndication\.com/,
+        /adservice\.google/,
+        /pagead\/js\/adsbygoogle\.js/,
+    ],
 });
 // --- Sentry 설정 끝 ---
 

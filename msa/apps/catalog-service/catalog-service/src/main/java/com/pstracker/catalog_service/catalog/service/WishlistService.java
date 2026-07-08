@@ -2,8 +2,8 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Wishlist;
-import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
-import com.pstracker.catalog_service.catalog.dto.WishlistDto;
+import com.pstracker.catalog_service.catalog.dto.GameGenreResult;
+import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
 import com.pstracker.catalog_service.catalog.repository.GameGenreRepository;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
@@ -90,9 +90,9 @@ public class WishlistService {
      * @param pageable 페이징 정보
      * @return 찜 목록 페이지
      */
-    public Page<WishlistDto> getMyWishlist(Long memberId, Pageable pageable) {
+    public Page<WishlistResponse> getMyWishlist(Long memberId, Pageable pageable) {
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
-        Page<WishlistDto> result = wishlistRepository.findAllByMemberId(memberId, safe);
+        Page<WishlistResponse> result = wishlistRepository.findAllByMemberId(memberId, safe);
 
         if (!result.isEmpty()) {
             markGameGenre(result.getContent());
@@ -105,13 +105,13 @@ public class WishlistService {
      * 찜 목록에 장르 정보 및 가격 판정 매핑
      * - 게임 ID 리스트로 한 번에 조회하여 N+1 문제 방지
      */
-    private void markGameGenre(List<WishlistDto> wishlist) {
-        List<Long> gameIds = wishlist.stream().map(WishlistDto::getGameId).toList();
+    private void markGameGenre(List<WishlistResponse> wishlist) {
+        List<Long> gameIds = wishlist.stream().map(WishlistResponse::getGameId).toList();
 
-        List<GameGenreResultDto> gameGenres = gameGenreRepository.findGameGenres(gameIds);
+        List<GameGenreResult> gameGenres = gameGenreRepository.findGameGenres(gameIds);
         Map<Long, List<String>> gameGenreMap = gameGenres.stream()
                 .collect(Collectors.groupingBy(
-                        GameGenreResultDto::getGameId, Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+                        GameGenreResult::getGameId, Collectors.mapping(GameGenreResult::getGenreName, Collectors.toList())));
         wishlist.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of())));
 
         Map<Long, Integer> historyCountMap = priceHistoryRepository.countGroupByGameId(gameIds)

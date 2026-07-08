@@ -1,6 +1,6 @@
 package com.pstracker.catalog_service.catalog.service;
 
-import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
+import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequest;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ public class RankingService {
      * - 엔티티를 메모리에 로드하지 않고 벌크 UPDATE로 처리하여 메모리·쿼리 수 최소화
      */
     @Transactional
-    public void updateRankings(RankingUpdateRequestDto request) {
+    public void updateRankings(RankingUpdateRequest request) {
         String type = request.getRankingType();
         List<String> psStoreIds = request.getPsStoreIds();
 

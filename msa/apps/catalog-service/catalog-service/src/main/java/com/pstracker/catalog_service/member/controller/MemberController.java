@@ -3,7 +3,7 @@ package com.pstracker.catalog_service.member.controller;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.dto.MemberInfoResponse;
-import com.pstracker.catalog_service.member.dto.MemberSignupDto;
+import com.pstracker.catalog_service.member.dto.MemberSignupRequest;
 import com.pstracker.catalog_service.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ public class MemberController {
 
     // 회원가입
     @PostMapping("/signup")
-    public ResponseEntity<Long> signup(@RequestBody MemberSignupDto request) {
+    public ResponseEntity<Long> signup(@RequestBody MemberSignupRequest request) {
         return ResponseEntity.ok(memberService.signup(request));
     }
 

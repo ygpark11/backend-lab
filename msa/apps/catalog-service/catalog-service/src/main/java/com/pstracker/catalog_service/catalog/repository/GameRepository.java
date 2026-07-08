@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.dto.GameIdMappingDto;
+import com.pstracker.catalog_service.catalog.dto.GameIdMapping;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -129,9 +129,9 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPlusExclusive = true AND g.discountRate > 0")
     long countPlusExclusiveDeals();
 
-    @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMappingDto(g.psStoreId, g.id) " +
+    @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMapping(g.psStoreId, g.id) " +
             "FROM Game g WHERE g.psStoreId IN :psStoreIds")
-    List<GameIdMappingDto> findGameIdsByPsStoreIds(@Param("psStoreIds") List<String> psStoreIds);
+    List<GameIdMapping> findGameIdsByPsStoreIds(@Param("psStoreIds") List<String> psStoreIds);
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 0 AND g.hltbMainStory <= 10")
     long countShortPlayTimeGames();

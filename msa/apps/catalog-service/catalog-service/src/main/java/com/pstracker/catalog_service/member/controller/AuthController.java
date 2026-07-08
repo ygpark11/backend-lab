@@ -3,7 +3,7 @@ package com.pstracker.catalog_service.member.controller;
 import com.pstracker.catalog_service.global.security.AuthConstants;
 import com.pstracker.catalog_service.global.security.JwtToken;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
-import com.pstracker.catalog_service.member.dto.MemberLoginDto;
+import com.pstracker.catalog_service.member.dto.MemberLoginRequest;
 import com.pstracker.catalog_service.member.service.MemberService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,7 +46,7 @@ public class AuthController {
      * 로그인 API
      */
     @PostMapping("/login")
-    public ResponseEntity<Void> login(@RequestBody MemberLoginDto request, HttpServletResponse response) {
+    public ResponseEntity<Void> login(@RequestBody MemberLoginRequest request, HttpServletResponse response) {
         // 1. 서비스 로직은 그대로 사용 (인증 및 토큰 생성)
         JwtToken jwtToken = memberService.login(request);
 

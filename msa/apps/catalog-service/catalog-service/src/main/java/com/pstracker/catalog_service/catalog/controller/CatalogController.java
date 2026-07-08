@@ -34,7 +34,7 @@ public class CatalogController {
 
     // 데이터 적재 API
     @PostMapping("/collect")
-    public ResponseEntity<String> collectGameInfo(@Valid @RequestBody CollectRequestDto request) {
+    public ResponseEntity<String> collectGameInfo(@Valid @RequestBody CollectRequest request) {
         catalogService.upsertGameData(request);
         return ResponseEntity.ok("Game data collected successfully");
     }
@@ -53,14 +53,14 @@ public class CatalogController {
     }
 
     @GetMapping("/search")
-    public ResponseEntity<Page<GameSearchResultDto>> searchGames(
+    public ResponseEntity<Page<GameSearchResponse>> searchGames(
             GameSearchCondition condition,
             @PageableDefault(size = 20, sort = "lastUpdated", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Long memberId = (principal != null) ? principal.getMemberId() : null;
 
-        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, memberId);
+        Page<GameSearchResponse> result = catalogService.searchGames(condition, pageable, memberId);
 
         return ResponseEntity.ok(result);
     }
@@ -86,14 +86,14 @@ public class CatalogController {
     }
 
     @PostMapping("/{gameId}/vote")
-    public ResponseEntity<GameVoteResponseDto> vote(
+    public ResponseEntity<GameVoteResponse> vote(
             @PathVariable Long gameId,
-            @RequestBody GameVoteRequestDto requestDto,
+            @RequestBody GameVoteRequest requestDto,
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Long memberId = (principal != null) ? principal.getMemberId() : null;
 
-        GameVoteResponseDto response = gameVoteService.toggleVote(gameId, memberId, requestDto.getVoteType());
+        GameVoteResponse response = gameVoteService.toggleVote(gameId, memberId, requestDto.getVoteType());
 
         return ResponseEntity.ok(response);
     }

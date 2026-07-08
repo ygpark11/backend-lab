@@ -4,7 +4,7 @@ import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GameVote;
 import com.pstracker.catalog_service.catalog.domain.VoteType;
-import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
 import jakarta.persistence.EntityManager;
@@ -40,7 +40,7 @@ class GameVoteServiceTest {
     private EntityManager em;
 
     @MockitoBean
-    private IgdbApiClient igdbApiClient;
+    private IgdbEnrichmentService igdbEnrichmentService;
 
     @MockitoBean
     private AiService aiService;

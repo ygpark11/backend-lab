@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.scraping.controller;
 
 import com.pstracker.catalog_service.catalog.dto.CrawlerCallbackRequest;
-import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequestDto;
+import com.pstracker.catalog_service.catalog.dto.RankingUpdateRequest;
 import com.pstracker.catalog_service.catalog.service.RankingService;
 import com.pstracker.catalog_service.scraping.dto.*;
 import com.pstracker.catalog_service.scraping.service.HltbScrapingService;
@@ -47,7 +47,7 @@ public class InternalWebhookController {
     @PostMapping("/rankings/update")
     @Transactional
     public ResponseEntity<String> updateRankings(
-            @RequestBody RankingUpdateRequestDto payload) {
+            @RequestBody RankingUpdateRequest payload) {
         rankingService.updateRankings(payload);
 
         log.info("[Webhook] 랭킹 업데이트 수신 및 처리 완료 ({})", payload.getRankingType());
@@ -66,7 +66,7 @@ public class InternalWebhookController {
 
     @PostMapping("/ratings/update")
     public ResponseEntity<String> updateRatingResult(
-            @RequestBody RatingUpdateDto request) {
+            @RequestBody RatingUpdateRequest request) {
         ratingScrapingService.updateRatingResult(request);
         return ResponseEntity.ok("Result saved successfully");
     }
@@ -81,7 +81,7 @@ public class InternalWebhookController {
     }
 
     @PostMapping("/hltb/update")
-    public ResponseEntity<String> updateHltbResult(@RequestBody HltbUpdateDto request) {
+    public ResponseEntity<String> updateHltbResult(@RequestBody HltbUpdateRequest request) {
         hltbScrapingService.updateHltbResult(request);
         return ResponseEntity.ok("HLTB Result saved successfully");
     }

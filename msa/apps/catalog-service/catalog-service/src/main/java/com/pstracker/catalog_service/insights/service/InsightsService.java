@@ -2,7 +2,7 @@ package com.pstracker.catalog_service.insights.service;
 
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
-import com.pstracker.catalog_service.insights.dto.DiscountSummaryDto;
+import com.pstracker.catalog_service.insights.dto.DiscountSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -58,11 +58,11 @@ public class InsightsService {
      * @return 할인 요약 정보 (총 할인 타이틀 수, 총 할인 금액 등)
      */
     @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_DISCOUNT_SUMMARY)
-    public DiscountSummaryDto getDiscountSummary() {
+    public DiscountSummaryResponse getDiscountSummary() {
         long totalDiscounted = gameRepository.countTotalDiscountedGames();
         Long dbTotalAmount = gameRepository.sumTotalDiscountAmount();
         long actualTotalAmount = (dbTotalAmount != null) ? dbTotalAmount : 0L;
-        return new DiscountSummaryDto(totalDiscounted, actualTotalAmount);
+        return new DiscountSummaryResponse(totalDiscounted, actualTotalAmount);
     }
 
     /**

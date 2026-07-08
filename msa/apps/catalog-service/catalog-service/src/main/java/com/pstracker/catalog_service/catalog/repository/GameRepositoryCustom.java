@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,7 +14,7 @@ public interface GameRepositoryCustom {
      * @param pageable 페이징 정보
      * @return 검색 결과 페이지
      */
-    Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable);
+    Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable);
 
     /**
      * 연관 게임 추천
@@ -23,7 +23,7 @@ public interface GameRepositoryCustom {
      * @param limit 가져올 개수
      * @return 추천 게임 리스트
      */
-    List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
+    List<GameSearchResponse> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
 
     long countMustPlayGames();
 }

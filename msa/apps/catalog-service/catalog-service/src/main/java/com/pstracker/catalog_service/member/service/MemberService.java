@@ -3,8 +3,8 @@ package com.pstracker.catalog_service.member.service;
 import com.pstracker.catalog_service.global.security.JwtToken;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
 import com.pstracker.catalog_service.member.domain.Member;
-import com.pstracker.catalog_service.member.dto.MemberLoginDto;
-import com.pstracker.catalog_service.member.dto.MemberSignupDto;
+import com.pstracker.catalog_service.member.dto.MemberLoginRequest;
+import com.pstracker.catalog_service.member.dto.MemberSignupRequest;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class MemberService {
      * 회원가입
      */
     @Transactional
-    public Long signup(MemberSignupDto request) {
+    public Long signup(MemberSignupRequest request) {
         // 1. 중복 검사
         if (memberRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
@@ -43,7 +43,7 @@ public class MemberService {
     /**
      * 로그인 -> 토큰 발급
      */
-    public JwtToken login(MemberLoginDto request) {
+    public JwtToken login(MemberLoginRequest request) {
         // 1. Login ID/PW를 기반으로 Authentication 객체 생성
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());

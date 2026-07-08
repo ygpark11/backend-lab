@@ -4,7 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
@@ -43,7 +43,7 @@ public class GameReadService {
      */
     @Cacheable(cacheNames = GlobalCacheConfig.CURATION_CACHE,
                key = "#condition.curationCacheKey() + '_' + #pageable.sort.toString()")
-    public Page<GameSearchResultDto> searchGamesForCuration(GameSearchCondition condition, Pageable pageable) {
+    public Page<GameSearchResponse> searchGamesForCuration(GameSearchCondition condition, Pageable pageable) {
         return gameRepository.searchGames(condition, pageable);
     }
 
@@ -135,11 +135,11 @@ public class GameReadService {
     }
 
     private List<GameDetailResponse.RelatedGameDto> buildRelatedGames(Game game) {
-        List<GameSearchResultDto> rawList = getRelatedGames(game);
+        List<GameSearchResponse> rawList = getRelatedGames(game);
         if (rawList.isEmpty()) return List.of();
 
         Map<Long, Integer> historyCountMap = countHistoryByGameIds(
-                rawList.stream().map(GameSearchResultDto::getId).toList());
+                rawList.stream().map(GameSearchResponse::getId).toList());
 
         return rawList.stream()
                 .map(r -> {
@@ -166,7 +166,7 @@ public class GameReadService {
                 ));
     }
 
-    private List<GameSearchResultDto> getRelatedGames(Game game) {
+    private List<GameSearchResponse> getRelatedGames(Game game) {
         List<Long> genreIds = game.getGameGenres().stream()
                 .map(gg -> gg.getGenre().getId())
                 .toList();

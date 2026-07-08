@@ -6,7 +6,7 @@ import com.pstracker.catalog_service.catalog.repository.CrawlJobRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.util.GameTitleNormalizer;
 import com.pstracker.catalog_service.scraping.dto.RatingTargetResponse;
-import com.pstracker.catalog_service.scraping.dto.RatingUpdateDto;
+import com.pstracker.catalog_service.scraping.dto.RatingUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,7 +54,7 @@ public class RatingScrapingService {
     }
 
     @Transactional
-    public void updateRatingResult(RatingUpdateDto dto) {
+    public void updateRatingResult(RatingUpdateRequest dto) {
         CrawlJob job = crawlJobRepository.findById(dto.jobId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Job ID: " + dto.jobId()));
 

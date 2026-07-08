@@ -6,7 +6,7 @@ import com.pstracker.catalog_service.catalog.repository.CrawlJobRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.util.GameTitleNormalizer;
 import com.pstracker.catalog_service.scraping.dto.HltbTargetResponse;
-import com.pstracker.catalog_service.scraping.dto.HltbUpdateDto;
+import com.pstracker.catalog_service.scraping.dto.HltbUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,7 +53,7 @@ public class HltbScrapingService {
     }
 
     @Transactional
-    public void updateHltbResult(HltbUpdateDto dto) {
+    public void updateHltbResult(HltbUpdateRequest dto) {
         CrawlJob job = crawlJobRepository.findById(dto.jobId())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid Job ID: " + dto.jobId()));
 

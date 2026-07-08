@@ -2,42 +2,38 @@ package com.pstracker.catalog_service.global.exception;
 
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
-    public String handleValidationExceptions(BindException e) {
-        return e.getBindingResult().getFieldErrors().stream()
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(BindException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
                 .map(x -> x.getField() + " : " + (Objects.requireNonNull(x.getCode()).equals("typeMismatch") ? "타입을 확인해주세요." : x.getDefaultMessage()))
                 .collect(Collectors.joining(", "));
+        return ResponseEntity.badRequest().body(new ErrorResponse(message));
     }
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(TypeMismatchException.class)
-    public String typeMismatchException(TypeMismatchException e) {
-        return "데이터 타입을 확인하세요.";
+    public ResponseEntity<ErrorResponse> typeMismatchException(TypeMismatchException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse("데이터 타입을 확인하세요."));
     }
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalArgumentException.class)
-    public String handleIllegalArgumentException(IllegalArgumentException ex) {
-        return ex.getMessage();
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
     }
 
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(IllegalStateException.class)
-    public String handleIllegalStateException(IllegalStateException ex) {
-        return ex.getMessage();
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(e.getMessage()));
     }
 }

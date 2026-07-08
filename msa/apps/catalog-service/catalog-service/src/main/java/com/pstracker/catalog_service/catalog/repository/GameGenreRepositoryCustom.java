@@ -1,9 +1,9 @@
 package com.pstracker.catalog_service.catalog.repository;
 
-import com.pstracker.catalog_service.catalog.dto.GameGenreResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameGenreResult;
 
 import java.util.List;
 
 public interface GameGenreRepositoryCustom {
-    List<GameGenreResultDto> findGameGenres(List<Long> genreIds);
+    List<GameGenreResult> findGameGenres(List<Long> genreIds);
 }

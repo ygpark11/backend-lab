@@ -1,6 +1,6 @@
 package com.pstracker.catalog_service.subscription.service;
 
-import com.pstracker.catalog_service.catalog.dto.GameIdMappingDto;
+import com.pstracker.catalog_service.catalog.dto.GameIdMapping;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
@@ -350,8 +350,8 @@ public class SubscriptionService {
         // Game ID 가져오기
         Map<String, Long> gameIdMap = gameRepository.findGameIdsByPsStoreIds(psStoreIds).stream()
                 .collect(Collectors.toMap(
-                        GameIdMappingDto::psStoreId,
-                        GameIdMappingDto::gameId
+                        GameIdMapping::psStoreId,
+                        GameIdMapping::gameId
                 ));
 
         // 기존 DTO에 gameId 매핑

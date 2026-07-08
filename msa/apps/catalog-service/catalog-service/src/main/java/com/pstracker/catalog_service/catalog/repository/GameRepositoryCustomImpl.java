@@ -2,8 +2,8 @@ package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
-import com.pstracker.catalog_service.catalog.dto.QGameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
+import com.pstracker.catalog_service.catalog.dto.QGameSearchResponse;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -33,9 +33,9 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable) {
-        List<GameSearchResultDto> content = queryFactory
-                .select(new QGameSearchResultDto(
+    public Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable) {
+        List<GameSearchResponse> content = queryFactory
+                .select(new QGameSearchResponse(
                         game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate, game.pioneerName,
@@ -97,11 +97,11 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     @Override
-    public List<GameSearchResultDto> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
+    public List<GameSearchResponse> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit) {
         NumberExpression<Integer> fallbackScore = game.mcMetaScore.coalesce(game.igdbCriticScore);
 
         return queryFactory
-                .select(new QGameSearchResultDto(
+                .select(new QGameSearchResponse(
                         game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.isPlusExclusive, game.saleEndDate, game.pioneerName,

@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.subscription.service;
 
 import com.pstracker.catalog_service.ai.service.AiService;
-import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.subscription.domain.PsPlusMonthlyHistory;
 import com.pstracker.catalog_service.subscription.domain.PsPlusPricing;
 import com.pstracker.catalog_service.subscription.domain.PsPlusTier;
@@ -38,7 +38,7 @@ class SubscriptionServiceTest {
     @Autowired private PsPlusMonthlyHistoryRepository psPlusMonthlyHistoryRepository;
     @Autowired private EntityManager em;
 
-    @MockitoBean private IgdbApiClient igdbApiClient;
+    @MockitoBean private IgdbEnrichmentService igdbEnrichmentService;
     @MockitoBean private AiService aiService;
 
     // ==================== 기존 테스트 (유지) ====================

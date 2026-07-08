@@ -1,6 +1,6 @@
 package com.pstracker.catalog_service.insights.controller;
 
-import com.pstracker.catalog_service.insights.dto.DiscountSummaryDto;
+import com.pstracker.catalog_service.insights.dto.DiscountSummaryResponse;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +32,7 @@ public class InsightsController {
         // 3. 총 트래킹 중인 타이틀 수
         response.put("totalTrackedCount", insightsService.getTotalTrackedCount());
 
-        DiscountSummaryDto discount = insightsService.getDiscountSummary();
+        DiscountSummaryResponse discount = insightsService.getDiscountSummary();
 
         // 4. 할인 중
         response.put("totalDiscountedGames", discount.totalDiscountedGames());

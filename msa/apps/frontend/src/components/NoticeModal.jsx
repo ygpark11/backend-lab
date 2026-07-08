@@ -177,7 +177,7 @@ const NoticeModal = ({ isOpen, onClose }) => {
             fetchNotices(0);
 
         } catch (error) {
-            toast.error(error.response?.data || '요청 처리에 실패했습니다.', { id: toastId });
+            toast.error(error.response?.data?.message || '요청 처리에 실패했습니다.', { id: toastId });
         }
     };
 

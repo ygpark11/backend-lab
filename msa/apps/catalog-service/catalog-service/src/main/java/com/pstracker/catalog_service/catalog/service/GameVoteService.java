@@ -3,7 +3,7 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GameVote;
 import com.pstracker.catalog_service.catalog.domain.VoteType;
-import com.pstracker.catalog_service.catalog.dto.GameVoteResponseDto;
+import com.pstracker.catalog_service.catalog.dto.GameVoteResponse;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class GameVoteService {
     private final GameReadService gameReadService;
 
     @Transactional
-    public GameVoteResponseDto toggleVote(Long gameId, Long memberId, VoteType requestedVoteType) {
+    public GameVoteResponse toggleVote(Long gameId, Long memberId, VoteType requestedVoteType) {
         if(memberId == null) {
             throw new IllegalArgumentException("회원 ID는 필수입니다.");
         }
@@ -69,6 +69,6 @@ public class GameVoteService {
 
         // clearAutomatically = true 로 PC 초기화됐으므로 DB에서 최신 카운트 재조회
         Game updatedGame = gameRepository.findById(gameId).orElseThrow();
-        return new GameVoteResponseDto(updatedGame.getLikeCount(), updatedGame.getDislikeCount(), finalUserVote);
+        return new GameVoteResponse(updatedGame.getLikeCount(), updatedGame.getDislikeCount(), finalUserVote);
     }
 }

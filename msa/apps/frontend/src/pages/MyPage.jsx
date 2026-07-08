@@ -166,7 +166,7 @@ export default function MyPage() {
             setIsEditingNickname(false);
             toast.success("닉네임이 성공적으로 변경되었습니다!", { id: toastId });
         } catch (error) {
-            toast.error(error.response?.data || "닉네임 변경에 실패했습니다.", { id: toastId });
+            toast.error(error.response?.data?.message || "닉네임 변경에 실패했습니다.", { id: toastId });
         }
     };
 

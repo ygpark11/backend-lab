@@ -5,9 +5,9 @@ import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import com.pstracker.catalog_service.member.domain.Member;
-import com.pstracker.catalog_service.member.dto.MyPagePioneeredGameDto;
-import com.pstracker.catalog_service.member.dto.MyPageProfileDto;
-import com.pstracker.catalog_service.member.dto.MyPageSettingsDto;
+import com.pstracker.catalog_service.member.dto.MyPagePioneeredGameResponse;
+import com.pstracker.catalog_service.member.dto.MyPageProfileResponse;
+import com.pstracker.catalog_service.member.dto.MyPageSettings;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class MyPageService {
     private final WishlistRepository wishlistRepository;
     private final GameVoteRepository gameVoteRepository;
 
-    public MyPageProfileDto getMyProfile(Long memberId) {
+    public MyPageProfileResponse getMyProfile(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
 
@@ -45,7 +45,7 @@ public class MyPageService {
         int level = (int) (1 + (pioneeredCount * 2) + (voteCount * 1) + (daysSinceJoin / 10));
 
         // 1-2. 트로피 티어 산정 (조건에 따라 해금 여부와 티어 결정)
-        List<MyPageProfileDto.TrophyDto> trophies = new ArrayList<>();
+        List<MyPageProfileResponse.TrophyDto> trophies = new ArrayList<>();
 
         // ① 개척자 트로피 (PIONEER) - 1, 5, 20, 50
         String pioneerTier = "LOCKED";
@@ -54,7 +54,7 @@ public class MyPageService {
         else if (pioneeredCount >= 20) pioneerTier = "GOLD";
         else if (pioneeredCount >= 5) pioneerTier = "SILVER";
         else if (pioneeredCount >= 1) pioneerTier = "BRONZE";
-        trophies.add(new MyPageProfileDto.TrophyDto("PIONEER", pioneerTier, pioneerUnlocked, pioneeredCount));
+        trophies.add(new MyPageProfileResponse.TrophyDto("PIONEER", pioneerTier, pioneerUnlocked, pioneeredCount));
 
         // ② 투표 트로피 (VOTE) - 1, 10, 50
         String voteTier = "LOCKED";
@@ -62,7 +62,7 @@ public class MyPageService {
         if (voteCount >= 50) voteTier = "GOLD";
         else if (voteCount >= 10) voteTier = "SILVER";
         else if (voteCount >= 1) voteTier = "BRONZE";
-        trophies.add(new MyPageProfileDto.TrophyDto("VOTE", voteTier, voteUnlocked, voteCount));
+        trophies.add(new MyPageProfileResponse.TrophyDto("VOTE", voteTier, voteUnlocked, voteCount));
 
         // ③ 고인물 트로피 (TIME) - 7, 30, 100, 365
         String timeTier = "LOCKED";
@@ -71,9 +71,9 @@ public class MyPageService {
         else if (daysSinceJoin >= 100) timeTier = "GOLD";
         else if (daysSinceJoin >= 30) timeTier = "SILVER";
         else if (daysSinceJoin >= 7) timeTier = "BRONZE";
-        trophies.add(new MyPageProfileDto.TrophyDto("TIME", timeTier, timeUnlocked, (int)daysSinceJoin));
+        trophies.add(new MyPageProfileResponse.TrophyDto("TIME", timeTier, timeUnlocked, (int)daysSinceJoin));
 
-        return new MyPageProfileDto(
+        return new MyPageProfileResponse(
                 member.getNickname(),
                 level,
                 totalSavedAmount,
@@ -83,12 +83,12 @@ public class MyPageService {
         );
     }
 
-    public List<MyPagePioneeredGameDto> getMyPioneeredGames(Long memberId) {
+    public List<MyPagePioneeredGameResponse> getMyPioneeredGames(Long memberId) {
         List<Game> myGames = gameRepository.findAllByPioneerMemberIdOrderByCreatedAtDesc(memberId);
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
 
         return myGames.stream()
-                .map(g -> new MyPagePioneeredGameDto(
+                .map(g -> new MyPagePioneeredGameResponse(
                         g.getId(),
                         g.getName(),
                         g.getImageUrl(),
@@ -96,19 +96,19 @@ public class MyPageService {
                 )).toList();
     }
 
-    public MyPageSettingsDto getMySettings(Long memberId) {
+    public MyPageSettings getMySettings(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
-        return new MyPageSettingsDto(member.isPriceAlertEnabled(), member.isNightModeEnabled());
+        return new MyPageSettings(member.isPriceAlertEnabled(), member.isNightModeEnabled());
     }
 
     @Transactional
-    public MyPageSettingsDto updateMySettings(Long memberId, MyPageSettingsDto settingsDto) {
+    public MyPageSettings updateMySettings(Long memberId, MyPageSettings settingsDto) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
 
         member.updateSettings(settingsDto.isPriceAlert(), settingsDto.isNightMode());
-        return new MyPageSettingsDto(member.isPriceAlertEnabled(), member.isNightModeEnabled());
+        return new MyPageSettings(member.isPriceAlertEnabled(), member.isNightModeEnabled());
     }
 
     @Transactional

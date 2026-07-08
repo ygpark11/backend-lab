@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
-import com.pstracker.catalog_service.catalog.dto.QWishlistDto;
-import com.pstracker.catalog_service.catalog.dto.WishlistDto;
+import com.pstracker.catalog_service.catalog.dto.QWishlistResponse;
+import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
@@ -20,9 +20,9 @@ public class WishlistRepositoryCustomImpl implements WishlistRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<WishlistDto> findAllByMemberId(Long memberId, Pageable pageable) {
-        List<WishlistDto> content = queryFactory
-                .select(new QWishlistDto(
+    public Page<WishlistResponse> findAllByMemberId(Long memberId, Pageable pageable) {
+        List<WishlistResponse> content = queryFactory
+                .select(new QWishlistResponse(
                         wishlist.id, game.id, game.name, game.imageUrl,
                         game.originalPrice, game.currentPrice, game.discountRate,
                         game.allTimeLowPrice,

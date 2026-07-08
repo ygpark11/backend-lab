@@ -3,10 +3,10 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
-import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.CollectRequest;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
-import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import jakarta.persistence.EntityManager;
@@ -48,7 +48,7 @@ public class CatalogServiceTest {
     private ApplicationEvents events;
 
     @MockitoBean
-    private IgdbApiClient igdbApiClient;
+    private IgdbEnrichmentService igdbEnrichmentService;
 
     @MockitoBean
     private AiService aiService;
@@ -60,8 +60,8 @@ public class CatalogServiceTest {
     @DisplayName("신규 게임이 수집되면 Game과 PriceHistory가 모두 저장되어야 한다.")
     void save_NewGame() {
         // given
-        CollectRequestDto request = createDto("PROD-001", "Elden Ring", 69800, 69800, 0, null);
-        given(igdbApiClient.searchGame(any())).willReturn(null);
+        CollectRequest request = createDto("PROD-001", "Elden Ring", 69800, 69800, 0, null);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         // when
         catalogService.upsertGameData(request);
@@ -80,13 +80,13 @@ public class CatalogServiceTest {
     @DisplayName("가격이 하락하면 새로운 이력이 저장되고 알림 이벤트가 발행되어야 한다.")
     void upsert_PriceDrop() {
         // given
-        CollectRequestDto initialData = createDto("PROD-002", "Cyberpunk", 10000, 10000, 0, null);
+        CollectRequest initialData = createDto("PROD-002", "Cyberpunk", 10000, 10000, 0, null);
         catalogService.upsertGameData(initialData);
 
         em.flush();
         em.clear();
 
-        CollectRequestDto newData = createDto("PROD-002", "Cyberpunk", 10000, 5000, 50, LocalDate.now().plusDays(7));
+        CollectRequest newData = createDto("PROD-002", "Cyberpunk", 10000, 5000, 50, LocalDate.now().plusDays(7));
 
         // when
         catalogService.upsertGameData(newData);
@@ -108,10 +108,10 @@ public class CatalogServiceTest {
     @DisplayName("가격과 조건이 동일하면 DB에 중복 저장하지 않아야 한다.")
     void upsert_NoChange() {
         // given
-        CollectRequestDto initialData = createDto("PROD-003", "Dave the Diver", 24000, 24000, 0, null);
+        CollectRequest initialData = createDto("PROD-003", "Dave the Diver", 24000, 24000, 0, null);
         catalogService.upsertGameData(initialData);
 
-        CollectRequestDto sameData = createDto("PROD-003", "Dave the Diver", 24000, 24000, 0, null);
+        CollectRequest sameData = createDto("PROD-003", "Dave the Diver", 24000, 24000, 0, null);
 
         // when
         catalogService.upsertGameData(sameData);
@@ -130,10 +130,10 @@ public class CatalogServiceTest {
         LocalDate date1 = LocalDate.of(2025, 1, 1);
         LocalDate date2 = LocalDate.of(2025, 2, 1);
 
-        CollectRequestDto data1 = createDto("PROD-004", "GTA V", 15000, 15000, 0, date1);
+        CollectRequest data1 = createDto("PROD-004", "GTA V", 15000, 15000, 0, date1);
         catalogService.upsertGameData(data1);
 
-        CollectRequestDto data2 = createDto("PROD-004", "GTA V", 15000, 15000,0, date2);
+        CollectRequest data2 = createDto("PROD-004", "GTA V", 15000, 15000,0, date2);
 
         // when
         catalogService.upsertGameData(data2);
@@ -153,7 +153,7 @@ public class CatalogServiceTest {
     @DisplayName("가격이 0원인 비정상 데이터가 들어오면 저장을 무시해야 한다.")
     void upsert_GuardClause_ZeroPrice() {
         // given
-        CollectRequestDto invalidData = createDto("PROD-005", "Error Game", 0, 0, 0, null);
+        CollectRequest invalidData = createDto("PROD-005", "Error Game", 0, 0, 0, null);
 
         // when
         catalogService.upsertGameData(invalidData);
@@ -167,8 +167,8 @@ public class CatalogServiceTest {
     @DisplayName("신규 게임 저장 시 createdAt, lastUpdated 타임스탬프가 설정되어야 한다.")
     void save_NewGame_shouldSetTimestamps() {
         // given
-        CollectRequestDto request = createDto("PROD-AUDIT-001", "Audit Test Game", 60000, 60000, 0, null);
-        given(igdbApiClient.searchGame(any())).willReturn(null);
+        CollectRequest request = createDto("PROD-AUDIT-001", "Audit Test Game", 60000, 60000, 0, null);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         // when
         catalogService.upsertGameData(request);
@@ -185,8 +185,8 @@ public class CatalogServiceTest {
     @DisplayName("게임 재수집(upsert) 시 lastUpdated 가 갱신되어야 한다.")
     void upsert_ExistingGame_shouldUpdateLastUpdated() throws InterruptedException {
         // given
-        CollectRequestDto initial = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 60000, 0, null);
-        given(igdbApiClient.searchGame(any())).willReturn(null);
+        CollectRequest initial = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 60000, 0, null);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(initial);
         em.flush();
         em.clear();
@@ -197,7 +197,7 @@ public class CatalogServiceTest {
         Thread.sleep(10);
 
         // when
-        CollectRequestDto updated = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 55000, 8, null);
+        CollectRequest updated = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 55000, 8, null);
         catalogService.upsertGameData(updated);
         em.flush();
         em.clear();
@@ -213,9 +213,9 @@ public class CatalogServiceTest {
         // given
         IgdbGameResponse igdbResponse = new IgdbGameResponse(
                 1L, "Elden Ring", 90.5, 48, 87.3, 1200, null, 1248);
-        given(igdbApiClient.searchGame(any())).willReturn(igdbResponse);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(igdbResponse);
 
-        CollectRequestDto request = createDto("PROD-IGDB-001", "Elden Ring", 70000, 70000, 0, null);
+        CollectRequest request = createDto("PROD-IGDB-001", "Elden Ring", 70000, 70000, 0, null);
 
         // when
         catalogService.upsertGameData(request);
@@ -237,7 +237,7 @@ public class CatalogServiceTest {
         String testThreadName = Thread.currentThread().getName();
         AtomicReference<String> igdbThreadName = new AtomicReference<>();
 
-        given(igdbApiClient.searchGame(any())).willAnswer(inv -> {
+        given(igdbEnrichmentService.searchGame(any())).willAnswer(inv -> {
             igdbThreadName.set(Thread.currentThread().getName());
             return null;
         });
@@ -251,8 +251,8 @@ public class CatalogServiceTest {
                 .isNotEqualTo(testThreadName);
     }
 
-    private CollectRequestDto createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {
-        return new CollectRequestDto(
+    private CollectRequest createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {
+        return new CollectRequest(
                 id,
                 title,
                 title + " (Eng)",

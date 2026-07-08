@@ -4,7 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.*;
 import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
-import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
 import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
@@ -46,7 +46,7 @@ public class CatalogService {
     private final GameVoteRepository gameVoteRepository;
     private final CrawlJobRepository crawlJobRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final IgdbApiClient igdbApiClient;
+    private final IgdbEnrichmentService igdbEnrichmentService;
     private final Executor igdbExecutor;
 
     private final GameReadService gameReadService;
@@ -58,7 +58,7 @@ public class CatalogService {
      * @param request 수집 요청 DTO
      */
     @Transactional
-    public void upsertGameData(CollectRequestDto request) {
+    public void upsertGameData(CollectRequest request) {
 
         // 가격 정보가 없거나 0원이면 아예 로직을 시작하지 않음
         if (request.getCurrentPrice() == null || request.getCurrentPrice() == 0) {
@@ -166,7 +166,7 @@ public class CatalogService {
      * @param request 수집 요청 DTO
      * @return 게임 엔티티
      */
-    private Game findOrCreateGame(CollectRequestDto request) {
+    private Game findOrCreateGame(CollectRequest request) {
         return gameRepository.findByPsStoreIdWithGenres(request.getPsStoreId())
                 .orElseGet(() -> Game.create(
                         request.getPsStoreId(),
@@ -185,7 +185,7 @@ public class CatalogService {
      * @param request 수집 요청 DTO
      * @param genres 장르 엔티티 집합
      */
-    private void updateGameMetadata(Game game, CollectRequestDto request, Set<Genre> genres) {
+    private void updateGameMetadata(Game game, CollectRequest request, Set<Genre> genres) {
         game.updateInfo(
                 request.getTitle(),
                 request.getEnglishTitle(),
@@ -242,7 +242,7 @@ public class CatalogService {
      */
     private IgdbGameResponse fetchIgdbSafely(String searchTitle) {
         try {
-            return igdbApiClient.searchGame(searchTitle);
+            return igdbEnrichmentService.searchGame(searchTitle);
         } catch (Exception e) {
             log.warn("IGDB Sync Failed for '{}': {}", searchTitle, e.getMessage());
             return null;
@@ -254,7 +254,7 @@ public class CatalogService {
      * @param game 게임 엔티티
      * @param request 수집 요청 DTO
      */
-    private void processPriceInfo(Game game, CollectRequestDto request) {
+    private void processPriceInfo(Game game, CollectRequest request) {
         Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(game);
 
         if (!shouldSaveHistory(latestHistoryOpt, request)) {
@@ -281,7 +281,7 @@ public class CatalogService {
      * @param request 수집 요청 DTO
      * @return 변경되었으면 true, 아니면 false
      */
-    private boolean shouldSaveHistory(Optional<GamePriceHistory> latestHistoryOpt, CollectRequestDto request) {
+    private boolean shouldSaveHistory(Optional<GamePriceHistory> latestHistoryOpt, CollectRequest request) {
         return latestHistoryOpt
                 .map(history -> !history.isSameCondition(
                         request.getCurrentPrice(),
@@ -330,14 +330,14 @@ public class CatalogService {
      * @param memberId 회원 ID (찜 여부 확인용, null 가능)
      * @return 검색 결과 페이지
      */
-    public Page<GameSearchResultDto> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
+    public Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
 
         if (Boolean.TRUE.equals(condition.getCuration())) {
             return gameReadService.searchGamesForCuration(condition, safe);
         }
 
-        Page<GameSearchResultDto> result = gameRepository.searchGames(condition, safe);
+        Page<GameSearchResponse> result = gameRepository.searchGames(condition, safe);
         if (!result.isEmpty()) {
             enrichSearchResults(result.getContent(), memberId);
         }
@@ -408,14 +408,14 @@ public class CatalogService {
     }
 
     /** 검색 결과에 장르·찜 여부·가격 판정을 일괄 세팅 (gameIds 추출 1회) */
-    private void enrichSearchResults(List<GameSearchResultDto> games, Long memberId) {
-        List<Long> gameIds = games.stream().map(GameSearchResultDto::getId).toList();
+    private void enrichSearchResults(List<GameSearchResponse> games, Long memberId) {
+        List<Long> gameIds = games.stream().map(GameSearchResponse::getId).toList();
 
         Map<Long, List<String>> gameGenreMap = gameGenreRepository.findGameGenres(gameIds)
                 .stream()
                 .collect(Collectors.groupingBy(
-                        GameGenreResultDto::getGameId,
-                        Collectors.mapping(GameGenreResultDto::getGenreName, Collectors.toList())));
+                        GameGenreResult::getGameId,
+                        Collectors.mapping(GameGenreResult::getGenreName, Collectors.toList())));
         games.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of())));
 
         if (memberId != null) {

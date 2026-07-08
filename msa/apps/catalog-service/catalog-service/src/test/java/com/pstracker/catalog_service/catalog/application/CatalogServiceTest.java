@@ -1,11 +1,11 @@
 package com.pstracker.catalog_service.catalog.application;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
-import com.pstracker.catalog_service.catalog.dto.CollectRequestDto;
+import com.pstracker.catalog_service.catalog.dto.CollectRequest;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
-import com.pstracker.catalog_service.catalog.dto.GameSearchResultDto;
+import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
-import com.pstracker.catalog_service.catalog.infrastructure.IgdbApiClient;
+import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
@@ -42,7 +42,7 @@ public class CatalogServiceTest {
     @Mock private GameReadService gameReadService;
     @Mock private GameRepository gameRepository;
     @Mock private GamePriceHistoryRepository priceHistoryRepository;
-    @Mock private IgdbApiClient igdbApiClient;
+    @Mock private IgdbEnrichmentService igdbEnrichmentService;
     @Mock private Executor igdbExecutor;
 
     @BeforeEach
@@ -96,11 +96,11 @@ public class CatalogServiceTest {
     void upsertGameData_NewEditionContents_EvictsFamilyCache() {
         // given: 기존에 editionContents가 없는 게임
         Game existingGame = createExistingGame();
-        CollectRequestDto request = buildRequest();
+        CollectRequest request = buildRequest();
         request.setEditionContents(List.of("기본 게임", "DLC 팩"));
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
-        given(igdbApiClient.searchGame(any())).willReturn(null);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
 
         // when
@@ -117,11 +117,11 @@ public class CatalogServiceTest {
         Game existingGame = createExistingGame();
         existingGame.updateEditionContents(List.of("기본 게임"));
 
-        CollectRequestDto request = buildRequest();
+        CollectRequest request = buildRequest();
         request.setEditionContents(List.of("기본 게임")); // 동일 내용
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
-        given(igdbApiClient.searchGame(any())).willReturn(null);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
 
         // when
@@ -135,7 +135,7 @@ public class CatalogServiceTest {
     @DisplayName("upsertGameData: 가격이 0이면 처리를 건너뛰고 어떤 저장도 발생하지 않는다")
     void upsertGameData_ZeroPrice_SkipsAllProcessing() {
         // given
-        CollectRequestDto request = buildRequest();
+        CollectRequest request = buildRequest();
         request.setCurrentPrice(0);
 
         // when
@@ -158,10 +158,10 @@ public class CatalogServiceTest {
                 1L, "Test Game", 88.0, 30, 82.5, 900, null, 930);
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
-        given(igdbApiClient.searchGame(any())).willReturn(igdbResponse);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(igdbResponse);
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
 
-        CollectRequestDto request = buildRequest();
+        CollectRequest request = buildRequest();
 
         // when
         catalogService.upsertGameData(request);
@@ -178,10 +178,10 @@ public class CatalogServiceTest {
         Game existingGame = createExistingGame();
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
-        given(igdbApiClient.searchGame(any())).willThrow(new RuntimeException("IGDB 서버 오류"));
+        given(igdbEnrichmentService.searchGame(any())).willThrow(new RuntimeException("IGDB 서버 오류"));
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
 
-        CollectRequestDto request = buildRequest();
+        CollectRequest request = buildRequest();
 
         // when & then: 예외 없이 완료되고 save가 호출돼야 함
         org.assertj.core.api.Assertions.assertThatCode(() -> catalogService.upsertGameData(request))
@@ -202,7 +202,7 @@ public class CatalogServiceTest {
         given(gameReadService.searchGamesForCuration(any(), any())).willReturn(Page.empty());
 
         // when
-        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, null);
+        Page<GameSearchResponse> result = catalogService.searchGames(condition, pageable, null);
 
         // then
         verify(gameReadService, times(1)).searchGamesForCuration(eq(condition), any(Pageable.class));
@@ -221,7 +221,7 @@ public class CatalogServiceTest {
         given(gameRepository.searchGames(any(), any())).willReturn(Page.empty());
 
         // when
-        Page<GameSearchResultDto> result = catalogService.searchGames(condition, pageable, null);
+        Page<GameSearchResponse> result = catalogService.searchGames(condition, pageable, null);
 
         // then
         verify(gameRepository, times(1)).searchGames(eq(condition), any(Pageable.class));
@@ -243,8 +243,8 @@ public class CatalogServiceTest {
     }
 
     /** 기본 수집 요청 DTO. genreIds=null 이라 genreRepository 호출 없음. */
-    private CollectRequestDto buildRequest() {
-        CollectRequestDto dto = new CollectRequestDto();
+    private CollectRequest buildRequest() {
+        CollectRequest dto = new CollectRequest();
         dto.setPsStoreId("HP0700-PPSA001-GAME");
         dto.setTitle("Test Game");
         dto.setOriginalPrice(69900);
