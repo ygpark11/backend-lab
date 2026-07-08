@@ -133,35 +133,63 @@ prometheus.remote_write "grafana_cloud_metrics" {
 - 조건: `up{job="spring_app"} == 0` 또는 데이터 수신 없음(No Data) 상태가 3분 이상 지속될 때.
 - 채널: Discord `#server-monitor` 채널로 긴급 호출.
 
-### 📊 주요 모니터링 지표 (Dashboard)
-Grafana 대시보드에서 중점적으로 보는 지표들입니다.
+### 📊 프로덕션 대시보드 구조 (5단 골든 시그널 아키텍처)
 
-1. JVM Heap Usage: 힙 메모리가 512MB 한계선에 근접하는지 감시. (초기 1GB RAM 환경의 256MB에서 A1 서버 이전 후 512MB로 상향)
-2. HikariCP Connections: DB 커넥션 풀이 고갈되지 않는지 체크.
-3. Log Error Rate: ERROR 레벨 로그 발생 빈도 추적.
-4. **Caffeine Cache (로컬 캐시 성능)**
+장애 발생 시 위에서 아래로 흐르며 원인을 빠르게 추적할 수 있도록 재정렬된 구조입니다.
 
-   `GlobalCacheConfig`의 `recordStats()` + Micrometer 수동 바인딩(`CaffeineCacheMetrics.monitor()`)으로 아래 지표를 Prometheus에 노출합니다.
+| Row | 목적 | 주요 패널 |
+|-----|------|----------|
+| 1단: 🔥 긴급 장애 징후 | 최우선 확인 | Slow Service Rate, Recent Slow Calls, ERROR logs, HTTP Status Codes |
+| 2단: 🏃 트래픽 및 성능 | 부하 파악 | Throughput (RPS), Latency, TOP 10 엔드포인트 |
+| 3단: 🧠 시스템 리소스 | 리소스 상태 | CPU Usage, Heap Used (%), GC Stop-the-World Duration |
+| 4단: 🔌 DB 커넥션 풀 | HikariCP 상태 | Connections Size, Active/Idle, Connection Acquire Time |
+| 5단: 💾 캐시 성능 | Caffeine 4개 통합 | Cache Hit Rate, Cache Size, Cache Evictions Rate |
 
-   현재 운영 중인 캐시 4개:
+---
 
-   | 캐시명 | 용도 | TTL | 상한 |
-   |--------|------|-----|------|
-   | `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 2,000건 |
-   | `insightsCache` | 통계 대시보드 | 24h | 50건 |
-   | `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 |
-   | `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 |
+### 🔍 실제 운영 쿼리 (검증 완료)
 
-   | 패널 | PromQL | 정상 기준 |
-   |------|--------|---------|
-   | Hit Rate | `rate(cache_gets_total{result="hit"}[5m]) / rate(cache_gets_total[5m])` | 서비스 안정 후 70% 이상 |
-   | Cache Size | `cache_size{cache="gameDetailCache"}` | 0 ~ 2,000 (설정 상한) |
-   | Evictions | `rate(cache_evictions_total[5m])` | 배치 직후 스파이크 → 정상, 상시 발생 → 점검 |
+#### Loki 로그 수집 레이블 주의사항
+Spring Boot가 파일로 로그를 출력하고 Alloy가 해당 파일을 읽는 구조이므로, Loki는 `filename` 레이블 기반으로 로그를 식별합니다. `{job="spring_app"}` 형태가 아닌 아래 형식을 사용해야 합니다.
 
-   **운영 판단 기준**
-   - Hit Rate가 배포 직후 낮은 것은 콜드 스타트로 정상. 하루 이후에도 50% 미만이면 TTL 또는 `maximumSize` 조정 검토.
-   - Evictions이 크롤러 배치 완료 시간대에 맞춰 스파이크가 뜨면 캐시 무효화 정상 동작. 배치 이후에도 0이면 `evictGameDetailCache()` 미호출 버그 의심.
-   - `psPlusPricingCache`는 PS Plus 가격 갱신 시 `@CacheEvict`로 즉시 무효화되므로, 배치와 무관하게 Eviction이 발생할 수 있음.
+```logql
+# 느린 서비스 탐지 (Rate)
+sum(rate({filename=~"/var/log/pstracker/.*"} |= "[SLOW]" [5m]))
+
+# 느린 메서드 로그 뷰어
+{filename=~"/var/log/pstracker/.*"} |= "[SLOW]"
+```
+
+> `ServiceExecutionAspect`가 500ms 초과 시 `[SLOW] ClassName.method() - NNNms (threshold: 500ms)` 형식으로 WARN 로그를 기록하며, 이 패턴으로 필터링합니다.
+
+#### Caffeine Cache (Prometheus)
+
+`GlobalCacheConfig`의 `recordStats()` + `CaffeineCacheMetrics.monitor()`로 4개 캐시 지표가 Prometheus에 노출됩니다. 레이블 키는 `cache`입니다.
+
+| 캐시명 | 용도 | TTL | 상한 |
+|--------|------|-----|------|
+| `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 2,000건 |
+| `insightsCache` | 통계 대시보드 | 24h | 50건 |
+| `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 |
+| `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 |
+
+```promql
+# 캐시별 Hit Rate (4개 캐시 한 그래프)
+sum by (cache) (rate(cache_gets_total{result="hit"}[5m]))
+/
+sum by (cache) (rate(cache_gets_total[5m]))
+
+# 캐시별 현재 항목 수
+cache_size
+
+# 캐시별 무효화 발생률
+sum by (cache) (rate(cache_evictions_total[5m]))
+```
+
+**운영 판단 기준**
+- Hit Rate가 배포 직후 낮은 것은 콜드 스타트로 정상. 하루 이후에도 50% 미만이면 TTL 또는 `maximumSize` 조정 검토.
+- Evictions이 크롤러 배치 완료 시간대에 맞춰 스파이크가 뜨면 캐시 무효화 정상 동작. 배치 이후에도 0이면 `evictGameDetailCache()` 미호출 버그 의심.
+- `psPlusPricingCache`는 PS Plus 가격 갱신 시 `@CacheEvict`로 즉시 무효화되므로, 배치와 무관하게 Eviction이 발생할 수 있음.
 
 ---
 

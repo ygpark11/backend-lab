@@ -33,45 +33,9 @@ sequenceDiagram
 
 ---
 
-## 2. Google Cloud Console 설정 (Prerequisites)
+## 2. 스프링 부트 설정 (Configuration)
 
-구글 로그인을 위해 GCP 프로젝트에서 발급받아야 할 정보입니다.
-
-### 🔹 필수 설정값
-UI는 변경될 수 있으므로, 아래 **설정값(Value)** 이 정확한지 확인하는 것이 중요합니다.
-
-| 항목 | 설정값 / 설명 |
-| :--- | :--- |
-| **Authorized JavaScript Origins** | `http://localhost:8080`, `https://ps-signal.com` |
-| **Authorized Redirect URIs** | `http://localhost:8080/login/oauth2/code/google`<br>`https://ps-signal.com/login/oauth2/code/google` |
-| **Scopes (범위)** | `email`, `profile` |
-
-> **⚠️ 주의사항:**
-> * `Redirect URI` 끝에 `/login/oauth2/code/google`은 스프링 시큐리티의 기본 경로이므로 토씨 하나 틀리면 안 됩니다.
-> * 로컬(`localhost`)과 운영(`ps-signal.com`) 주소를 모두 등록해야 합니다.
-
----
-
-## 3. 스프링 부트 설정 (Configuration)
-
-🔹 `application-secret.yml`
-- 민감 정보는 별도 파일로 분리하여 관리합니다. (.gitignore 필수)
-
-```yaml
-spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: "발급받은_CLIENT_ID"
-            client-secret: "발급받은_CLIENT_SECRET"
-            scope:
-              - email
-              - profile
-jwt:
-  secret: "32글자_이상의_매우_긴_랜덤_시크릿_키_Base64_권장"
-```
+> GCP 콘솔 redirect URI 설정, `application-secret.yml` 템플릿은 → [RUNBOOK.md](RUNBOOK.md)
 
 🔹 `SecurityConfig.java` (핵심 필터 체인)
 - 왜 sessionManagement를 STATELESS로 했는지, 필터 순서는 어떻게 되는지 기억해야 합니다.
@@ -104,7 +68,7 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
 ---
 
-## 4. 핵심 구현 로직 (Core Logic)
+## 3. 핵심 구현 로직 (Core Logic)
 
 📌 A. 유저 정보 처리 (`CustomOAuth2UserService`)
 - 구글에서 받은 정보를 우리 DB 스키마(`Member`)에 맞게 변환하고 저장(`saveOrUpdate`)합니다.
@@ -182,7 +146,7 @@ public void onAuthenticationSuccess(HttpServletRequest request, HttpServletRespo
 
 ---
 
-## 5. 보안 아키텍처 의사결정 (ADR)
+## 4. 보안 아키텍처 의사결정 (ADR)
 
 ### Q. 왜 Authorization Header 대신 'Full Cookie' 방식을 택했는가?
 

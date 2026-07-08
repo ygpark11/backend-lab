@@ -203,7 +203,7 @@ docker compose -f docker-compose-local.yml up -d --build
 | Backend API | `http://localhost:8080` |
 | DB Admin | `http://localhost:8090` (Adminer) |
 
-> 운영 서버 3-Node 배포, CI/CD 파이프라인 상세는 → **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+> 운영 서버 배포 명령어 → **[RUNBOOK.md](docs/RUNBOOK.md)** | CI/CD 파이프라인 상세 → **[DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
 ---
 
@@ -213,7 +213,8 @@ docker compose -f docker-compose-local.yml up -d --build
 | :--- | :--- |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 핵심 구현 기술 상세 (Backend·Data Engineering 설계 결정 및 근거) |
 | [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 37가지 기술 이슈 분석 |
-| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | CI/CD 파이프라인, 3-Node 서버 배포, 멀티 아키텍처 빌드 |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | CI/CD 파이프라인, SSL 전략, 멀티 아키텍처 빌드 |
+| [RUNBOOK.md](docs/RUNBOOK.md) | 로컬 실행·운영 배포 명령어, 환경 변수 설정, 초기 설정 가이드 |
 | [OBSERVABILITY.md](docs/OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud) |
 | [AUTH_GUIDE.md](docs/AUTH_GUIDE.md) | OAuth2 + JWT 인증 파이프라인 |
 | [EXTERNAL_SERVICES.md](docs/EXTERNAL_SERVICES.md) | Google Gemini, FCM, Discord 연동 |
