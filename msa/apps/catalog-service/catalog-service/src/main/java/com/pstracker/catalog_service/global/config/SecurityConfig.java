@@ -85,6 +85,7 @@ public class SecurityConfig {
                         // 인증 없이 접근 허용
                         .requestMatchers(
                                 "/api/v1/games/**",
+                                "/api/og/**",
                                 "/api/internal/**",
                                 "/api/v1/subscriptions/**",
                                 "/api/v1/members/signup",

@@ -40,6 +40,7 @@ function AppRoutes() {
 
                 <Route element={<Layout />}>
                     <Route path="/games" element={<GameListPage />} />
+                    <Route path="/games/:id" element={<GameDetailPage />} />
                     <Route path="/curation" element={<CurationPage />} />
                     <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
