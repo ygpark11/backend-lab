@@ -3,9 +3,11 @@ package com.pstracker.catalog_service.catalog.repository;
 import com.pstracker.catalog_service.catalog.domain.Platform;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
+import com.pstracker.catalog_service.catalog.dto.GameSuggestResponse;
 import com.pstracker.catalog_service.catalog.dto.QGameSearchResponse;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
@@ -287,6 +289,17 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             }
         }
         return orders.toArray(new OrderSpecifier[0]);
+    }
+
+    @Override
+    public List<GameSuggestResponse> suggestByName(String keyword, int limit) {
+        return queryFactory
+                .select(Projections.constructor(GameSuggestResponse.class,
+                        game.id, game.name, game.imageUrl))
+                .from(game)
+                .where(nameContains(keyword))
+                .limit(limit)
+                .fetch();
     }
 
     @Override

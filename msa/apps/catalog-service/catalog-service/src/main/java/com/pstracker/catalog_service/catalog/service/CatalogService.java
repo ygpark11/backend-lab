@@ -330,6 +330,10 @@ public class CatalogService {
      * @param memberId 회원 ID (찜 여부 확인용, null 가능)
      * @return 검색 결과 페이지
      */
+    public List<GameSuggestResponse> suggestGames(String keyword, int limit) {
+        return gameRepository.suggestByName(keyword, limit);
+    }
+
     public Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable, Long memberId) {
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
 

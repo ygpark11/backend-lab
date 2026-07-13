@@ -55,6 +55,7 @@ import {adminApi} from '../api/adminApi';
 import {useCurrentUser} from '../hooks/useCurrentUser';
 import DonationModal from '../components/DonationModal';
 import {useAuth} from '../contexts/AuthContext';
+import {pushRecentGame} from '../utils/recentGames';
 
 const renderVerdictIcon = (verdict) => {
     const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border shadow-lg backdrop-blur-xl transition-all border-divider-strong bg-surface";
@@ -133,6 +134,14 @@ export default function GameDetailPage() {
                 const res = await client.get(`/api/v1/games/${id}`);
                 setGame(res.data);
                 if (res.data.liked !== undefined) setIsLiked(res.data.liked);
+                pushRecentGame({
+                    id: res.data.id,
+                    title: res.data.title,
+                    thumbnail: res.data.imageUrl,
+                    currentPrice: res.data.currentPrice,
+                    priceVerdict: res.data.priceVerdict,
+                    viewedAt: Date.now(),
+                });
 
                 setVoteCounts({
                     likes: res.data.likeCount || 0,

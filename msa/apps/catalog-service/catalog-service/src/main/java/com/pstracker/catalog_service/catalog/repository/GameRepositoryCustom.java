@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
+import com.pstracker.catalog_service.catalog.dto.GameSuggestResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -26,4 +27,9 @@ public interface GameRepositoryCustom {
     List<GameSearchResponse> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
 
     long countMustPlayGames();
+
+    /**
+     * 게임 이름 자동완성 (한국어/영문/초성/AI키워드 지원)
+     */
+    List<GameSuggestResponse> suggestByName(String keyword, int limit);
 }

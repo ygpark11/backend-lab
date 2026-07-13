@@ -85,6 +85,14 @@ public class CatalogController {
         return ResponseEntity.ok("Cache cleared successfully");
     }
 
+    @GetMapping("/suggest")
+    public ResponseEntity<List<GameSuggestResponse>> suggestGames(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "5") int limit) {
+        if (q.length() < 2) return ResponseEntity.ok(List.of());
+        return ResponseEntity.ok(catalogService.suggestGames(q, Math.min(limit, 10)));
+    }
+
     @PostMapping("/{gameId}/vote")
     public ResponseEntity<GameVoteResponse> vote(
             @PathVariable Long gameId,

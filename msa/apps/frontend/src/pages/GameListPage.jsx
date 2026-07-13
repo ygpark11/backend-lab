@@ -31,6 +31,7 @@ import {
     Search,
     Server,
     Sparkles,
+    Square,
     Star,
     Timer,
     TrendingDown,
@@ -46,6 +47,7 @@ import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
+import {getRecentGames, clearRecentGames} from '../utils/recentGames';
 
 const PLAYTIME_PRESETS = [
     { id: 'short', label: '주말 컷', range: '0~10h', min: 0, max: 10, icon: Zap, color: 'text-yellow-400', bg: 'hover:bg-yellow-400/10' },
@@ -98,6 +100,9 @@ const GameListPage = () => {
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
+    const [recentGames, setRecentGames] = useState([]);
+    const [suggestions, setSuggestions] = useState([]);
+    const [isDesktopSearchActive, setIsDesktopSearchActive] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -579,6 +584,32 @@ const GameListPage = () => {
 
         checkPsPlusDeal();
     }, []);
+
+    // 바텀시트 열릴 때 최근 본 게임 로드
+    useEffect(() => {
+        if (isQuickSearchOpen) {
+            setRecentGames(getRecentGames());
+        } else {
+            setSuggestions([]);
+        }
+    }, [isQuickSearchOpen]);
+
+    // 자동완성 (2자 이상, 300ms debounce)
+    useEffect(() => {
+        if (searchInput.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+        const timer = setTimeout(async () => {
+            try {
+                const res = await client.get('/api/v1/games/suggest', { params: { q: searchInput, limit: 5 } });
+                setSuggestions(res.data);
+            } catch {
+                setSuggestions([]);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchInput]);
 
     useEffect(() => {
         fetchGames(page);
@@ -1121,8 +1152,27 @@ const GameListPage = () => {
                                 value={searchInput}
                                 onChange={(e) => setSearchInput(e.target.value)}
                                 onKeyDown={handleKeyDown}
+                                onFocus={() => setIsDesktopSearchActive(true)}
+                                onBlur={() => setTimeout(() => setIsDesktopSearchActive(false), 150)}
                                 className="w-full bg-base border border-divider rounded-lg py-3 pl-12 pr-4 text-primary placeholder-muted focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all shadow-inner" />
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
+                            {isDesktopSearchActive && !isQuickSearchOpen && suggestions.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-base border border-divider rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top">
+                                    {suggestions.map((s) => (
+                                        <button
+                                            key={s.id}
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => { setIsDesktopSearchActive(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
+                                            className="flex items-center gap-3 w-full px-4 py-3 hover:bg-surface-hover transition-colors text-left border-b border-divider last:border-0"
+                                        >
+                                            <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0">
+                                                <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" />
+                                            </div>
+                                            <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         <div className="relative min-w-[180px]">
@@ -1532,20 +1582,77 @@ const GameListPage = () => {
                     </div>
                 </div>
 
-                <div className={`fixed inset-x-0 bottom-0 z-[60] transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`}>
-                    <div className="bg-base border-t border-divider p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.5)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <div className={`fixed inset-x-0 bottom-0 z-[60] transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`} onClick={() => setIsQuickSearchOpen(false)}>
+                    <div className="bg-base border-t border-divider p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.5)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-6 sticky top-0 bg-base pb-4 z-10 border-b border-divider">
                             <h3 className="text-xl font-black text-primary flex items-center gap-2"><Search className="w-5 h-5 text-ps-blue"/> 퀵 서치 & 필터</h3>
                             <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-surface hover:bg-[var(--bento-red-from)] rounded-full transition-colors"><X className="w-5 h-5 text-secondary hover:text-red-500"/></button>
                         </div>
 
                         <div className="flex flex-col gap-8 pb-24">
+                            {/* 최근 열어본 게임 */}
+                            {recentGames.length > 0 && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <label className="text-sm font-bold text-secondary flex items-center gap-1.5">
+                                            <Clock className="w-4 h-4 text-ps-blue" /> 최근 열어본 게임
+                                        </label>
+                                        <button
+                                            onClick={() => { clearRecentGames(); setRecentGames([]); }}
+                                            className="text-xs font-bold text-muted hover:text-red-400 transition-colors"
+                                        >
+                                            초기화
+                                        </button>
+                                    </div>
+                                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                        {recentGames.map((g) => (
+                                            <button
+                                                key={g.id}
+                                                onClick={() => { setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
+                                                className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
+                                            >
+                                                <div className="w-full aspect-[3/4] rounded-lg overflow-hidden">
+                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" />
+                                                </div>
+                                                <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
+                                                <div className="flex items-center gap-1">
+                                                    {g.priceVerdict === 'BUY_NOW' && <Circle className="w-3 h-3 text-green-500 fill-green-500" />}
+                                                    {g.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+                                                    {g.priceVerdict === 'WAIT' && <X className="w-3 h-3 text-red-500" />}
+                                                    {(g.priceVerdict === 'TRACKING' || !g.priceVerdict) && <Square className="w-3 h-3 text-ps-blue" />}
+                                                    {g.currentPrice > 0 && (
+                                                        <span className="text-[10px] font-bold text-muted">₩{g.currentPrice.toLocaleString()}</span>
+                                                    )}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 키워드 입력 + 자동완성 */}
                             <div>
                                 <label className="block text-sm font-bold text-secondary mb-2">어떤 게임을 찾으시나요?</label>
                                 <div className="relative">
                                     <input type="text" name="keyword" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={handleKeyDown} className="w-full bg-surface border border-divider rounded-xl py-4 pl-12 pr-4 text-primary placeholder-muted focus:border-ps-blue outline-none transition-all shadow-inner" />
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
                                 </div>
+                                {suggestions.length > 0 && (
+                                    <div className="mt-2 flex flex-col gap-1">
+                                        {suggestions.map((s) => (
+                                            <button
+                                                key={s.id}
+                                                onClick={() => { setIsQuickSearchOpen(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
+                                                className="flex items-center gap-3 p-3 rounded-xl bg-surface hover:bg-surface-hover border border-divider hover:border-ps-blue/40 transition-all text-left active:scale-[0.98]"
+                                            >
+                                                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
+                                                    <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" />
+                                                </div>
+                                                <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             <div>
