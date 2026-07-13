@@ -122,3 +122,50 @@ spring:
 jwt:
   secret: "32글자_이상의_매우_긴_랜덤_시크릿_키_Base64_권장"
 ```
+
+---
+
+## 6. DB 백업 & 복구
+
+### 백업 구성
+
+| 항목 | 값 |
+| :--- | :--- |
+| **스크립트** | `/home/ubuntu/db_backup.sh` |
+| **로그** | `/home/ubuntu/backup.log` |
+| **스케줄** | 매일 23:00 KST (`cron: 0 14 * * *` — UTC 기준) |
+| **저장소** | Oracle Object Storage (`ps-tracker-backup` 버킷, 네임스페이스: `axaiesjuor3l`) |
+| **보관 정책** | 최근 7일치 유지, 초과분 자동 삭제 |
+| **파일명 형식** | `pstracker_YYYY-MM-DD.sql.gz` |
+
+백업 방식: `mysqldump --single-transaction --no-tablespaces | gzip | oci os object put` (스트리밍, 디스크 미사용)
+
+### 백업 상태 확인
+
+```bash
+# 최근 백업 로그 확인
+tail -20 /home/ubuntu/backup.log
+
+# Object Storage 목록 확인
+oci os object list --bucket-name ps-tracker-backup --query 'data[].{name:name,size:size}' --output table
+```
+
+### DB 복구 절차
+
+```bash
+# 1. 복구할 백업 파일 다운로드
+oci os object get \
+  --bucket-name ps-tracker-backup \
+  --name pstracker_YYYY-MM-DD.sql.gz \
+  --file /home/ubuntu/restore.sql.gz
+
+# 2. 압축 해제 후 DB 복구
+gunzip -c /home/ubuntu/restore.sql.gz | \
+  docker exec -i ps-tracker-db \
+  mysql -u root -p"${MYSQL_ROOT_PASSWORD}" pstracker
+
+# 3. 복구 완료 후 임시 파일 삭제
+rm /home/ubuntu/restore.sql.gz
+```
+
+> 복구 실행 전 현재 DB를 별도로 백업해두는 것을 권장합니다.

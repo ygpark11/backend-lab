@@ -9,7 +9,9 @@
       "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/components/common/PSGameImage.jsx src/pages/PioneerCandidatesPage.jsx)",
       "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/pages/PioneerCandidatesPage.jsx src/pages/GameDetailPage.jsx src/pages/GameListPage.jsx)",
       "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/pages/PioneerCandidatesPage.jsx)",
-      "Bash(grep \"\\\\.java$\")"
+      "Bash(grep \"\\\\.java$\")",
+      "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/docs/**)",
+      "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/**)"
     ]
   }
 }

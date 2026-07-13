@@ -34,6 +34,7 @@
 - 🗄️ **4-Cache 하이브리드 전략:** Redis 없이 Caffeine Cache 4개로 정적/동적 데이터를 분리 운영, 배치 완료 시 웹훅 기반 일괄 무효화 → [상세](docs/ARCHITECTURE.md)
 - 🕷️ **Playwright 수집 엔진:** CDP(WebSocket) 직접 통신 + 네트워크 레벨 리소스 차단 + 배치 단위 브라우저 재시작으로 1GB RAM 환경에서 안정적인 장시간 운영 → [상세](docs/ARCHITECTURE.md)
 - 🚀 **멀티 아키텍처 CI/CD:** GitHub Actions + Buildx로 AMD64/ARM64 네이티브 이미지를 동시 빌드·자동 배포 → [DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- 💾 **자동 DB 백업 파이프라인:** mysqldump → gzip → Oracle Object Storage 스트리밍 업로드를 cron(매일 23:00 KST)으로 자동화. 7일치 보관 후 자동 삭제 → [RUNBOOK.md](docs/RUNBOOK.md#6-db-백업--복구)
 
 ---
 
