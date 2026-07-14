@@ -45,7 +45,8 @@ const PSGameImage = ({ src, alt, className, priority = false }) => {
                 ref={imgRef}
                 src={src}
                 alt={alt}
-                className={`${className} transition-opacity duration-500 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                className={className}
+                style={{ opacity: isLoaded ? 1 : 0, transition: 'opacity 600ms ease' }}
                 onLoad={() => setIsLoaded(true)}
                 onError={() => setHasError(true)}
                 loading={priority ? 'eager' : 'lazy'}

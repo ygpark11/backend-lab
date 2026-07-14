@@ -383,7 +383,7 @@ export default function GameDetailPage() {
         <div className="relative z-10">
             <div className="p-4 sm:p-6 md:p-8 pb-20 max-w-7xl mx-auto">
                 <button onClick={handleClose} className="mb-6 flex items-center text-secondary hover:text-primary transition-colors text-sm font-bold gap-1 w-fit">
-                    <ArrowLeft className="w-4 h-4" /> Back to List
+                    <ArrowLeft className="w-4 h-4" /> 목록으로
                 </button>
 
                 {/* 💡 새로운 레이아웃 뼈대: 12칸 그리드 시스템 */}
@@ -463,7 +463,7 @@ export default function GameDetailPage() {
 
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs font-bold text-secondary">
                                 <span className="flex items-center gap-1.5"><Building2 className="w-4 h-4" /> {game.publisher}</span>
-                                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {game.releaseDate?.replace(/-/g, '. ')}</span>
+                                {game.releaseDate && <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> 출시 {game.releaseDate.replace(/-/g, '. ')}</span>}
                                 {game.pioneerName && <span className="flex items-center gap-1.5 text-ps-blue bg-blue-500/10 px-2 py-0.5 rounded-md"><Pickaxe className="w-3.5 h-3.5" /> {game.pioneerName} 발굴</span>}
                             </div>
 
@@ -528,7 +528,7 @@ export default function GameDetailPage() {
                                         )}
                                         {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
                                             <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs bg-surface border border-divider px-3 py-1 rounded-lg shadow-sm font-bold text-primary">
-                                                <TrendingUp className="w-3.5 h-3.5 text-green-500" /> 최저가: {game.lowestPrice.toLocaleString()}원
+                                                <TrendingUp className="w-3.5 h-3.5 text-green-500" /> 역대최저가: {game.lowestPrice.toLocaleString()}원
                                             </span>
                                         )}
                                     </div>
@@ -536,8 +536,8 @@ export default function GameDetailPage() {
                                     {/* 3. 할인 종료일 */}
                                     {game.saleEndDate && game.discountRate > 0 && (
                                         <div className="mt-5 flex items-center lg:justify-end gap-2 text-xs w-fit lg:ml-auto">
-                                            <CalendarDays className="w-4 h-4 text-secondary" />
-                                            <span className="text-secondary font-bold">할인 종료: {game.saleEndDate.replace(/-/g, '.')}</span>
+                                            <CalendarDays className="w-4 h-4 text-amber-500 shrink-0" />
+                                            <span className="text-secondary font-bold">할인 종료 <span className="text-primary font-black">{game.saleEndDate.replace(/-/g, '.')}</span></span>
                                             {daysLeft !== null && daysLeft >= 0 ? (
                                                 <span className={`px-2 py-0.5 rounded-md border shadow-sm font-black ${
                                                     daysLeft <= 3
