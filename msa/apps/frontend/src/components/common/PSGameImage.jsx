@@ -1,20 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Triangle, Circle, X, Square } from 'lucide-react';
 
 const PSGameImage = ({ src, alt, className, priority = false }) => {
     const [hasError, setHasError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
-    const imgRef = useRef(null);
+    const [currentSrc, setCurrentSrc] = useState(src);
 
-    useEffect(() => {
+    // src 변경 시 렌더 중에 바로 초기화
+    if (currentSrc !== src) {
+        setCurrentSrc(src);
         setHasError(false);
-        // complete + naturalWidth > 0 으로 에러 완료(깨진 이미지)와 정상 완료를 구분
-        if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+        setIsLoaded(false);
+    }
+
+    // ref 콜백: DOM에 img가 붙는 시점(커밋 단계)에 캐시된 이미지 즉시 감지
+    // src가 바뀌면 콜백이 새 함수로 교체되어 자동으로 재실행됨
+    const imgRef = useCallback((node) => {
+        if (node?.complete && node.naturalWidth > 0) {
             setIsLoaded(true);
-        } else {
-            setIsLoaded(false);
         }
-    }, [src]);
+    }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!src || hasError) {
         return (
@@ -36,7 +41,6 @@ const PSGameImage = ({ src, alt, className, priority = false }) => {
     return (
         <>
             {!isLoaded && (
-                // 부모 컨테이너(relative 또는 absolute 포지션)에 절대 위치로 채움
                 <div className="absolute inset-0 bg-surface overflow-hidden pointer-events-none">
                     <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-divider-strong to-transparent" />
                 </div>
