@@ -1,25 +1,27 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Triangle, Circle, X, Square } from 'lucide-react';
 
 const PSGameImage = ({ src, alt, className, priority = false }) => {
     const [hasError, setHasError] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
     const [currentSrc, setCurrentSrc] = useState(src);
+    const imgRef = useRef(null);
 
-    // src 변경 시 렌더 중에 바로 초기화
+    // src 변경 시 렌더 중에 바로 초기화 (cascading render 없음)
     if (currentSrc !== src) {
         setCurrentSrc(src);
         setHasError(false);
         setIsLoaded(false);
     }
 
-    // ref 콜백: DOM에 img가 붙는 시점(커밋 단계)에 캐시된 이미지 즉시 감지
-    // src가 바뀌면 콜백이 새 함수로 교체되어 자동으로 재실행됨
-    const imgRef = useCallback((node) => {
-        if (node?.complete && node.naturalWidth > 0) {
-            setIsLoaded(true);
-        }
-    }, [src]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        const node = imgRef.current;
+        if (!node?.complete || node.naturalWidth === 0) return;
+        // useEffect는 브라우저 페인트 후 실행 → opacity:0 프레임이 이미 그려진 상태
+        // rAF로 다음 프레임에 setState → CSS transition(0→1)이 정상 동작
+        const id = requestAnimationFrame(() => setIsLoaded(true));
+        return () => cancelAnimationFrame(id);
+    }, [src]);
 
     if (!src || hasError) {
         return (
