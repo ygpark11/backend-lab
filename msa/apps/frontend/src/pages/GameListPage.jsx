@@ -1165,7 +1165,7 @@ const GameListPage = () => {
                                             onClick={() => { setIsDesktopSearchActive(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
                                             className="flex items-center gap-3 w-full px-4 py-3 hover:bg-surface-hover transition-colors text-left border-b border-divider last:border-0"
                                         >
-                                            <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0">
+                                            <div className="relative w-9 h-9 rounded-lg overflow-hidden shrink-0">
                                                 <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
                                             </div>
                                             <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
@@ -1426,7 +1426,7 @@ const GameListPage = () => {
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full ${game.priceVerdict === 'BUY_NOW' ? 'border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
+                                    className={`group bg-glass backdrop-blur-md rounded-xl overflow-hidden hover:-translate-y-1 transition-[transform,box-shadow,border-color] duration-300 ease-out shadow-lg cursor-pointer border relative flex flex-col h-full ${game.priceVerdict === 'BUY_NOW' ? 'border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]' : 'border-divider hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)]'}`}
                                 >
                                     <div
                                         className="aspect-[3/4] overflow-hidden relative shrink-0 bg-base"
@@ -1434,7 +1434,7 @@ const GameListPage = () => {
                                         <PSGameImage
                                             src={game.imageUrl}
                                             alt={game.name}
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            className="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-500 ease-out"
                                             priority={index < 4}
                                             width={640}
                                         />
@@ -1612,7 +1612,7 @@ const GameListPage = () => {
                                                 onClick={() => { setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
                                                 className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
                                             >
-                                                <div className="w-full aspect-[3/4] rounded-lg overflow-hidden">
+                                                <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
                                                     <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
                                                 </div>
                                                 <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
@@ -1646,7 +1646,7 @@ const GameListPage = () => {
                                                 onClick={() => { setIsQuickSearchOpen(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
                                                 className="flex items-center gap-3 p-3 rounded-xl bg-surface hover:bg-surface-hover border border-divider hover:border-ps-blue/40 transition-all text-left active:scale-[0.98]"
                                             >
-                                                <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
+                                                <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
                                                     <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
                                                 </div>
                                                 <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
