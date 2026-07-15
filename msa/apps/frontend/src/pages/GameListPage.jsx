@@ -284,7 +284,7 @@ const GameListPage = () => {
         }
     };
 
-    const handleKeyDown = (e) => { if (e.key === 'Enter') executeSearch(); };
+    const handleKeyDown = (e) => { if (e.key === 'Enter') { e.target.blur(); executeSearch(); } };
 
     const handleFilterChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -345,20 +345,20 @@ const GameListPage = () => {
     }, [loading, page, totalPages]);
 
     const handleRecentGamesDragStart = useCallback((e) => {
+        if (e.pointerType === 'touch') return; // 모바일 터치는 브라우저 네이티브 스크롤에 맡김
         const el = recentGamesScrollRef.current;
         if (!el) return;
-        dragStateRef.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, hasDragged: false };
+        el.setPointerCapture(e.pointerId); // 요소 밖으로 나가도 포인터 이벤트 고정
+        dragStateRef.current = { isDragging: true, startX: e.clientX, scrollLeft: el.scrollLeft, hasDragged: false };
         el.style.cursor = 'grabbing';
     }, []);
 
     const handleRecentGamesDragMove = useCallback((e) => {
         const state = dragStateRef.current;
         if (!state.isDragging) return;
-        e.preventDefault();
         const el = recentGamesScrollRef.current;
         if (!el) return;
-        const x = e.pageX - el.offsetLeft;
-        const delta = x - state.startX;
+        const delta = e.clientX - state.startX;
         if (Math.abs(delta) > 5) state.hasDragged = true;
         el.scrollLeft = state.scrollLeft - delta * 1.5;
     }, []);
@@ -1634,10 +1634,11 @@ const GameListPage = () => {
                                     <div
                                         ref={recentGamesScrollRef}
                                         className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 cursor-grab select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                                        onMouseDown={handleRecentGamesDragStart}
-                                        onMouseMove={handleRecentGamesDragMove}
-                                        onMouseUp={handleRecentGamesDragEnd}
-                                        onMouseLeave={handleRecentGamesDragEnd}
+                                        onPointerDown={handleRecentGamesDragStart}
+                                        onPointerMove={handleRecentGamesDragMove}
+                                        onPointerUp={handleRecentGamesDragEnd}
+                                        onPointerCancel={handleRecentGamesDragEnd}
+                                        onDragStart={(e) => e.preventDefault()}
                                     >
                                         {recentGames.map((g) => (
                                             <button
