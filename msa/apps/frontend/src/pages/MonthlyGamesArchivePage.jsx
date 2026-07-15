@@ -57,6 +57,7 @@ const GameCard = ({ game }) => {
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.title}
+                    width={640}
                     className={`w-full h-full object-cover transition-transform duration-500 ${isGhost ? 'grayscale-[60%] opacity-80' : 'group-hover/card:scale-105'}`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-90"></div>

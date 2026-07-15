@@ -54,6 +54,7 @@ export default function RelatedGameCard({ game }) {
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.name}
+                    width={640}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
 

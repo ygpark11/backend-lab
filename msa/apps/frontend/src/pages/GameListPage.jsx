@@ -1166,7 +1166,7 @@ const GameListPage = () => {
                                             className="flex items-center gap-3 w-full px-4 py-3 hover:bg-surface-hover transition-colors text-left border-b border-divider last:border-0"
                                         >
                                             <div className="w-9 h-9 rounded-lg overflow-hidden shrink-0">
-                                                <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" />
+                                                <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
                                             </div>
                                             <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
                                         </button>
@@ -1436,6 +1436,7 @@ const GameListPage = () => {
                                             alt={game.name}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                             priority={index < 4}
+                                            width={640}
                                         />
 
                                         {rankToDisplay && (
@@ -1612,7 +1613,7 @@ const GameListPage = () => {
                                                 className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
                                             >
                                                 <div className="w-full aspect-[3/4] rounded-lg overflow-hidden">
-                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" />
+                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
                                                 </div>
                                                 <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
                                                 <div className="flex items-center gap-1">
@@ -1646,7 +1647,7 @@ const GameListPage = () => {
                                                 className="flex items-center gap-3 p-3 rounded-xl bg-surface hover:bg-surface-hover border border-divider hover:border-ps-blue/40 transition-all text-left active:scale-[0.98]"
                                             >
                                                 <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0">
-                                                    <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" />
+                                                    <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
                                                 </div>
                                                 <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
                                             </button>

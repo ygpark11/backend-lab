@@ -65,6 +65,7 @@ const CandidateCard = memo(({ game, onExtract, onDelete, isAuthenticated, isAdmi
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.title}
+                    width={640}
                     className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-[cubic-bezier(0.25,1,0.5,1)]
                         ${isUnlocked
                         ? 'scale-125 z-10'

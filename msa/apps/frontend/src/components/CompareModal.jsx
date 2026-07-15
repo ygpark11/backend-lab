@@ -237,7 +237,7 @@ export default function CompareModal({ isOpen, onClose }) {
                     <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : '-translate-x-full'}`}>
                         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-transparent z-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameA.imageUrl} className="w-full h-full object-cover object-top opacity-80" />
+                        <PSGameImage src={gameA.imageUrl} width={640} className="w-full h-full object-cover object-top opacity-80" />
                         <div className="absolute bottom-4 left-4 right-6 z-30">
                             <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 max-w-[85%]">{gameA.title || gameA.name}</h2>
                         </div>
@@ -246,7 +246,7 @@ export default function CompareModal({ isOpen, onClose }) {
                     <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : 'translate-x-full'}`}>
                         <div className="absolute inset-0 bg-gradient-to-l from-rose-900/60 to-transparent z-10 mix-blend-overlay"></div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameB.imageUrl} className="w-full h-full object-cover object-top opacity-80" />
+                        <PSGameImage src={gameB.imageUrl} width={640} className="w-full h-full object-cover object-top opacity-80" />
                         <div className="absolute bottom-4 left-6 right-4 z-30 flex justify-end">
                             <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 text-right max-w-[85%]">{gameB.title || gameB.name}</h2>
                         </div>

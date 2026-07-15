@@ -249,6 +249,7 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
                     <PSGameImage
                         src={games[0].imageUrl}
                         alt=""
+                        width={640}
                         className="absolute inset-0 w-full h-full object-cover opacity-25 dark:opacity-40 blur-sm scale-110 group-hover:scale-[1.15] transition-transform duration-700 pointer-events-none select-none"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-base/95 via-base/60 to-transparent pointer-events-none" />
@@ -339,6 +340,7 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
                                 <PSGameImage
                                     src={game.imageUrl}
                                     alt={game.name}
+                                    width={100}
                                     className="w-full h-full object-cover transition-transform duration-500 sm:group-hover:scale-105"
                                 />
                             </div>

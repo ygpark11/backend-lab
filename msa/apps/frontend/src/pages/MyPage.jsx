@@ -394,7 +394,7 @@ export default function MyPage() {
                                             <div
                                                 className="relative aspect-[3/4] rounded-lg overflow-hidden border shadow-sm mb-2 transition-transform duration-300 group-hover:-translate-y-1 group-hover:border-ps-blue bg-base border-divider"
                                             >
-                                                <PSGameImage src={game.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                                                <PSGameImage src={game.imageUrl} width={640} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80 pointer-events-none"></div>
 
                                                 <div className="absolute top-1.5 right-1.5 bg-glass backdrop-blur-sm p-1 rounded-md border border-divider shadow-sm">
