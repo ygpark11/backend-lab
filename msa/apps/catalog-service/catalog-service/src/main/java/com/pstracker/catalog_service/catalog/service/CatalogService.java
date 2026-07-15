@@ -381,18 +381,17 @@ public class CatalogService {
                 : null;
 
         // 4. 방어력 티어 계산 (캐시된 이력 데이터 활용)
-        String[] defenseInfo = gameScouterService.calculateDefenseTier(
+        GameDetailResponse.DefenseInfo defenseInfo = gameScouterService.calculateDefenseTier(
                 baseResponse.originalPrice(),
                 baseResponse.currentPrice(),
                 baseResponse.lowestPrice(),
-                baseResponse.isPlusExclusive(),
                 baseResponse.releaseDate(),
                 baseResponse.priceHistory()
         );
 
         return baseResponse.withDynamicData(
                 isLiked, userVote,
-                totalWatchers, avgTargetPrice, myTargetPrice, defenseInfo[0], defenseInfo[1]
+                totalWatchers, avgTargetPrice, myTargetPrice, defenseInfo
         );
     }
 

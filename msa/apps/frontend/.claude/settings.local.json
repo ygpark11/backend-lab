@@ -11,7 +11,10 @@
       "Bash(node node_modules/eslint/bin/eslint.js src/App.jsx src/pages/PioneerCandidatesPage.jsx)",
       "Bash(grep \"\\\\.java$\")",
       "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/docs/**)",
-      "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/**)"
+      "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/**)",
+      "Bash(mvn compile:*)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew test:*)"
     ]
   }
 }

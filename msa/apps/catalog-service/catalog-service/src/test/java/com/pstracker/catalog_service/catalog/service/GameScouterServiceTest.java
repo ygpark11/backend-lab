@@ -50,31 +50,31 @@ class GameScouterServiceTest {
         @Test
         @DisplayName("originalPrice = null → 등급 외")
         void null_originalPrice() {
-            var r = sut.calculateDefenseTier(null, OP, null, false, TODAY.minusMonths(12),
+            var r = sut.calculateDefenseTier(null, OP, null, TODAY.minusMonths(12),
                     List.of(full(TODAY.minusMonths(1))));
-            assertThat(r[0]).isEqualTo("등급 외");
+            assertThat(r.tier()).isEqualTo("등급 외");
         }
 
         @Test
         @DisplayName("originalPrice = 0 → 등급 외")
         void zero_originalPrice() {
-            var r = sut.calculateDefenseTier(0, OP, null, false, TODAY.minusMonths(12),
+            var r = sut.calculateDefenseTier(0, OP, null, TODAY.minusMonths(12),
                     List.of(full(TODAY.minusMonths(1))));
-            assertThat(r[0]).isEqualTo("등급 외");
+            assertThat(r.tier()).isEqualTo("등급 외");
         }
 
         @Test
         @DisplayName("history = null → 등급 외")
         void null_history() {
-            var r = sut.calculateDefenseTier(OP, OP, null, false, TODAY.minusMonths(12), null);
-            assertThat(r[0]).isEqualTo("등급 외");
+            var r = sut.calculateDefenseTier(OP, OP, null, TODAY.minusMonths(12), null);
+            assertThat(r.tier()).isEqualTo("등급 외");
         }
 
         @Test
         @DisplayName("history = empty → 등급 외")
         void empty_history() {
-            var r = sut.calculateDefenseTier(OP, OP, null, false, TODAY.minusMonths(12), List.of());
-            assertThat(r[0]).isEqualTo("등급 외");
+            var r = sut.calculateDefenseTier(OP, OP, null, TODAY.minusMonths(12), List.of());
+            assertThat(r.tier()).isEqualTo("등급 외");
         }
     }
 
@@ -89,40 +89,34 @@ class GameScouterServiceTest {
         @DisplayName("출시 3개월, 할인 이력 없음, 정가 → N급 신작 / 추측성 문구 없음")
         void no_discount_history_no_sale() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(3),
                     List.of(full(TODAY.minusMonths(3))));
 
-            assertThat(r[0]).isEqualTo("N급 신작");
-            // 데이터 기반이 아닌 추측성 문구가 없어야 함
-            assertThat(r[1])
-                    .doesNotContain("통상")
-                    .doesNotContain("보통")
-                    .doesNotContain("대개")
-                    .contains("3개월차")
-                    .contains("아직 할인 신호가 잡힌 적 없습니다");
+            assertThat(r.tier()).isEqualTo("N급 신작");
+            assertThat(r.discountCount()).isEqualTo(0);
         }
 
         @Test
         @DisplayName("출시 5개월 → 신작 구간 (경계값: 5 < 6)")
         void exactly_5_months_is_new_game() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(5),
                     List.of(full(TODAY.minusMonths(5))));
 
-            assertThat(r[0]).isEqualTo("N급 신작");
+            assertThat(r.tier()).isEqualTo("N급 신작");
         }
 
         @Test
         @DisplayName("출시 6개월 → 신작 구간 이탈 (경계값: 6 >= 6)")
         void exactly_6_months_exits_new_game() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(6),
                     List.of(full(TODAY.minusMonths(6))));
 
-            assertThat(r[0]).isNotIn("N급 신작", "신작 첫 할인");
+            assertThat(r.tier()).isNotIn("N급 신작", "신작 첫 할인");
         }
 
         @Test
@@ -130,14 +124,14 @@ class GameScouterServiceTest {
         void currently_on_sale_returns_신작_첫_할인() {
             int salePrice = discountedPrice(15);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(3),
                     List.of(
                             full(TODAY.minusMonths(3)),
                             sale(TODAY.minusDays(2), salePrice, 15)));
 
-            assertThat(r[0]).isEqualTo("신작 첫 할인");
-            assertThat(r[1]).contains("3개월만에").contains("15%");
+            assertThat(r.tier()).isEqualTo("신작 첫 할인");
+            assertThat(r.discountCount()).isEqualTo(1);
         }
 
         @Test
@@ -145,14 +139,14 @@ class GameScouterServiceTest {
         void new_game_plus_exclusive_sale() {
             int salePrice = discountedPrice(15);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, true,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(3),
                     List.of(
                             full(TODAY.minusMonths(3)),
                             sale(TODAY.minusDays(2), salePrice, 15)));
 
-            assertThat(r[0]).isEqualTo("신작 첫 할인");
-            assertThat(r[1]).contains("PS Plus 전용");
+            assertThat(r.tier()).isEqualTo("신작 첫 할인");
+            assertThat(r.discountCount()).isEqualTo(1);
         }
 
         @Test
@@ -160,15 +154,15 @@ class GameScouterServiceTest {
         void new_game_past_discount_now_full_price() {
             int salePrice = discountedPrice(15);
             var r = sut.calculateDefenseTier(
-                    OP, OP, salePrice, false,
+                    OP, OP, salePrice,
                     TODAY.minusMonths(4),
                     List.of(
                             full(TODAY.minusMonths(4)),             // 첫 수집: 정가
                             sale(TODAY.minusMonths(1), salePrice, 15), // 할인 전환
                             full(TODAY.minusDays(5))));             // 정가 복귀
 
-            assertThat(r[0]).isEqualTo("N급 신작");
-            assertThat(r[1]).contains("현재 정가");
+            assertThat(r.tier()).isEqualTo("N급 신작");
+            assertThat(r.discountCount()).isEqualTo(1);
         }
 
         @Test
@@ -176,7 +170,7 @@ class GameScouterServiceTest {
         void new_game_second_discount_returns_신작_재할인() {
             int salePrice = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(4),
                     List.of(
                             full(TODAY.minusMonths(4)),
@@ -184,8 +178,8 @@ class GameScouterServiceTest {
                             full(TODAY.minusMonths(2)),
                             sale(TODAY.minusDays(5), salePrice, 30)));
 
-            assertThat(r[0]).isEqualTo("신작 재할인");
-            assertThat(r[1]).contains("2번째 할인").contains("30%");
+            assertThat(r.tier()).isEqualTo("신작 재할인");
+            assertThat(r.discountCount()).isEqualTo(2);
         }
 
         @Test
@@ -194,15 +188,14 @@ class GameScouterServiceTest {
             // 출시 5개월차, 1개월 전부터 수집 시작 (lateTracking = 5-1=4 >= 2)
             int salePrice = discountedPrice(20);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(5),
                     List.of(
                             full(TODAY.minusMonths(1)),
                             sale(TODAY.minusDays(5), salePrice, 20)));
 
-            assertThat(r[0]).isEqualTo("신작 할인");
-            assertThat(r[0]).isNotEqualTo("신작 첫 할인");
-            assertThat(r[1]).doesNotContain("첫 신호").contains("이전 이력은 미확인");
+            assertThat(r.tier()).isEqualTo("신작 할인");
+            assertThat(r.tier()).isNotEqualTo("신작 첫 할인");
         }
 
         @Test
@@ -212,14 +205,14 @@ class GameScouterServiceTest {
             // N급 신작으로 잘못 분류하던 문제 (수정 전 코드의 동작)
             int salePrice = discountedPrice(17);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(3),
                     List.of(
                             full(TODAY.minusMonths(3)),
                             sale(TODAY.minusDays(2), salePrice, 17)));
 
-            assertThat(r[0]).isEqualTo("신작 첫 할인"); // 수정 후 올바른 결과
-            assertThat(r[0]).isNotEqualTo("N급 신작");  // 수정 전 잘못된 결과
+            assertThat(r.tier()).isEqualTo("신작 첫 할인"); // 수정 후 올바른 결과
+            assertThat(r.tier()).isNotEqualTo("N급 신작");  // 수정 전 잘못된 결과
         }
     }
 
@@ -234,11 +227,11 @@ class GameScouterServiceTest {
         @DisplayName("추적 2개월, 할인 없음 → 관측 중")
         void short_tracked_no_discount() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(10),
                     List.of(full(TODAY.minusMonths(2))));
 
-            assertThat(r[0]).isEqualTo("관측 중");
+            assertThat(r.tier()).isEqualTo("관측 중");
         }
 
         @Test
@@ -248,11 +241,11 @@ class GameScouterServiceTest {
             // → 세일 시작 시점 불명, 정가 이력 없음 → 패턴 판단 불가
             int salePrice = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(12),
                     List.of(sale(TODAY.minusMonths(2), salePrice, 30)));
 
-            assertThat(r[0]).isEqualTo("관측 중");
+            assertThat(r.tier()).isEqualTo("관측 중");
         }
 
         @Test
@@ -261,13 +254,13 @@ class GameScouterServiceTest {
             // 추적 기간이 충분하면(>= 3개월) 관측 중이 아닌 방어도 판정으로 진행
             int salePrice = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, salePrice, false,
+                    OP, OP, salePrice,
                     TODAY.minusMonths(18),
                     List.of(
                             sale(TODAY.minusMonths(4), salePrice, 30), // 첫 수집: 할인가
                             full(TODAY.minusMonths(2))));              // 정가 복귀
 
-            assertThat(r[0]).isNotIn("관측 중", "N급 신작");
+            assertThat(r.tier()).isNotIn("관측 중", "N급 신작");
         }
 
         @Test
@@ -276,24 +269,24 @@ class GameScouterServiceTest {
             // 첫 수집이 정가이고 이후 할인이 발생했다면 → 신뢰할 수 있는 전환 이벤트
             int salePrice = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, salePrice, salePrice, false,
+                    OP, salePrice, salePrice,
                     TODAY.minusMonths(12),
                     List.of(
                             full(TODAY.minusMonths(2)),
                             sale(TODAY.minusDays(5), salePrice, 30)));
 
-            assertThat(r[0]).isNotEqualTo("관측 중");
+            assertThat(r.tier()).isNotEqualTo("관측 중");
         }
 
         @Test
         @DisplayName("추적 3개월+ + 할인 없음 → S급 철벽 (관측 중 아님)")
         void long_tracked_no_discount_is_iron_wall_not_관측중() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(18),
                     List.of(full(TODAY.minusMonths(12))));
 
-            assertThat(r[0]).isEqualTo("S급 철벽");
+            assertThat(r.tier()).isEqualTo("S급 철벽");
         }
     }
 
@@ -308,12 +301,12 @@ class GameScouterServiceTest {
         @DisplayName("12개월 추적, 할인 없음 → S급 철벽 + 추적 기간 포함")
         void long_tracked_no_discount() {
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(24),
                     List.of(full(TODAY.minusMonths(12))));
 
-            assertThat(r[0]).isEqualTo("S급 철벽");
-            assertThat(r[1]).contains("12개월");
+            assertThat(r.tier()).isEqualTo("S급 철벽");
+            assertThat(r.trackedMonths()).isGreaterThanOrEqualTo(12L);
         }
     }
 
@@ -334,15 +327,15 @@ class GameScouterServiceTest {
             void full_price() {
                 int lowest = discountedPrice(20);
                 var r = sut.calculateDefenseTier(
-                        OP, OP, lowest, false,
+                        OP, OP, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), lowest, 20),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("A급 방패");
-                assertThat(r[1]).contains("역대 최대 20%").contains("현재 정가");
+                assertThat(r.tier()).isEqualTo("A급 방패");
+                assertThat(r.maxRate()).isEqualTo(20);
             }
 
             @Test
@@ -350,14 +343,14 @@ class GameScouterServiceTest {
             void boundary_25_pct() {
                 // 10_000원 기준: 25% off = 7_500 → maxRate 정확히 25.0
                 var r = sut.calculateDefenseTier(
-                        10_000, 10_000, 7_500, false,
+                        10_000, 10_000, 7_500,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), 7_500, 25),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("A급 방패");
+                assertThat(r.tier()).isEqualTo("A급 방패");
             }
 
             @Test
@@ -365,23 +358,23 @@ class GameScouterServiceTest {
             void at_historic_low() {
                 int lowest = discountedPrice(20);
                 var r = sut.calculateDefenseTier(
-                        OP, lowest, lowest, false,
+                        OP, lowest, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusDays(3), lowest, 20)));
 
-                assertThat(r[0]).isEqualTo("A급 방패");
-                assertThat(r[1]).contains("역대 최저가 구간");
+                assertThat(r.tier()).isEqualTo("A급 방패");
+                assertThat(r.maxRate()).isEqualTo(20);
             }
 
             @Test
-            @DisplayName("현재 할인 중이지만 역대 최저가 아님 → 역대 최저까지 갭 표시")
+            @DisplayName("현재 할인 중이지만 역대 최저가 아님 → 역대 최대 할인율 확인")
             void on_sale_not_at_historic_low() {
                 int lowest = discountedPrice(20);  // 역대 최저 (20% off)
                 int current = discountedPrice(10); // 현재 (10% off)
                 var r = sut.calculateDefenseTier(
-                        OP, current, lowest, false,
+                        OP, current, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
@@ -389,8 +382,8 @@ class GameScouterServiceTest {
                                 full(TODAY.minusMonths(4)),
                                 sale(TODAY.minusDays(3), current, 10)));
 
-                assertThat(r[0]).isEqualTo("A급 방패");
-                assertThat(r[1]).contains("역대 최저(20%)").contains("10%");
+                assertThat(r.tier()).isEqualTo("A급 방패");
+                assertThat(r.maxRate()).isEqualTo(20);
             }
         }
 
@@ -404,15 +397,15 @@ class GameScouterServiceTest {
             void max_35_pct() {
                 int lowest = discountedPrice(35);
                 var r = sut.calculateDefenseTier(
-                        OP, OP, lowest, false,
+                        OP, OP, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), lowest, 35),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("B급 일반");
-                assertThat(r[1]).contains("역대 최대 35%");
+                assertThat(r.tier()).isEqualTo("B급 일반");
+                assertThat(r.maxRate()).isEqualTo(35);
             }
 
             @Test
@@ -420,14 +413,14 @@ class GameScouterServiceTest {
             void boundary_40_pct() {
                 // 10_000원: 40% off = 6_000 → maxRate 정확히 40.0
                 var r = sut.calculateDefenseTier(
-                        10_000, 10_000, 6_000, false,
+                        10_000, 10_000, 6_000,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), 6_000, 40),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("B급 일반");
+                assertThat(r.tier()).isEqualTo("B급 일반");
             }
 
             @Test
@@ -435,14 +428,14 @@ class GameScouterServiceTest {
             void at_historic_low() {
                 int lowest = discountedPrice(40);
                 var r = sut.calculateDefenseTier(
-                        OP, lowest, lowest, false,
+                        OP, lowest, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusDays(3), lowest, 40)));
 
-                assertThat(r[0]).isEqualTo("B급 일반");
-                assertThat(r[1]).contains("역대 최저가 구간");
+                assertThat(r.tier()).isEqualTo("B급 일반");
+                assertThat(r.maxRate()).isEqualTo(40);
             }
         }
 
@@ -456,14 +449,14 @@ class GameScouterServiceTest {
             void max_50_pct() {
                 int lowest = discountedPrice(50);
                 var r = sut.calculateDefenseTier(
-                        OP, OP, lowest, false,
+                        OP, OP, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), lowest, 50),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("C급 솜방패");
+                assertThat(r.tier()).isEqualTo("C급 솜방패");
             }
 
             @Test
@@ -471,14 +464,14 @@ class GameScouterServiceTest {
             void just_below_d_tier() {
                 // 10_000원: 59% off = 4_100 → maxRate ≈ 59%
                 var r = sut.calculateDefenseTier(
-                        10_000, 10_000, 4_100, false,
+                        10_000, 10_000, 4_100,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), 4_100, 59),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("C급 솜방패");
+                assertThat(r.tier()).isEqualTo("C급 솜방패");
             }
         }
 
@@ -492,14 +485,14 @@ class GameScouterServiceTest {
             void boundary_60_pct() {
                 // 10_000원: 60% off = 4_000 → maxRate = 60.0
                 var r = sut.calculateDefenseTier(
-                        10_000, 10_000, 4_000, false,
+                        10_000, 10_000, 4_000,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), 4_000, 60),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("D급 낙하산");
+                assertThat(r.tier()).isEqualTo("D급 낙하산");
             }
 
             @Test
@@ -507,14 +500,14 @@ class GameScouterServiceTest {
             void max_75_pct() {
                 int lowest = discountedPrice(75);
                 var r = sut.calculateDefenseTier(
-                        OP, OP, lowest, false,
+                        OP, OP, lowest,
                         TODAY.minusMonths(18),
                         List.of(
                                 full(TODAY.minusMonths(12)),
                                 sale(TODAY.minusMonths(6), lowest, 75),
                                 full(TODAY.minusMonths(4))));
 
-                assertThat(r[0]).isEqualTo("D급 낙하산");
+                assertThat(r.tier()).isEqualTo("D급 낙하산");
             }
         }
     }
@@ -532,14 +525,14 @@ class GameScouterServiceTest {
         void full_to_sale_to_full_counts_one_discount() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(12)),              // 첫 수집: 정가
                             sale(TODAY.minusMonths(9), lowest, 30),  // 정가→할인 전환
                             full(TODAY.minusMonths(6))));             // 할인→정가 복귀
 
-            assertThat(r[1]).contains("1번 할인");
+            assertThat(r.discountCount()).isEqualTo(1);
         }
 
         @Test
@@ -547,7 +540,7 @@ class GameScouterServiceTest {
         void two_separate_sales_counted_correctly() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(24),
                     List.of(
                             full(TODAY.minusMonths(12)),              // 첫 수집: 정가
@@ -556,7 +549,7 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(4), lowest, 30),  // 2차 할인 전환
                             full(TODAY.minusMonths(2))));             // 2차 정가 복귀
 
-            assertThat(r[1]).contains("2번 할인");
+            assertThat(r.discountCount()).isEqualTo(2);
         }
 
         @Test
@@ -566,7 +559,7 @@ class GameScouterServiceTest {
             LocalDate trackStart = TODAY.minusMonths(6);
 
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             sale(trackStart, lowest, 35),            // 첫 수집: 이미 할인 중
@@ -574,8 +567,7 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(1), lowest, 35),  // 새 할인 전환
                             full(TODAY)));                           // 다시 정가
 
-            // 콜드 스타트 경고가 메시지에 포함되어야 함
-            assertThat(r[1]).contains("이전 이력 미반영");
+            assertThat(r.coldStartWarning()).isTrue();
         }
 
         @Test
@@ -583,14 +575,14 @@ class GameScouterServiceTest {
         void no_cold_start_note_when_first_was_full_price() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
                             sale(TODAY.minusMonths(4), lowest, 30),
                             full(TODAY.minusMonths(2))));
 
-            assertThat(r[1]).doesNotContain("수집 시작").doesNotContain("이전 이력");
+            assertThat(r.coldStartWarning()).isFalse();
         }
 
         @Test
@@ -602,7 +594,7 @@ class GameScouterServiceTest {
             LocalDate trackStart = TODAY.minusMonths(6);
 
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             sale(trackStart, lowest, 30),           // 첫 수집: 할인가
@@ -610,8 +602,9 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(1), lowest, 30), // 새 할인
                             full(TODAY)));
 
-            // 보수적 계산: 6개월 / 1 = 6 → "약 6개월에 1회"
-            assertThat(r[1]).contains("6개월에 1회");
+            // 콜드 스타트 보수적 보정: countForFreq=max(1,2-1)=1 → 주기 판단 불가 → monthsPerSale=null
+            assertThat(r.coldStartWarning()).isTrue();
+            assertThat(r.monthsPerSale()).isNull();
         }
     }
 
@@ -627,16 +620,16 @@ class GameScouterServiceTest {
         void once_in_12_months_single_observation() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(24),
                     List.of(
                             full(TODAY.minusMonths(12)),
                             sale(TODAY.minusMonths(6), lowest, 30),
                             full(TODAY.minusMonths(4))));
 
-            // discountCount=1 → 빈도 판단 대신 "아직 관측 1회" 안내
-            assertThat(r[1]).contains("아직 관측 1회");
-            assertThat(r[1]).doesNotContain("연 1회 미만").doesNotContain("개월에 1회");
+            // discountCount=1 → 빈도 판단 불가, monthsPerSale=null
+            assertThat(r.discountCount()).isEqualTo(1);
+            assertThat(r.monthsPerSale()).isNull();
         }
 
         @Test
@@ -644,7 +637,7 @@ class GameScouterServiceTest {
         void rare_discount_with_multiple_observations() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(36),
                     List.of(
                             full(TODAY.minusMonths(24)),
@@ -653,8 +646,9 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(6), lowest, 30),
                             full(TODAY.minusMonths(3))));
 
-            // discountCount=2, monthsPerDiscount=24/2=12 → "연 1회 미만"
-            assertThat(r[1]).contains("연 1회 미만");
+            // discountCount=2, monthsPerDiscount=24/2=12 → 연 1회 미만
+            assertThat(r.monthsPerSale()).isNotNull();
+            assertThat(r.monthsPerSale()).isGreaterThanOrEqualTo(12.0);
         }
 
         @Test
@@ -662,7 +656,7 @@ class GameScouterServiceTest {
         void twice_in_12_months_is_every_6_months() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(24),
                     List.of(
                             full(TODAY.minusMonths(12)),
@@ -671,7 +665,8 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(3), lowest, 30),
                             full(TODAY.minusMonths(1))));
 
-            assertThat(r[1]).contains("6개월에 1회");
+            assertThat(r.monthsPerSale()).isNotNull();
+            assertThat(r.monthsPerSale()).isBetween(5.0, 7.0);
         }
 
         @Test
@@ -679,7 +674,7 @@ class GameScouterServiceTest {
         void three_in_6_months_is_every_2_months() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(6)),
@@ -690,7 +685,8 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(1), lowest, 30),
                             full(TODAY)));
 
-            assertThat(r[1]).contains("2개월에 1회");
+            assertThat(r.monthsPerSale()).isNotNull();
+            assertThat(r.monthsPerSale()).isBetween(1.5, 2.5);
         }
 
         @Test
@@ -698,7 +694,7 @@ class GameScouterServiceTest {
         void frequent_sales_under_2_months() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(4)),
@@ -709,7 +705,8 @@ class GameScouterServiceTest {
                             sale(TODAY.minusMonths(1), lowest, 30),
                             full(TODAY)));
 
-            assertThat(r[1]).contains("자주 세일하는 편");
+            assertThat(r.monthsPerSale()).isNotNull();
+            assertThat(r.monthsPerSale()).isLessThan(2.0);
         }
     }
 
@@ -726,14 +723,14 @@ class GameScouterServiceTest {
             // discountRate=20이지만 실제 price=OP (데이터 품질 이상)
             // → safeLowest=OP, hasValidLowest=false → Layer 4 가드에서 차단
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false,
+                    OP, OP, null,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(12)),
                             sale(TODAY.minusMonths(3), OP, 20),
                             full(TODAY.minusMonths(1))));
 
-            assertThat(r[0]).isEqualTo("분석 불가");
+            assertThat(r.tier()).isEqualTo("분석 불가");
         }
     }
 
@@ -749,13 +746,14 @@ class GameScouterServiceTest {
         void plus_exclusive_at_historic_low() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, lowest, lowest, true,
+                    OP, lowest, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
                             sale(TODAY.minusDays(3), lowest, 30)));
 
-            assertThat(r[1]).contains("PS Plus 전용").contains("역대 최저가 구간");
+            assertThat(r.tier()).isEqualTo("B급 일반");
+            assertThat(r.discountCount()).isGreaterThan(0);
         }
 
         @Test
@@ -764,7 +762,7 @@ class GameScouterServiceTest {
             int lowest = discountedPrice(35);  // 역대 최저 35%
             int current = discountedPrice(20); // 현재 20%
             var r = sut.calculateDefenseTier(
-                    OP, current, lowest, true,
+                    OP, current, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
@@ -772,7 +770,8 @@ class GameScouterServiceTest {
                             full(TODAY.minusMonths(4)),
                             sale(TODAY.minusDays(3), current, 20)));
 
-            assertThat(r[1]).contains("PS Plus 전용").contains("역대 최저(35%)");
+            assertThat(r.tier()).isEqualTo("B급 일반");
+            assertThat(r.maxRate()).isEqualTo(35);
         }
 
         @Test
@@ -780,16 +779,16 @@ class GameScouterServiceTest {
         void plus_exclusive_flag_ignored_when_not_on_sale() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, true, // isPlusExclusive=true이지만 현재 정가
+                    OP, OP, lowest, // isPlusExclusive 파라미터 제거됨
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
                             sale(TODAY.minusMonths(4), lowest, 30),
                             full(TODAY.minusMonths(2))));
 
-            // 현재 정가일 때는 PS Plus 전용 언급 없어야 함 (성급한 판단 방지)
-            assertThat(r[1]).doesNotContain("PS Plus 전용");
-            assertThat(r[1]).contains("현재 정가");
+            // 정가 상태에서 등급 분류가 올바른지 확인
+            assertThat(r.tier()).isEqualTo("B급 일반");
+            assertThat(r.maxRate()).isEqualTo(30);
         }
     }
 
@@ -805,7 +804,7 @@ class GameScouterServiceTest {
         void null_lowest_computed_from_history() {
             int historicLow = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, null, false, // lowestPrice = null
+                    OP, OP, null, // lowestPrice = null
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
@@ -813,8 +812,8 @@ class GameScouterServiceTest {
                             full(TODAY.minusMonths(2))));
 
             // null이어도 history에서 30% 최저가를 읽어 B급으로 분류 (S급 철벽이 아님)
-            assertThat(r[0]).isNotEqualTo("S급 철벽");
-            assertThat(r[0]).isEqualTo("B급 일반");
+            assertThat(r.tier()).isNotEqualTo("S급 철벽");
+            assertThat(r.tier()).isEqualTo("B급 일반");
         }
 
         @Test
@@ -822,14 +821,14 @@ class GameScouterServiceTest {
         void zero_lowest_computed_from_history() {
             int historicLow = discountedPrice(50);
             var r = sut.calculateDefenseTier(
-                    OP, OP, 0, false, // lowestPrice = 0
+                    OP, OP, 0, // lowestPrice = 0
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
                             sale(TODAY.minusMonths(4), historicLow, 50),
                             full(TODAY.minusMonths(2))));
 
-            assertThat(r[0]).isEqualTo("C급 솜방패");
+            assertThat(r.tier()).isEqualTo("C급 솜방패");
         }
 
         @Test
@@ -837,7 +836,7 @@ class GameScouterServiceTest {
         void lowest_above_original_treated_as_invalid() {
             int historicLow = discountedPrice(40);
             var r = sut.calculateDefenseTier(
-                    OP, OP, OP + 1000, false, // lowestPrice > originalPrice (이상 데이터)
+                    OP, OP, OP + 1000, // lowestPrice > originalPrice (이상 데이터)
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(8)),
@@ -845,53 +844,57 @@ class GameScouterServiceTest {
                             full(TODAY.minusMonths(2))));
 
             // history에서 40% 최저가 계산 → B급 일반
-            assertThat(r[0]).isEqualTo("B급 일반");
+            assertThat(r.tier()).isEqualTo("B급 일반");
         }
     }
 
     // ═══════════════════════════════════════════════════════════
-    // 메시지 구조 검증 (모바일 truncate 고려: 역사 요약이 앞에 위치)
+    // DefenseInfo 수치 필드 검증
     // ═══════════════════════════════════════════════════════════
     @Nested
-    @DisplayName("메시지 구조")
-    class MessageStructureTests {
+    @DisplayName("DefenseInfo 수치 필드")
+    class DefenseInfoFieldTests {
 
         @Test
-        @DisplayName("Layer 4 메시지는 '추적' 정보로 시작 (모바일 truncate 고려)")
-        void message_starts_with_history_summary() {
+        @DisplayName("Layer 4 케이스: 수치 필드가 모두 올바르게 채워짐")
+        void layer4_all_fields_populated() {
             int lowest = discountedPrice(30);
             var r = sut.calculateDefenseTier(
-                    OP, OP, lowest, false,
+                    OP, OP, lowest,
                     TODAY.minusMonths(18),
                     List.of(
                             full(TODAY.minusMonths(12)),
                             sale(TODAY.minusMonths(6), lowest, 30),
                             full(TODAY.minusMonths(4))));
 
-            // 역사 패턴 요약이 메시지 앞부분에 위치
-            assertThat(r[1]).startsWith("12개월 추적");
+            assertThat(r.tier()).isEqualTo("B급 일반");
+            assertThat(r.trackedMonths()).isGreaterThanOrEqualTo(12L);
+            assertThat(r.discountCount()).isEqualTo(1);
+            assertThat(r.maxRate()).isEqualTo(30);
+            assertThat(r.trackingStartDate()).isNotNull();
         }
 
         @Test
-        @DisplayName("추측성 문구가 없음을 검증 (전체 등급 공통)")
-        void no_speculative_phrases_in_any_tier() {
-            List<String> speculative = List.of("통상", "보통", "대개", "일반적으로", "대부분");
+        @DisplayName("예상 다음 할인일은 할인 2회 이상일 때만 계산됨")
+        void next_sale_estimate_requires_at_least_2_discounts() {
+            int lowest = discountedPrice(30);
 
-            // N급 신작
-            var newGame = sut.calculateDefenseTier(
-                    OP, OP, null, false, TODAY.minusMonths(2),
-                    List.of(full(TODAY.minusMonths(2))));
+            // 할인 1회 → null
+            var single = sut.calculateDefenseTier(
+                    OP, OP, lowest, TODAY.minusMonths(18),
+                    List.of(full(TODAY.minusMonths(12)), sale(TODAY.minusMonths(6), lowest, 30), full(TODAY.minusMonths(4))));
+            assertThat(single.nextSaleEstimate()).isNull();
 
-            // A급 방패
-            int lowest = discountedPrice(20);
-            var aGrade = sut.calculateDefenseTier(
-                    OP, OP, lowest, false, TODAY.minusMonths(18),
-                    List.of(full(TODAY.minusMonths(12)), sale(TODAY.minusMonths(6), lowest, 20), full(TODAY.minusMonths(4))));
-
-            for (String phrase : speculative) {
-                assertThat(newGame[1]).as("N급 신작 메시지에 추측성 문구 없어야 함").doesNotContain(phrase);
-                assertThat(aGrade[1]).as("A급 방패 메시지에 추측성 문구 없어야 함").doesNotContain(phrase);
-            }
+            // 할인 2회 → 날짜 반환
+            var multi = sut.calculateDefenseTier(
+                    OP, OP, lowest, TODAY.minusMonths(24),
+                    List.of(
+                            full(TODAY.minusMonths(24)),
+                            sale(TODAY.minusMonths(18), lowest, 30),
+                            full(TODAY.minusMonths(15)),
+                            sale(TODAY.minusMonths(6), lowest, 30),
+                            full(TODAY.minusMonths(3))));
+            assertThat(multi.nextSaleEstimate()).isNotNull();
         }
     }
 }

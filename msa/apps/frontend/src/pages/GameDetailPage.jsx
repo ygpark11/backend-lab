@@ -8,6 +8,7 @@ import RelatedGameCard from '../components/RelatedGameCard';
 import {getGenreBadgeStyle} from '../utils/uiUtils';
 import {getTrafficLight} from '../utils/priceUtils';
 import TargetPriceModal from '../components/TargetPriceModal';
+import DefenseTrophyCard from '../components/DefenseTrophyCard';
 import StealthPanel from '../components/StealthPanel';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import HelpModal from '../components/common/HelpModal';
@@ -35,7 +36,7 @@ import {
     RefreshCw,
     Search,
     Server,
-    ShieldAlert,
+
     Sparkles,
     Square,
     Timer,
@@ -426,16 +427,9 @@ export default function GameDetailPage() {
                             </div>
                         </div>
 
-                        {game.defenseTier && (
-                            <div className={`hidden lg:block bg-base/90 backdrop-blur-xl border rounded-2xl p-5 text-center transition-colors shadow-lg ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'border-red-500/30' : 'border-green-500/30'}`}>
-                                <div className={`flex items-center justify-center gap-1.5 mb-1 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>
-                                    <ShieldAlert className="w-4 h-4" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">할인 방어력</span>
-                                </div>
-                                <div className={`text-2xl font-black mt-2 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</div>
-                                <p className="text-xs text-secondary mt-2 font-bold">{game.defenseMessage}</p>
-                            </div>
-                        )}
+                        <div className="hidden lg:block">
+                            <DefenseTrophyCard defenseInfo={game.defenseInfo} />
+                        </div>
                     </div>
 
                     {/* ========================================== */}
@@ -590,20 +584,9 @@ export default function GameDetailPage() {
                             )}
                         </div>
 
-                        {game.defenseTier && (
-                            <div className={`lg:hidden mb-4 px-4 py-3 rounded-xl border ${
-                                game.defenseTier.includes('S') || game.defenseTier.includes('A')
-                                    ? 'border-red-500/30 bg-red-500/5'
-                                    : 'border-green-500/30 bg-green-500/5'
-                            }`}>
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <ShieldAlert className={`w-4 h-4 shrink-0 ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`} />
-                                    <span className="text-xs font-bold uppercase tracking-widest text-secondary">할인 방어력</span>
-                                    <span className={`text-base font-black ${game.defenseTier.includes('S') || game.defenseTier.includes('A') ? 'text-red-500' : 'text-green-500'}`}>{game.defenseTier}</span>
-                                </div>
-                                <p className="text-xs text-secondary font-bold break-keep">{game.defenseMessage}</p>
-                            </div>
-                        )}
+                        <div className="lg:hidden mb-4">
+                            <DefenseTrophyCard defenseInfo={game.defenseInfo} compact />
+                        </div>
 
                         {/* 현재 에디션 구성품 */}
                         {myEditionContents.length > 0 && (
@@ -1067,7 +1050,7 @@ export default function GameDetailPage() {
 
             {/* Modal Components */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
-            {isTargetModalOpen && <TargetPriceModal onClose={() => setIsTargetModalOpen(false)} game={game} defenseTier={game.defenseTier} onSubmit={(price) => handleTargetSubmit(price)} />}
+            {isTargetModalOpen && <TargetPriceModal onClose={() => setIsTargetModalOpen(false)} game={game} defenseTier={game.defenseInfo?.tier} onSubmit={(price) => handleTargetSubmit(price)} />}
             <HelpModal isOpen={helpInfo.isOpen} type={helpInfo.type} onClose={() => setHelpInfo({ isOpen: false, type: null })} />
         </div>
     );

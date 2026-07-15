@@ -68,8 +68,7 @@ public record GameDetailResponse(
 
         Integer scouterTotalWatchers,
         Integer scouterAverageTargetPrice,
-        String defenseTier,
-        String defenseMessage,
+        DefenseInfo defenseInfo,
 
         // 기타
         List<String> platforms,
@@ -89,7 +88,7 @@ public record GameDetailResponse(
     public GameDetailResponse withDynamicData(
             boolean isLiked, VoteType userVote,
             int totalWatchers, Integer avgTargetPrice, Integer myTargetPrice,
-            String defTier, String defMessage) {
+            DefenseInfo defenseInfo) {
 
         return new GameDetailResponse(
                 this.id, this.title, this.originalTitle, this.publisher,
@@ -104,7 +103,7 @@ public record GameDetailResponse(
                 this.likeCount, this.dislikeCount, userVote,
                 isLiked, myTargetPrice, this.createdAt, this.priceVerdict,
                 this.priceHistory,
-                totalWatchers, avgTargetPrice, defTier, defMessage,
+                totalWatchers, avgTargetPrice, defenseInfo,
                 this.platforms, this.genres, this.inCatalog, this.familyGames, this.relatedGames
         );
     }
@@ -152,10 +151,23 @@ public record GameDetailResponse(
                 vibeTags,
                 game.getLikeCount(), game.getDislikeCount(), null,
                 liked, null, game.getCreatedAt(), verdict, history,
-                0, null, null ,null,
+                0, null, null,
                 game.getPlatforms().stream().map(Enum::name).toList(),
                 genreList, game.isInCatalog(), familyGames, relatedGames
         );
+    }
+
+    public record DefenseInfo(
+            String tier,                  // 등급명 (ex. "S급 철벽", "A급 방패")
+            long trackedMonths,           // 추적 기간(개월)
+            int discountCount,            // 전체 할인 횟수
+            Integer maxRate,              // 역대 최대 할인율(%), 할인 이력 없으면 null
+            Double monthsPerSale,         // 평균 할인 주기(개월), 할인 1회 이하면 null
+            LocalDate nextSaleEstimate,   // 예상 다음 할인 시작일, 데이터 부족하면 null
+            boolean coldStartWarning,     // 수집 시작 당시 이미 할인 중이었는지
+            LocalDate trackingStartDate   // 추적 시작일
+    ) implements Serializable {
+        private static final long serialVersionUID = 3L;
     }
 
     public record FamilyGameDto(
