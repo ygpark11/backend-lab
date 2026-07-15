@@ -12,7 +12,6 @@ import {
     CalendarDays,
     Check,
     ChevronDown,
-    ChevronLeft,
     ChevronRight,
     Circle,
     CircleDollarSign,
@@ -99,6 +98,7 @@ const GameListPage = () => {
     const lastScrollYRef = useRef(0);
     const observer = useRef();
     const recentGamesScrollRef = useRef(null);
+    const dragStateRef = useRef({ isDragging: false, startX: 0, scrollLeft: 0, hasDragged: false });
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
@@ -343,6 +343,30 @@ const GameListPage = () => {
         });
         if (node) observer.current.observe(node);
     }, [loading, page, totalPages]);
+
+    const handleRecentGamesDragStart = useCallback((e) => {
+        const el = recentGamesScrollRef.current;
+        if (!el) return;
+        dragStateRef.current = { isDragging: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft, hasDragged: false };
+        el.style.cursor = 'grabbing';
+    }, []);
+
+    const handleRecentGamesDragMove = useCallback((e) => {
+        const state = dragStateRef.current;
+        if (!state.isDragging) return;
+        e.preventDefault();
+        const el = recentGamesScrollRef.current;
+        if (!el) return;
+        const x = e.pageX - el.offsetLeft;
+        const delta = x - state.startX;
+        if (Math.abs(delta) > 5) state.hasDragged = true;
+        el.scrollLeft = state.scrollLeft - delta * 1.5;
+    }, []);
+
+    const handleRecentGamesDragEnd = useCallback(() => {
+        dragStateRef.current.isDragging = false;
+        if (recentGamesScrollRef.current) recentGamesScrollRef.current.style.cursor = 'grab';
+    }, []);
 
     const handleContactClick = useCallback((e) => {
         e.preventDefault();
@@ -1567,9 +1591,9 @@ const GameListPage = () => {
                 {/* 스마트 플로팅 바 */}
                 <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-40 transition-transform duration-300 ease-in-out ${isFloatingVisible ? 'translate-y-0' : 'translate-y-24'}`}>
                     <div className="flex items-center gap-2 bg-glass backdrop-blur-md md:backdrop-blur-xl border border-divider p-2 pl-4 rounded-full shadow-glow">
-                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="빠른 검색"><Search className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" /></button>
+                        <button onClick={() => setIsQuickSearchOpen(true)} className="group flex items-center justify-center w-10 h-10 rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-ps-blue/50 hover:shadow-[0_0_10px_rgba(0,67,156,0.2)] transition-all active:scale-95" title="빠른 검색"><Search className="w-4 h-4 text-secondary group-hover:text-primary transition-colors" /></button>
 
-                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-hover transition-all border border-divider bg-surface" title="맨 위로"><Triangle className="w-5 h-5 text-green-500 fill-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] group-hover:-translate-y-1 transition-transform" /></button>
+                        <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="group flex items-center justify-center w-10 h-10 rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-green-500/50 hover:shadow-[0_0_10px_rgba(34,197,94,0.2)] transition-all active:scale-95" title="맨 위로"><Triangle className="w-5 h-5 text-green-500 fill-green-500 drop-shadow-[0_0_5px_rgba(34,197,94,0.8)] group-hover:-translate-y-1 transition-transform" /></button>
 
                         <div className="w-[1px] h-6 bg-divider mx-1"></div>
                         <button onClick={handleContactClick} className="group flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full transition-all border border-[color:var(--bento-blue-border)] bg-[var(--bento-blue-from)] hover:border-[color:var(--bento-blue-border-hover)] relative overflow-hidden" title="문의 및 제휴">
@@ -1607,24 +1631,18 @@ const GameListPage = () => {
                                             초기화
                                         </button>
                                     </div>
-                                    <div className="relative">
-                                        <button
-                                            onClick={() => recentGamesScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}
-                                            className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 items-center justify-center rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-ps-blue/50 hover:shadow-[0_0_10px_rgba(0,67,156,0.3)] transition-all active:scale-95"
-                                        >
-                                            <ChevronLeft className="w-4 h-4 text-secondary" />
-                                        </button>
-                                        <button
-                                            onClick={() => recentGamesScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}
-                                            className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 items-center justify-center rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-ps-blue/50 hover:shadow-[0_0_10px_rgba(0,67,156,0.3)] transition-all active:scale-95"
-                                        >
-                                            <ChevronRight className="w-4 h-4 text-secondary" />
-                                        </button>
-                                    <div ref={recentGamesScrollRef} className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                    <div
+                                        ref={recentGamesScrollRef}
+                                        className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 cursor-grab select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                        onMouseDown={handleRecentGamesDragStart}
+                                        onMouseMove={handleRecentGamesDragMove}
+                                        onMouseUp={handleRecentGamesDragEnd}
+                                        onMouseLeave={handleRecentGamesDragEnd}
+                                    >
                                         {recentGames.map((g) => (
                                             <button
                                                 key={g.id}
-                                                onClick={() => { setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
+                                                onClick={() => { if (dragStateRef.current.hasDragged) return; setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
                                                 className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
                                             >
                                                 <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
@@ -1642,7 +1660,6 @@ const GameListPage = () => {
                                                 </div>
                                             </button>
                                         ))}
-                                    </div>
                                     </div>
                                 </div>
                             )}
