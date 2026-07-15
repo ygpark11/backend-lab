@@ -12,6 +12,7 @@ import {
     CalendarDays,
     Check,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     Circle,
     CircleDollarSign,
@@ -97,6 +98,7 @@ const GameListPage = () => {
 
     const lastScrollYRef = useRef(0);
     const observer = useRef();
+    const recentGamesScrollRef = useRef(null);
 
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
@@ -1605,7 +1607,20 @@ const GameListPage = () => {
                                             초기화
                                         </button>
                                     </div>
-                                    <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => recentGamesScrollRef.current?.scrollBy({ left: -300, behavior: 'smooth' })}
+                                            className="hidden lg:flex absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-7 h-7 items-center justify-center rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-ps-blue/50 hover:shadow-[0_0_10px_rgba(0,67,156,0.3)] transition-all active:scale-95"
+                                        >
+                                            <ChevronLeft className="w-4 h-4 text-secondary" />
+                                        </button>
+                                        <button
+                                            onClick={() => recentGamesScrollRef.current?.scrollBy({ left: 300, behavior: 'smooth' })}
+                                            className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-7 h-7 items-center justify-center rounded-full bg-glass backdrop-blur-sm border border-divider hover:border-ps-blue/50 hover:shadow-[0_0_10px_rgba(0,67,156,0.3)] transition-all active:scale-95"
+                                        >
+                                            <ChevronRight className="w-4 h-4 text-secondary" />
+                                        </button>
+                                    <div ref={recentGamesScrollRef} className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                                         {recentGames.map((g) => (
                                             <button
                                                 key={g.id}
@@ -1627,6 +1642,7 @@ const GameListPage = () => {
                                                 </div>
                                             </button>
                                         ))}
+                                    </div>
                                     </div>
                                 </div>
                             )}
