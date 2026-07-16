@@ -14,7 +14,8 @@
       "Read(//c/Users/Yonggyu/Desktop/study/docker-study/msa/apps/**)",
       "Bash(mvn compile:*)",
       "Bash(./gradlew compileJava)",
-      "Bash(./gradlew test:*)"
+      "Bash(./gradlew test:*)",
+      "Bash(grep -E \"\\\\.\\(java\\)$\")"
     ]
   }
 }

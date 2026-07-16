@@ -45,6 +45,7 @@ import {
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
+import TrendingGamesWidget from '../components/TrendingGamesWidget';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
@@ -169,6 +170,15 @@ const GameListPage = () => {
 
     const isPriceFilterActive = filter.minPrice !== '' || filter.maxPrice !== '';
     const isPlayTimeFilterActive = filter.minPlayTime !== '' || filter.maxPlayTime !== '';
+
+    const isFilterActive = !!(
+        filter.keyword || filter.genre || filter.minDiscountRate || filter.minMetaScore ||
+        filter.platform || filter.isPlusExclusive || filter.inCatalog ||
+        isPriceFilterActive || isPlayTimeFilterActive ||
+        filter.isAllTimeLow || filter.isPs5ProEnhanced || filter.isBestSeller ||
+        filter.isMostDownloaded || filter.isClosingSoon || filter.isNewDiscount ||
+        (filter.vibeTags && filter.vibeTags.length > 0) || filter.curation
+    );
 
     const fetchGames = async (pageNumber, overrideFilter = null) => {
         const currentFilter = overrideFilter || filter;
@@ -1428,6 +1438,8 @@ const GameListPage = () => {
                         </div>
                     )}
                 </div>
+
+                {!isFilterActive && <TrendingGamesWidget />}
 
                 {!loading && <p className="text-muted text-sm mb-4 text-right">총 <span className="text-primary font-bold">{totalElements.toLocaleString()}</span>개의 게임이 검색되었습니다.</p>}
 

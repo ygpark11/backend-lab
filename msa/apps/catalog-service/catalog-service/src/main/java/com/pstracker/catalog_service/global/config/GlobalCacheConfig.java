@@ -40,6 +40,9 @@ public class GlobalCacheConfig {
     public static final String INSIGHT_KEY_PT_LONG = "'ptLong'";
     public static final String INSIGHT_KEY_PT_EPIC = "'ptEpic'";
 
+    public static final String TRENDING_CACHE = "trendingCache";
+    public static final String TRENDING_KEY_TOP_GAMES = "'trendingTopGames'";
+
     @Bean
     public CacheManager cacheManager(MeterRegistry meterRegistry) {
         // 1. 게임 상세 캐시 (전체 게임 수 ~2,000개 기준, 1GB 서버 메모리 고려)
@@ -78,8 +81,17 @@ public class GlobalCacheConfig {
         CaffeineCacheMetrics.monitor(meterRegistry, curationNative, CURATION_CACHE);
         CaffeineCache curationCache = new CaffeineCache(CURATION_CACHE, curationNative);
 
+        // 5. 트렌딩(찜 TOP N) 캐시 (1시간 TTL — 찜 변화에 빠르게 반응)
+        Cache<Object, Object> trendingNative = Caffeine.newBuilder()
+                .expireAfterWrite(1, TimeUnit.HOURS)
+                .maximumSize(1)
+                .recordStats()
+                .build();
+        CaffeineCacheMetrics.monitor(meterRegistry, trendingNative, TRENDING_CACHE);
+        CaffeineCache trendingCache = new CaffeineCache(TRENDING_CACHE, trendingNative);
+
         SimpleCacheManager manager = new SimpleCacheManager();
-        manager.setCaches(List.of(gameDetailCache, insightsCache, psPlusPricingCache, curationCache));
+        manager.setCaches(List.of(gameDetailCache, insightsCache, psPlusPricingCache, curationCache, trendingCache));
         return manager;
     }
 }

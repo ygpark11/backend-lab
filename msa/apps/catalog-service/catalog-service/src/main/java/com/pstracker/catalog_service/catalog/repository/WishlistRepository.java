@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 
 public interface WishlistRepository extends JpaRepository<Wishlist, Long>, WishlistRepositoryCustom {
     @Query("SELECT w FROM Wishlist w WHERE w.member.id = :memberId AND w.game.id = :gameId")
@@ -42,4 +43,7 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
     @Modifying
     @Query("UPDATE Wishlist w SET w.targetPrice = null WHERE w.game.id = :gameId AND w.targetPrice >= :newOriginalPrice")
     void resetInvalidTargetPrices(@Param("gameId") Long gameId, @Param("newOriginalPrice") Integer newOriginalPrice);
+
+    @Query("SELECT w.game.id FROM Wishlist w GROUP BY w.game.id ORDER BY COUNT(w) DESC")
+    List<Long> findTopGameIdsByWishlistCount(Pageable pageable);
 }

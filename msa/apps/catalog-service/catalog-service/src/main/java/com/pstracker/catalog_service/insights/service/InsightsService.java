@@ -1,18 +1,27 @@
 package com.pstracker.catalog_service.insights.service;
 
+import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.insights.dto.TrendingGameResponse;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
+import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.insights.dto.DiscountSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.pstracker.catalog_service.global.config.GlobalCacheConfig.*;
 
@@ -148,5 +157,32 @@ public class InsightsService {
     @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_PT_EPIC)
     public long getEpicPlayTimeCount() {
         return gameRepository.countEpicPlayTimeGames();
+    }
+
+    @Cacheable(cacheNames = TRENDING_CACHE, key = TRENDING_KEY_TOP_GAMES)
+    public List<TrendingGameResponse> getTrendingGames() {
+        List<Long> topGameIds = wishlistRepository.findTopGameIdsByWishlistCount(PageRequest.of(0, 20));
+        if (topGameIds.isEmpty()) return List.of();
+
+        Map<Long, Game> gameMap = gameRepository.findAllById(topGameIds).stream()
+                .collect(Collectors.toMap(Game::getId, g -> g));
+
+        List<TrendingGameResponse> result = new ArrayList<>();
+        for (int i = 0; i < topGameIds.size(); i++) {
+            Game game = gameMap.get(topGameIds.get(i));
+            if (game == null) continue;
+            PriceVerdict verdict = PriceVerdictCalculator.forGame(
+                    game.getCurrentPrice(), game.getOriginalPrice(), game.getAllTimeLowPrice(), 5);
+            result.add(new TrendingGameResponse(
+                    i + 1,
+                    game.getId(),
+                    game.getName(),
+                    game.getImageUrl(),
+                    game.getCurrentPrice(),
+                    game.getDiscountRate(),
+                    verdict.name()
+            ));
+        }
+        return result;
     }
 }

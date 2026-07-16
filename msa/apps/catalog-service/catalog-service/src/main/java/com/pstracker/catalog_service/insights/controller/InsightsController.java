@@ -1,15 +1,14 @@
 package com.pstracker.catalog_service.insights.controller;
 
 import com.pstracker.catalog_service.insights.dto.DiscountSummaryResponse;
+import com.pstracker.catalog_service.insights.dto.TrendingGameResponse;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -68,6 +67,13 @@ public class InsightsController {
         response.put("ptEpicCount", insightsService.getEpicPlayTimeCount());
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/trending")
+    public ResponseEntity<List<TrendingGameResponse>> getTrendingGames(
+            @RequestParam(defaultValue = "10") int limit) {
+        List<TrendingGameResponse> all = insightsService.getTrendingGames();
+        return ResponseEntity.ok(all.stream().limit(Math.min(limit, 20)).toList());
     }
 
     @PostMapping("/refresh")
