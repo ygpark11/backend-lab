@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.insights.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
+import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.insights.dto.TrendingGameResponse;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
@@ -33,6 +34,7 @@ public class InsightsService {
 
     private final GameRepository gameRepository;
     private final WishlistRepository wishlistRepository;
+    private final GamePriceHistoryRepository priceHistoryRepository;
     private final CacheManager cacheManager;
 
     /**
@@ -167,12 +169,20 @@ public class InsightsService {
         Map<Long, Game> gameMap = gameRepository.findAllById(topGameIds).stream()
                 .collect(Collectors.toMap(Game::getId, g -> g));
 
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countGroupByGameId(topGameIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        arr -> (Long) arr[0],
+                        arr -> ((Long) arr[1]).intValue()
+                ));
+
         List<TrendingGameResponse> result = new ArrayList<>();
         for (int i = 0; i < topGameIds.size(); i++) {
             Game game = gameMap.get(topGameIds.get(i));
             if (game == null) continue;
+            int historySize = historyCountMap.getOrDefault(game.getId(), 0);
             PriceVerdict verdict = PriceVerdictCalculator.forGame(
-                    game.getCurrentPrice(), game.getOriginalPrice(), game.getAllTimeLowPrice(), 5);
+                    game.getCurrentPrice(), game.getOriginalPrice(), game.getAllTimeLowPrice(), historySize);
             result.add(new TrendingGameResponse(
                     i + 1,
                     game.getId(),
