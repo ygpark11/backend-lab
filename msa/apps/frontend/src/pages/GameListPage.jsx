@@ -96,6 +96,8 @@ const GameListPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { openLoginModal } = useAuth();
 
+    const filterBoxRef = useRef(null);
+    const swipeStartYRef = useRef(0);
     const lastScrollYRef = useRef(0);
     const observer = useRef();
     const recentGamesScrollRef = useRef(null);
@@ -107,12 +109,11 @@ const GameListPage = () => {
     const [suggestions, setSuggestions] = useState([]);
     const [isDesktopSearchActive, setIsDesktopSearchActive] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
-    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [expandedPill, setExpandedPill] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
-    const [showFilter, setShowFilter] = useState(false);
     const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
     const [priceRange, setPriceRange] = useState({
@@ -231,7 +232,7 @@ const GameListPage = () => {
     const handlePriceReset = () => {
         setPriceRange({ min: '', max: '' });
         setFilter(prev => ({ ...prev, minPrice: '', maxPrice: '' }));
-        setActiveDropdown(null);
+        setExpandedPill(null);
         setPage(0);
     };
 
@@ -250,7 +251,7 @@ const GameListPage = () => {
             minPrice: minVal !== '' ? String(minVal) : '',
             maxPrice: maxVal !== '' ? String(maxVal) : ''
         }));
-        setActiveDropdown(null);
+        setExpandedPill(null);
         setPage(0);
     };
 
@@ -290,7 +291,7 @@ const GameListPage = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             setIsQuickSearchOpen(false);
         } else {
-            setActiveDropdown(null);
+            setExpandedPill(null);
         }
     };
 
@@ -307,7 +308,7 @@ const GameListPage = () => {
 
     const handleCustomSelect = (name, value) => {
         setFilter(prev => ({ ...prev, [name]: value }));
-        setActiveDropdown(null);
+        setExpandedPill(null);
         setPage(0);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -620,6 +621,18 @@ const GameListPage = () => {
 
         checkPsPlusDeal();
     }, []);
+
+    // 필터 pill 외부 클릭 시 닫기
+    useEffect(() => {
+        if (!expandedPill) return;
+        const handleClickOutside = (e) => {
+            if (filterBoxRef.current && !filterBoxRef.current.contains(e.target)) {
+                setExpandedPill(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [expandedPill]);
 
     // 바텀시트 열릴 때 최근 본 게임 로드
     useEffect(() => {
@@ -1178,8 +1191,9 @@ const GameListPage = () => {
                 {/* 다이내믹 인사이트 배너 */}
                 {renderActionBanner()}
 
-                <div className="relative z-40 bg-glass backdrop-blur-md md:backdrop-blur-xl p-6 rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
-                    <div className="flex flex-col md:flex-row gap-4">
+                <div ref={filterBoxRef} className="relative z-40 bg-glass backdrop-blur-md md:backdrop-blur-xl rounded-xl border border-divider shadow-lg mb-8 transition-colors duration-500">
+                    {/* 검색 행 */}
+                    <div className="flex items-center gap-3 p-4 md:p-5 pb-3">
                         <div className="relative flex-1">
                             <input
                                 type="text"
@@ -1190,7 +1204,8 @@ const GameListPage = () => {
                                 onKeyDown={handleKeyDown}
                                 onFocus={() => setIsDesktopSearchActive(true)}
                                 onBlur={() => setTimeout(() => setIsDesktopSearchActive(false), 150)}
-                                className="w-full bg-base border border-divider rounded-lg py-3 pl-12 pr-4 text-primary placeholder-muted focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all shadow-inner" />
+                                className="w-full bg-base border border-divider rounded-lg py-3 pl-12 pr-4 text-primary placeholder-muted focus:outline-none focus:border-ps-blue focus:ring-1 focus:ring-ps-blue transition-all shadow-inner"
+                            />
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
                             {isDesktopSearchActive && !isQuickSearchOpen && suggestions.length > 0 && (
                                 <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-base border border-divider rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.3)] overflow-hidden animate-in fade-in zoom-in-95 duration-150 origin-top">
@@ -1210,231 +1225,404 @@ const GameListPage = () => {
                                 </div>
                             )}
                         </div>
-
-                        <div className="relative min-w-[180px]">
-                            <button
-                                disabled={filter.isBestSeller || filter.isMostDownloaded}
-                                onClick={() => setActiveDropdown(activeDropdown === 'sort' ? null : 'sort')}
-                                onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'sort' ? null : prev), 200)}
-                                className={`w-full bg-base border border-divider rounded-lg px-4 py-3 text-sm font-bold text-primary flex items-center justify-between transition-all shadow-inner
-                                    ${(filter.isBestSeller || filter.isMostDownloaded) ? 'opacity-50 cursor-not-allowed' : 'hover:border-ps-blue hover:bg-surface-hover'}`}
-                            >
-                                <span className="flex items-center gap-2">
-                                    {(filter.isBestSeller || filter.isMostDownloaded) ? (
-                                        <><Lock className="w-4 h-4 text-secondary"/> 랭킹순 고정됨</>
-                                    ) : (
-                                        <>
-                                            {sortOptions.find(opt => opt.value === filter.sort)?.icon && React.createElement(sortOptions.find(opt => opt.value === filter.sort).icon, { className: `w-4 h-4 ${sortOptions.find(opt => opt.value === filter.sort).color}` })}
-                                            {sortOptions.find(opt => opt.value === filter.sort)?.label.split(' ')[1] || '정렬'}
-                                        </>
-                                    )}
-                                </span>
-                                {!(filter.isBestSeller || filter.isMostDownloaded) && <ChevronDown className={`w-4 h-4 text-secondary transition-transform duration-200 ${activeDropdown === 'sort' ? 'rotate-180' : ''}`} />}
-                            </button>
-                            {activeDropdown === 'sort' && (
-                                <div className="absolute top-full mt-2 right-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn origin-top">
-                                    <div className="py-1">
-                                        {sortOptions.map((option) => (
-                                            <button key={option.value} onClick={() => handleCustomSelect('sort', option.value)} className={`w-full px-4 py-3 text-sm font-bold flex items-center gap-3 transition-colors ${filter.sort === option.value ? 'bg-ps-blue/10 text-ps-blue' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
-                                                <option.icon className={`w-4 h-4 ${option.color}`} /> {option.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <button
-                            onClick={() => setShowFilter(!showFilter)}
-                            className={`px-4 py-3 rounded-lg border text-sm font-bold flex items-center gap-2 transition-all duration-300 whitespace-nowrap ${
-                                showFilter
-                                    ? 'bg-ps-blue border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                                    : 'bg-base border-divider text-secondary hover:border-primary hover:text-primary shadow-inner'
-                            }`}
-                        >
-                            <Filter className="w-4 h-4" /> 상세 필터
-                        </button>
                         <button
                             onClick={executeSearch}
-                            className="px-6 py-3 rounded-lg text-sm font-bold transition-all duration-300 whitespace-nowrap bg-primary text-[color:var(--color-bg-base)] hover:opacity-80 shadow-md"
+                            className="shrink-0 px-5 py-3 rounded-lg text-sm font-bold transition-all whitespace-nowrap bg-primary text-[color:var(--color-bg-base)] hover:opacity-80 shadow-md active:scale-95"
                         >
                             검색
                         </button>
                     </div>
 
-                    {showFilter && (
-                        <div className="mt-6 pt-6 border-t border-divider grid grid-cols-2 md:grid-cols-4 gap-6 animate-fadeIn">
-                            <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Percent className="w-3 h-3 text-red-400"/>최소 할인율</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'discount' ? null : 'discount')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'discount' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
-                                    <span className="truncate">{discountOptions.find(o => o.value === filter.minDiscountRate)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'discount' ? 'rotate-180' : ''}`} />
-                                </button>
-                                {activeDropdown === 'discount' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
-                                        <div className="py-1">
-                                            {discountOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('minDiscountRate', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minDiscountRate === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                    {/* 활성 필터 요약 바 — 모바일 전용 */}
+                    <div className="flex items-center gap-2 px-4 pb-3 md:hidden overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        <button
+                            onClick={() => setIsQuickSearchOpen(true)}
+                            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-xs font-bold bg-surface border-divider text-secondary hover:border-ps-blue/50 hover:text-primary transition-all active:scale-95 whitespace-nowrap"
+                        >
+                            <Filter className="w-3.5 h-3.5" />
+                            <span>필터</span>
+                            {isFilterActive && (
+                                <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-ps-blue text-white text-[9px] font-black leading-none">
+                                    {[
+                                        filter.sort !== 'lastUpdated,desc' && !filter.isBestSeller && !filter.isMostDownloaded,
+                                        !!filter.minDiscountRate, isPriceFilterActive, isPlayTimeFilterActive,
+                                        !!filter.minMetaScore, !!filter.platform,
+                                        filter.isPlusExclusive, filter.inCatalog, filter.isPs5ProEnhanced,
+                                        filter.isAllTimeLow,
+                                    ].filter(Boolean).length}
+                                </span>
+                            )}
+                        </button>
+                        {isFilterActive && <div className="shrink-0 w-px h-4 bg-divider-strong" />}
+                        {filter.sort !== 'lastUpdated,desc' && !filter.isBestSeller && !filter.isMostDownloaded && (() => {
+                            const opt = sortOptions.find(o => o.value === filter.sort);
+                            return (
+                                <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-blue-500/15 border-blue-500/40 text-blue-400 text-xs font-bold whitespace-nowrap">
+                                    <span>{opt?.label}</span>
+                                    <button onClick={() => { setFilter(p => ({...p, sort: 'lastUpdated,desc'})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })()}
+                        {!!filter.minDiscountRate && (() => {
+                            const opt = discountOptions.find(o => o.value === filter.minDiscountRate);
+                            return (
+                                <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-red-500/15 border-red-500/40 text-red-400 text-xs font-bold whitespace-nowrap">
+                                    <span>{opt?.label}</span>
+                                    <button onClick={() => { setFilter(p => ({...p, minDiscountRate: ''})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })()}
+                        {isPriceFilterActive && (() => {
+                            const min = filter.minPrice ? `${Math.round(Number(filter.minPrice)/10000)}만` : '';
+                            const max = filter.maxPrice ? `${Math.round(Number(filter.maxPrice)/10000)}만` : '';
+                            const label = min && max ? `${min}~${max}` : min ? `${min}~` : `~${max}`;
+                            return (
+                                <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-green-500/15 border-green-500/40 text-green-400 text-xs font-bold whitespace-nowrap">
+                                    <span>{label}</span>
+                                    <button onClick={handlePriceReset} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })()}
+                        {isPlayTimeFilterActive && (() => {
+                            const preset = PLAYTIME_PRESETS.find(p => p.id === selectedPlayTimeId);
+                            return (
+                                <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-teal-500/15 border-teal-500/40 text-teal-400 text-xs font-bold whitespace-nowrap">
+                                    <span>{preset?.label || '플탐'}</span>
+                                    <button onClick={() => { setSelectedPlayTimeId(null); setFilter(p => ({...p, minPlayTime: '', maxPlayTime: ''})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })()}
+                        {!!filter.minMetaScore && (() => {
+                            const opt = metaScoreOptions.find(o => o.value === filter.minMetaScore);
+                            return (
+                                <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-purple-500/15 border-purple-500/40 text-purple-400 text-xs font-bold whitespace-nowrap">
+                                    <span>{opt?.label}</span>
+                                    <button onClick={() => { setFilter(p => ({...p, minMetaScore: ''})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                                </div>
+                            );
+                        })()}
+                        {!!filter.platform && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-indigo-500/15 border-indigo-500/40 text-indigo-400 text-xs font-bold whitespace-nowrap">
+                                <span>{filter.platform}</span>
+                                <button onClick={() => { setFilter(p => ({...p, platform: ''})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
                             </div>
-
-                            <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><CircleDollarSign className="w-3 h-3 text-green-400"/>가격 범위</label>
-                                <button
-                                    onClick={() => setActiveDropdown(activeDropdown === 'price' ? null : 'price')}
-                                    className={`w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner ${
-                                        isPriceFilterActive ? 'bg-ps-blue/10 text-ps-blue font-bold border-ps-blue/50' : 'text-primary'
-                                    }`}
-                                >
-                                    <span className="truncate">
-                                        {isPriceFilterActive
-                                            ? `${filter.minPrice ? Number(filter.minPrice).toLocaleString() + '원' : '0원'} ~ ${filter.maxPrice ? Number(filter.maxPrice).toLocaleString() + '원' : '최대'}`
-                                            : '전체 범위'}
-                                    </span>
-                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'price' ? 'rotate-180' : ''}`} />
-                                </button>
-                                {activeDropdown === 'price' && (
-                                    <div className="absolute top-full mt-2 right-0 md:right-auto md:left-0 w-[300px] md:w-80 bg-base border border-divider rounded-2xl shadow-2xl z-50 p-5 animate-fadeIn origin-top-right md:origin-top-left" onClick={(e) => e.stopPropagation()}>
-                                        <div className="flex items-center gap-2 mb-5">
-                                            <div className="relative flex-1">
-                                                <input type="number" min="0" placeholder="예: 10000" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-bold text-xs">원</span>
-                                            </div>
-                                            <span className="text-secondary font-bold">~</span>
-                                            <div className="relative flex-1">
-                                                <input type="number" min="0" placeholder="예: 50000" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-sm focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted font-bold text-xs">원</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <button onClick={handlePriceReset} className="flex-1 px-4 py-2 bg-surface hover:bg-surface-hover text-secondary hover:text-primary rounded-lg text-xs font-bold transition-colors">초기화</button>
-                                            <button onClick={handlePriceApply} className="flex-1 px-4 py-2 bg-ps-blue hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors shadow-[0_0_15px_rgba(59,130,246,0.3)]">적용</button>
-                                        </div>
-                                    </div>
-                                )}
+                        )}
+                        {filter.isPlusExclusive && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-yellow-500/15 border-yellow-500/40 text-yellow-400 text-xs font-bold whitespace-nowrap">
+                                <span>PLUS</span>
+                                <button onClick={() => { setFilter(p => ({...p, isPlusExclusive: false})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
                             </div>
+                        )}
+                        {filter.inCatalog && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-yellow-500/15 border-yellow-500/40 text-yellow-400 text-xs font-bold whitespace-nowrap">
+                                <span>스페셜</span>
+                                <button onClick={() => { setFilter(p => ({...p, inCatalog: false})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                            </div>
+                        )}
+                        {filter.isPs5ProEnhanced && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-primary/10 border-primary/30 text-primary text-xs font-bold whitespace-nowrap">
+                                <span>Pro</span>
+                                <button onClick={() => { setFilter(p => ({...p, isPs5ProEnhanced: false})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                            </div>
+                        )}
+                        {filter.isAllTimeLow && (
+                            <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-green-500/15 border-green-500/40 text-green-500 text-xs font-bold whitespace-nowrap">
+                                <Circle className="w-3 h-3 fill-green-500" />
+                                <span>역대최저</span>
+                                <button onClick={() => { setFilter(p => ({...p, isAllTimeLow: false})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
+                            </div>
+                        )}
+                    </div>
 
-                            <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1">
-                                    <Clock className="w-3 h-3 text-teal-400"/>플레이 타임
-                                </label>
+                    {/* 필터 Pill 행 — PC 전용 */}
+                    <div className="relative hidden md:block">
+                    <div className="flex items-center gap-2 px-4 md:px-5 pb-4 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                        {/* 정렬 */}
+                        {(() => {
+                            const isLocked = filter.isBestSeller || filter.isMostDownloaded;
+                            const sortOpt = sortOptions.find(o => o.value === filter.sort) || sortOptions[0];
+                            const isActive = filter.sort !== 'lastUpdated,desc';
+                            return (
                                 <button
-                                    onClick={() => setActiveDropdown(activeDropdown === 'playtime' ? null : 'playtime')}
-                                    className={`w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner ${
-                                        isPlayTimeFilterActive ? 'bg-ps-blue/10 text-ps-blue font-bold border-ps-blue/50' : 'text-primary'
-                                    }`}
+                                    disabled={isLocked}
+                                    onClick={() => !isLocked && setExpandedPill(expandedPill === 'sort' ? null : 'sort')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isLocked ? 'opacity-50 cursor-not-allowed bg-surface border-divider text-muted' :
+                                            isActive ? 'bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]' :
+                                            expandedPill === 'sort' ? 'bg-surface border-ps-blue text-ps-blue' :
+                                            'bg-surface border-divider text-secondary hover:border-ps-blue/50 hover:text-primary'}`}
                                 >
-                                    <span className="truncate">
-                                        {isPlayTimeFilterActive
-                                            ? PLAYTIME_PRESETS.find(p => p.id === selectedPlayTimeId)?.label || '선택됨'
-                                            : '전체 시간'}
-                                    </span>
-                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'playtime' ? 'rotate-180' : ''}`} />
+                                    {isLocked ? <Lock className="w-3 h-3" /> : <sortOpt.icon className={`w-3 h-3 ${isActive ? 'text-blue-400' : sortOpt.color}`} />}
+                                    <span>{isLocked ? '랭킹순' : (isActive ? sortOpt.label : '정렬')}</span>
+                                    {isActive && !isLocked
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, sort: 'lastUpdated,desc'})); setExpandedPill(null); setPage(0); }} />
+                                        : !isLocked && <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'sort' ? 'rotate-180' : ''}`} />
+                                    }
                                 </button>
-                                {activeDropdown === 'playtime' && (
-                                    <div className="absolute top-full mt-2 left-0 w-[280px] bg-base border border-divider rounded-2xl shadow-2xl z-50 p-4 animate-fadeIn origin-top-left" onClick={(e) => e.stopPropagation()}>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            {PLAYTIME_PRESETS.map((preset) => {
-                                                const Icon = preset.icon;
-                                                const isSelected = selectedPlayTimeId === preset.id;
-                                                return (
-                                                    <button
-                                                        key={preset.id}
-                                                        onClick={() => handlePlayTimeSelect(preset, false)}
-                                                        className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
-                                                            isSelected
-                                                                ? 'bg-ps-blue/10 border-ps-blue text-ps-blue shadow-[0_0_15px_rgba(59,130,246,0.15)]'
-                                                                : `bg-surface border-divider ${preset.bg} text-primary`
-                                                        }`}
-                                                    >
-                                                        <Icon className={`w-5 h-5 mb-1.5 ${isSelected ? 'text-ps-blue' : preset.color}`} />
-                                                        <span className="text-xs font-black tracking-tight">{preset.label}</span>
-                                                        <span className="text-[9px] font-bold opacity-60">{preset.range}</span>
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
+                            );
+                        })()}
 
-                                        <button
-                                            onClick={() => handlePlayTimeSelect(null, false)}
-                                            className="w-full mt-3 py-2.5 bg-surface hover:bg-surface-hover text-xs font-bold text-secondary hover:text-primary rounded-lg transition-colors border border-divider shadow-sm"
+                        <div className="shrink-0 w-px h-4 bg-divider-strong mx-0.5" />
+
+                        {/* 할인율 */}
+                        {(() => {
+                            const isActive = filter.minDiscountRate !== '';
+                            const activeOpt = discountOptions.find(o => o.value === filter.minDiscountRate);
+                            return (
+                                <button
+                                    onClick={() => setExpandedPill(expandedPill === 'discount' ? null : 'discount')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isActive ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]' :
+                                            expandedPill === 'discount' ? 'bg-surface border-red-400/40 text-red-400' :
+                                            'bg-surface border-divider text-secondary hover:border-red-400/30 hover:text-primary'}`}
+                                >
+                                    <Percent className="w-3 h-3" />
+                                    <span>{isActive ? activeOpt?.label : '할인율'}</span>
+                                    {isActive
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, minDiscountRate: ''})); setExpandedPill(null); setPage(0); }} />
+                                        : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'discount' ? 'rotate-180' : ''}`} />
+                                    }
+                                </button>
+                            );
+                        })()}
+
+                        {/* 가격 */}
+                        {(() => {
+                            const isActive = isPriceFilterActive;
+                            return (
+                                <button
+                                    onClick={() => setExpandedPill(expandedPill === 'price' ? null : 'price')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isActive ? 'bg-green-500/15 border-green-500/40 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]' :
+                                            expandedPill === 'price' ? 'bg-surface border-green-400/40 text-green-400' :
+                                            'bg-surface border-divider text-secondary hover:border-green-400/30 hover:text-primary'}`}
+                                >
+                                    <Banknote className="w-3 h-3" />
+                                    <span>{isActive ? `${filter.minPrice ? `${Number(filter.minPrice).toLocaleString()}원` : '0원'}~${filter.maxPrice ? `${Number(filter.maxPrice).toLocaleString()}원` : '최대'}` : '가격'}</span>
+                                    {isActive
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, minPrice: '', maxPrice: ''})); setPriceRange({min: '', max: ''}); setExpandedPill(null); setPage(0); }} />
+                                        : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'price' ? 'rotate-180' : ''}`} />
+                                    }
+                                </button>
+                            );
+                        })()}
+
+                        {/* 플탐 */}
+                        {(() => {
+                            const isActive = isPlayTimeFilterActive;
+                            const preset = PLAYTIME_PRESETS.find(p => p.id === selectedPlayTimeId);
+                            const PtIcon = preset?.icon || Timer;
+                            return (
+                                <button
+                                    onClick={() => setExpandedPill(expandedPill === 'playtime' ? null : 'playtime')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isActive ? 'bg-teal-500/15 border-teal-500/40 text-teal-400 shadow-[0_0_10px_rgba(20,184,166,0.2)]' :
+                                            expandedPill === 'playtime' ? 'bg-surface border-teal-400/40 text-teal-400' :
+                                            'bg-surface border-divider text-secondary hover:border-teal-400/30 hover:text-primary'}`}
+                                >
+                                    <PtIcon className="w-3 h-3" />
+                                    <span>{isActive ? preset?.label : '플탐'}</span>
+                                    {isActive
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, minPlayTime: '', maxPlayTime: ''})); setSelectedPlayTimeId(null); setExpandedPill(null); setPage(0); }} />
+                                        : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'playtime' ? 'rotate-180' : ''}`} />
+                                    }
+                                </button>
+                            );
+                        })()}
+
+                        {/* 평점 */}
+                        {(() => {
+                            const isActive = filter.minMetaScore !== '';
+                            const activeOpt = metaScoreOptions.find(o => o.value === filter.minMetaScore);
+                            return (
+                                <button
+                                    onClick={() => setExpandedPill(expandedPill === 'metaScore' ? null : 'metaScore')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isActive ? 'bg-purple-500/15 border-purple-500/40 text-purple-400 shadow-[0_0_10px_rgba(168,85,247,0.2)]' :
+                                            expandedPill === 'metaScore' ? 'bg-surface border-purple-400/40 text-purple-400' :
+                                            'bg-surface border-divider text-secondary hover:border-purple-400/30 hover:text-primary'}`}
+                                >
+                                    <Star className="w-3 h-3" />
+                                    <span>{isActive ? `${activeOpt?.label.split(' ')[0]}점+` : '평점'}</span>
+                                    {isActive
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, minMetaScore: ''})); setExpandedPill(null); setPage(0); }} />
+                                        : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'metaScore' ? 'rotate-180' : ''}`} />
+                                    }
+                                </button>
+                            );
+                        })()}
+
+                        {/* 플랫폼 */}
+                        {(() => {
+                            const isActive = filter.platform !== '';
+                            const activeOpt = platformOptions.find(o => o.value === filter.platform);
+                            return (
+                                <button
+                                    onClick={() => setExpandedPill(expandedPill === 'platform' ? null : 'platform')}
+                                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                        ${isActive ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.2)]' :
+                                            expandedPill === 'platform' ? 'bg-surface border-indigo-400/40 text-indigo-400' :
+                                            'bg-surface border-divider text-secondary hover:border-indigo-400/30 hover:text-primary'}`}
+                                >
+                                    <MonitorPlay className="w-3 h-3" />
+                                    <span>{isActive ? activeOpt?.label : '플랫폼'}</span>
+                                    {isActive
+                                        ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, platform: ''})); setExpandedPill(null); setPage(0); }} />
+                                        : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'platform' ? 'rotate-180' : ''}`} />
+                                    }
+                                </button>
+                            );
+                        })()}
+
+                        <div className="shrink-0 w-px h-4 bg-divider-strong mx-0.5" />
+
+                        {/* PLUS 토글 */}
+                        <button
+                            onClick={() => { setFilter(prev => ({...prev, isPlusExclusive: !prev.isPlusExclusive})); setPage(0); }}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                ${filter.isPlusExclusive ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 'bg-surface border-divider text-secondary hover:border-yellow-400/30 hover:text-primary'}`}
+                        >
+                            <Plus className="w-3 h-3" strokeWidth={3} />
+                            <span className={filter.isPlusExclusive ? 'font-black' : ''}>PLUS</span>
+                            {filter.isPlusExclusive && <Check className="w-3 h-3" strokeWidth={3} />}
+                        </button>
+
+                        {/* 스페셜 토글 */}
+                        <button
+                            onClick={() => { setFilter(prev => ({...prev, inCatalog: !prev.inCatalog})); setPage(0); }}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                ${filter.inCatalog ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.2)]' : 'bg-surface border-divider text-secondary hover:border-yellow-400/30 hover:text-primary'}`}
+                        >
+                            <Gamepad2 className="w-3 h-3" />
+                            <span>스페셜</span>
+                            {filter.inCatalog && <Check className="w-3 h-3" strokeWidth={3} />}
+                        </button>
+
+                        {/* PS5 Pro 토글 */}
+                        <button
+                            onClick={() => { setFilter(prev => ({...prev, isPs5ProEnhanced: !prev.isPs5ProEnhanced})); setPage(0); }}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                ${filter.isPs5ProEnhanced ? 'bg-primary/10 border-primary/40 text-primary shadow-[0_0_10px_rgba(255,255,255,0.08)]' : 'bg-surface border-divider text-secondary hover:border-divider-strong hover:text-primary'}`}
+                        >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Pro</span>
+                            {filter.isPs5ProEnhanced && <Check className="w-3 h-3" strokeWidth={3} />}
+                        </button>
+
+                        {/* 역대최저 토글 */}
+                        <button
+                            onClick={() => { setFilter(prev => ({...prev, isAllTimeLow: !prev.isAllTimeLow})); setPage(0); }}
+                            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                ${filter.isAllTimeLow ? 'bg-green-500/15 border-green-500/40 text-green-500 shadow-[0_0_10px_rgba(34,197,94,0.2)]' : 'bg-surface border-divider text-secondary hover:border-green-500/30 hover:text-primary'}`}
+                        >
+                            <Circle className={`w-3 h-3 ${filter.isAllTimeLow ? 'fill-green-500 text-green-500' : ''}`} />
+                            <span>역대최저</span>
+                            {filter.isAllTimeLow && <Check className="w-3 h-3" strokeWidth={3} />}
+                        </button>
+                    </div>
+                    {/* 우측 페이드 — 더 있음 암시 */}
+                    <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-14 bg-gradient-to-l from-glass to-transparent rounded-r-xl" />
+                    </div>
+
+                    {/* 확장 패널 */}
+                    {expandedPill && (
+                        <div className="border-t border-divider px-4 md:px-5 py-3 animate-fadeIn">
+                            {expandedPill === 'sort' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {sortOptions.map(opt => (
+                                        <button key={opt.value}
+                                            onClick={() => { setFilter(prev => ({...prev, sort: opt.value})); setExpandedPill(null); setPage(0); window.scrollTo({top:0,behavior:'smooth'}); }}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95
+                                                ${filter.sort === opt.value ? 'bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.2)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary'}`}
                                         >
+                                            <opt.icon className={`w-3 h-3 ${filter.sort === opt.value ? 'text-blue-400' : opt.color}`} />
+                                            {opt.label}
+                                            {filter.sort === opt.value && <Check className="w-3 h-3" strokeWidth={3} />}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {expandedPill === 'discount' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {discountOptions.map(opt => (
+                                        <button key={opt.value}
+                                            onClick={() => { setFilter(prev => ({...prev, minDiscountRate: opt.value})); setExpandedPill(null); setPage(0); window.scrollTo({top:0,behavior:'smooth'}); }}
+                                            className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95
+                                                ${filter.minDiscountRate === opt.value ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {expandedPill === 'price' && (
+                                <div className="flex items-center gap-2 max-w-sm">
+                                    <div className="relative flex-1">
+                                        <input type="number" min="0" placeholder="최소" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-base border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-xs focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-xs font-bold">원</span>
+                                    </div>
+                                    <span className="text-secondary font-bold text-xs shrink-0">~</span>
+                                    <div className="relative flex-1">
+                                        <input type="number" min="0" placeholder="최대" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-base border border-divider rounded-lg pl-3 pr-8 py-2 text-primary text-xs focus:border-ps-blue outline-none transition-colors appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-xs font-bold">원</span>
+                                    </div>
+                                    <button onClick={handlePriceApply} className="shrink-0 px-4 py-2 bg-ps-blue text-white rounded-full text-xs font-bold hover:bg-blue-600 active:scale-95 shadow-[0_0_10px_rgba(59,130,246,0.3)]">적용</button>
+                                    {isPriceFilterActive && <button onClick={handlePriceReset} className="shrink-0 px-4 py-2 bg-surface border border-divider text-secondary rounded-full text-xs font-bold hover:text-primary active:scale-95">초기화</button>}
+                                </div>
+                            )}
+                            {expandedPill === 'playtime' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {PLAYTIME_PRESETS.map(preset => {
+                                        const Icon = preset.icon;
+                                        const isSelected = selectedPlayTimeId === preset.id;
+                                        return (
+                                            <button key={preset.id}
+                                                onClick={() => { handlePlayTimeSelect(preset, false); setExpandedPill(null); }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95
+                                                    ${isSelected ? 'bg-teal-500/15 border-teal-500/40 text-teal-400 shadow-[0_0_8px_rgba(20,184,166,0.2)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary'}`}
+                                            >
+                                                <Icon className={`w-3 h-3 ${isSelected ? 'text-teal-400' : preset.color}`} />
+                                                {preset.label}
+                                                <span className="opacity-50">{preset.range}</span>
+                                                {isSelected && <Check className="w-3 h-3" strokeWidth={3} />}
+                                            </button>
+                                        );
+                                    })}
+                                    {isPlayTimeFilterActive && (
+                                        <button onClick={() => { handlePlayTimeSelect(null, false); setExpandedPill(null); }}
+                                            className="px-3 py-1.5 rounded-full border text-xs font-bold bg-surface border-divider text-secondary hover:text-primary transition-all active:scale-95">
                                             전체 시간
                                         </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><Star className="w-3 h-3 text-purple-400"/>전문가 평점</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'metaScore' ? null : 'metaScore')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'metaScore' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
-                                    <span className="truncate">{metaScoreOptions.find(o => o.value === filter.minMetaScore)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'metaScore' ? 'rotate-180' : ''}`} />
-                                </button>
-                                {activeDropdown === 'metaScore' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
-                                        <div className="py-1">
-                                            {metaScoreOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('minMetaScore', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.minMetaScore === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="relative">
-                                <label className="block text-xs text-secondary mb-2 font-bold flex items-center gap-1"><MonitorPlay className="w-3 h-3 text-blue-400"/>플랫폼</label>
-                                <button onClick={() => setActiveDropdown(activeDropdown === 'platform' ? null : 'platform')} onBlur={() => setTimeout(() => setActiveDropdown(prev => prev === 'platform' ? null : prev), 200)} className="w-full bg-base border border-divider rounded-lg px-4 py-2.5 text-sm text-primary flex items-center justify-between hover:border-ps-blue hover:bg-surface-hover transition-all text-left shadow-inner">
-                                    <span className="truncate">{platformOptions.find(o => o.value === filter.platform)?.label}</span>
-                                    <ChevronDown className={`w-4 h-4 text-muted shrink-0 transition-transform ${activeDropdown === 'platform' ? 'rotate-180' : ''}`} />
-                                </button>
-                                {activeDropdown === 'platform' && (
-                                    <div className="absolute top-full mt-2 left-0 w-full bg-base border border-divider rounded-xl shadow-2xl overflow-hidden z-50 animate-fadeIn">
-                                        <div className="py-1">
-                                            {platformOptions.map((opt) => (
-                                                <button key={opt.value} onClick={() => handleCustomSelect('platform', opt.value)} className={`w-full px-4 py-3 text-sm text-left transition-colors ${filter.platform === opt.value ? 'bg-ps-blue/10 text-ps-blue font-bold' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="col-span-2 md:col-span-4 flex flex-row flex-wrap items-center gap-6 pt-2 h-full">
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
-                                    <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="isPlusExclusive" checked={filter.isPlusExclusive} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer shadow-inner" />
-                                        <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
-                                    </div>
-                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors"><span className="text-yellow-500 font-black">PLUS</span> 전용 할인</span>
-                                </label>
-
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
-                                    <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="inCatalog" checked={filter.inCatalog} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-yellow-500 checked:border-yellow-500 transition-all cursor-pointer shadow-inner" />
-                                        <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
-                                    </div>
-                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors flex items-center gap-1.5"><Gamepad2 className="w-4 h-4 text-yellow-500" /> 스페셜(무료) 포함</span>
-                                </label>
-
-                                <label className="flex items-center gap-2 cursor-pointer group hover:bg-surface-hover p-2 rounded-lg transition-colors border border-transparent">
-                                    <div className="relative flex items-center justify-center">
-                                        <input type="checkbox" name="isPs5ProEnhanced" checked={filter.isPs5ProEnhanced} onChange={handleFilterChange} className="peer w-4 h-4 appearance-none rounded bg-base border border-divider-strong checked:bg-primary checked:border-primary transition-all cursor-pointer shadow-inner" />
-                                        <Check className="absolute w-3 h-3 text-[color:var(--color-bg-base)] opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" strokeWidth={3} />
-                                    </div>
-                                    <span className="text-sm font-bold text-secondary group-hover:text-primary transition-colors flex items-center gap-1.5">
-                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-primary' : 'text-secondary'}`} /> PS5 Pro 향상
-                                    </span>
-                                </label>
-                            </div>
+                                    )}
+                                </div>
+                            )}
+                            {expandedPill === 'metaScore' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {metaScoreOptions.map(opt => (
+                                        <button key={opt.value}
+                                            onClick={() => { setFilter(prev => ({...prev, minMetaScore: opt.value})); setExpandedPill(null); setPage(0); window.scrollTo({top:0,behavior:'smooth'}); }}
+                                            className={`px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95
+                                                ${filter.minMetaScore === opt.value ? 'bg-purple-500/15 border-purple-500/40 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary'}`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {expandedPill === 'platform' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {platformOptions.map(opt => (
+                                        <button key={opt.value}
+                                            onClick={() => { setFilter(prev => ({...prev, platform: opt.value})); setExpandedPill(null); setPage(0); window.scrollTo({top:0,behavior:'smooth'}); }}
+                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all active:scale-95
+                                                ${filter.platform === opt.value ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.2)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary'}`}
+                                        >
+                                            <MonitorPlay className="w-3 h-3" />
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -1622,203 +1810,262 @@ const GameListPage = () => {
                 </div>
 
                 <div className={`fixed inset-x-0 bottom-0 z-[60] transition-transform duration-300 ease-in-out ${isQuickSearchOpen ? 'translate-y-0' : 'translate-y-full'}`} onClick={() => setIsQuickSearchOpen(false)}>
-                    <div className="bg-base border-t border-divider p-6 md:p-8 rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.5)] max-w-3xl mx-auto max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-6 sticky top-0 bg-base pb-4 z-10 border-b border-divider">
-                            <h3 className="text-xl font-black text-primary flex items-center gap-2"><Search className="w-5 h-5 text-ps-blue"/> 퀵 서치 & 필터</h3>
-                            <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-surface hover:bg-[var(--bento-red-from)] rounded-full transition-colors"><X className="w-5 h-5 text-secondary hover:text-red-500"/></button>
+                    <div className="bg-base border-t border-divider rounded-t-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.5)] max-w-3xl mx-auto max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+
+                        {/* 드래그 핸들 (스와이프 닫기) */}
+                        <div
+                            className="shrink-0 flex justify-center pt-3 pb-2 cursor-grab touch-none"
+                            onTouchStart={(e) => { swipeStartYRef.current = e.touches[0].clientY; }}
+                            onTouchEnd={(e) => { if (e.changedTouches[0].clientY - swipeStartYRef.current > 60) setIsQuickSearchOpen(false); }}
+                        >
+                            <div className="w-10 h-1 rounded-full bg-divider-strong opacity-50" />
                         </div>
 
-                        <div className="flex flex-col gap-8 pb-24">
-                            {/* 최근 열어본 게임 */}
-                            {recentGames.length > 0 && (
-                                <div>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <label className="text-sm font-bold text-secondary flex items-center gap-1.5">
-                                            <Clock className="w-4 h-4 text-ps-blue" /> 최근 열어본 게임
-                                        </label>
-                                        <button
-                                            onClick={() => { clearRecentGames(); setRecentGames([]); }}
-                                            className="text-xs font-bold text-muted hover:text-red-400 transition-colors"
-                                        >
-                                            초기화
-                                        </button>
-                                    </div>
-                                    <div
-                                        ref={recentGamesScrollRef}
-                                        className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 cursor-grab select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                                        onPointerDown={handleRecentGamesDragStart}
-                                        onPointerMove={handleRecentGamesDragMove}
-                                        onPointerUp={handleRecentGamesDragEnd}
-                                        onPointerCancel={handleRecentGamesDragEnd}
-                                        onDragStart={(e) => e.preventDefault()}
-                                    >
-                                        {recentGames.map((g) => (
-                                            <button
-                                                key={g.id}
-                                                onClick={() => { if (dragStateRef.current.hasDragged) return; setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
-                                                className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
-                                            >
-                                                <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
-                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
-                                                </div>
-                                                <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
-                                                <div className="flex items-center gap-1">
-                                                    {g.priceVerdict === 'BUY_NOW' && <Circle className="w-3 h-3 text-green-500 fill-green-500" />}
-                                                    {g.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
-                                                    {g.priceVerdict === 'WAIT' && <X className="w-3 h-3 text-red-500" />}
-                                                    {(g.priceVerdict === 'TRACKING' || !g.priceVerdict) && <Square className="w-3 h-3 text-ps-blue" />}
-                                                    {g.currentPrice > 0 && (
-                                                        <span className="text-[10px] font-bold text-muted">₩{g.currentPrice.toLocaleString()}</span>
-                                                    )}
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
+                        {/* 스크롤 가능 콘텐츠 */}
+                        <div className="flex-1 overflow-y-auto px-6 md:px-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            {/* 헤더 */}
+                            <div className="flex justify-between items-center mb-5 sticky top-0 bg-base py-4 z-10 border-b border-divider">
+                                <div className="flex items-center gap-2">
+                                    <Search className="w-4 h-4 text-ps-blue" />
+                                    <h3 className="text-lg font-black text-primary">퀵 서치</h3>
+                                    <span className="text-[9px] font-black text-ps-blue bg-ps-blue/10 border border-ps-blue/30 px-2 py-0.5 rounded-full tracking-widest">QUICK SCAN</span>
                                 </div>
-                            )}
+                                <button onClick={() => setIsQuickSearchOpen(false)} className="p-2 bg-surface hover:bg-[var(--bento-red-from)] rounded-full transition-colors active:scale-95"><X className="w-4 h-4 text-secondary"/></button>
+                            </div>
 
-                            {/* 키워드 입력 + 자동완성 */}
-                            <div>
-                                <label className="block text-sm font-bold text-secondary mb-2">어떤 게임을 찾으시나요?</label>
-                                <div className="relative">
-                                    <input type="text" name="keyword" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={handleKeyDown} className="w-full bg-surface border border-divider rounded-xl py-4 pl-12 pr-4 text-primary placeholder-muted focus:border-ps-blue outline-none transition-all shadow-inner" />
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
-                                </div>
-                                {suggestions.length > 0 && (
-                                    <div className="mt-2 flex flex-col gap-1">
-                                        {suggestions.map((s) => (
+                            <div className="flex flex-col gap-8 pb-6">
+                                {/* 최근 열어본 게임 */}
+                                {recentGames.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 tracking-widest uppercase"><Clock className="w-3 h-3" /> RECENT</span>
                                             <button
-                                                key={s.id}
-                                                onClick={() => { setIsQuickSearchOpen(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
-                                                className="flex items-center gap-3 p-3 rounded-xl bg-surface hover:bg-surface-hover border border-divider hover:border-ps-blue/40 transition-all text-left active:scale-[0.98]"
+                                                onClick={() => { clearRecentGames(); setRecentGames([]); }}
+                                                className="text-[10px] font-bold text-muted hover:text-red-400 transition-colors"
                                             >
-                                                <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
-                                                    <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
-                                                </div>
-                                                <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
+                                                초기화
                                             </button>
-                                        ))}
+                                        </div>
+                                        <div
+                                            ref={recentGamesScrollRef}
+                                            className="flex overflow-x-auto snap-x snap-mandatory gap-3 pb-2 cursor-grab select-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                            onPointerDown={handleRecentGamesDragStart}
+                                            onPointerMove={handleRecentGamesDragMove}
+                                            onPointerUp={handleRecentGamesDragEnd}
+                                            onPointerCancel={handleRecentGamesDragEnd}
+                                            onDragStart={(e) => e.preventDefault()}
+                                        >
+                                            {recentGames.map((g) => (
+                                                <button
+                                                    key={g.id}
+                                                    onClick={() => { if (dragStateRef.current.hasDragged) return; setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
+                                                    className="shrink-0 snap-center w-24 flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
+                                                >
+                                                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
+                                                        <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
+                                                    </div>
+                                                    <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
+                                                    <div className="flex items-center gap-1">
+                                                        {g.priceVerdict === 'BUY_NOW' && <Circle className="w-3 h-3 text-green-500 fill-green-500" />}
+                                                        {g.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
+                                                        {g.priceVerdict === 'WAIT' && <X className="w-3 h-3 text-red-500" />}
+                                                        {(g.priceVerdict === 'TRACKING' || !g.priceVerdict) && <Square className="w-3 h-3 text-ps-blue" />}
+                                                        {g.currentPrice > 0 && (
+                                                            <span className="text-[10px] font-bold text-muted">₩{g.currentPrice.toLocaleString()}</span>
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-secondary mb-2">원하시는 가격대가 있나요?</label>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative flex-1">
-                                        <input type="number" min="0" placeholder="예: 10000" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
-                                    </div>
-                                    <span className="text-secondary font-bold">~</span>
-                                    <div className="relative flex-1">
-                                        <input type="number" min="0" placeholder="예: 50000" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
-                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-secondary mb-3 flex items-center gap-1.5">
-                                    <Clock className="w-4 h-4 text-teal-400" /> 어떤 볼륨의 게임을 찾으세요?
-                                </label>
-                                <div className="grid grid-cols-2 gap-2.5">
-                                    {PLAYTIME_PRESETS.map((preset) => {
-                                        const Icon = preset.icon;
-                                        const isSelected = selectedPlayTimeId === preset.id;
-                                        return (
-                                            <button
-                                                key={preset.id}
-                                                // 퀵서치에서는 선택 시 즉시 닫히며 검색되도록 true 전달
-                                                onClick={() => handlePlayTimeSelect(preset, true)}
-                                                className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
-                                                    isSelected
-                                                        ? 'bg-ps-blue border-ps-blue text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                                                        : 'bg-surface border-divider text-primary hover:bg-surface-hover'
-                                                }`}
-                                            >
-                                                <div className={`p-2 rounded-lg ${isSelected ? 'bg-white/20' : 'bg-base border border-divider'}`}>
-                                                    <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : preset.color}`} />
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className="text-xs font-black">{preset.label}</div>
-                                                    <div className={`text-[10px] font-bold opacity-60 ${isSelected ? 'text-white/80' : 'text-secondary'}`}>{preset.range}</div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
-                                <button
-                                    onClick={() => handlePlayTimeSelect(null, true)}
-                                    className="w-full mt-3 py-3.5 bg-surface hover:bg-surface-hover text-sm font-bold text-secondary hover:text-primary rounded-xl transition-colors border border-divider shadow-sm"
-                                >
-                                    전체 시간
-                                </button>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-bold text-secondary mb-3 flex items-center justify-between">
-                                    정렬 기준
-                                    {(filter.isBestSeller || filter.isMostDownloaded) && <span className="text-xs text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3"/> 랭킹 모드 고정됨</span>}
-                                </label>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    {sortOptions.map((opt) => {
-                                        const isLocked = filter.isBestSeller || filter.isMostDownloaded;
-                                        return (
-                                            <button key={opt.value} disabled={isLocked} onClick={() => handleQuickSelect('sort', opt.value)} className={`flex items-center gap-2 p-3 rounded-xl border font-bold text-xs md:text-sm transition-all ${isLocked ? 'opacity-40 cursor-not-allowed bg-surface border-divider text-muted' : filter.sort === opt.value ? 'bg-ps-blue/10 border-ps-blue text-ps-blue shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                                <opt.icon className={`w-4 h-4 shrink-0 ${isLocked ? 'text-muted' : filter.sort === opt.value ? 'text-ps-blue' : opt.color}`} />
-                                                <span className="truncate">{opt.label}</span>
-                                            </button>
-                                        )})}
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* 키워드 입력 + 자동완성 */}
                                 <div>
-                                    <label className="block text-sm font-bold text-secondary mb-3">최소 할인율</label>
-                                    <div className="flex flex-wrap gap-2">
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-ps-blue tracking-widest uppercase mb-2"><Search className="w-3 h-3" /> KEYWORD</span>
+                                    <div className="relative">
+                                        <input type="text" name="keyword" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={handleKeyDown} className="w-full bg-surface border border-divider rounded-xl py-4 pl-12 pr-4 text-primary placeholder-muted focus:border-ps-blue outline-none transition-all shadow-inner" />
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted w-5 h-5" />
+                                    </div>
+                                    {suggestions.length > 0 && (
+                                        <div className="mt-2 flex flex-col gap-1">
+                                            {suggestions.map((s) => (
+                                                <button
+                                                    key={s.id}
+                                                    onClick={() => { setIsQuickSearchOpen(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
+                                                    className="flex items-center gap-3 p-3 rounded-xl bg-surface hover:bg-surface-hover border border-divider hover:border-ps-blue/40 transition-all text-left active:scale-[0.98]"
+                                                >
+                                                    <div className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0">
+                                                        <PSGameImage src={s.imageUrl} className="w-full h-full object-cover" width={80} />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-primary line-clamp-1">{s.name}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 할인율 */}
+                                <div>
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-red-400 tracking-widest uppercase mb-3"><Percent className="w-3 h-3" /> DISCOUNT</span>
+                                    <div className="grid grid-cols-2 gap-2">
                                         {discountOptions.map((opt) => (
-                                            <button key={opt.value} onClick={() => handleQuickSelect('minDiscountRate', opt.value)} className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minDiscountRate === opt.value ? 'bg-[var(--bento-red-from)] border-[color:var(--bento-red-border)] text-red-500 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
+                                            <button key={opt.value} onClick={() => handleQuickSelect('minDiscountRate', opt.value)}
+                                                className={`w-full px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                    ${filter.minDiscountRate === opt.value
+                                                        ? 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
+                                                        : 'bg-surface border-divider text-secondary hover:border-red-400/30 hover:text-primary'}`}>
                                                 {opt.label}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-secondary mb-3">전문가 평점</label>
-                                    <div className="flex flex-wrap gap-2">
-                                        {metaScoreOptions.map((opt) => (
-                                            <button key={opt.value} onClick={() => handleQuickSelect('minMetaScore', opt.value)} className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all ${filter.minMetaScore === opt.value ? 'bg-[var(--bento-purple-from)] border-[color:var(--bento-purple-border)] text-purple-500 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-bold text-secondary mb-3">추가 옵션</label>
-                                <div className="flex flex-wrap gap-3">
-                                    {platformOptions.slice(1).map((opt) => (
-                                        <button key={opt.value} onClick={() => handleQuickSelect('platform', filter.platform === opt.value ? '' : opt.value)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.platform === opt.value ? 'bg-[var(--bento-blue-from)] border-[color:var(--bento-blue-border)] text-ps-blue shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                            <MonitorPlay className="w-4 h-4 text-blue-500" /> {opt.label}
+                                {/* 전문가 평점 */}
+                                <div>
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-purple-400 tracking-widest uppercase mb-3"><Star className="w-3 h-3" /> META SCORE</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {metaScoreOptions.map((opt) => (
+                                            <button key={opt.value} onClick={() => handleQuickSelect('minMetaScore', opt.value)}
+                                                className={`w-full px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                    ${filter.minMetaScore === opt.value
+                                                        ? 'bg-purple-500/15 border-purple-500/40 text-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.2)]'
+                                                        : 'bg-surface border-divider text-secondary hover:border-purple-400/30 hover:text-primary'}`}>
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 가격대 */}
+                                <div>
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-green-400 tracking-widest uppercase mb-2"><CircleDollarSign className="w-3 h-3" /> PRICE RANGE</span>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative flex-1">
+                                            <input type="number" min="0" placeholder="예: 10000" value={priceRange.min} onChange={(e) => setPriceRange({...priceRange, min: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
+                                        </div>
+                                        <span className="text-secondary font-bold">~</span>
+                                        <div className="relative flex-1">
+                                            <input type="number" min="0" placeholder="예: 50000" value={priceRange.max} onChange={(e) => setPriceRange({...priceRange, max: e.target.value})} onKeyDown={(e) => { if (e.key === '-' || e.key === 'e') e.preventDefault(); }} className="w-full bg-surface border border-divider rounded-xl py-4 pl-4 pr-10 text-primary focus:border-ps-blue outline-none transition-all appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none shadow-inner" />
+                                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-bold">원</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 플레이 볼륨 */}
+                                <div>
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-teal-400 tracking-widest uppercase mb-3"><Timer className="w-3 h-3" /> PLAY VOLUME</span>
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        {PLAYTIME_PRESETS.map((preset) => {
+                                            const Icon = preset.icon;
+                                            const isSelected = selectedPlayTimeId === preset.id;
+                                            return (
+                                                <button
+                                                    key={preset.id}
+                                                    onClick={() => handlePlayTimeSelect(preset, true)}
+                                                    className={`flex items-center gap-3 p-4 rounded-2xl border transition-all active:scale-95 ${
+                                                        isSelected
+                                                            ? 'bg-teal-500/15 border-teal-500/40 text-teal-400 shadow-[0_0_10px_rgba(20,184,166,0.2)]'
+                                                            : 'bg-surface border-divider text-primary hover:bg-surface-hover hover:border-teal-400/30'
+                                                    }`}
+                                                >
+                                                    <div className={`p-2 rounded-lg ${isSelected ? 'bg-teal-400/20' : 'bg-base border border-divider'}`}>
+                                                        <Icon className={`w-4 h-4 ${isSelected ? 'text-teal-400' : preset.color}`} />
+                                                    </div>
+                                                    <div className="text-left">
+                                                        <div className="text-xs font-black">{preset.label}</div>
+                                                        <div className={`text-[10px] font-bold ${isSelected ? 'text-teal-300' : 'text-secondary'}`}>{preset.range}</div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    <button
+                                        onClick={() => handlePlayTimeSelect(null, true)}
+                                        className="w-full mt-3 py-3 bg-surface hover:bg-surface-hover text-xs font-bold text-secondary hover:text-primary rounded-xl transition-colors border border-divider active:scale-95"
+                                    >
+                                        전체 볼륨
+                                    </button>
+                                </div>
+
+                                {/* 정렬 */}
+                                <div>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <span className="flex items-center gap-1.5 text-[10px] font-black text-blue-400 tracking-widest uppercase"><TrendingUp className="w-3 h-3" /> SORT MODE</span>
+                                        {(filter.isBestSeller || filter.isMostDownloaded) && <span className="text-[10px] text-amber-500 font-bold flex items-center gap-1"><Lock className="w-3 h-3"/> 랭킹 모드 고정됨</span>}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {sortOptions.map((opt) => {
+                                            const isLocked = filter.isBestSeller || filter.isMostDownloaded;
+                                            const isActive = filter.sort === opt.value;
+                                            return (
+                                                <button
+                                                    key={opt.value}
+                                                    disabled={isLocked}
+                                                    onClick={() => handleQuickSelect('sort', opt.value)}
+                                                    className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                        ${isLocked ? 'opacity-40 cursor-not-allowed bg-surface border-divider text-muted' :
+                                                          isActive ? 'bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_8px_rgba(59,130,246,0.2)]' :
+                                                          'bg-surface border-divider text-secondary hover:border-blue-400/30 hover:text-primary'}`}
+                                                >
+                                                    <opt.icon className={`w-3.5 h-3.5 shrink-0 ${isLocked ? 'text-muted' : isActive ? 'text-blue-400' : opt.color}`} />
+                                                    <span>{opt.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* 추가 옵션 */}
+                                <div>
+                                    <span className="flex items-center gap-1.5 text-[10px] font-black text-indigo-400 tracking-widest uppercase mb-3"><Filter className="w-3 h-3" /> EXTRAS</span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button onClick={() => handleQuickSelect('isAllTimeLow', !filter.isAllTimeLow)}
+                                            className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                ${filter.isAllTimeLow
+                                                    ? 'bg-green-500/15 border-green-500/40 text-green-500 shadow-[0_0_8px_rgba(34,197,94,0.2)]'
+                                                    : 'bg-surface border-divider text-secondary hover:border-green-500/30 hover:text-primary'}`}>
+                                            <Circle className="w-3.5 h-3.5 shrink-0 fill-green-500 text-green-500" /> 역대최저
                                         </button>
-                                    ))}
-                                    <button onClick={() => handleQuickSelect('isPlusExclusive', !filter.isPlusExclusive)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.isPlusExclusive ? 'bg-[var(--bento-yellow-from)] border-[color:var(--bento-yellow-border)] text-yellow-600 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                        <Star className="w-4 h-4 text-yellow-500" /> <span className="text-yellow-500 font-black">PLUS</span> 할인만
-                                    </button>
-                                    <button onClick={() => handleQuickSelect('inCatalog', !filter.inCatalog)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl border font-bold text-sm transition-all ${filter.inCatalog ? 'bg-[var(--bento-yellow-from)] border-[color:var(--bento-yellow-border)] text-yellow-600 shadow-sm' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                        <Layers className="w-4 h-4 text-yellow-500" /> 스페셜 카탈로그
-                                    </button>
-                                    <button onClick={() => handleQuickSelect('isPs5ProEnhanced', !filter.isPs5ProEnhanced)} className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-sm transition-all ${filter.isPs5ProEnhanced ? 'bg-primary border-primary text-[color:var(--color-bg-base)] shadow-glow' : 'bg-surface border-divider text-secondary hover:bg-surface-hover hover:text-primary shadow-sm'}`}>
-                                        <Sparkles className={`w-4 h-4 ${filter.isPs5ProEnhanced ? 'text-base' : 'text-primary'}`} /> PS5 Pro 향상
-                                    </button>
+                                        {platformOptions.slice(1).map((opt) => (
+                                            <button key={opt.value} onClick={() => handleQuickSelect('platform', filter.platform === opt.value ? '' : opt.value)}
+                                                className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                    ${filter.platform === opt.value
+                                                        ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400 shadow-[0_0_8px_rgba(99,102,241,0.2)]'
+                                                        : 'bg-surface border-divider text-secondary hover:border-indigo-400/30 hover:text-primary'}`}>
+                                                <MonitorPlay className="w-3.5 h-3.5 shrink-0" /> {opt.label}
+                                            </button>
+                                        ))}
+                                        <button onClick={() => handleQuickSelect('isPlusExclusive', !filter.isPlusExclusive)}
+                                            className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                ${filter.isPlusExclusive
+                                                    ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.2)]'
+                                                    : 'bg-surface border-divider text-secondary hover:border-yellow-400/30 hover:text-primary'}`}>
+                                            <Star className="w-3.5 h-3.5 shrink-0" /> <span className="font-black">PLUS</span> 할인만
+                                        </button>
+                                        <button onClick={() => handleQuickSelect('inCatalog', !filter.inCatalog)}
+                                            className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                ${filter.inCatalog
+                                                    ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.2)]'
+                                                    : 'bg-surface border-divider text-secondary hover:border-yellow-400/30 hover:text-primary'}`}>
+                                            <Layers className="w-3.5 h-3.5 shrink-0" /> 스페셜 카탈로그
+                                        </button>
+                                        <button onClick={() => handleQuickSelect('isPs5ProEnhanced', !filter.isPs5ProEnhanced)}
+                                            className={`w-full flex items-center gap-1.5 px-4 py-2.5 rounded-full border font-bold text-xs transition-all active:scale-95
+                                                ${filter.isPs5ProEnhanced
+                                                    ? 'bg-primary border-primary text-[color:var(--color-bg-base)] shadow-glow'
+                                                    : 'bg-surface border-divider text-secondary hover:border-primary/30 hover:text-primary'}`}>
+                                            <Sparkles className="w-3.5 h-3.5 shrink-0" /> PS5 Pro 향상
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="absolute bottom-0 left-0 w-full p-4 bg-base border-t border-divider">
-                            <button onClick={executeSearch} className="w-full bg-ps-blue hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-colors shadow-glow-blue flex items-center justify-center gap-2">
+                        {/* 적용 버튼 (하단 고정) */}
+                        <div className="shrink-0 px-6 md:px-8 py-4 bg-base border-t border-divider">
+                            <button onClick={executeSearch} className="w-full bg-ps-blue hover:bg-blue-600 text-white font-black py-4 rounded-xl transition-colors shadow-glow-blue flex items-center justify-center gap-2 active:scale-[0.98]">
                                 <Search className="w-5 h-5" /> 검색어 적용하기
                             </button>
                         </div>
