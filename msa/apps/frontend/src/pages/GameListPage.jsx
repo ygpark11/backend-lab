@@ -272,6 +272,16 @@ const GameListPage = () => {
         const f = preset.filters;
         setFilter(prev => ({
             ...prev,
+            // URL-only 특수 필터 명시적 초기화 (잔존 시 배너 충돌 방지)
+            isBestSeller: false,
+            isMostDownloaded: false,
+            isClosingSoon: false,
+            isNewDiscount: false,
+            curation: false,
+            curationTheme: '',
+            vibeTags: [],
+            minUserScore: '',
+            // 프리셋 필드
             sort: f.sort ?? 'lastUpdated,desc',
             minDiscountRate: f.minDiscountRate ?? '',
             minMetaScore: f.minMetaScore ?? '',
@@ -861,8 +871,10 @@ const GameListPage = () => {
     ]);
 
     const getActiveSpecialFilters = () => {
-        // 큐레이션 진입 시 다른 배너를 모두 무시하고 curationMode 단독 표시
+        // 큐레이션 진입 시 단독 표시
         if (filter.curation) return ['curationMode'];
+        // 프리셋 활성 시 단독 표시 (개별 필터 배너보다 우선)
+        if (activePresetId) return ['preset'];
 
         const active = [];
         if (filter.isAllTimeLow) active.push('isAllTimeLow');
@@ -871,8 +883,9 @@ const GameListPage = () => {
         const isPlayTimeActive = filter.minPlayTime !== '' || filter.maxPlayTime !== '';
         if (isPlayTimeActive) active.push('playTime');
 
-        // '전체 할인' 배너는 다른 특수 필터가 아예 없을 때만 표시되도록 방어
+        // '전체 할인' 배너는 다른 특수 필터가 아예 없을 때만 표시
         if (filter.minDiscountRate === '1' && filter.minMetaScore === '' &&
+            !filter.isAllTimeLow &&
             !filter.isBestSeller && !filter.isMostDownloaded && !filter.isClosingSoon &&
             !filter.isNewDiscount && !filter.isPs5ProEnhanced && !filter.inCatalog && !filter.isPlusExclusive &&
             !isPlayTimeActive) {
@@ -959,6 +972,31 @@ const GameListPage = () => {
         const currentBanner = activeBanners[0];
 
         switch (currentBanner) {
+            case 'preset': {
+                const activePreset = presets.find(p => p.id === activePresetId);
+                if (!activePreset) return null;
+                return (
+                    <div className="mb-8 relative overflow-hidden rounded-xl bg-[var(--bento-card-bg)] border border-amber-500/30 p-4 sm:p-5 flex items-center justify-between hover:border-amber-500/50 hover:shadow-[0_0_25px_rgba(245,158,11,0.15)] group transition-all">
+                        <div className="absolute top-0 left-0 w-1/2 h-full bg-gradient-to-r from-amber-500/10 to-transparent"></div>
+                        <div className="absolute top-0 left-0 w-48 h-full bg-amber-500/10 blur-3xl transform -skew-x-12"></div>
+                        <div className="flex items-center gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/30">
+                                <Bookmark className="w-6 h-6 text-amber-500" />
+                            </div>
+                            <div>
+                                <div className="text-amber-500 font-bold text-[10px] sm:text-xs mb-0.5 tracking-wider flex items-center gap-1"><Bookmark className="w-3 h-3"/> MY PRESET</div>
+                                <div className="text-primary font-black text-sm sm:text-base lg:text-lg">
+                                    '<span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-yellow-400">{activePreset.name}</span>' 조건으로 탐색 중!
+                                </div>
+                            </div>
+                        </div>
+                        <button onClick={() => setActivePresetId(null)} className="relative z-10 flex items-center gap-1.5 bg-base hover:bg-surface-hover border border-divider px-3 py-2 sm:px-4 sm:py-2 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary hover:text-primary shadow-sm">
+                            <X className="w-4 h-4" /> <span className="hidden sm:inline">해제</span>
+                        </button>
+                    </div>
+                );
+            }
+
             case 'playTime': {
                 const activePreset = PLAYTIME_PRESETS.find(p => String(p.min) === filter.minPlayTime && String(p.max) === filter.maxPlayTime);
                 const Icon = activePreset ? activePreset.icon : Clock;
