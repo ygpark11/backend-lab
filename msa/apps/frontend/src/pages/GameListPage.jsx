@@ -24,6 +24,8 @@ import {
     Layers,
     Lock,
     Mail,
+    Bookmark,
+    MoreHorizontal,
     MonitorPlay,
     Percent,
     Pickaxe,
@@ -49,6 +51,7 @@ import TrendingGamesWidget from '../components/TrendingGamesWidget';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
+import {getMyPresets, createPreset, updatePreset, deletePreset} from '../api/presets';
 
 const PLAYTIME_PRESETS = [
     { id: 'short', label: '주말 컷', range: '0~10h', min: 0, max: 10, icon: Zap, color: 'text-yellow-400', bg: 'hover:bg-yellow-400/10' },
@@ -94,7 +97,7 @@ const GameListPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { openLoginModal } = useAuth();
+    const { openLoginModal, isAuthenticated } = useAuth();
 
     const filterBoxRef = useRef(null);
     const swipeStartYRef = useRef(0);
@@ -110,6 +113,12 @@ const GameListPage = () => {
     const [isDesktopSearchActive, setIsDesktopSearchActive] = useState(false);
     const [isFloatingVisible, setIsFloatingVisible] = useState(true);
     const [expandedPill, setExpandedPill] = useState(null);
+    const [presets, setPresets] = useState([]);
+    const [activePresetId, setActivePresetId] = useState(null);
+    const [isPresetNameModalOpen, setIsPresetNameModalOpen] = useState(false);
+    const [presetNameInput, setPresetNameInput] = useState('');
+    const [presetEditingId, setPresetEditingId] = useState(null);
+    const [presetMenuOpenId, setPresetMenuOpenId] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -227,6 +236,146 @@ const GameListPage = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // 프리셋 - 현재 필터에서 저장할 조건 추출 (keyword 제외)
+    const extractPresetFilters = useCallback(() => ({
+        sort: filter.sort,
+        minDiscountRate: filter.minDiscountRate,
+        minMetaScore: filter.minMetaScore,
+        platform: filter.platform,
+        isPlusExclusive: filter.isPlusExclusive,
+        inCatalog: filter.inCatalog,
+        minPrice: filter.minPrice,
+        maxPrice: filter.maxPrice,
+        minPlayTime: filter.minPlayTime,
+        maxPlayTime: filter.maxPlayTime,
+        isAllTimeLow: filter.isAllTimeLow,
+        isPs5ProEnhanced: filter.isPs5ProEnhanced,
+    }), [filter]);
+
+    // 프리셋 자동 이름 생성
+    const buildAutoPresetName = useCallback(() => {
+        const parts = [];
+        if (filter.minDiscountRate) parts.push(`${filter.minDiscountRate}%+`);
+        if (filter.minMetaScore) parts.push(`Meta ${filter.minMetaScore}+`);
+        if (filter.maxPlayTime && filter.maxPlayTime !== '999') parts.push(`~${filter.maxPlayTime}h`);
+        else if (filter.minPlayTime) parts.push(`${filter.minPlayTime}h+`);
+        if (filter.platform) parts.push(filter.platform);
+        if (filter.isAllTimeLow) parts.push('역대최저');
+        if (filter.isPlusExclusive) parts.push('PLUS');
+        return parts.join(' · ').slice(0, 15) || '나만의 탐색';
+    }, [filter]);
+
+    // 프리셋 적용
+    const applyPreset = useCallback((preset) => {
+        const f = preset.filters;
+        setFilter(prev => ({
+            ...prev,
+            sort: f.sort ?? 'lastUpdated,desc',
+            minDiscountRate: f.minDiscountRate ?? '',
+            minMetaScore: f.minMetaScore ?? '',
+            platform: f.platform ?? '',
+            isPlusExclusive: f.isPlusExclusive ?? false,
+            inCatalog: f.inCatalog ?? false,
+            minPrice: f.minPrice ?? '',
+            maxPrice: f.maxPrice ?? '',
+            minPlayTime: f.minPlayTime ?? '',
+            maxPlayTime: f.maxPlayTime ?? '',
+            isAllTimeLow: f.isAllTimeLow ?? false,
+            isPs5ProEnhanced: f.isPs5ProEnhanced ?? false,
+        }));
+        setPriceRange({ min: f.minPrice ?? '', max: f.maxPrice ?? '' });
+        setSelectedPlayTimeId(PLAYTIME_PRESETS.find(p =>
+            String(p.min) === f.minPlayTime && String(p.max) === f.maxPlayTime
+        )?.id || null);
+        setActivePresetId(preset.id);
+        setExpandedPill(null);
+        setPage(0);
+    }, []);
+
+    // 프리셋 저장 버튼 클릭
+    const handleSavePreset = () => {
+        if (!isAuthenticated) { openLoginModal(); return; }
+        setPresetNameInput(buildAutoPresetName());
+        setPresetEditingId(null);
+        setIsPresetNameModalOpen(true);
+    };
+
+    // 프리셋 이름 수정 버튼 클릭
+    const handleEditPresetName = (preset) => {
+        setPresetNameInput(preset.name);
+        setPresetEditingId(preset.id);
+        setIsPresetNameModalOpen(true);
+    };
+
+    // 프리셋 이름 모달 확인
+    const handleConfirmPresetName = async () => {
+        const name = presetNameInput.trim();
+        if (!name) return;
+        try {
+            if (presetEditingId) {
+                const updated = await updatePreset(presetEditingId, { name });
+                setPresets(prev => prev.map(p => p.id === updated.id ? updated : p));
+                toast.success('이름이 수정됐어요');
+            } else {
+                const newPreset = await createPreset(name, extractPresetFilters());
+                setPresets(prev => [...prev, newPreset]);
+                setActivePresetId(newPreset.id);
+                toast.success('탐색 조건이 저장됐어요');
+            }
+            setIsPresetNameModalOpen(false);
+            setPresetEditingId(null);
+        } catch (e) {
+            toast.error(e.response?.data?.message || '처리에 실패했어요');
+        }
+    };
+
+    // 프리셋 조건 덮어쓰기
+    const handleOverwritePreset = (preset) => {
+        setPresetMenuOpenId(null);
+        const filters = extractPresetFilters();
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <p className="text-sm font-bold text-primary">'{preset.name}'을 현재 조건으로 덮어쓸까요?</p>
+                <div className="flex gap-2">
+                    <button onClick={() => {
+                        toast.dismiss(t.id);
+                        updatePreset(preset.id, { filters })
+                            .then(updated => {
+                                setPresets(prev => prev.map(p => p.id === updated.id ? updated : p));
+                                setActivePresetId(updated.id);
+                                toast.success('프리셋이 업데이트됐어요');
+                            })
+                            .catch(() => toast.error('수정에 실패했어요'));
+                    }} className="flex-1 px-3 py-1.5 bg-ps-blue/20 border border-ps-blue/40 text-ps-blue text-xs font-bold rounded-lg active:scale-95">덮어쓰기</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-3 py-1.5 bg-surface border border-divider text-secondary text-xs font-bold rounded-lg active:scale-95">취소</button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+    };
+
+    // 프리셋 삭제
+    const handleDeletePreset = (preset) => {
+        setPresetMenuOpenId(null);
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <p className="text-sm font-bold text-primary">'{preset.name}' 프리셋을 삭제할까요?</p>
+                <div className="flex gap-2">
+                    <button onClick={() => {
+                        toast.dismiss(t.id);
+                        deletePreset(preset.id)
+                            .then(() => {
+                                setPresets(prev => prev.filter(p => p.id !== preset.id));
+                                if (activePresetId === preset.id) setActivePresetId(null);
+                                toast.success('프리셋이 삭제됐어요');
+                            })
+                            .catch(() => toast.error('삭제에 실패했어요'));
+                    }} className="flex-1 px-3 py-1.5 bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-bold rounded-lg active:scale-95">삭제</button>
+                    <button onClick={() => toast.dismiss(t.id)} className="flex-1 px-3 py-1.5 bg-surface border border-divider text-secondary text-xs font-bold rounded-lg active:scale-95">취소</button>
+                </div>
+            </div>
+        ), { duration: Infinity });
     };
 
     const handlePriceReset = () => {
@@ -633,6 +782,42 @@ const GameListPage = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [expandedPill]);
+
+    // 프리셋 목록 로드 (로그인 시)
+    useEffect(() => {
+        if (!isAuthenticated) return;
+        getMyPresets().then(setPresets).catch(() => {});
+    }, [isAuthenticated]);
+
+    // 필터가 프리셋과 달라지면 해제, 프리셋 삭제 시에도 해제
+    useEffect(() => {
+        if (!activePresetId) return;
+        const active = presets.find(p => p.id === activePresetId);
+        if (!active) { setActivePresetId(null); return; }
+        const f = active.filters;
+        const diverged =
+            filter.sort !== (f.sort ?? 'lastUpdated,desc') ||
+            filter.minDiscountRate !== (f.minDiscountRate ?? '') ||
+            filter.minMetaScore !== (f.minMetaScore ?? '') ||
+            filter.platform !== (f.platform ?? '') ||
+            filter.isPlusExclusive !== (f.isPlusExclusive ?? false) ||
+            filter.inCatalog !== (f.inCatalog ?? false) ||
+            filter.minPrice !== (f.minPrice ?? '') ||
+            filter.maxPrice !== (f.maxPrice ?? '') ||
+            filter.minPlayTime !== (f.minPlayTime ?? '') ||
+            filter.maxPlayTime !== (f.maxPlayTime ?? '') ||
+            filter.isAllTimeLow !== (f.isAllTimeLow ?? false) ||
+            filter.isPs5ProEnhanced !== (f.isPs5ProEnhanced ?? false);
+        if (diverged) setActivePresetId(null);
+    }, [filter, presets, activePresetId]);
+
+    // 프리셋 메뉴 외부 클릭 시 닫기
+    useEffect(() => {
+        if (!presetMenuOpenId) return;
+        const handleMouseDown = () => setPresetMenuOpenId(null);
+        document.addEventListener('mousedown', handleMouseDown);
+        return () => document.removeEventListener('mousedown', handleMouseDown);
+    }, [presetMenuOpenId]);
 
     // 바텀시트 열릴 때 최근 본 게임 로드
     useEffect(() => {
@@ -1273,8 +1458,9 @@ const GameListPage = () => {
                             );
                         })()}
                         {isPriceFilterActive && (() => {
-                            const min = filter.minPrice ? `${Math.round(Number(filter.minPrice)/10000)}만` : '';
-                            const max = filter.maxPrice ? `${Math.round(Number(filter.maxPrice)/10000)}만` : '';
+                            const fmt = (val) => { const n = Number(val); if (n < 10000) return n.toLocaleString(); const m = n/10000; return `${m%1===0?m:m.toFixed(1)}만`; };
+                            const min = filter.minPrice ? fmt(filter.minPrice) : '';
+                            const max = filter.maxPrice ? fmt(filter.maxPrice) : '';
                             const label = min && max ? `${min}~${max}` : min ? `${min}~` : `~${max}`;
                             return (
                                 <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-green-500/15 border-green-500/40 text-green-400 text-xs font-bold whitespace-nowrap">
@@ -1296,7 +1482,7 @@ const GameListPage = () => {
                             const opt = metaScoreOptions.find(o => o.value === filter.minMetaScore);
                             return (
                                 <div className="shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full border bg-purple-500/15 border-purple-500/40 text-purple-400 text-xs font-bold whitespace-nowrap">
-                                    <span>{opt?.label}</span>
+                                    <span>{opt?.value}점+</span>
                                     <button onClick={() => { setFilter(p => ({...p, minMetaScore: ''})); setPage(0); }} className="ml-0.5 p-1 -mr-1 hover:text-red-400 transition-colors active:scale-95"><X className="w-3 h-3" /></button>
                                 </div>
                             );
@@ -1333,6 +1519,94 @@ const GameListPage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* 탐색 조건 프리셋 행 — PC 전용 */}
+                    {(presets.length > 0 || isFilterActive) && (
+                    <div className="hidden md:flex items-center flex-wrap gap-2 px-4 md:px-5 pt-2 pb-1">
+                        {presets.map(preset => {
+                            const isActive = activePresetId === preset.id;
+                            const isMenuOpen = presetMenuOpenId === preset.id;
+                            return (
+                                <div key={preset.id} className="relative shrink-0">
+                                    <button
+                                        onClick={() => isActive ? setActivePresetId(null) : applyPreset(preset)}
+                                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold transition-all whitespace-nowrap active:scale-95
+                                            ${isActive
+                                                ? 'bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.15)]'
+                                                : 'bg-surface border-divider text-secondary hover:border-amber-400/50 hover:text-amber-400'}`}
+                                    >
+                                        {isActive && <Check className="w-3 h-3" strokeWidth={3} />}
+                                        <span>{preset.name}</span>
+                                        <span className={`w-px h-3 mx-0.5 ${isActive ? 'bg-amber-400/30' : 'bg-divider'}`} />
+                                        <span
+                                            onMouseDown={e => e.stopPropagation()}
+                                            onClick={e => { e.stopPropagation(); setPresetMenuOpenId(isMenuOpen ? null : preset.id); }}
+                                            className={`flex items-center p-0.5 rounded-full transition-colors ${isActive ? 'hover:bg-amber-400/20' : 'hover:bg-surface-hover'}`}
+                                        >
+                                            <MoreHorizontal className={`w-3.5 h-3.5 ${isActive ? '' : 'text-muted'}`} />
+                                        </span>
+                                    </button>
+                                    {isMenuOpen && (
+                                        <div onMouseDown={e => e.stopPropagation()} className="absolute top-full left-0 mt-1 bg-base border border-divider rounded-xl shadow-lg z-50 w-44 animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                                            <button onClick={() => { handleEditPresetName(preset); setPresetMenuOpenId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-colors rounded-t-xl">이름 수정</button>
+                                            <button onClick={() => handleOverwritePreset(preset)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-colors">현재 조건으로 덮어쓰기</button>
+                                            <div className="border-t border-divider" />
+                                            <button onClick={() => handleDeletePreset(preset)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-surface-hover transition-colors rounded-b-xl">삭제</button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        {presets.length < 5 && isFilterActive && (
+                            <button
+                                onClick={handleSavePreset}
+                                className="shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold transition-all whitespace-nowrap border-dashed border-divider text-muted hover:border-amber-400/50 hover:text-amber-400 active:scale-95"
+                            >
+                                <Bookmark className="w-3 h-3" />
+                                현재 조건 저장
+                            </button>
+                        )}
+                        {presets.length >= 5 && isFilterActive && (
+                            <span className="shrink-0 text-[10px] text-muted px-1">최대 5개 저장됨</span>
+                        )}
+                    </div>
+                    )}
+
+                    {/* 활성 프리셋 표시 — 모바일 전용 */}
+                    {activePresetId && (() => {
+                        const activePreset = presets.find(p => p.id === activePresetId);
+                        if (!activePreset) return null;
+                        const isMenuOpen = presetMenuOpenId === activePreset.id;
+                        return (
+                            <div className="flex md:hidden items-center px-4 pt-2 pb-1">
+                                <div className="relative shrink-0">
+                                    <button
+                                        onClick={() => setActivePresetId(null)}
+                                        className="flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold bg-amber-500/15 border-amber-500/40 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.15)] active:scale-95 transition-all whitespace-nowrap"
+                                    >
+                                        <Check className="w-3 h-3" strokeWidth={3} />
+                                        <span>{activePreset.name}</span>
+                                        <span className="w-px h-3 bg-amber-400/30 mx-0.5" />
+                                        <span
+                                            onMouseDown={e => e.stopPropagation()}
+                                            onClick={e => { e.stopPropagation(); setPresetMenuOpenId(isMenuOpen ? null : activePreset.id); }}
+                                            className="flex items-center p-0.5 rounded-full hover:bg-amber-400/20 transition-colors"
+                                        >
+                                            <MoreHorizontal className="w-3.5 h-3.5" />
+                                        </span>
+                                    </button>
+                                    {isMenuOpen && (
+                                        <div onMouseDown={e => e.stopPropagation()} className="absolute top-full left-0 mt-1 bg-base border border-divider rounded-xl shadow-lg z-50 w-44 animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                                            <button onClick={() => { handleEditPresetName(activePreset); setPresetMenuOpenId(null); }} className="w-full text-left px-4 py-2.5 text-xs font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-colors rounded-t-xl">이름 수정</button>
+                                            <button onClick={() => handleOverwritePreset(activePreset)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-secondary hover:text-primary hover:bg-surface-hover transition-colors">현재 조건으로 덮어쓰기</button>
+                                            <div className="border-t border-divider" />
+                                            <button onClick={() => handleDeletePreset(activePreset)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-surface-hover transition-colors rounded-b-xl">삭제</button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* 필터 Pill 행 — PC 전용 */}
                     <div className="relative hidden md:block">
@@ -1443,7 +1717,7 @@ const GameListPage = () => {
                                             'bg-surface border-divider text-secondary hover:border-purple-400/30 hover:text-primary'}`}
                                 >
                                     <Star className="w-3 h-3" />
-                                    <span>{isActive ? `${activeOpt?.label.split(' ')[0]}점+` : '평점'}</span>
+                                    <span>{isActive ? `${activeOpt?.value}점+` : '평점'}</span>
                                     {isActive
                                         ? <X className="w-3 h-3 opacity-60 hover:opacity-100" onClick={(e) => { e.stopPropagation(); setFilter(prev => ({...prev, minMetaScore: ''})); setExpandedPill(null); setPage(0); }} />
                                         : <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${expandedPill === 'metaScore' ? 'rotate-180' : ''}`} />
@@ -1834,6 +2108,66 @@ const GameListPage = () => {
                             </div>
 
                             <div className="flex flex-col gap-8 pb-6">
+                                {/* 나의 탐색 프리셋 */}
+                                {(isAuthenticated && (presets.length > 0 || isFilterActive)) || (!isAuthenticated && isFilterActive) ? (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-400 tracking-widest uppercase"><Bookmark className="w-3 h-3" /> MY PRESETS</span>
+                                        </div>
+                                        <div className="flex flex-col gap-2">
+                                            {presets.map(preset => {
+                                                const isActive = activePresetId === preset.id;
+                                                const isMenuOpen = presetMenuOpenId === preset.id;
+                                                return (
+                                                    <div key={preset.id} className="flex flex-col gap-1.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => { isActive ? setActivePresetId(null) : applyPreset(preset); if (!isActive) setIsQuickSearchOpen(false); }}
+                                                                className={`flex items-center gap-2 flex-1 px-4 py-3 rounded-2xl border text-sm font-bold transition-all active:scale-95
+                                                                    ${isActive
+                                                                        ? 'bg-amber-500/15 border-amber-500/40 text-amber-400'
+                                                                        : 'bg-surface border-divider text-secondary'}`}
+                                                            >
+                                                                {isActive && <Check className="w-4 h-4 shrink-0" strokeWidth={3} />}
+                                                                <span className="flex-1 text-left">{preset.name}</span>
+                                                            </button>
+                                                            <button
+                                                                onMouseDown={e => e.stopPropagation()}
+                                                                onClick={() => setPresetMenuOpenId(isMenuOpen ? null : preset.id)}
+                                                                className={`p-3 rounded-2xl border active:scale-95 transition-colors shrink-0
+                                                                    ${isActive
+                                                                        ? 'bg-surface border-amber-500/40 text-amber-400 hover:bg-amber-500/10'
+                                                                        : 'bg-surface border-divider text-muted hover:text-secondary hover:border-divider-strong'}`}
+                                                            >
+                                                                <MoreHorizontal className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        {isMenuOpen && (
+                                                            <div className="flex gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                                                                <button onMouseDown={e => e.stopPropagation()} onClick={() => { handleEditPresetName(preset); setPresetMenuOpenId(null); }} className="flex-1 py-2.5 text-xs font-bold text-secondary bg-surface border border-divider rounded-xl hover:bg-surface-hover active:scale-95 transition-colors">이름 수정</button>
+                                                                <button onMouseDown={e => e.stopPropagation()} onClick={() => handleOverwritePreset(preset)} className="flex-1 py-2.5 text-xs font-bold text-secondary bg-surface border border-divider rounded-xl hover:bg-surface-hover active:scale-95 transition-colors">덮어쓰기</button>
+                                                                <button onMouseDown={e => e.stopPropagation()} onClick={() => handleDeletePreset(preset)} className="flex-1 py-2.5 text-xs font-bold text-red-400 bg-surface border border-red-400/30 rounded-xl hover:bg-surface-hover active:scale-95 transition-colors">삭제</button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {presets.length < 5 && isFilterActive && (
+                                                <button
+                                                    onClick={handleSavePreset}
+                                                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl border border-dashed border-divider text-sm font-bold text-muted active:scale-95 transition-colors"
+                                                >
+                                                    <Bookmark className="w-4 h-4" />
+                                                    현재 조건 저장
+                                                </button>
+                                            )}
+                                            {presets.length >= 5 && isFilterActive && (
+                                                <p className="text-[10px] text-muted text-center py-1">최대 5개까지 저장할 수 있어요</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : null}
+
                                 {/* 최근 열어본 게임 */}
                                 {recentGames.length > 0 && (
                                     <div>
@@ -2074,6 +2408,32 @@ const GameListPage = () => {
                 {isQuickSearchOpen && <div className="fixed inset-0 z-[55] bg-backdrop backdrop-blur-md transition-opacity animate-fadeIn" onClick={() => setIsQuickSearchOpen(false)}></div>}
 
                 <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
+
+                {/* 프리셋 이름 입력 모달 */}
+                {isPresetNameModalOpen && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center px-4" onClick={() => setIsPresetNameModalOpen(false)}>
+                        <div className="absolute inset-0 bg-backdrop backdrop-blur-md" />
+                        <div className="relative bg-base border border-divider rounded-2xl p-6 w-full max-w-sm shadow-[0_20px_60px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                            <h3 className="text-base font-black text-primary mb-1">
+                                {presetEditingId ? '프리셋 이름 수정' : '탐색 조건 저장'}
+                            </h3>
+                            <p className="text-xs text-muted mb-4">최대 15자까지 입력할 수 있어요.</p>
+                            <input
+                                autoFocus
+                                type="text"
+                                value={presetNameInput}
+                                onChange={e => setPresetNameInput(e.target.value.slice(0, 15))}
+                                onKeyDown={e => e.key === 'Enter' && handleConfirmPresetName()}
+                                className="w-full px-4 py-3 rounded-xl bg-surface border border-divider text-primary text-sm font-bold focus:outline-none focus:border-amber-400/60 transition-colors mb-4"
+                                placeholder="예: 인디 탐색, 고퀄 RPG"
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => { setIsPresetNameModalOpen(false); setPresetEditingId(null); }} className="px-4 py-2 rounded-xl text-sm font-bold text-secondary hover:text-primary border border-divider hover:bg-surface-hover transition-colors active:scale-95">취소</button>
+                                <button onClick={handleConfirmPresetName} disabled={!presetNameInput.trim()} className="px-4 py-2 rounded-xl text-sm font-bold bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed">저장</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
