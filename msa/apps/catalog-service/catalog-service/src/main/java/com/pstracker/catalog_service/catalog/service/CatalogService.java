@@ -325,9 +325,6 @@ public class CatalogService {
 
     /**
      * 게임 검색
-     * @param condition 검색 조건
-     * @param pageable 페이징 정보
-     * @param memberId 회원 ID (찜 여부 확인용, null 가능)
      * @return 검색 결과 페이지
      */
     public List<GameSuggestResponse> suggestGames(String keyword, int limit) {

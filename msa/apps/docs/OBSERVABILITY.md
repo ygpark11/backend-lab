@@ -143,7 +143,7 @@ prometheus.remote_write "grafana_cloud_metrics" {
 | 2단: 🏃 트래픽 및 성능 | 부하 파악 | Throughput (RPS), Latency, TOP 10 엔드포인트 |
 | 3단: 🧠 시스템 리소스 | 리소스 상태 | CPU Usage, Heap Used (%), GC Stop-the-World Duration |
 | 4단: 🔌 DB 커넥션 풀 | HikariCP 상태 | Connections Size, Active/Idle, Connection Acquire Time |
-| 5단: 💾 캐시 성능 | Caffeine 4개 통합 | Cache Hit Rate, Cache Size, Cache Evictions Rate |
+| 5단: 💾 캐시 성능 | Caffeine 5개 통합 | Cache Hit Rate, Cache Size, Cache Evictions Rate |
 
 ---
 
@@ -164,7 +164,7 @@ sum(rate({filename=~"/var/log/pstracker/.*"} |= "[SLOW]" [5m]))
 
 #### Caffeine Cache (Prometheus)
 
-`GlobalCacheConfig`의 `recordStats()` + `CaffeineCacheMetrics.monitor()`로 4개 캐시 지표가 Prometheus에 노출됩니다. 레이블 키는 `cache`입니다.
+`GlobalCacheConfig`의 `recordStats()` + `CaffeineCacheMetrics.monitor()`로 5개 캐시 지표가 Prometheus에 노출됩니다. 레이블 키는 `cache`입니다.
 
 | 캐시명 | 용도 | TTL | 상한 |
 |--------|------|-----|------|
@@ -172,9 +172,10 @@ sum(rate({filename=~"/var/log/pstracker/.*"} |= "[SLOW]" [5m]))
 | `insightsCache` | 통계 대시보드 | 24h | 50건 |
 | `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 |
 | `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 |
+| `trendingCache` | 찜 TOP 10 게임 목록 | 1h | 1건 |
 
 ```promql
-# 캐시별 Hit Rate (4개 캐시 한 그래프)
+# 캐시별 Hit Rate (5개 캐시 한 그래프)
 sum by (cache) (rate(cache_gets_total{result="hit"}[5m]))
 /
 sum by (cache) (rate(cache_gets_total[5m]))

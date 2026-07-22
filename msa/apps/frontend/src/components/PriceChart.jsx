@@ -10,63 +10,61 @@ const PERIODS = [
     { label: '전체', months: null },
 ];
 
-const renderPSButton = (cx, cy, verdict, isActive = false) => {
-    const scale = isActive ? 1.3 : 0.9;
-    const strokeW = isActive ? 3 : 2.5;
-    const bgOpacity = isActive ? "0.3" : "0.15";
-    const innerFill = "var(--color-bg-base)";
+const VERDICT_COLOR = {
+    BUY_NOW:    '#22C55E',
+    GOOD_OFFER: '#F59E0B',
+    WAIT:       '#EF4444',
+    TRACKING:   '#3B82F6',
+};
 
-    switch (verdict) {
-        case 'BUY_NOW':
-            return (
-                <g className="transition-all duration-300">
-                    <circle cx={cx} cy={cy} r={12 * scale} fill="#22C55E" opacity={bgOpacity} className="animate-pulse" />
-                    <circle cx={cx} cy={cy} r={5 * scale} fill={innerFill} stroke="#22C55E" strokeWidth={strokeW} />
-                </g>
-            );
-        case 'GOOD_OFFER': {
-            const tR = 6 * scale;
-            const points = `${cx},${cy - tR} ${cx - tR * 0.866},${cy + tR * 0.5} ${cx + tR * 0.866},${cy + tR * 0.5}`;
-            return (
-                <g className="transition-all duration-300">
-                    <circle cx={cx} cy={cy} r={12 * scale} fill="#F59E0B" opacity={bgOpacity} className="animate-pulse" />
-                    <polygon points={points} fill={innerFill} stroke="#D97706" strokeWidth={strokeW} strokeLinejoin="round" />
-                </g>
-            );
-        }
-        case 'WAIT': {
-            const xR = 4 * scale;
-            return (
-                <g className="transition-all duration-300">
-                    <circle cx={cx} cy={cy} r={12 * scale} fill="#EF4444" opacity={bgOpacity} />
-                    <path d={`M ${cx - xR} ${cy - xR} L ${cx + xR} ${cy + xR} M ${cx + xR} ${cy - xR} L ${cx - xR} ${cy + xR}`}
-                          stroke="#EF4444" strokeWidth={strokeW + 0.5} strokeLinecap="round" />
-                </g>
-            );
-        }
-        case 'TRACKING':
-        default: {
-            const sR = 4.5 * scale;
-            return (
-                <g className="transition-all duration-300">
-                    <circle cx={cx} cy={cy} r={12 * scale} fill="#3B82F6" opacity={bgOpacity} />
-                    <rect x={cx - sR} y={cy - sR} width={sR * 2} height={sR * 2} fill={innerFill} stroke="#3B82F6" strokeWidth={strokeW} rx={1} />
-                </g>
-            );
-        }
+// 일반 dot: 작고 깔끔한 stroke-first 도형
+// active dot: 동일 도형 + 크기 업 + 후광 (pulse 없음)
+const renderPSShape = (cx, cy, verdict, isActive) => {
+    const color = VERDICT_COLOR[verdict] ?? VERDICT_COLOR.TRACKING;
+    const r     = isActive ? 6.5 : 4;
+    const sw    = isActive ? 2.5 : 2;
+    const fi    = isActive ? 0.18 : 0.08;
+
+    const shapeProps = { fill: color, fillOpacity: fi, stroke: color, strokeWidth: sw };
+
+    let shape;
+    if (verdict === 'BUY_NOW') {
+        shape = <circle cx={cx} cy={cy} r={r} {...shapeProps} />;
+    } else if (verdict === 'GOOD_OFFER') {
+        const pts = `${cx},${cy - r} ${cx - r * 0.866},${cy + r * 0.5} ${cx + r * 0.866},${cy + r * 0.5}`;
+        shape = <polygon points={pts} {...shapeProps} strokeLinejoin="round" />;
+    } else if (verdict === 'WAIT') {
+        const d = r * 0.7;
+        shape = (
+            <>
+                <line x1={cx - d} y1={cy - d} x2={cx + d} y2={cy + d} stroke={color} strokeWidth={sw + 0.5} strokeLinecap="round" />
+                <line x1={cx + d} y1={cy - d} x2={cx - d} y2={cy + d} stroke={color} strokeWidth={sw + 0.5} strokeLinecap="round" />
+            </>
+        );
+    } else {
+        shape = <rect x={cx - r} y={cy - r} width={r * 2} height={r * 2} {...shapeProps} rx={1} />;
     }
+
+    return (
+        <g>
+            {isActive && (
+                <circle cx={cx} cy={cy} r={r + 7} fill={color} opacity={0.12} />
+            )}
+            {shape}
+        </g>
+    );
 };
 
 const CustomDot = (props) => {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null) return null;
-    return renderPSButton(cx, cy, payload.verdict, false);
+    return renderPSShape(cx, cy, payload.verdict, false);
 };
 
 const CustomActiveDot = (props) => {
     const { cx, cy, payload } = props;
     if (cx == null || cy == null) return null;
-    return renderPSButton(cx, cy, payload.verdict, true);
+    return renderPSShape(cx, cy, payload.verdict, true);
 };
 
 const CustomTooltip = ({ active, payload }) => {
