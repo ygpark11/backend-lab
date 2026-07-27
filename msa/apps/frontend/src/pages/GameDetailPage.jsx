@@ -57,6 +57,7 @@ import {useCurrentUser} from '../hooks/useCurrentUser';
 import DonationModal from '../components/DonationModal';
 import {useAuth} from '../contexts/AuthContext';
 import {pushRecentGame} from '../utils/recentGames';
+import GameShortsCard from '../components/GameShortsCard';
 
 const renderVerdictIcon = (verdict) => {
     const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border shadow-lg backdrop-blur-xl transition-all border-divider-strong bg-surface";
@@ -323,6 +324,15 @@ export default function GameDetailPage() {
 
     if (loading) return <div className="pt-20"><PSLoader /></div>;
     if (!game) return null;
+
+    // 🎬 Shorts 촬영용 전체화면 카드 — /games/:id?view=shorts
+    if (new URLSearchParams(location.search).get('view') === 'shorts') {
+        return (
+            <div className="fixed inset-0 z-[200]">
+                <GameShortsCard game={game} />
+            </div>
+        );
+    }
 
     const traffic = getTrafficLight(game.priceVerdict, game);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;

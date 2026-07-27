@@ -641,81 +641,59 @@ def crawl_phase0_new_releases(bm):
             human_like_scroll(page)
 
             if "/concept/" in url:
+                # 이미지 URL 추출은 기존 방식 유지 (__NEXT_DATA__ 기반)
                 next_data_text = page.evaluate(
                     "() => { const el = document.getElementById('__NEXT_DATA__'); return el ? el.textContent : ''; }"
                 )
-                is_free_game = False
                 image_url_from_html = extract_gamehub_image_url(next_data_text)
 
-                # isFree/basePrice는 이스케이프 여부 무관하게 두 형태 모두 체크
-                if ('"isFree":true' in next_data_text or '"basePrice":"무료"' in next_data_text
-                        or '\\"isFree\\":true' in next_data_text or '\\"basePrice\\":\\"무료\\"' in next_data_text):
-                    is_free_game = True
-                else:
-                    # 안전망: 화면에 렌더링된 메인 버튼 텍스트도 확인 (기다리지 않음)
-                    try:
-                        main_cta = page.locator("div[data-qa='mfeCtaMain']")
-                        if main_cta.count() > 0:
-                            price_loc = main_cta.locator("span[data-qa$='#finalPrice']")
-                            if price_loc.count() > 0:
-                                price_text = price_loc.first.inner_text().strip()
-                                if "무료" in price_text or price_text == "0원":
-                                    is_free_game = True
-                    except: pass
-
-                if is_free_game:
-                    logger.info(f"[Phase 0 스킵] 기본 영역 무료 판정(F2P/체험판) -> {url}")
-                    continue
-
+                # [신규] mfeCtaMain > wishlistToggle에서 productId 획득
+                # 에디션 유무와 무관하게 항상 현재 기본 에디션의 productId를 반환
                 ps_store_id = None
-                editions = page.locator("article[data-qa^='mfeUpsell#productEdition']").all()
-                if editions:
-                    for ed in editions:
-                        try:
-                            ed_name = ed.locator("h3[data-qa$='#editionName']").inner_text(timeout=1000).strip()
-                            if any(x in ed_name for x in ["체험판", "Demo", "Trial", "BETA", "데모"]):
-                                continue
-
-                            ed_price_loc = ed.locator("span[data-qa$='#finalPrice']")
-                            if ed_price_loc.is_visible(timeout=1000):
-                                ed_price = ed_price_loc.inner_text().strip()
-                                if "무료" in ed_price or ed_price == "0원":
-                                    continue
-
-                                link_loc = ed.locator("a[href*='/product/']")
-                                if link_loc.is_visible(timeout=1000):
-                                    ps_store_id = link_loc.get_attribute("href").split('/')[-1]
-                                    break
-                        except:
-                            continue
+                try:
+                    wishlist_btn = page.locator("div[data-qa='mfeCtaMain'] button[data-qa='wishlistToggle']")
+                    wishlist_btn.wait_for(state="attached", timeout=10000)
+                    meta_str = wishlist_btn.get_attribute("data-telemetry-meta")
+                    if meta_str:
+                        ps_store_id = json.loads(meta_str).get("productId")
+                except Exception as e:
+                    logger.warning(f"[Phase 0] wishlistToggle 획득 실패: {e}")
 
                 if not ps_store_id:
+                    logger.warning(f"[Phase 0 스킵] productId 획득 실패: {url}")
+                    continue
+
+                # [신규] 무료 판별: CTA 버튼 data-telemetry-meta의 originalPriceValue 기반
+                # span#finalPrice 텍스트는 렌더링 타이밍에 따라 불안정 → 숫자값으로 대체
+                try:
+                    cta_btn = page.locator("div[data-qa='mfeCtaMain'] button[data-qa='mfeCtaMain#cta#action']")
+                    cta_btn.wait_for(state="attached", timeout=10000)
+                    meta_str = cta_btn.get_attribute("data-telemetry-meta")
+                    if meta_str:
+                        meta_json = json.loads(meta_str)
+                        price_value = meta_json["productDetail"][0]["productPriceDetail"][0]["originalPriceValue"]
+                        if price_value == 0:
+                            logger.info(f"[Phase 0 스킵] 무료 게임 판정(F2P/체험판) -> {url}")
+                            continue
+                except Exception as e:
+                    logger.warning(f"[Phase 0] 가격 파싱 실패, 유료로 간주: {e}")
+
+                page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=25000)
+                title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
+
+                image_url = image_url_from_html
+                if not image_url:
                     try:
-                        meta_loc = page.locator("a[data-telemetry-meta]").first
-                        if meta_loc.is_visible(timeout=2000):
-                            meta_str = meta_loc.get_attribute("data-telemetry-meta")
-                            meta_json = json.loads(meta_str)
-                            ps_store_id = meta_json.get("productId")
-                    except:
-                        pass
+                        img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
+                        if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
+                    except: pass
 
-                if ps_store_id:
-                    page.wait_for_selector("[data-qa='mfe-game-title#name']", timeout=25000)
-                    title = page.locator("[data-qa='mfe-game-title#name']").inner_text().strip()
-
-                    image_url = image_url_from_html
-                    if not image_url:
-                        try:
-                            img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
-                            if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
-                        except: pass
-
-                    logger.info(f"[Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
-                    session.post(INTERNAL_SYNC_URL, json={
-                        "psStoreId": ps_store_id,
-                        "title": title,
-                        "imageUrl": image_url
-                    }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
+                logger.info(f"[Phase 0 등록] 신작 수집소 전송: {title} ({ps_store_id})")
+                session.post(INTERNAL_SYNC_URL, json={
+                    "psStoreId": ps_store_id,
+                    "title": title,
+                    "imageUrl": image_url
+                }, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
 
             elif "/product/" in url:
                 ps_store_id = url.split('/')[-1]
@@ -1169,7 +1147,7 @@ def run_batch_crawler_logic():
             # [Phase 2] Deep Discovery
             logger.info("🔭 [Phase 2] Starting Deep Discovery ...")
             base_category_path = "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897"
-            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification"
+            search_params = "?FULL_GAME=storeDisplayClassification&GAME_BUNDLE=storeDisplayClassification&PREMIUM_EDITION=storeDisplayClassification&ADD-ON_PACK=storeDisplayClassification"
 
             phase2_pages = [p for p in range(1, 11) if (p - 1) % SHARD_TOTAL == SHARD_ID]
             logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 2 담당 페이지: {phase2_pages}")
