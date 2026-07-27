@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
     AlertTriangle, Circle, CheckSquare, Edit3, Plus, RefreshCw,
@@ -304,6 +304,9 @@ function GameManagementTab() {
         }
     }, [keyword]);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => { search(0); }, []);
+
     const toggleSelect = (id) => setSelected(prev => {
         const next = new Set(prev);
         next.has(id) ? next.delete(id) : next.add(id);
@@ -546,6 +549,8 @@ function ScrapingQueueTab() {
             setLoading(false);
         }
     }, []);
+
+    useEffect(() => { fetchRequests(0); }, [fetchRequests]);
 
     const handleRetry = async (requestId) => {
         setRetrying(requestId);
