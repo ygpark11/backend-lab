@@ -144,4 +144,8 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 100")
     long countEpicPlayTimeGames();
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Game g WHERE g.id IN :ids")
+    void deleteByIds(@Param("ids") List<Long> ids);
 }

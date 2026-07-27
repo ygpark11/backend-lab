@@ -2,6 +2,8 @@ package com.pstracker.catalog_service.scraping.repository;
 
 import com.pstracker.catalog_service.scraping.domain.ScrapingRequest;
 import com.pstracker.catalog_service.scraping.domain.ScrapingRequestStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,4 +31,6 @@ public interface ScrapingRequestRepository extends JpaRepository<ScrapingRequest
     void deleteByPsStoreIdAndStatus(@Param("psStoreId") String psStoreId, @Param("status") ScrapingRequestStatus status);
 
     boolean existsByPsStoreId(String psStoreId);
+
+    Page<ScrapingRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

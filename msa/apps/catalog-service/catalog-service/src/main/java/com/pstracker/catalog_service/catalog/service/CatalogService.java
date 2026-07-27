@@ -4,7 +4,6 @@ import com.pstracker.catalog_service.catalog.domain.*;
 import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
-import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
 import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
@@ -404,6 +403,59 @@ public class CatalogService {
         gameRepository.delete(game);
 
         // 삭제 후 캐시도 제거
+        gameReadService.evictGameDetailCache(gameId);
+    }
+
+    /**
+     * 게임 다중 삭제 (관리자 전용)
+     */
+    @Transactional
+    public void bulkDeleteGames(List<Long> gameIds) {
+        // 1. DB cascade 대상 테이블을 JPQL IN절로 선행 삭제 (성능 최적화)
+        priceHistoryRepository.deleteByGameIds(gameIds);
+        wishlistRepository.deleteByGameIds(gameIds);
+        gameVoteRepository.deleteByGameIds(gameIds);
+        crawlJobRepository.deleteByGameIds(gameIds);
+
+        // 2. Game 엔티티 삭제 — JPA cascade로 game_genres(CascadeType.ALL), game_platforms(@ElementCollection) 처리
+        List<Game> games = gameRepository.findAllById(gameIds);
+        for (Game game : games) {
+            gameRepository.delete(game);
+            gameReadService.evictGameDetailCache(game.getId());
+        }
+    }
+
+    /**
+     * 게임 정보 수정 (관리자 전용)
+     * 크롤러 담당 필드(가격 등)는 제외.
+     * - name/englishName/imageUrl: null이면 기존 값 유지 (공란으로 지우기 시나리오 없음)
+     * - IGDB/MC 평점, HLTB: null이면 해당 필드 초기화 (의도적 삭제 허용, 폼 전체 제출 전제)
+     * - searchKeywords: null이면 skip, 빈 배열이면 전체 삭제
+     */
+    @Transactional
+    public void adminUpdateGame(Long gameId, AdminGameUpdateRequest req) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("게임을 찾을 수 없습니다. id=" + gameId));
+
+        // name, englishName, imageUrl — 크롤러의 "최초 1회 설정" 제약 없이 자유롭게 수정
+        game.adminUpdateBasicInfo(req.name(), req.englishName(), req.imageUrl());
+
+        // IGDB 평점 — null 전달 시 해당 필드 초기화 (관리자 의도적 삭제 허용)
+        game.adminUpdateIgdbRatings(req.igdbCriticScore(), req.igdbCriticCount(),
+                req.igdbUserScore(), req.igdbUserCount());
+
+        // 메타크리틱 평점
+        game.adminUpdateMetacriticRatings(req.mcMetaScore(), req.mcMetaCount(),
+                req.mcUserScore(), req.mcUserCount());
+
+        // 검색 키워드
+        if (req.searchKeywords() != null) {
+            game.updateSearchKeywords(req.searchKeywords());
+        }
+
+        // HLTB — updatePlayTimes는 직접 대입이므로 null = 초기화
+        game.updatePlayTimes(req.hltbMainStory(), req.hltbMainExtra(), req.hltbCompletionist());
+
         gameReadService.evictGameDetailCache(gameId);
     }
 

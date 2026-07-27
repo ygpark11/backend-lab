@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface GameVoteRepository extends JpaRepository<GameVote, Long> {
@@ -21,4 +22,8 @@ public interface GameVoteRepository extends JpaRepository<GameVote, Long> {
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM GameVote v WHERE v.memberId = :memberId AND v.game.id = :gameId")
     void deleteByMemberIdAndGameId(@Param("memberId") Long memberId, @Param("gameId") Long gameId);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM GameVote v WHERE v.game.id IN :gameIds")
+    void deleteByGameIds(@Param("gameIds") List<Long> gameIds);
 }

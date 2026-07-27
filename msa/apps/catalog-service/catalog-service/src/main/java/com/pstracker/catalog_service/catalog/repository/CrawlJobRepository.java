@@ -14,6 +14,10 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
     boolean existsByGameIdAndTargetTypeAndStatusIn(Long gameId, CrawlJob.TargetType targetType, java.util.List<CrawlJob.JobStatus> statuses);
 
     @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM CrawlJob c WHERE c.gameId IN :gameIds")
+    void deleteByGameIds(@Param("gameIds") List<Long> gameIds);
+
+    @Modifying(clearAutomatically = true)
     @Query("UPDATE CrawlJob c " +
             "SET c.status = :newStatus, c.errorMessage = null, c.updatedAt = CURRENT_TIMESTAMP " +
             "WHERE c.gameId = :gameId " +

@@ -42,6 +42,7 @@ class ScrapingQueueServiceTest {
     GameRepository gameRepository;
 
     private Member testMember;
+    private Member adminMember;
     private static final String TEST_PS_STORE_ID = "PPSA-TEST-001";
 
     @BeforeEach
@@ -51,6 +52,13 @@ class ScrapingQueueServiceTest {
                 .password("test-pw")
                 .nickname("테스트개척자")
                 .role(Role.USER)
+                .build());
+
+        adminMember = memberRepository.save(Member.builder()
+                .email("admin@ps-signal.com")
+                .password("admin-pw")
+                .nickname("관리자")
+                .role(Role.ADMIN)
                 .build());
 
         gameCandidateRepository.save(GameCandidate.builder()
@@ -192,8 +200,136 @@ class ScrapingQueueServiceTest {
                 .hasMessageContaining("존재하지 않는 후보 게임입니다");
     }
 
+    // ── adminRegisterGame ────────────────────────────────────────────────────
+
     @Test
-    @DisplayName("후보군 목록 조회 시 size=20 기준 Slice 페이지네이션이 적용되어야 한다.")
+    @DisplayName("adminRegisterGame — 정상 등록 시 ScrapingRequest가 PENDING으로 생성된다")
+    void adminRegisterGame_정상_등록() {
+        // given
+        String psStoreId = "PPSA-ADMIN-NEW-001";
+        given(gameRepository.existsByPsStoreId(psStoreId)).willReturn(false);
+
+        // when
+        scrapingQueueService.adminRegisterGame(psStoreId, adminMember.getId());
+
+        // then
+        Optional<ScrapingRequest> request = scrapingRequestRepository
+                .findFirstByStatusOrderByCreatedAtAsc(ScrapingRequestStatus.PENDING);
+        assertThat(request).isPresent();
+        assertThat(request.get().getPsStoreId()).isEqualTo(psStoreId);
+        assertThat(request.get().getMember().getId()).isEqualTo(adminMember.getId());
+    }
+
+    @Test
+    @DisplayName("adminRegisterGame — 이미 games 테이블에 있으면 예외")
+    void adminRegisterGame_이미_등록된_게임_예외() {
+        given(gameRepository.existsByPsStoreId(anyString())).willReturn(true);
+
+        assertThatThrownBy(() -> scrapingQueueService.adminRegisterGame("PPSA-EXIST-001", adminMember.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("이미 트래커에 등록된 게임");
+    }
+
+    @Test
+    @DisplayName("adminRegisterGame — PENDING 상태 중복 시 예외")
+    void adminRegisterGame_PENDING_중복_차단() {
+        // given: 이미 PENDING 존재
+        String psStoreId = "PPSA-ADMIN-DUP-001";
+        given(gameRepository.existsByPsStoreId(psStoreId)).willReturn(false);
+        scrapingQueueService.adminRegisterGame(psStoreId, adminMember.getId());
+
+        // when & then
+        assertThatThrownBy(() -> scrapingQueueService.adminRegisterGame(psStoreId, adminMember.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("이미 수집 대기열에 등록된 게임");
+    }
+
+    @Test
+    @DisplayName("adminRegisterGame — FAILED 상태는 재시도 허용, 기존 FAILED 레코드 삭제됨")
+    void adminRegisterGame_FAILED_재등록_허용() {
+        // given: FAILED 상태 레코드 직접 생성
+        String psStoreId = "PPSA-ADMIN-FAIL-001";
+        given(gameRepository.existsByPsStoreId(psStoreId)).willReturn(false);
+
+        ScrapingRequest failed = ScrapingRequest.builder()
+                .member(testMember)
+                .psStoreId(psStoreId)
+                .targetUrl("https://store.playstation.com/ko-kr/product/" + psStoreId)
+                .build();
+        failed.markAsFailed("크롤러 타임아웃");
+        scrapingRequestRepository.save(failed);
+
+        // when
+        scrapingQueueService.adminRegisterGame(psStoreId, adminMember.getId());
+
+        // then: 새 PENDING 생성
+        Optional<ScrapingRequest> newPending = scrapingRequestRepository
+                .findFirstByStatusOrderByCreatedAtAsc(ScrapingRequestStatus.PENDING);
+        assertThat(newPending).isPresent();
+        assertThat(newPending.get().getPsStoreId()).isEqualTo(psStoreId);
+
+        // then: 기존 FAILED 삭제됨
+        assertThat(scrapingRequestRepository.existsByPsStoreIdAndStatusIn(
+                psStoreId, List.of(ScrapingRequestStatus.FAILED))).isFalse();
+    }
+
+    // ── adminRetryRequest ────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("adminRetryRequest — FAILED 상태 재시도 시 새 PENDING이 생성되고 기존 FAILED는 삭제된다")
+    void adminRetryRequest_정상_재시도() {
+        // given
+        String psStoreId = "PPSA-RETRY-001";
+        ScrapingRequest failed = ScrapingRequest.builder()
+                .member(testMember)
+                .psStoreId(psStoreId)
+                .targetUrl("https://store.playstation.com/ko-kr/product/" + psStoreId)
+                .build();
+        failed.markAsFailed("파이썬 크롤러 오류");
+        ScrapingRequest saved = scrapingRequestRepository.save(failed);
+
+        // when
+        scrapingQueueService.adminRetryRequest(saved.getId(), adminMember.getId());
+
+        // then: 새 PENDING 생성됨
+        Optional<ScrapingRequest> newPending = scrapingRequestRepository
+                .findFirstByStatusOrderByCreatedAtAsc(ScrapingRequestStatus.PENDING);
+        assertThat(newPending).isPresent();
+        assertThat(newPending.get().getPsStoreId()).isEqualTo(psStoreId);
+
+        // then: 기존 FAILED 삭제됨
+        assertThat(scrapingRequestRepository.existsByPsStoreIdAndStatusIn(
+                psStoreId, List.of(ScrapingRequestStatus.FAILED))).isFalse();
+    }
+
+    @Test
+    @DisplayName("adminRetryRequest — FAILED가 아닌 상태(PENDING)는 예외")
+    void adminRetryRequest_FAILED_아닌_상태_예외() {
+        // given: PENDING 상태 요청
+        String psStoreId = "PPSA-RETRY-002";
+        ScrapingRequest pending = ScrapingRequest.builder()
+                .member(testMember)
+                .psStoreId(psStoreId)
+                .targetUrl("https://store.playstation.com/ko-kr/product/" + psStoreId)
+                .build();
+        ScrapingRequest saved = scrapingRequestRepository.save(pending);
+
+        // when & then
+        assertThatThrownBy(() -> scrapingQueueService.adminRetryRequest(saved.getId(), adminMember.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("FAILED 상태인 요청만 재시도");
+    }
+
+    @Test
+    @DisplayName("adminRetryRequest — 존재하지 않는 requestId면 예외")
+    void adminRetryRequest_존재하지않는ID_예외() {
+        assertThatThrownBy(() -> scrapingQueueService.adminRetryRequest(99999L, adminMember.getId()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("요청을 찾을 수 없습니다");
+    }
+
+    @Test
+    @DisplayName("getCandidates_페이지네이션 size=20 기준 Slice 페이지네이션이 적용되어야 한다.")
     void getCandidates_페이지네이션() {
         // given: 기존 setUp 1건 포함하여 총 25건
         for (int i = 2; i <= 25; i++) {

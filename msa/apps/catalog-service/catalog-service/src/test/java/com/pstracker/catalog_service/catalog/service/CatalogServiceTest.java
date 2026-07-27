@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
+import com.pstracker.catalog_service.catalog.dto.AdminGameUpdateRequest;
 import com.pstracker.catalog_service.catalog.dto.CollectRequest;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
@@ -249,6 +250,183 @@ public class CatalogServiceTest {
         assertThat(igdbThreadName.get())
                 .isNotNull()
                 .isNotEqualTo(testThreadName);
+    }
+
+    // ── adminUpdateGame ──────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("adminUpdateGame — 영문명이 이미 있어도 새 값으로 수정된다 (updateInfo 버그 수정 검증)")
+    void adminUpdateGame_영문명_덮어쓰기() {
+        // given: 영문명이 이미 설정된 게임 생성
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("PROD-ADMIN-001", "엘든 링", 70000, 70000, 0, null));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("PROD-ADMIN-001").orElseThrow();
+        assertThat(game.getEnglishName()).isEqualTo("엘든 링 (Eng)");
+
+        AdminGameUpdateRequest req = new AdminGameUpdateRequest(
+                null, "Elden Ring", null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, null
+        );
+
+        // when
+        catalogService.adminUpdateGame(game.getId(), req);
+        em.flush(); em.clear();
+
+        // then: 기존 값 무관하게 영문명 수정됨
+        Game updated = gameRepository.findById(game.getId()).orElseThrow();
+        assertThat(updated.getEnglishName()).isEqualTo("Elden Ring");
+    }
+
+    @Test
+    @DisplayName("adminUpdateGame — name/englishName은 null 가드 보호 (지우기 불가)")
+    void adminUpdateGame_name_englishName_null_보호() {
+        // given
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("PROD-ADMIN-002", "사이버펑크", 50000, 50000, 0, null));
+        em.flush(); em.clear();
+
+        Game before = gameRepository.findByPsStoreId("PROD-ADMIN-002").orElseThrow();
+        String originalName = before.getName();
+        String originalEnglishName = before.getEnglishName();
+
+        AdminGameUpdateRequest req = new AdminGameUpdateRequest(
+                null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, null
+        );
+
+        // when
+        catalogService.adminUpdateGame(before.getId(), req);
+        em.flush(); em.clear();
+
+        // then: name/englishName은 null 가드로 보호됨
+        Game after = gameRepository.findById(before.getId()).orElseThrow();
+        assertThat(after.getName()).isEqualTo(originalName);
+        assertThat(after.getEnglishName()).isEqualTo(originalEnglishName);
+    }
+
+    @Test
+    @DisplayName("adminUpdateGame — IGDB null 전달 시 기존 평점 초기화 (폼 전체 제출 전제, 의도적 삭제 허용)")
+    void adminUpdateGame_IGDB_null_시_기존값_초기화() {
+        // given: IGDB 평점이 설정된 게임 생성
+        given(igdbEnrichmentService.searchGame(any())).willReturn(
+                new IgdbGameResponse(1L, "갓 오브 워", 90.5, 48, 87.3, 1200, null, 1248)
+        );
+        catalogService.upsertGameData(createDto("PROD-ADMIN-003", "갓 오브 워", 60000, 60000, 0, null));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("PROD-ADMIN-003").orElseThrow();
+        assertThat(game.getIgdbCriticScore()).isNotNull(); // 초기 IGDB 데이터 확인
+
+        // IGDB 전체 null (관리자가 평점 정보 지우기)
+        AdminGameUpdateRequest req = new AdminGameUpdateRequest(
+                null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, null
+        );
+
+        // when
+        catalogService.adminUpdateGame(game.getId(), req);
+        em.flush(); em.clear();
+
+        // then: IGDB 필드 전부 null로 초기화됨
+        Game updated = gameRepository.findById(game.getId()).orElseThrow();
+        assertThat(updated.getIgdbCriticScore()).isNull();
+        assertThat(updated.getIgdbCriticCount()).isNull();
+        assertThat(updated.getIgdbUserScore()).isNull();
+        assertThat(updated.getIgdbUserCount()).isNull();
+    }
+
+    @Test
+    @DisplayName("adminUpdateGame — HLTB null 전달 시 기존 플레이타임 초기화")
+    void adminUpdateGame_HLTB_null_시_기존값_초기화() {
+        // given: HLTB 값 세팅
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("PROD-ADMIN-004", "엘든 링", 70000, 70000, 0, null));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("PROD-ADMIN-004").orElseThrow();
+
+        AdminGameUpdateRequest setReq = new AdminGameUpdateRequest(
+                null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, 40.0, 60.0, 100.0
+        );
+        catalogService.adminUpdateGame(game.getId(), setReq);
+        em.flush(); em.clear();
+
+        // when: HLTB 전체 null
+        AdminGameUpdateRequest clearReq = new AdminGameUpdateRequest(
+                null, null, null,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null, null
+        );
+        catalogService.adminUpdateGame(game.getId(), clearReq);
+        em.flush(); em.clear();
+
+        // then: HLTB 전부 null로 초기화됨
+        Game updated = gameRepository.findById(game.getId()).orElseThrow();
+        assertThat(updated.getHltbMainStory()).isNull();
+        assertThat(updated.getHltbMainExtra()).isNull();
+        assertThat(updated.getHltbCompletionist()).isNull();
+    }
+
+    // ── bulkDeleteGames ──────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("bulkDeleteGames — 게임과 연관 가격 이력이 모두 삭제된다")
+    void bulkDeleteGames_게임과_이력_모두_삭제() {
+        // given: 게임 2개 생성 (price_history 포함)
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("PROD-BULK-001", "벌크삭제1", 50000, 50000, 0, null));
+        catalogService.upsertGameData(createDto("PROD-BULK-002", "벌크삭제2", 60000, 60000, 0, null));
+        em.flush(); em.clear();
+
+        List<Long> gameIds = List.of(
+                gameRepository.findByPsStoreId("PROD-BULK-001").orElseThrow().getId(),
+                gameRepository.findByPsStoreId("PROD-BULK-002").orElseThrow().getId()
+        );
+
+        // when
+        catalogService.bulkDeleteGames(gameIds);
+        em.flush(); em.clear();
+
+        // then: 게임 삭제됨
+        assertThat(gameRepository.findByPsStoreId("PROD-BULK-001")).isEmpty();
+        assertThat(gameRepository.findByPsStoreId("PROD-BULK-002")).isEmpty();
+
+        // then: 가격 이력도 삭제됨
+        gameIds.forEach(id ->
+                assertThat(priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(id)).isEmpty()
+        );
+    }
+
+    @Test
+    @DisplayName("bulkDeleteGames — 존재하지 않는 ID를 포함해도 예외 없이 존재하는 게임만 삭제된다")
+    void bulkDeleteGames_존재하지않는ID_포함() {
+        // given
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("PROD-BULK-003", "벌크삭제3", 50000, 50000, 0, null));
+        em.flush(); em.clear();
+
+        Long existingId = gameRepository.findByPsStoreId("PROD-BULK-003").orElseThrow().getId();
+        Long nonExistentId = 99999L;
+
+        // when & then: 예외 없이 완료되어야 함
+        org.assertj.core.api.Assertions.assertThatCode(
+                () -> catalogService.bulkDeleteGames(List.of(existingId, nonExistentId))
+        ).doesNotThrowAnyException();
+
+        em.flush(); em.clear();
+        assertThat(gameRepository.findByPsStoreId("PROD-BULK-003")).isEmpty();
     }
 
     private CollectRequest createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {

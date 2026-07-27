@@ -6,13 +6,16 @@ import com.pstracker.catalog_service.member.repository.MemberRepository;
 import com.pstracker.catalog_service.scraping.domain.GameCandidate;
 import com.pstracker.catalog_service.scraping.domain.ScrapingRequest;
 import com.pstracker.catalog_service.scraping.domain.ScrapingRequestStatus;
+import com.pstracker.catalog_service.scraping.dto.AdminScrapingResponse;
 import com.pstracker.catalog_service.scraping.dto.CandidateSliceResponse;
 import com.pstracker.catalog_service.scraping.dto.GameCandidateResponse;
 import com.pstracker.catalog_service.scraping.repository.GameCandidateRepository;
 import com.pstracker.catalog_service.scraping.repository.ScrapingRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,5 +94,68 @@ public class ScrapingQueueService {
         gameCandidateRepository.deleteByPsStoreId(psStoreId);
 
         log.debug("수집 대기열 등록 완료: 유저 {} -> 게임 {}", member.getNickname(), candidate.getTitle());
+    }
+
+    /**
+     * 관리자 게임 등록 — GameCandidate 없이 psStoreId만으로 수집 큐에 직접 삽입
+     * 도배 방지, 후보군 체크 없음. 이미 games 테이블에 있으면 예외.
+     */
+    @Transactional
+    public void adminRegisterGame(String psStoreId, Long adminMemberId) {
+        if (gameRepository.existsByPsStoreId(psStoreId)) {
+            throw new IllegalStateException("이미 트래커에 등록된 게임입니다. 재수집은 개별 refresh를 사용하세요.");
+        }
+        if (scrapingRequestRepository.existsByPsStoreIdAndStatusIn(
+                psStoreId, List.of(ScrapingRequestStatus.PENDING, ScrapingRequestStatus.PROCESSING))) {
+            throw new IllegalStateException("이미 수집 대기열에 등록된 게임입니다.");
+        }
+
+        // 기존 FAILED 레코드 제거 (unique 제약 충돌 방지)
+        scrapingRequestRepository.deleteByPsStoreIdAndStatus(psStoreId, ScrapingRequestStatus.FAILED);
+
+        Member admin = memberRepository.findById(adminMemberId)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+
+        ScrapingRequest request = ScrapingRequest.builder()
+                .member(admin)
+                .psStoreId(psStoreId)
+                .targetUrl("https://store.playstation.com/ko-kr/product/" + psStoreId)
+                .build();
+        scrapingRequestRepository.save(request);
+        log.info("관리자 게임 등록 요청: {} (요청자: {})", psStoreId, admin.getNickname());
+    }
+
+    /**
+     * FAILED 상태의 수집 요청 재시도 — 기존 레코드 삭제 후 PENDING으로 재삽입
+     */
+    @Transactional
+    public void adminRetryRequest(Long requestId, Long adminMemberId) {
+        ScrapingRequest req = scrapingRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("요청을 찾을 수 없습니다. id=" + requestId));
+        if (req.getStatus() != ScrapingRequestStatus.FAILED) {
+            throw new IllegalStateException("FAILED 상태인 요청만 재시도할 수 있습니다.");
+        }
+
+        String psStoreId = req.getPsStoreId();
+        scrapingRequestRepository.deleteByPsStoreIdAndStatus(psStoreId, ScrapingRequestStatus.FAILED);
+
+        Member admin = memberRepository.findById(adminMemberId)
+                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+
+        ScrapingRequest newReq = ScrapingRequest.builder()
+                .member(admin)
+                .psStoreId(psStoreId)
+                .targetUrl("https://store.playstation.com/ko-kr/product/" + psStoreId)
+                .build();
+        scrapingRequestRepository.save(newReq);
+        log.info("관리자 수집 재시도: {} (요청자: {})", psStoreId, admin.getNickname());
+    }
+
+    /**
+     * 관리자 수집 현황 조회 — 전체 요청을 최신순으로 페이징
+     */
+    public Page<AdminScrapingResponse> getAdminScrapingRequests(Pageable pageable) {
+        return scrapingRequestRepository.findAllByOrderByCreatedAtDesc(pageable)
+                .map(AdminScrapingResponse::from);
     }
 }

@@ -280,6 +280,24 @@ public class Game {
     }
 
     /**
+     * 관리자 전용 기본 정보 수정 — 크롤러의 "최초 1회 설정" 제약 없이 자유롭게 덮어씀.
+     * null·공백이면 기존 값 유지.
+     */
+    public void adminUpdateBasicInfo(String name, String englishName, String imageUrl) {
+        if (hasText(name) && !name.equals(this.name)) {
+            this.name = name;
+            this.chosungName = ChosungUtils.extract(name);
+        }
+        if (hasText(englishName)) {
+            this.englishName = englishName;
+        }
+        if (hasText(imageUrl)) {
+            this.imageUrl = imageUrl;
+        }
+        this.lastUpdated = LocalDateTime.now();
+    }
+
+    /**
      * 플랫폼 정보 업데이트
      * @param newPlatforms 새로운 플랫폼 집합
      */
@@ -289,6 +307,22 @@ public class Game {
             this.platforms.clear();
             this.platforms.addAll(newPlatforms);
         }
+    }
+
+    /** 관리자 전용 — null 전달 시 해당 필드를 null로 초기화 */
+    public void adminUpdateIgdbRatings(Integer criticScore, Integer criticCount, Double userScore, Integer userCount) {
+        this.igdbCriticScore = criticScore;
+        this.igdbCriticCount = criticCount;
+        this.igdbUserScore = userScore;
+        this.igdbUserCount = userCount;
+    }
+
+    /** 관리자 전용 — null 전달 시 해당 필드를 null로 초기화 */
+    public void adminUpdateMetacriticRatings(Integer metaScore, Integer metaCount, Double userScore, Integer userCount) {
+        this.mcMetaScore = metaScore;
+        this.mcMetaCount = metaCount;
+        this.mcUserScore = userScore;
+        this.mcUserCount = userCount;
     }
 
     public void updateIgdbRatings(Integer criticScore, Integer criticCount, Double userScore, Integer userCount) {

@@ -130,4 +130,54 @@ class GameTest {
         assertThat(game.getEditionContents()).containsExactly("DLC 팩", "기본 게임");
         assertThat(game.getEditionContents()).hasSize(2);
     }
+
+    // ========== adminUpdateBasicInfo ==========
+
+    @Test
+    @DisplayName("영문명이 이미 있어도 새 값으로 자유롭게 덮어써진다 (updateInfo의 최초1회 제약 없음)")
+    void adminUpdateBasicInfo_영문명_덮어쓰기() {
+        Game game = createGame(); // englishName = "Test Game"
+        assertThat(game.getEnglishName()).isEqualTo("Test Game");
+
+        game.adminUpdateBasicInfo(null, "New English Name", null);
+
+        assertThat(game.getEnglishName()).isEqualTo("New English Name");
+    }
+
+    @Test
+    @DisplayName("null 필드는 기존 값을 유지한다")
+    void adminUpdateBasicInfo_null_기존값_유지() {
+        Game game = createGame();
+        String originalName = game.getName();
+        String originalEnglishName = game.getEnglishName();
+        String originalImageUrl = game.getImageUrl();
+
+        game.adminUpdateBasicInfo(null, null, null);
+
+        assertThat(game.getName()).isEqualTo(originalName);
+        assertThat(game.getEnglishName()).isEqualTo(originalEnglishName);
+        assertThat(game.getImageUrl()).isEqualTo(originalImageUrl);
+    }
+
+    @Test
+    @DisplayName("name 변경 시 chosungName도 함께 갱신된다")
+    void adminUpdateBasicInfo_name변경_chosungName갱신() {
+        Game game = createGame();
+
+        game.adminUpdateBasicInfo("새 게임 이름", null, null);
+
+        assertThat(game.getName()).isEqualTo("새 게임 이름");
+        assertThat(game.getChosungName()).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("공백 문자열은 null과 동일하게 무시된다")
+    void adminUpdateBasicInfo_공백_무시() {
+        Game game = createGame();
+        String originalName = game.getName();
+
+        game.adminUpdateBasicInfo("   ", "   ", "   ");
+
+        assertThat(game.getName()).isEqualTo(originalName);
+    }
 }

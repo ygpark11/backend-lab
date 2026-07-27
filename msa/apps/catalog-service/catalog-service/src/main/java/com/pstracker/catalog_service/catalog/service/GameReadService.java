@@ -2,6 +2,7 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
+import com.pstracker.catalog_service.catalog.dto.AdminGameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
@@ -172,5 +173,14 @@ public class GameReadService {
                 .toList();
         if (genreIds.isEmpty()) return List.of();
         return gameRepository.findRelatedGames(genreIds, game.getId(), RECOMMEND_GAME_COUNT);
+    }
+
+    /**
+     * 게임 상세 조회 (관리자 전용) — 캐시 없이 DB 직접 조회, searchKeywords 포함
+     */
+    public AdminGameDetailResponse getAdminGameDetail(Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("게임을 찾을 수 없습니다. id=" + gameId));
+        return AdminGameDetailResponse.from(game);
     }
 }

@@ -17,6 +17,7 @@ import MyPage from './pages/MyPage';
 import PsPlusPricingPage from './pages/PsPlusPricingPage';
 import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
 import CurationPage from './pages/CurationPage';
+import AdminPage from './pages/AdminPage';
 
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
@@ -53,6 +54,10 @@ function AppRoutes() {
                     <Route
                         path="/profile"
                         element={isAuthenticated ? <MyPage /> : <Navigate to="/games" replace />}
+                    />
+                    <Route
+                        path="/admin"
+                        element={isAuthenticated ? <AdminPage /> : <Navigate to="/games" replace />}
                     />
                 </Route>
             </Routes>

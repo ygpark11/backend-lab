@@ -19,6 +19,7 @@ import {
     Moon,
     Plus,
     CalendarDays,
+    Settings,
     Shield,
     Sparkles,
     Sun,
@@ -37,7 +38,8 @@ const Navbar = () => {
     const location = useLocation();
     const notiRef = useRef(null);
     const mobileMenuRef = useRef(null);
-    const { isAuthenticated, openLoginModal } = useAuth();
+    const { isAuthenticated, openLoginModal, user } = useAuth();
+    const isAdmin = isAuthenticated && user?.role === 'ROLE_ADMIN';
 
     const [isGuideOpen, setIsGuideOpen] = useState(false);
     const [isLegalOpen, setIsLegalOpen] = useState(false);
@@ -526,6 +528,16 @@ const Navbar = () => {
                             <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
+                        {isAdmin && (
+                            <button
+                                onClick={() => navigateAndScroll('/admin')}
+                                title="관리자 콘솔"
+                                className={`hidden lg:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/admin') ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20' : 'text-secondary hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10'}`}
+                            >
+                                <Settings className="w-5 h-5" />
+                            </button>
+                        )}
+
                         <button onClick={handleLogout} className="hidden lg:flex items-center gap-2 text-sm font-bold text-secondary p-2 rounded-lg transition-colors hover:text-red-500 hover:bg-surface-hover active:text-red-500">
                             <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
@@ -589,6 +601,12 @@ const Navbar = () => {
                                     {isAuthenticated && (
                                         <button onClick={() => { navigateAndScroll('/profile'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/profile') ? 'bg-surface-hover text-primary' : 'text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface'}`}>
                                             <UserCircle className="w-4 h-4 opacity-70" /> 마이페이지
+                                        </button>
+                                    )}
+
+                                    {isAdmin && (
+                                        <button onClick={() => { navigateAndScroll('/admin'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-2.5 mb-1 rounded-xl text-sm font-bold transition-all ${location.pathname.includes('/admin') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'text-secondary hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10'}`}>
+                                            <Settings className="w-4 h-4 opacity-70" /> 관리자 콘솔
                                         </button>
                                     )}
 

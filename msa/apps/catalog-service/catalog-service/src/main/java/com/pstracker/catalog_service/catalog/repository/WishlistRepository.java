@@ -46,4 +46,8 @@ public interface WishlistRepository extends JpaRepository<Wishlist, Long>, Wishl
 
     @Query("SELECT w.game.id FROM Wishlist w GROUP BY w.game.id ORDER BY COUNT(w) DESC")
     List<Long> findTopGameIdsByWishlistCount(Pageable pageable);
+
+    @Modifying(clearAutomatically = true)
+    @Query("DELETE FROM Wishlist w WHERE w.game.id IN :gameIds")
+    void deleteByGameIds(@Param("gameIds") List<Long> gameIds);
 }
