@@ -250,8 +250,8 @@ export default function GameShortsCard({ game }) {
                                     }
                                     <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/45'}`}>
                                         {isClosingSoon
-                                            ? `막차! ${daysLeft}일 남음`
-                                            : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')} (${daysLeft}일 남음)`
+                                            ? `막차! ${game.saleEndDate?.replace(/-/g, '.')} 마감`
+                                            : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')}`
                                         }
                                     </span>
                                 </div>
