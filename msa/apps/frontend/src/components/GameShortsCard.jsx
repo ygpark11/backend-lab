@@ -136,8 +136,8 @@ export default function GameShortsCard({ game }) {
                 <Square   className="w-28 h-28 stroke-[1.5px]" />
             </div>
 
-            {/* ── 게임 커버: h-[46vh] → 393×852에서 잘리지 않음 ── */}
-            <div className="relative h-[46vh] shrink-0 overflow-hidden">
+            {/* ── 게임 커버: h-[38vh] → YouTube Shorts 안전 영역 확보 ── */}
+            <div className="relative h-[38vh] shrink-0 overflow-hidden">
                 <PSGameImage
                     src={game.imageUrl}
                     alt={game.title}
@@ -187,7 +187,7 @@ export default function GameShortsCard({ game }) {
             </div>
 
             {/* ── 하단 컨텐츠 ── */}
-            <div className="relative z-10 flex flex-col flex-1 px-5 pt-2 pb-3 gap-2">
+            <div className="relative z-10 flex flex-col flex-1 px-5 pt-2 pb-20 gap-2">
 
                 {/* 핵심 판정 박스 */}
                 <div className={`rounded-2xl border bg-white/[0.05] backdrop-blur-md p-3 ${cfg.border} ${cfg.boxGlow}`}>
@@ -350,8 +350,6 @@ export default function GameShortsCard({ game }) {
                         </div>
                     </div>
                 )}
-
-                <div className="flex-1" />
 
                 {/* 브랜딩 */}
                 <div className="flex items-center justify-between pt-2 border-t border-white/10">
