@@ -151,23 +151,23 @@ export default function GameShortsCard({ game }) {
                 {/* 우상단 배지 — 플랫폼 / PS5 Pro / PLUS 할인 / PS+ 카탈로그 */}
                 <div className="absolute top-4 right-4 flex flex-col gap-1.5 items-end">
                     {game.platforms?.slice(0, 2).map(p => (
-                        <span key={p} className="text-[11px] font-black text-blue-200 bg-blue-950/80 backdrop-blur-sm border border-blue-400/40 px-2.5 py-0.5 rounded-md shadow-sm">
+                        <span key={p} className="text-[13px] font-black text-blue-200 bg-blue-950/80 backdrop-blur-sm border border-blue-400/40 px-2.5 py-0.5 rounded-md shadow-sm">
                             {p}
                         </span>
                     ))}
                     {game.isPs5ProEnhanced && (
-                        <span className="text-[11px] font-black text-white/80 bg-black/70 backdrop-blur-sm border border-white/20 px-2.5 py-0.5 rounded-md">
+                        <span className="text-[13px] font-black text-white/80 bg-black/70 backdrop-blur-sm border border-white/20 px-2.5 py-0.5 rounded-md">
                             PS5 Pro
                         </span>
                     )}
                     {game.isPlusExclusive && (
-                        <span className="text-[11px] font-black text-yellow-300 bg-yellow-950/80 backdrop-blur-sm border border-yellow-400/40 px-2.5 py-0.5 rounded-md">
+                        <span className="text-[13px] font-black text-yellow-300 bg-yellow-950/80 backdrop-blur-sm border border-yellow-400/40 px-2.5 py-0.5 rounded-md">
                             PLUS 할인
                         </span>
                     )}
                     {/* PS+ 카탈로그 포함 — 구독자는 무료 플레이 가능 */}
                     {isPsExtra && (
-                        <span className="text-[11px] font-black text-cyan-300 bg-cyan-950/80 backdrop-blur-sm border border-cyan-400/40 px-2.5 py-0.5 rounded-md shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                        <span className="text-[13px] font-black text-cyan-300 bg-cyan-950/80 backdrop-blur-sm border border-cyan-400/40 px-2.5 py-0.5 rounded-md shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                             PS+ 포함
                         </span>
                     )}
@@ -176,7 +176,7 @@ export default function GameShortsCard({ game }) {
                 {/* 타이틀 */}
                 <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
                     {game.genres?.[0] && (
-                        <p className="text-[10px] text-white/50 font-bold tracking-widest uppercase mb-1.5">
+                        <p className="text-[12px] text-white/50 font-bold tracking-widest uppercase mb-1.5">
                             {game.genres[0]}
                         </p>
                     )}
@@ -222,21 +222,21 @@ export default function GameShortsCard({ game }) {
 
                             {/* 정가 취소선 */}
                             {game.discountRate > 0 && game.originalPrice > 0 && (
-                                <p className="text-xs text-white/30 font-bold line-through leading-none">
+                                <p className="text-[14px] text-white/30 font-bold line-through leading-none">
                                     {game.originalPrice.toLocaleString()}원
                                 </p>
                             )}
 
                             {/* 역대최저가 shimmer 뱃지 / GOOD_OFFER 근접 */}
                             {game.priceVerdict === 'BUY_NOW' && (
-                                <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[14px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                                <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
                                     <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                                     <TrendingUp className="relative z-10 w-4 h-4 shrink-0" />
                                     <span className="relative z-10">역대최저가 달성!</span>
                                 </div>
                             )}
                             {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
-                                <p className="text-[13px] text-white/45 font-bold mt-0.5">
+                                <p className="text-[15px] text-white/45 font-bold mt-0.5">
                                     역대최저 {game.lowestPrice.toLocaleString()}원 근접
                                 </p>
                             )}
@@ -245,10 +245,10 @@ export default function GameShortsCard({ game }) {
                             {daysLeft !== null && daysLeft >= 0 && (
                                 <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
                                     {isClosingSoon
-                                        ? <Timer className="w-4 h-4 text-red-400 shrink-0 animate-pulse" />
-                                        : <CalendarDays className="w-4 h-4 text-white/35 shrink-0" />
+                                        ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+                                        : <CalendarDays className="w-5 h-5 text-white/35 shrink-0" />
                                     }
-                                    <span className={`text-[13px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/45'}`}>
+                                    <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/45'}`}>
                                         {isClosingSoon
                                             ? `막차! ${daysLeft}일 남음`
                                             : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')} (${daysLeft}일 남음)`
@@ -261,7 +261,7 @@ export default function GameShortsCard({ game }) {
                         /* WAIT / TRACKING 내용 */
                         <div className="flex flex-col gap-2">
                             <div>
-                                <p className="text-[10px] text-white/30 font-black tracking-widest mb-0.5">
+                                <p className="text-[12px] text-white/30 font-black tracking-widest mb-0.5">
                                     {game.discountRate > 0 ? '현재 할인가' : '현재 정가'}
                                 </p>
                                 <div className="flex items-center gap-2">
@@ -275,14 +275,14 @@ export default function GameShortsCard({ game }) {
                                     )}
                                 </div>
                                 {game.discountRate > 0 && daysLeft !== null && daysLeft >= 0 && (
-                                    <p className="text-[11px] text-white/25 font-bold mt-1">
+                                    <p className="text-[13px] text-white/25 font-bold mt-1">
                                         이번 할인 {daysLeft === 0 ? '오늘 종료' : `${daysLeft}일 남음`} — 역대최저 아님
                                     </p>
                                 )}
                             </div>
                             {game.lowestPrice > 0 ? (
                                 <div>
-                                    <p className="text-[10px] text-green-400/70 font-black tracking-widest mb-0.5">역대최저가</p>
+                                    <p className="text-[12px] text-green-400/70 font-black tracking-widest mb-0.5">역대최저가</p>
                                     <span className="text-[34px] font-black text-green-400 tracking-tighter drop-shadow-[0_0_16px_rgba(34,197,94,0.7)]">
                                         {game.lowestPrice.toLocaleString()}원
                                     </span>
@@ -291,7 +291,7 @@ export default function GameShortsCard({ game }) {
                                 <p className="text-[13px] text-white/25 font-bold">역대 할인 이력 부족</p>
                             )}
                             {game.lowestPrice > 0 && game.currentPrice > game.lowestPrice && (
-                                <p className="text-[12px] text-white/35 font-bold pt-1 border-t border-white/10">
+                                <p className="text-[14px] text-white/35 font-bold pt-1 border-t border-white/10">
                                     지금 사면 역대최저보다{' '}
                                     <span className="text-amber-400/90 font-black">
                                         +{(game.currentPrice - game.lowestPrice).toLocaleString()}원
@@ -311,10 +311,10 @@ export default function GameShortsCard({ game }) {
                                 {type === 'score' && <div className="absolute -bottom-2 -right-2 opacity-[0.06] text-white"><span className="text-[56px] font-black leading-none">M</span></div>}
                                 {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
 
-                                <p className="relative z-10 text-[10px] font-black text-white/35 tracking-widest mb-2 uppercase">{label}</p>
+                                <p className="relative z-10 text-[12px] font-black text-white/35 tracking-widest mb-2 uppercase">{label}</p>
 
                                 {/* 시간당 가격: 우리 차별 지표 → 흰색 glow로 강조 */}
-                                <p className={`relative z-10 text-[19px] font-black leading-none ${
+                                <p className={`relative z-10 text-[22px] font-black leading-none ${
                                     type === 'time'
                                         ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]'
                                         : 'text-white'
@@ -329,7 +329,7 @@ export default function GameShortsCard({ game }) {
 
                                 {/* 플레이타임 서브텍스트 — "시간당 N원"의 맥락 완성 */}
                                 {type === 'time' && hours > 0 && (
-                                    <p className="relative z-10 text-[10px] text-white/30 font-bold mt-1">
+                                    <p className="relative z-10 text-[12px] text-white/30 font-bold mt-1">
                                         {hours}시간 기준
                                     </p>
                                 )}
@@ -343,8 +343,8 @@ export default function GameShortsCard({ game }) {
                     <div className="bg-white/[0.05] border border-white/10 rounded-xl p-3 flex items-center gap-3 backdrop-blur-sm">
                         <CalendarDays className={`w-5 h-5 shrink-0 ${isEstimatePast ? 'text-yellow-400 animate-pulse' : 'text-white/35'}`} />
                         <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-black text-white/30 tracking-widest mb-0.5">다음 할인 예상</p>
-                            <p className={`text-[16px] font-black leading-tight ${isEstimatePast ? 'text-yellow-400' : nextSale ? 'text-white' : 'text-white/35'}`}>
+                            <p className="text-[12px] font-black text-white/30 tracking-widest mb-0.5">다음 할인 예상</p>
+                            <p className={`text-[18px] font-black leading-tight ${isEstimatePast ? 'text-yellow-400' : nextSale ? 'text-white' : 'text-white/35'}`}>
                                 {isEstimatePast ? '곧 할인 가능성 높음' : nextSale ?? '패턴 데이터 부족'}
                             </p>
                         </div>
@@ -355,8 +355,8 @@ export default function GameShortsCard({ game }) {
 
                 {/* 브랜딩 */}
                 <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                    <span className="text-white/20 text-[11px] font-bold tracking-wider">PS 가격 추적 서비스</span>
-                    <span className="text-white font-black text-[14px] tracking-widest">ps-signal.com</span>
+                    <span className="text-white/20 text-[13px] font-bold tracking-wider">PS 가격 추적 서비스</span>
+                    <span className="text-white font-black text-[16px] tracking-widest">ps-signal.com</span>
                 </div>
             </div>
         </div>
