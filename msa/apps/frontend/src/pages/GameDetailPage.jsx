@@ -59,6 +59,93 @@ import {useAuth} from '../contexts/AuthContext';
 import {pushRecentGame} from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
 
+// ── Shorts 유튜브 설명 자동생성 ──────────────────────────────────────
+function generateShortsDesc(game) {
+    const verdictMap = {
+        BUY_NOW:    '지금 사세요 ○',
+        GOOD_OFFER: '괜찮은 가격 △',
+        WAIT:       '기다리세요 ×',
+        TRACKING:   '추적 중 □',
+    };
+    const verdict = verdictMap[game.priceVerdict] ?? '추적 중 □';
+    const isBuy   = game.priceVerdict === 'BUY_NOW' || game.priceVerdict === 'GOOD_OFFER';
+    const lines   = [];
+
+    lines.push(`${game.title} 지금 살까요? 🎮`);
+    lines.push('');
+
+    if (isBuy) {
+        let main = verdict;
+        if (game.discountRate > 0) main += ` | -${game.discountRate}% 할인`;
+        if (game.priceVerdict === 'BUY_NOW')    main += ' | 역대최저가 달성!';
+        if (game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0) main += ' | 역대최저 근접';
+        lines.push(main);
+        if (game.saleEndDate && game.discountRate > 0)
+            lines.push(`할인 종료: ${game.saleEndDate.replace(/-/g, '.')}`);
+    } else {
+        let main = verdict;
+        if (game.discountRate > 0) main += ` | -${game.discountRate}% 할인 중이나 역대최저 아님`;
+        lines.push(main);
+        if (game.lowestPrice > 0)
+            lines.push(`역대최저가: ${game.lowestPrice.toLocaleString()}원 (더 기다리세요)`);
+    }
+
+    const meta = [];
+    const score = game.mcMetaScore || game.igdbCriticScore;
+    if (score) meta.push(`메타크리틱: ${score}점`);
+    const hours = game.hltbMainStory > 0 ? Math.round(game.hltbMainStory) : null;
+    if (hours)  meta.push(`플레이타임: ${hours}시간`);
+    if (meta.length > 0) lines.push(meta.join(' | '));
+
+    lines.push('');
+    lines.push('PS 가격 추적 → ps-signal.com');
+
+    const gameTag      = '#' + game.title.replace(/[^가-힣a-zA-Z0-9]/g, '').slice(0, 25);
+    const platformTags = (game.platforms || []).map(p => '#' + p.replace(/\s/g, '')).join(' ');
+    lines.push(`#플스세일 #게임할인 ${platformTags} ${gameTag}`.trim());
+
+    return lines.join('\n');
+}
+
+function ShortsToolbar({ game }) {
+    const [copied, setCopied] = React.useState(false);
+    const desc = generateShortsDesc(game);
+
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(desc);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        } catch {
+            toast.error('클립보드 복사 실패');
+        }
+    };
+
+    return (
+        <div className="bg-[#080810] px-5 py-8 flex flex-col gap-4 min-h-[40vh]">
+            <p className="text-white/20 text-[11px] font-black tracking-widest uppercase text-center">
+                카드 녹화 후 스크롤 — 유튜브 설명 복사
+            </p>
+            {/* 미리보기 */}
+            <pre className="text-white/55 text-[13px] font-bold leading-relaxed bg-white/[0.04] border border-white/10 rounded-xl p-4 whitespace-pre-wrap break-keep">
+                {desc}
+            </pre>
+            {/* 복사 버튼 */}
+            <button
+                onClick={handleCopy}
+                className={`w-full py-4 rounded-2xl font-black text-[17px] tracking-wide transition-all active:scale-95 ${
+                    copied
+                        ? 'bg-green-500/20 border border-green-400/60 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.3)]'
+                        : 'bg-white/[0.08] border border-white/20 text-white hover:bg-white/[0.12]'
+                }`}
+            >
+                {copied ? '✓ 클립보드에 복사됨' : '유튜브 설명 복사'}
+            </button>
+        </div>
+    );
+}
+// ──────────────────────────────────────────────────────────────────────
+
 const renderVerdictIcon = (verdict) => {
     const buttonBase = "w-14 h-14 rounded-full flex items-center justify-center border shadow-lg backdrop-blur-xl transition-all border-divider-strong bg-surface";
     switch (verdict) {
@@ -328,8 +415,11 @@ export default function GameDetailPage() {
     // 🎬 Shorts 촬영용 전체화면 카드 — /games/:id?view=shorts
     if (new URLSearchParams(location.search).get('view') === 'shorts') {
         return (
-            <div className="fixed inset-0 z-[200]">
+            <div className="fixed inset-0 z-[200] overflow-y-auto bg-[#080810]">
+                {/* 카드: h-screen으로 뷰포트 꽉 채움 — 이 영역만 화면 녹화 */}
                 <GameShortsCard game={game} />
+                {/* 스크롤 아래 — 녹화 후 유튜브 설명 복사 도구 */}
+                <ShortsToolbar game={game} />
             </div>
         );
     }
