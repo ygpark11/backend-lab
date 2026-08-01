@@ -198,7 +198,7 @@ export default function GameShortsCard({ game }) {
             </div>
 
             {/* ── 하단 컨텐츠 ── */}
-            <div className="relative z-10 flex flex-col flex-1 px-5 pt-2 pb-20 gap-2">
+            <div className="relative z-10 flex flex-col flex-1 px-5 pt-2 pb-40 gap-2">
 
                 {/* 핵심 판정 박스 */}
                 <div className={`rounded-2xl border bg-white/[0.05] backdrop-blur-md p-3 ${cfg.border} ${cfg.boxGlow}`}>
