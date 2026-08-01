@@ -120,12 +120,12 @@ export default function GameShortsCard({ game }) {
     const colClass = stats.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
 
     const scorePct   = game.mcMetaScore || game.igdbCriticScore || 0;
-    // 점수별 색상 코딩 — 넷플릭스 매칭% 방식 참고
-    const scoreColor = scorePct >= 90
+    // GameDetailPage getScoreColor 기준과 통일: 75+ 초록 / 50+ 노랑 / 미만 빨강
+    const scoreColor = scorePct >= 75
         ? 'text-green-400 drop-shadow-[0_0_14px_rgba(34,197,94,0.9)]'
-        : scorePct >= 75
+        : scorePct >= 50
             ? 'text-yellow-400 drop-shadow-[0_0_14px_rgba(234,179,8,0.9)]'
-            : 'text-white';
+            : 'text-red-400 drop-shadow-[0_0_14px_rgba(239,68,68,0.9)]';
 
     const isPsExtra  = Boolean(game.inCatalog);
     const hasBadges  = game.platforms?.length > 0 || game.isPs5ProEnhanced || game.isPlusExclusive || isPsExtra;
