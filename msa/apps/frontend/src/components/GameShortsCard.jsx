@@ -265,7 +265,7 @@ export default function GameShortsCard({ game }) {
                                             -{game.discountRate}%
                                         </span>
                                         {game.originalPrice > game.currentPrice && (
-                                            <span className="text-[12px] text-white/45 font-bold mt-1">
+                                            <span className="text-[13px] text-white/70 font-bold mt-1">
                                                 {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
                                             </span>
                                         )}
@@ -281,7 +281,7 @@ export default function GameShortsCard({ game }) {
                                 </div>
                             )}
                             {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
-                                <p className="text-[15px] text-white/45 font-bold mt-0.5">
+                                <p className="text-[15px] text-white/65 font-bold mt-0.5">
                                     역대최저 {game.lowestPrice.toLocaleString()}원 근접
                                 </p>
                             )}
@@ -290,9 +290,9 @@ export default function GameShortsCard({ game }) {
                                 <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
                                     {isClosingSoon
                                         ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
-                                        : <CalendarDays className="w-5 h-5 text-white/35 shrink-0" />
+                                        : <CalendarDays className="w-5 h-5 text-white/60 shrink-0" />
                                     }
-                                    <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/45'}`}>
+                                    <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/70'}`}>
                                         {isClosingSoon
                                             ? `막차! ${game.saleEndDate?.replace(/-/g, '.')} 마감`
                                             : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')}`
@@ -354,42 +354,49 @@ export default function GameShortsCard({ game }) {
                                 {type === 'score' && <div className="absolute -bottom-2 -right-2 opacity-[0.06] text-white"><span className="text-[56px] font-black leading-none">M</span></div>}
                                 {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
 
-                                {type === 'score' ? (
-                                    <div className="relative z-10 flex justify-center mb-2">
-                                        <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-md border tracking-wider ${
-                                            scorePct >= 75
-                                                ? 'text-green-400 border-green-400/60 bg-green-400/10'
-                                                : scorePct >= 50
-                                                    ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
-                                                    : 'text-red-400 border-red-400/60 bg-red-400/10'
-                                        }`}>{label}</span>
+                                {type === 'score' && userScore ? (
+                                    /* 가로 2분할: 좌=비평가, 우=유저 */
+                                    <div className="relative z-10 flex items-center">
+                                        <div className="flex-1 flex flex-col items-center">
+                                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider mb-2 ${
+                                                scorePct >= 75
+                                                    ? 'text-green-400 border-green-400/60 bg-green-400/10'
+                                                    : scorePct >= 50
+                                                        ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
+                                                        : 'text-red-400 border-red-400/60 bg-red-400/10'
+                                            }`}>{label}</span>
+                                            <p className={`text-[30px] font-black leading-none ${scoreColor}`}>{value}</p>
+                                        </div>
+                                        <div className="w-px h-10 bg-white/15 mx-2 self-center" />
+                                        <div className="flex-1 flex flex-col items-center">
+                                            <User className="w-4 h-4 text-white/55 mb-2" />
+                                            <p className="text-[30px] font-black leading-none text-white/75">{userScore}</p>
+                                        </div>
                                     </div>
-                                ) : type === 'time' ? (
-                                    <div className="relative z-10 flex items-center justify-center gap-1 mb-2">
-                                        <Clock className="w-3 h-3 text-white/35" />
-                                        <span className="text-[11px] font-black text-white/35 tracking-widest uppercase">플레이타임</span>
-                                    </div>
-                                ) : (
-                                    <p className="relative z-10 text-[11px] font-black text-white/35 tracking-widest mb-2 uppercase">{label}</p>
-                                )}
-
-                                {type === 'score' && (
+                                ) : type === 'score' ? (
+                                    /* 유저 평점 없음 — 세로 */
                                     <>
+                                        <div className="relative z-10 flex justify-center mb-2">
+                                            <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-md border tracking-wider ${
+                                                scorePct >= 75
+                                                    ? 'text-green-400 border-green-400/60 bg-green-400/10'
+                                                    : scorePct >= 50
+                                                        ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
+                                                        : 'text-red-400 border-red-400/60 bg-red-400/10'
+                                            }`}>{label}</span>
+                                        </div>
                                         <p className={`relative z-10 text-[32px] font-black leading-none ${scoreColor}`}>{value}</p>
-                                        {userScore && (
-                                            <div className="relative z-10 flex items-center justify-center gap-1 mt-1.5">
-                                                <User className="w-3 h-3 text-white/30" />
-                                                <span className="text-[14px] font-black text-white/60">{userScore}</span>
-                                            </div>
-                                        )}
                                     </>
-                                )}
-
-                                {type === 'time' && (
+                                ) : (
+                                    /* 플레이타임 */
                                     <>
+                                        <div className="relative z-10 flex items-center justify-center gap-1.5 mb-2">
+                                            <Clock className="w-3.5 h-3.5 text-white/60" />
+                                            <span className="text-[11px] font-black text-white/60 tracking-widest uppercase">플레이타임</span>
+                                        </div>
                                         <p className="relative z-10 text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{value}</p>
                                         {sub && (
-                                            <p className="relative z-10 text-[12px] text-white/40 font-bold mt-1.5">{sub}</p>
+                                            <p className="relative z-10 text-[13px] text-white/60 font-bold mt-1.5">{sub}</p>
                                         )}
                                     </>
                                 )}
