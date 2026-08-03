@@ -1120,7 +1120,7 @@ def run_batch_crawler_logic():
         # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
         if SHARD_TOTAL > 1:
-            targets = [t for i, t in enumerate(targets) if i % SHARD_TOTAL == SHARD_ID]
+            targets = [t for t in targets if hash(t.split('/')[-1]) % SHARD_TOTAL == SHARD_ID]
             logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 1 타겟 필터 완료: {len(targets)}개")
 
         with sync_playwright() as p:
