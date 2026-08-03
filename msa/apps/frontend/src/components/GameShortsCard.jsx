@@ -191,7 +191,7 @@ export default function GameShortsCard({ game }) {
                 {/* 타이틀 + 뱃지 — pr-16으로 YouTube 우측 버튼 safe zone 확보 */}
                 <div className="absolute bottom-0 left-0 right-0 pl-5 pr-16 pb-4">
                     {game.genres?.[0] && (
-                        <p className="text-[12px] text-white/50 font-bold tracking-widest uppercase mb-1.5">
+                        <p className="text-[12px] text-white/70 font-bold tracking-widest uppercase mb-1.5 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
                             {game.genres[0]}
                         </p>
                     )}
@@ -240,9 +240,9 @@ export default function GameShortsCard({ game }) {
 
                     {isBuy ? (
                         <div className="flex flex-col gap-2">
-                            {/* 가격 2×2 그리드 — 행 단위로 정렬: 1행=현재가|할인율, 2행=정가취소선|절약금액 */}
-                            {game.discountRate > 0 ? (
-                                <div className="grid grid-cols-2 items-baseline gap-x-2 gap-y-1.5">
+                            {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex items-baseline gap-2.5 flex-wrap">
                                     <span className={`text-[42px] font-black tracking-tighter leading-none ${
                                         game.isPlusExclusive
                                             ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
@@ -253,30 +253,29 @@ export default function GameShortsCard({ game }) {
                                         {game.currentPrice.toLocaleString()}
                                         <span className="text-xl font-medium text-white/40 ml-1">원</span>
                                     </span>
-                                    <span className={`text-[30px] font-black leading-none text-right ${cfg.labelColor} ${cfg.accentGlow}`}>
-                                        -{game.discountRate}%
-                                    </span>
-                                    {game.originalPrice > 0 && (
-                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none">
-                                            {game.originalPrice.toLocaleString()}원
-                                        </p>
-                                    )}
-                                    {game.originalPrice > game.currentPrice && (
-                                        <span className="text-[13px] text-white/70 font-bold text-right">
-                                            {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
+                                    {game.discountRate > 0 && (
+                                        <span className={`text-[22px] font-black leading-none px-2.5 py-0.5 rounded-lg border ${
+                                            game.priceVerdict === 'BUY_NOW'
+                                                ? 'bg-green-500/20 text-green-400 border-green-400/50'
+                                                : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
+                                        }`}>
+                                            -{game.discountRate}%
                                         </span>
                                     )}
                                 </div>
-                            ) : (
-                                <span className={`text-[42px] font-black tracking-tighter leading-none block ${
-                                    game.isPlusExclusive
-                                        ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
-                                        : 'text-white'
-                                }`}>
-                                    {game.currentPrice.toLocaleString()}
-                                    <span className="text-xl font-medium text-white/40 ml-1">원</span>
-                                </span>
-                            )}
+                                {game.discountRate > 0 && game.originalPrice > 0 && (
+                                    <div className="flex items-center gap-2.5">
+                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none">
+                                            {game.originalPrice.toLocaleString()}원
+                                        </p>
+                                        {game.originalPrice > game.currentPrice && (
+                                            <span className="text-[13px] text-green-400/80 font-bold">
+                                                {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
 
                             {game.priceVerdict === 'BUY_NOW' && (
                                 <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
