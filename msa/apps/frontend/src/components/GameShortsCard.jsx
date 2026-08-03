@@ -214,7 +214,7 @@ export default function GameShortsCard({ game }) {
                             )}
                             {isPsExtra && (
                                 <span className="text-[12px] font-black text-cyan-300 bg-cyan-950/90 backdrop-blur-sm border border-cyan-400/70 px-2.5 py-1 rounded-md shadow-[0_0_8px_rgba(6,182,212,0.4)]">
-                                    PS+ 포함
+                                    PS+ CATALOG
                                 </span>
                             )}
                         </div>
@@ -369,14 +369,15 @@ export default function GameShortsCard({ game }) {
                                                         : scorePct >= 50
                                                             ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
                                                             : 'text-red-400 border-red-400/60 bg-red-400/10'
-                                                }`}>{label}</span>
+                                                }`}>META</span>
                                             </div>
                                             <p className={`text-[30px] font-black leading-none ${scoreColor}`}>{value}</p>
                                         </div>
                                         <div className="w-px h-10 bg-white/15 mx-2 self-center" />
                                         <div className="flex-1 flex flex-col items-center">
-                                            <div className="h-5 flex items-center justify-center mb-2">
-                                                <User className="w-4 h-4 text-white/55" />
+                                            <div className="h-5 flex items-center justify-center gap-1 mb-2">
+                                                <User className="w-3 h-3 text-white/55" />
+                                                <span className="text-[11px] font-black text-white/55 tracking-wider">USER</span>
                                             </div>
                                             <p className="text-[30px] font-black leading-none text-white/75">{userScore}</p>
                                         </div>
@@ -400,7 +401,7 @@ export default function GameShortsCard({ game }) {
                                     <>
                                         <div className="relative z-10 flex items-center justify-center gap-1.5 mb-2">
                                             <Clock className="w-3.5 h-3.5 text-white/60" />
-                                            <span className="text-[11px] font-black text-white/60 tracking-widest uppercase">플레이타임</span>
+                                            <span className="text-[11px] font-black text-white/60 tracking-widest">PLAYTIME</span>
                                         </div>
                                         <p className="relative z-10 text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{value}</p>
                                         {sub && (
