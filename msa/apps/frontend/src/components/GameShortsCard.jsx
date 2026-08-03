@@ -1,7 +1,7 @@
 // 🎬 YouTube Shorts 촬영 전용 카드 (항상 다크 고정, 9:16 풀스크린)
 // 접근: /games/:id?view=shorts — 사이트 내 링크 없음
 import React from 'react';
-import { Circle, Triangle, X, Square, CalendarDays, TrendingUp, Timer, Clock } from 'lucide-react';
+import { Circle, Triangle, X, Square, CalendarDays, TrendingUp, Timer, Clock, User } from 'lucide-react';
 import PSGameImage from './common/PSGameImage';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
@@ -17,12 +17,28 @@ function formatYearMonth(dateStr) {
     }
 }
 
+// 언어 태그 괄호 및 PS4/PS5 suffix 제거
+// "마블 스파이더맨 2 (중국어(간체자), 한국어, 영어, ...)" → "마블 스파이더맨 2"
+// "보더랜드 3 PS4™ & PS5™ (...)" → "보더랜드 3"
+function cleanTitle(title) {
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = title.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) title = title.slice(0, parenIdx).trim();
+    }
+    // PS4/PS5 suffix 제거 (플랫폼 뱃지로 이미 표시됨)
+    return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
+
 const VERDICT_CONFIG = {
     BUY_NOW: {
         label: '지금 사세요',
         labelColor: 'text-green-400',
         border: 'border-green-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(34,197,94,0.45),inset_0_1px_0_rgba(34,197,94,0.2)]',
+        frameBorder: 'border-green-500/50 shadow-[inset_0_0_30px_rgba(34,197,94,0.1)]',
         auroraA: 'bg-green-500/35',
         auroraB: 'bg-teal-500/20',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(34,197,94,0.7)]',
@@ -40,6 +56,7 @@ const VERDICT_CONFIG = {
         labelColor: 'text-yellow-400',
         border: 'border-yellow-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(234,179,8,0.45),inset_0_1px_0_rgba(234,179,8,0.2)]',
+        frameBorder: 'border-yellow-500/50 shadow-[inset_0_0_30px_rgba(234,179,8,0.1)]',
         auroraA: 'bg-yellow-500/30',
         auroraB: 'bg-amber-500/20',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(234,179,8,0.7)]',
@@ -55,6 +72,7 @@ const VERDICT_CONFIG = {
         labelColor: 'text-red-400',
         border: 'border-red-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(239,68,68,0.45),inset_0_1px_0_rgba(239,68,68,0.2)]',
+        frameBorder: 'border-red-500/50 shadow-[inset_0_0_30px_rgba(239,68,68,0.1)]',
         auroraA: 'bg-red-500/30',
         auroraB: 'bg-purple-500/20',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]',
@@ -70,6 +88,7 @@ const VERDICT_CONFIG = {
         labelColor: 'text-blue-400',
         border: 'border-blue-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(59,130,246,0.45),inset_0_1px_0_rgba(59,130,246,0.2)]',
+        frameBorder: 'border-blue-500/50 shadow-[inset_0_0_30px_rgba(59,130,246,0.1)]',
         auroraA: 'bg-blue-500/30',
         auroraB: 'bg-indigo-500/20',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(59,130,246,0.7)]',
@@ -96,8 +115,7 @@ export default function GameShortsCard({ game }) {
         : null;
 
     const score      = game.mcMetaScore || game.igdbCriticScore || null;
-    // "MC" → 풀네임으로 직관성 강화
-    const scoreLabel = game.mcMetaScore ? '메타크리틱' : 'IGDB';
+    const scoreLabel = game.mcMetaScore ? '메타' : 'IGDB';
 
     const nextSaleRaw    = game.defenseInfo?.nextSaleEstimate;
     const nextSale       = formatYearMonth(nextSaleRaw);
@@ -105,11 +123,19 @@ export default function GameShortsCard({ game }) {
         ? nextSaleRaw < new Date().toISOString().slice(0, 10)
         : false;
 
-    // 플레이타임을 primary로, 시성비를 sub(secondary)로
     const playtimeHours = game.hltbMainStory > 0 ? Math.round(game.hltbMainStory) : null;
 
+    const userScoreValue = game.mcMetaScore
+        ? (game.mcUserScore > 0 ? game.mcUserScore.toFixed(1) : null)
+        : (game.igdbUserScore > 0 ? String(Math.round(game.igdbUserScore)) : null);
+
     const stats = [
-        score         ? { label: scoreLabel, value: String(score), type: 'score' } : null,
+        score ? {
+            label: scoreLabel,
+            value: String(score),
+            type: 'score',
+            userScore: userScoreValue,
+        } : null,
         playtimeHours ? {
             label: '플레이타임',
             value: `${playtimeHours}시간`,
@@ -120,7 +146,6 @@ export default function GameShortsCard({ game }) {
     const colClass = stats.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
 
     const scorePct   = game.mcMetaScore || game.igdbCriticScore || 0;
-    // GameDetailPage getScoreColor 기준과 통일: 75+ 초록 / 50+ 노랑 / 미만 빨강
     const scoreColor = scorePct >= 75
         ? 'text-green-400 drop-shadow-[0_0_14px_rgba(34,197,94,0.9)]'
         : scorePct >= 50
@@ -129,9 +154,13 @@ export default function GameShortsCard({ game }) {
 
     const isPsExtra  = Boolean(game.inCatalog);
     const hasBadges  = game.platforms?.length > 0 || game.isPs5ProEnhanced || game.isPlusExclusive || isPsExtra;
+    const title      = cleanTitle(game.title);
 
     return (
         <div className="relative w-full h-screen bg-[#080810] overflow-hidden flex flex-col select-none">
+
+            {/* 판정별 카드 외곽 프레임 — TCG 카드처럼 전체를 감싸는 컬러 테두리 */}
+            <div className={`absolute inset-0 border-2 pointer-events-none z-50 ${cfg.frameBorder}`} />
 
             {/* Aurora 배경 — verdict별 색상 */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -151,7 +180,7 @@ export default function GameShortsCard({ game }) {
             <div className="relative h-[38vh] shrink-0 overflow-hidden">
                 <PSGameImage
                     src={game.imageUrl}
-                    alt={game.title}
+                    alt={title}
                     priority
                     width={640}
                     className="w-full h-full object-cover"
@@ -159,46 +188,45 @@ export default function GameShortsCard({ game }) {
                 <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-[#080810]" />
                 <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/40 via-transparent to-transparent" />
 
-                {/* 타이틀 + 뱃지 — 커버 하단 좌측 (우상단→하단 이동으로 YouTube 인게이지먼트 버튼 충돌 해소) */}
-                <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
+                {/* 타이틀 + 뱃지 — pr-16으로 YouTube 우측 버튼 safe zone 확보 */}
+                <div className="absolute bottom-0 left-0 right-0 pl-5 pr-16 pb-4">
                     {game.genres?.[0] && (
                         <p className="text-[12px] text-white/50 font-bold tracking-widest uppercase mb-1.5">
                             {game.genres[0]}
                         </p>
                     )}
-                    {/* 뱃지 — 타이틀 바로 위 인라인 pill row */}
                     {hasBadges && (
                         <div className="flex flex-wrap gap-1.5 mb-2">
                             {game.platforms?.slice(0, 2).map(p => (
-                                <span key={p} className="text-[11px] font-black text-blue-200 bg-blue-950/80 backdrop-blur-sm border border-blue-400/40 px-2 py-0.5 rounded-md">
+                                <span key={p} className="text-[12px] font-black text-blue-200 bg-blue-950/90 backdrop-blur-sm border border-blue-400/70 px-2.5 py-1 rounded-md shadow-[0_0_8px_rgba(96,165,250,0.35)]">
                                     {p}
                                 </span>
                             ))}
                             {game.isPs5ProEnhanced && (
-                                <span className="text-[11px] font-black text-white/80 bg-black/70 backdrop-blur-sm border border-white/20 px-2 py-0.5 rounded-md">
+                                <span className="text-[12px] font-black text-white bg-white/10 backdrop-blur-sm border border-white/50 px-2.5 py-1 rounded-md shadow-[0_0_8px_rgba(255,255,255,0.2)]">
                                     PS5 Pro
                                 </span>
                             )}
                             {game.isPlusExclusive && (
-                                <span className="text-[11px] font-black text-yellow-300 bg-yellow-950/80 backdrop-blur-sm border border-yellow-400/40 px-2 py-0.5 rounded-md">
+                                <span className="text-[12px] font-black text-yellow-300 bg-yellow-950/90 backdrop-blur-sm border border-yellow-400/70 px-2.5 py-1 rounded-md shadow-[0_0_8px_rgba(234,179,8,0.35)]">
                                     PLUS 할인
                                 </span>
                             )}
                             {isPsExtra && (
-                                <span className="text-[11px] font-black text-cyan-300 bg-cyan-950/80 backdrop-blur-sm border border-cyan-400/40 px-2 py-0.5 rounded-md shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                                <span className="text-[12px] font-black text-cyan-300 bg-cyan-950/90 backdrop-blur-sm border border-cyan-400/70 px-2.5 py-1 rounded-md shadow-[0_0_8px_rgba(6,182,212,0.4)]">
                                     PS+ 포함
                                 </span>
                             )}
                         </div>
                     )}
                     <h1 className="text-[26px] font-black text-white leading-tight break-keep line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-                        {game.title}
+                        {title}
                     </h1>
                 </div>
             </div>
 
-            {/* ── 하단 컨텐츠 ── */}
-            <div className="relative z-10 flex flex-col flex-1 px-5 pt-2 pb-40 gap-2">
+            {/* ── 하단 컨텐츠 — pl-5 pr-16으로 YouTube 우측 버튼 safe zone 확보 ── */}
+            <div className="relative z-10 flex flex-col flex-1 pl-5 pr-16 pt-2 pb-40 gap-2">
 
                 {/* 핵심 판정 박스 */}
                 <div className={`rounded-2xl border bg-white/[0.05] backdrop-blur-md p-3 ${cfg.border} ${cfg.boxGlow}`}>
@@ -212,33 +240,39 @@ export default function GameShortsCard({ game }) {
 
                     {isBuy ? (
                         <div className="flex flex-col gap-2">
-                            {/* 가격 + 할인율 */}
-                            <div className="flex items-end gap-3 flex-wrap">
-                                <span className={`text-[42px] font-black tracking-tighter leading-none ${
-                                    game.isPlusExclusive
-                                        ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
-                                        : game.priceVerdict === 'BUY_NOW'
-                                            ? 'text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]'
-                                            : 'text-white'
-                                }`}>
-                                    {game.currentPrice.toLocaleString()}
-                                    <span className="text-xl font-medium text-white/40 ml-1">원</span>
-                                </span>
-                                {game.discountRate > 0 && (
-                                    <span className={`text-[24px] font-black mb-1.5 ${cfg.labelColor} ${cfg.accentGlow}`}>
-                                        -{game.discountRate}%
+                            {/* 가격 좌우 분할 — 좌: 현재가+정가취소선 / 우: 할인율+절약금액 */}
+                            <div className="flex items-start gap-2">
+                                <div className="flex-1">
+                                    <span className={`text-[42px] font-black tracking-tighter leading-none block ${
+                                        game.isPlusExclusive
+                                            ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                                            : game.priceVerdict === 'BUY_NOW'
+                                                ? 'text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]'
+                                                : 'text-white'
+                                    }`}>
+                                        {game.currentPrice.toLocaleString()}
+                                        <span className="text-xl font-medium text-white/40 ml-1">원</span>
                                     </span>
+                                    {game.discountRate > 0 && game.originalPrice > 0 && (
+                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none mt-1.5">
+                                            {game.originalPrice.toLocaleString()}원
+                                        </p>
+                                    )}
+                                </div>
+                                {game.discountRate > 0 && (
+                                    <div className="flex flex-col items-end shrink-0 pt-1">
+                                        <span className={`text-[30px] font-black leading-none ${cfg.labelColor} ${cfg.accentGlow}`}>
+                                            -{game.discountRate}%
+                                        </span>
+                                        {game.originalPrice > game.currentPrice && (
+                                            <span className="text-[12px] text-white/45 font-bold mt-1">
+                                                {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
-                            {/* 정가 취소선 — white/30 → white/55 로 가시성 강화 */}
-                            {game.discountRate > 0 && game.originalPrice > 0 && (
-                                <p className="text-[14px] text-white/55 font-bold line-through leading-none">
-                                    {game.originalPrice.toLocaleString()}원
-                                </p>
-                            )}
-
-                            {/* 역대최저가 shimmer 뱃지 */}
                             {game.priceVerdict === 'BUY_NOW' && (
                                 <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
                                     <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
@@ -252,7 +286,6 @@ export default function GameShortsCard({ game }) {
                                 </p>
                             )}
 
-                            {/* 할인 종료일 */}
                             {daysLeft !== null && daysLeft >= 0 && (
                                 <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
                                     {isClosingSoon
@@ -269,7 +302,6 @@ export default function GameShortsCard({ game }) {
                             )}
                         </div>
                     ) : (
-                        /* WAIT / TRACKING */
                         <div className="flex flex-col gap-2">
                             <div>
                                 <p className="text-[12px] text-white/30 font-black tracking-widest mb-0.5">
@@ -314,22 +346,45 @@ export default function GameShortsCard({ game }) {
                     )}
                 </div>
 
-                {/* 핵심 수치: 메타크리틱 점수 + 플레이타임 */}
+                {/* 핵심 수치: 메타크리틱 + 플레이타임 */}
                 {stats.length > 0 && (
                     <div className={`grid ${colClass} gap-2`}>
-                        {stats.map(({ label, value, type, sub }) => (
+                        {stats.map(({ label, value, type, sub, userScore }) => (
                             <div key={label} className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
                                 {type === 'score' && <div className="absolute -bottom-2 -right-2 opacity-[0.06] text-white"><span className="text-[56px] font-black leading-none">M</span></div>}
                                 {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
 
-                                <p className="relative z-10 text-[11px] font-black text-white/35 tracking-widest mb-2 uppercase">{label}</p>
-
-                                {/* 메타크리틱: 점수별 색상 코딩 + glow (progress bar 제거) */}
-                                {type === 'score' && (
-                                    <p className={`relative z-10 text-[32px] font-black leading-none ${scoreColor}`}>{value}</p>
+                                {type === 'score' ? (
+                                    <div className="relative z-10 flex justify-center mb-2">
+                                        <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-md border tracking-wider ${
+                                            scorePct >= 75
+                                                ? 'text-green-400 border-green-400/60 bg-green-400/10'
+                                                : scorePct >= 50
+                                                    ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
+                                                    : 'text-red-400 border-red-400/60 bg-red-400/10'
+                                        }`}>{label}</span>
+                                    </div>
+                                ) : type === 'time' ? (
+                                    <div className="relative z-10 flex items-center justify-center gap-1 mb-2">
+                                        <Clock className="w-3 h-3 text-white/35" />
+                                        <span className="text-[11px] font-black text-white/35 tracking-widest uppercase">플레이타임</span>
+                                    </div>
+                                ) : (
+                                    <p className="relative z-10 text-[11px] font-black text-white/35 tracking-widest mb-2 uppercase">{label}</p>
                                 )}
 
-                                {/* 플레이타임: 시간 primary(크게) + 시성비 secondary(작게) */}
+                                {type === 'score' && (
+                                    <>
+                                        <p className={`relative z-10 text-[32px] font-black leading-none ${scoreColor}`}>{value}</p>
+                                        {userScore && (
+                                            <div className="relative z-10 flex items-center justify-center gap-1 mt-1.5">
+                                                <User className="w-3 h-3 text-white/30" />
+                                                <span className="text-[14px] font-black text-white/60">{userScore}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
                                 {type === 'time' && (
                                     <>
                                         <p className="relative z-10 text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{value}</p>
@@ -356,11 +411,6 @@ export default function GameShortsCard({ game }) {
                     </div>
                 )}
 
-                {/* 브랜딩 */}
-                <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                    <span className="text-white/20 text-[13px] font-bold tracking-wider">PS 가격 추적 서비스</span>
-                    <span className="text-white font-black text-[16px] tracking-widest">ps-signal.com</span>
-                </div>
             </div>
         </div>
     );
