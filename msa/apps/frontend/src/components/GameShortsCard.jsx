@@ -240,10 +240,10 @@ export default function GameShortsCard({ game }) {
 
                     {isBuy ? (
                         <div className="flex flex-col gap-2">
-                            {/* 가격 좌우 분할 — 좌: 현재가+정가취소선 / 우: 할인율+절약금액 */}
-                            <div className="flex items-start gap-2">
-                                <div className="flex-1">
-                                    <span className={`text-[42px] font-black tracking-tighter leading-none block ${
+                            {/* 가격 2×2 그리드 — 행 단위로 정렬: 1행=현재가|할인율, 2행=정가취소선|절약금액 */}
+                            {game.discountRate > 0 ? (
+                                <div className="grid grid-cols-2 items-baseline gap-x-2 gap-y-1.5">
+                                    <span className={`text-[42px] font-black tracking-tighter leading-none ${
                                         game.isPlusExclusive
                                             ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
                                             : game.priceVerdict === 'BUY_NOW'
@@ -253,25 +253,30 @@ export default function GameShortsCard({ game }) {
                                         {game.currentPrice.toLocaleString()}
                                         <span className="text-xl font-medium text-white/40 ml-1">원</span>
                                     </span>
-                                    {game.discountRate > 0 && game.originalPrice > 0 && (
-                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none mt-1.5">
+                                    <span className={`text-[30px] font-black leading-none text-right ${cfg.labelColor} ${cfg.accentGlow}`}>
+                                        -{game.discountRate}%
+                                    </span>
+                                    {game.originalPrice > 0 && (
+                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none">
                                             {game.originalPrice.toLocaleString()}원
                                         </p>
                                     )}
-                                </div>
-                                {game.discountRate > 0 && (
-                                    <div className="flex flex-col items-end shrink-0 pt-1">
-                                        <span className={`text-[30px] font-black leading-none ${cfg.labelColor} ${cfg.accentGlow}`}>
-                                            -{game.discountRate}%
+                                    {game.originalPrice > game.currentPrice && (
+                                        <span className="text-[13px] text-white/70 font-bold text-right">
+                                            {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
                                         </span>
-                                        {game.originalPrice > game.currentPrice && (
-                                            <span className="text-[13px] text-white/70 font-bold mt-1">
-                                                {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <span className={`text-[42px] font-black tracking-tighter leading-none block ${
+                                    game.isPlusExclusive
+                                        ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                                        : 'text-white'
+                                }`}>
+                                    {game.currentPrice.toLocaleString()}
+                                    <span className="text-xl font-medium text-white/40 ml-1">원</span>
+                                </span>
+                            )}
 
                             {game.priceVerdict === 'BUY_NOW' && (
                                 <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
@@ -355,21 +360,25 @@ export default function GameShortsCard({ game }) {
                                 {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
 
                                 {type === 'score' && userScore ? (
-                                    /* 가로 2분할: 좌=비평가, 우=유저 */
-                                    <div className="relative z-10 flex items-center">
+                                    /* 가로 2분할: 좌=비평가, 우=유저 — 헤더 h-5 고정으로 숫자 높이 정렬 */
+                                    <div className="relative z-10 flex items-start">
                                         <div className="flex-1 flex flex-col items-center">
-                                            <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider mb-2 ${
-                                                scorePct >= 75
-                                                    ? 'text-green-400 border-green-400/60 bg-green-400/10'
-                                                    : scorePct >= 50
-                                                        ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
-                                                        : 'text-red-400 border-red-400/60 bg-red-400/10'
-                                            }`}>{label}</span>
+                                            <div className="h-5 flex items-center justify-center mb-2">
+                                                <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider ${
+                                                    scorePct >= 75
+                                                        ? 'text-green-400 border-green-400/60 bg-green-400/10'
+                                                        : scorePct >= 50
+                                                            ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
+                                                            : 'text-red-400 border-red-400/60 bg-red-400/10'
+                                                }`}>{label}</span>
+                                            </div>
                                             <p className={`text-[30px] font-black leading-none ${scoreColor}`}>{value}</p>
                                         </div>
                                         <div className="w-px h-10 bg-white/15 mx-2 self-center" />
                                         <div className="flex-1 flex flex-col items-center">
-                                            <User className="w-4 h-4 text-white/55 mb-2" />
+                                            <div className="h-5 flex items-center justify-center mb-2">
+                                                <User className="w-4 h-4 text-white/55" />
+                                            </div>
                                             <p className="text-[30px] font-black leading-none text-white/75">{userScore}</p>
                                         </div>
                                     </div>
