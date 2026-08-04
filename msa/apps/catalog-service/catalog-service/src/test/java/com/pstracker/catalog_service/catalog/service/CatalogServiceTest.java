@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.ai.service.AiService;
+import com.pstracker.catalog_service.catalog.domain.CrawlJob;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.AdminGameUpdateRequest;
@@ -8,6 +9,7 @@ import com.pstracker.catalog_service.catalog.dto.CollectRequest;
 import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
+import com.pstracker.catalog_service.catalog.repository.CrawlJobRepository;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import jakarta.persistence.EntityManager;
@@ -47,6 +49,9 @@ public class CatalogServiceTest {
 
     @Autowired
     private ApplicationEvents events;
+
+    @Autowired
+    private CrawlJobRepository crawlJobRepository;
 
     @MockitoBean
     private IgdbEnrichmentService igdbEnrichmentService;
@@ -429,6 +434,92 @@ public class CatalogServiceTest {
         assertThat(gameRepository.findByPsStoreId("PROD-BULK-003")).isEmpty();
     }
 
+    // ── 버그 재현: clearAutomatically=true 로 인한 Game UPDATE 유실 ──────────────
+    //
+    // 발생 조건: isRecentRelease=true (releaseDate 1개월 이내) + CrawlJob이 DONE 상태
+    //   → requeueFinishedJob(clearAutomatically=true) 가 호출됨
+    //   → em.clear() 가 Game 엔티티의 pending dirty state(UPDATE SQL)를 파기
+    //   → 트랜잭션 커밋 시 Game UPDATE가 실행되지 않음
+    //
+    // 미발생 조건:
+    //   - isRecentRelease=false → requeueRecentGameForScraping 미호출 → em.clear() 없음
+    //   - CrawlJob이 PENDING/PROCESSING → existsByGameIdAndTargetTypeAndStatusIn=true → early return → requeueFinishedJob 미호출
+
+    @Test
+    @DisplayName("[버그 재현] 최근 출시 게임 세일 종료 후 재수집 시 Game 가격 필드가 업데이트되어야 한다")
+    void upsert_RecentRelease_SaleEnded_ExistingDoneJob_GamePriceUpdated() {
+        // given: 세일 중 최초 수집 (releaseDate 2주 전 → isRecentRelease=true)
+        LocalDate recentRelease = LocalDate.now().minusWeeks(2);
+        LocalDate saleEndPast  = LocalDate.now().minusDays(3);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+
+        CollectRequest onSale = createDtoWithReleaseDate(
+                "PROD-BUG-001", "Voidtrain", 39800, 31840, 20, saleEndPast, recentRelease);
+        catalogService.upsertGameData(onSale);
+        em.flush();
+        em.clear();
+
+        // CrawlJob 상태를 DONE으로 변경 (배치 처리 완료 후 실제 상태 시뮬레이션)
+        // → 이 상태에서 다음 수집 시 requeueFinishedJob(DONE→PENDING)이 호출됨
+        Game game = gameRepository.findByPsStoreId("PROD-BUG-001").orElseThrow();
+        crawlJobRepository.findAll().stream()
+                .filter(j -> j.getGameId().equals(game.getId()))
+                .forEach(j -> j.updateStatus(CrawlJob.JobStatus.DONE, null));
+        em.flush();
+        em.clear();
+
+        // when: 세일 종료 후 정상가(39800)로 재수집
+        //   1. shouldSaveHistory=true (31840→39800)  → 이력 INSERT (IDENTITY 전략으로 즉시 실행)
+        //   2. isRecentRelease=true + CrawlJob DONE  → requeueFinishedJob(DONE→PENDING) 실행
+        //   3. clearAutomatically=true               → em.clear() → Game UPDATE SQL 유실
+        //   4. 트랜잭션 커밋 시 Game UPDATE 미실행   → DB에 31840 그대로 남음
+        CollectRequest afterSale = createDtoWithReleaseDate(
+                "PROD-BUG-001", "Voidtrain", 39800, 39800, 0, null, recentRelease);
+        catalogService.upsertGameData(afterSale);
+        em.flush();
+        em.clear();
+
+        // then: Game 역정규화 필드가 39800으로 업데이트되어야 한다
+        Game updated = gameRepository.findByPsStoreId("PROD-BUG-001").orElseThrow();
+        assertThat(updated.getCurrentPrice()).isEqualTo(39800);
+        assertThat(updated.getDiscountRate()).isEqualTo(0);
+        assertThat(updated.getSaleEndDate()).isNull();
+    }
+
+    @Test
+    @DisplayName("[버그 재현] 최근 출시 게임 동일 가격 재수집 시에도 Game 메타데이터가 업데이트되어야 한다")
+    void upsert_RecentRelease_SamePrice_ExistingDoneJob_MetadataUpdated() {
+        // given: 게임 최초 수집 후 CrawlJob DONE 전환
+        LocalDate recentRelease = LocalDate.now().minusWeeks(2);
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+
+        CollectRequest initial = createDtoWithReleaseDate(
+                "PROD-BUG-002", "TestGame", 39800, 39800, 0, null, recentRelease);
+        catalogService.upsertGameData(initial);
+        em.flush();
+        em.clear();
+
+        Game game = gameRepository.findByPsStoreId("PROD-BUG-002").orElseThrow();
+        crawlJobRepository.findAll().stream()
+                .filter(j -> j.getGameId().equals(game.getId()))
+                .forEach(j -> j.updateStatus(CrawlJob.JobStatus.DONE, null));
+        em.flush();
+        em.clear();
+
+        // when: 동일 가격으로 재수집 (shouldSaveHistory=false)
+        //   → updateInfo()는 항상 lastUpdated=now 로 설정하므로 Game이 dirty 상태
+        //   → requeueFinishedJob(clearAutomatically=true) → em.clear() → dirty state 유실
+        CollectRequest updated = createDtoWithReleaseDate(
+                "PROD-BUG-002", "TestGame Updated", 39800, 39800, 0, null, recentRelease);
+        catalogService.upsertGameData(updated);
+        em.flush();
+        em.clear();
+
+        // then: 이름 변경이 DB에 반영되어야 한다
+        Game result = gameRepository.findByPsStoreId("PROD-BUG-002").orElseThrow();
+        assertThat(result.getName()).isEqualTo("TestGame Updated");
+    }
+
     private CollectRequest createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {
         return new CollectRequest(
                 id,
@@ -443,6 +534,30 @@ public class CatalogServiceTest {
                 saleEnd,
                 "Action,RPG",
                 LocalDate.of(2026,1,1),
+                false,
+                false,
+                List.of("PS5"),
+                false,
+                null
+        );
+    }
+
+    private CollectRequest createDtoWithReleaseDate(String id, String title, int originalPrice,
+                                                     int currentPrice, int discount, LocalDate saleEnd,
+                                                     LocalDate releaseDate) {
+        return new CollectRequest(
+                id,
+                title,
+                title + " (Eng)",
+                "Publisher",
+                "http://img.com",
+                "Desc",
+                originalPrice,
+                currentPrice,
+                discount,
+                saleEnd,
+                "Action,RPG",
+                releaseDate,
                 false,
                 false,
                 List.of("PS5"),

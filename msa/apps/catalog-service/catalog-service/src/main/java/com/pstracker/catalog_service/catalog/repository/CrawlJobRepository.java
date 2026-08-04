@@ -17,7 +17,7 @@ public interface CrawlJobRepository extends JpaRepository<CrawlJob, Long> {
     @Query("DELETE FROM CrawlJob c WHERE c.gameId IN :gameIds")
     void deleteByGameIds(@Param("gameIds") List<Long> gameIds);
 
-    @Modifying(clearAutomatically = true)
+    @Modifying
     @Query("UPDATE CrawlJob c " +
             "SET c.status = :newStatus, c.errorMessage = null, c.updatedAt = CURRENT_TIMESTAMP " +
             "WHERE c.gameId = :gameId " +

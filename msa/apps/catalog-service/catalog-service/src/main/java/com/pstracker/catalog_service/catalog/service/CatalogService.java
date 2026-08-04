@@ -79,7 +79,7 @@ public class CatalogService {
         updateGameMetadata(game, request, genreEntities);
         boolean editionContentsChanged = game.updateEditionContents(request.getEditionContents());
 
-        // DB 작업이 끝난 시점에 IGDB 결과 합류 (이미 완료됐을 가능성 높음)
+        // DB 작업이 끝난 시점에 IGDB 결과 합류
         applyIgdbRatings(game, igdbFuture.join(), searchTitle);
 
         game.updatePriceSearchInfo(
