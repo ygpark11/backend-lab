@@ -39,15 +39,17 @@ const VERDICT_CONFIG = {
         border: 'border-green-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(34,197,94,0.45),inset_0_1px_0_rgba(34,197,94,0.2)]',
         frameBorder: 'border-green-500/50 shadow-[inset_0_0_30px_rgba(34,197,94,0.1)]',
-        auroraA: 'bg-green-500/35',
-        auroraB: 'bg-teal-500/20',
+        auroraA: 'bg-green-500/50',
+        auroraB: 'bg-teal-500/30',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(34,197,94,0.7)]',
         renderIcon: () => (
-            <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
-                <div className="absolute inset-0 rounded-full animate-ping opacity-30 bg-green-400" />
-                <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-green-400" style={{ animationDelay: '0.4s' }} />
-                <div className="absolute inset-0 rounded-full blur-md bg-green-400/35" />
-                <Circle className="relative z-10 w-12 h-12 text-green-400 fill-green-400/25 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(34,197,94,1)]" />
+            <div className="relative flex items-center justify-center w-16 h-16 shrink-0">
+                {/* ping — 글래스 디스크 바깥에서 파동 */}
+                <div className="absolute inset-[-6px] rounded-full animate-ping opacity-20 bg-green-400" />
+                <div className="absolute inset-[-6px] rounded-full animate-ping opacity-15 bg-green-400" style={{ animationDelay: '0.5s' }} />
+                {/* 글래스 디스크 */}
+                <div className="absolute inset-0 rounded-full bg-green-400/15 backdrop-blur-md border border-green-400/35 shadow-[0_0_28px_rgba(34,197,94,0.55),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_0_16px_rgba(34,197,94,0.15)]" />
+                <Circle className="relative z-10 w-10 h-10 text-green-400 fill-green-400/20 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(34,197,94,1)]" />
             </div>
         ),
     },
@@ -57,13 +59,14 @@ const VERDICT_CONFIG = {
         border: 'border-yellow-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(234,179,8,0.45),inset_0_1px_0_rgba(234,179,8,0.2)]',
         frameBorder: 'border-yellow-500/50 shadow-[inset_0_0_30px_rgba(234,179,8,0.1)]',
-        auroraA: 'bg-yellow-500/30',
-        auroraB: 'bg-amber-500/20',
+        auroraA: 'bg-yellow-500/45',
+        auroraB: 'bg-amber-500/30',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(234,179,8,0.7)]',
         renderIcon: () => (
-            <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
-                <div className="absolute inset-0 rounded-full animate-pulse blur-md bg-yellow-400/35" />
-                <Triangle className="relative z-10 w-12 h-12 text-yellow-400 fill-yellow-400/25 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(234,179,8,1)] animate-bounce" />
+            <div className="relative flex items-center justify-center w-16 h-16 shrink-0">
+                {/* 글래스 디스크 — pulse로 살아있는 느낌 */}
+                <div className="absolute inset-0 rounded-full bg-yellow-400/15 backdrop-blur-md border border-yellow-400/35 shadow-[0_0_28px_rgba(234,179,8,0.55),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_0_16px_rgba(234,179,8,0.15)] animate-pulse" />
+                <Triangle className="relative z-10 w-10 h-10 text-yellow-400 fill-yellow-400/20 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(234,179,8,1)] animate-bounce" />
             </div>
         ),
     },
@@ -73,13 +76,14 @@ const VERDICT_CONFIG = {
         border: 'border-red-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(239,68,68,0.45),inset_0_1px_0_rgba(239,68,68,0.2)]',
         frameBorder: 'border-red-500/50 shadow-[inset_0_0_30px_rgba(239,68,68,0.1)]',
-        auroraA: 'bg-red-500/30',
-        auroraB: 'bg-purple-500/20',
+        auroraA: 'bg-red-500/45',
+        auroraB: 'bg-purple-500/30',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(239,68,68,0.7)]',
         renderIcon: () => (
-            <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
-                <div className="absolute inset-0 rounded-full animate-pulse blur-md bg-red-400/35" />
-                <X className="relative z-10 w-12 h-12 text-red-400 stroke-[3.5px] drop-shadow-[0_0_14px_rgba(239,68,68,1)] animate-[spin_6s_linear_infinite]" />
+            <div className="relative flex items-center justify-center w-16 h-16 shrink-0">
+                {/* 글래스 디스크 */}
+                <div className="absolute inset-0 rounded-full bg-red-400/15 backdrop-blur-md border border-red-400/35 shadow-[0_0_28px_rgba(239,68,68,0.55),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_0_16px_rgba(239,68,68,0.15)]" />
+                <X className="relative z-10 w-10 h-10 text-red-400 stroke-[3.5px] drop-shadow-[0_0_14px_rgba(239,68,68,1)] animate-[spin_6s_linear_infinite]" />
             </div>
         ),
     },
@@ -89,13 +93,14 @@ const VERDICT_CONFIG = {
         border: 'border-blue-500/50',
         boxGlow: 'shadow-[0_0_50px_rgba(59,130,246,0.45),inset_0_1px_0_rgba(59,130,246,0.2)]',
         frameBorder: 'border-blue-500/50 shadow-[inset_0_0_30px_rgba(59,130,246,0.1)]',
-        auroraA: 'bg-blue-500/30',
-        auroraB: 'bg-indigo-500/20',
+        auroraA: 'bg-blue-500/45',
+        auroraB: 'bg-indigo-500/30',
         accentGlow: 'drop-shadow-[0_0_12px_rgba(59,130,246,0.7)]',
         renderIcon: () => (
-            <div className="relative flex items-center justify-center w-14 h-14 shrink-0">
-                <div className="absolute inset-0 rounded-full animate-pulse blur-md bg-blue-400/35" />
-                <Square className="relative z-10 w-12 h-12 text-blue-400 fill-blue-400/25 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(59,130,246,1)] animate-pulse" />
+            <div className="relative flex items-center justify-center w-16 h-16 shrink-0">
+                {/* 글래스 디스크 — pulse */}
+                <div className="absolute inset-0 rounded-full bg-blue-400/15 backdrop-blur-md border border-blue-400/35 shadow-[0_0_28px_rgba(59,130,246,0.55),inset_0_1px_0_rgba(255,255,255,0.2),inset_0_0_16px_rgba(59,130,246,0.15)] animate-pulse" />
+                <Square className="relative z-10 w-10 h-10 text-blue-400 fill-blue-400/20 stroke-[2.5px] drop-shadow-[0_0_14px_rgba(59,130,246,1)] animate-pulse" />
             </div>
         ),
     },
@@ -162,20 +167,10 @@ export default function GameShortsCard({ game }) {
             {/* 판정별 카드 외곽 프레임 — TCG 카드처럼 전체를 감싸는 컬러 테두리 */}
             <div className={`absolute inset-0 border-2 pointer-events-none z-50 ${cfg.frameBorder}`} />
 
-            {/* 배경 레이어: blur 커버(게임 정체성) + Aurora(verdict 색상) */}
+            {/* Aurora 배경 — verdict별 색상 */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                {/* 1. 게임 커버 blur — "이 게임"이라는 분위기를 화면 전체에 */}
-                <PSGameImage
-                    src={game.imageUrl}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover scale-110 opacity-20"
-                    style={{ filter: 'blur(32px)' }}
-                />
-                {/* 2. verdict Aurora — 판정 색상 인식 유지 */}
                 <div className={`absolute -top-[20%] -right-[20%] w-[80%] h-[70%] ${cfg.auroraA} rounded-full blur-[90px] animate-[pulse_6s_ease-in-out_infinite]`} />
                 <div className={`absolute top-[50%] -left-[20%] w-[70%] h-[60%] ${cfg.auroraB} rounded-full blur-[90px] animate-[pulse_9s_ease-in-out_infinite]`} />
-                {/* 3. 어두운 overlay — 콘텐츠 가시성 보장 */}
-                <div className="absolute inset-0 bg-[#080810]/55" />
             </div>
 
             {/* ○△×□ 워터마크 */}
@@ -187,7 +182,7 @@ export default function GameShortsCard({ game }) {
             </div>
 
             {/* ── 게임 커버 ── */}
-            <div className="relative h-[38vh] shrink-0 overflow-hidden">
+            <div className="relative h-[42vh] shrink-0 overflow-hidden">
                 <PSGameImage
                     src={game.imageUrl}
                     alt={title}
@@ -253,29 +248,27 @@ export default function GameShortsCard({ game }) {
                                 </div>
                                 {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center gap-2.5 flex-wrap">
-                                        <span className={`text-[52px] font-black tracking-tighter leading-none ${
-                                            game.isPlusExclusive
-                                                ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
-                                                : game.priceVerdict === 'BUY_NOW'
-                                                    ? 'text-white drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]'
-                                                    : 'text-white'
-                                        }`}>
-                                            {game.currentPrice.toLocaleString()}
-                                            <span className="text-2xl font-medium text-white/40 ml-1">원</span>
-                                        </span>
-                                        {game.discountRate > 0 && (
-                                            <span className={`inline-flex items-center text-[22px] font-black leading-none px-2.5 py-1 rounded-lg border ${
+                                    {/* 가격 단독 — 가장 크게, 단독으로 */}
+                                    <span className={`text-[52px] font-black tracking-tighter leading-none ${
+                                        game.isPlusExclusive
+                                            ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
+                                            : game.priceVerdict === 'BUY_NOW'
+                                                ? 'text-white drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]'
+                                                : 'text-white'
+                                    }`}>
+                                        {game.currentPrice.toLocaleString()}
+                                        <span className="text-2xl font-medium text-white/40 ml-1">원</span>
+                                    </span>
+                                    {/* 할인율 pill + 정가 취소선 + 절약금액 — 한 행 */}
+                                    {game.discountRate > 0 && game.originalPrice > 0 && (
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`inline-flex items-center text-[15px] font-black leading-none px-2 pt-[5px] pb-[3px] rounded-md border ${
                                                 game.priceVerdict === 'BUY_NOW'
                                                     ? 'bg-green-500/20 text-green-400 border-green-400/50'
                                                     : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
                                             }`}>
                                                 -{game.discountRate}%
                                             </span>
-                                        )}
-                                    </div>
-                                    {game.discountRate > 0 && game.originalPrice > 0 && (
-                                        <div className="flex items-center gap-2.5">
                                             <p className="text-[15px] text-white/55 font-bold line-through leading-none">
                                                 {game.originalPrice.toLocaleString()}원
                                             </p>
