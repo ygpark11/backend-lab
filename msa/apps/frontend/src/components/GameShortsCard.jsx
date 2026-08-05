@@ -239,16 +239,16 @@ export default function GameShortsCard({ game }) {
                     {isBuy ? (
                         /* isBuy: 좌(판정+가격) / 우(점수) — score 있을 때만 분할, 구분선 박스 전체 관통 */
                         <div className="flex items-stretch">
-                            <div className={`${score ? 'flex-1 min-w-0' : 'w-full'} p-3 flex flex-col gap-2`}>
+                            <div className={`${score ? 'flex-1 min-w-0' : 'w-full'} p-3 flex flex-col gap-2.5`}>
+                                {/* 판정 아이콘 + 라벨 */}
                                 <div className="flex items-center gap-3">
                                     {cfg.renderIcon()}
                                     <span className={`text-[30px] font-black leading-none ${cfg.labelColor}`}>
                                         {cfg.label}
                                     </span>
                                 </div>
-                                {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
-                                <div className="flex flex-col gap-1.5">
-                                    {/* 가격 단독 — 가장 크게, 단독으로 */}
+                                {/* 가격 + 할인 정보 */}
+                                <div className="flex flex-col gap-1">
                                     <span className={`text-[52px] font-black tracking-tighter leading-none ${
                                         game.isPlusExclusive
                                             ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
@@ -259,7 +259,6 @@ export default function GameShortsCard({ game }) {
                                         {game.currentPrice.toLocaleString()}
                                         <span className="text-2xl font-medium text-white/40 ml-1">원</span>
                                     </span>
-                                    {/* 할인율 + 정가 취소선 + 절약금액 — 한 행 */}
                                     {game.discountRate > 0 && game.originalPrice > 0 && (
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className={`text-[18px] font-black leading-none ${
@@ -278,27 +277,29 @@ export default function GameShortsCard({ game }) {
                                         </div>
                                     )}
                                 </div>
+                                {/* 역대최저 뱃지 */}
                                 {game.priceVerdict === 'BUY_NOW' && (
                                     game.isAllTimeLowNew ? (
-                                        <div className="relative overflow-hidden mt-1 w-full inline-flex items-center gap-2.5 bg-green-500/20 border border-green-400/60 text-green-400 text-[18px] font-black px-4 py-2 rounded-xl shadow-[0_0_24px_rgba(34,197,94,0.45)]">
+                                        <div className="relative overflow-hidden w-full inline-flex items-center gap-2.5 bg-green-500/20 border border-green-400/60 text-green-400 text-[18px] font-black px-4 py-2 rounded-xl shadow-[0_0_24px_rgba(34,197,94,0.45)]">
                                             <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                                             <Flame className="relative z-10 w-5 h-5 shrink-0" />
                                             <span className="relative z-10">역대최저가 갱신!</span>
                                         </div>
                                     ) : (
-                                        <div className="mt-1 w-full inline-flex items-center gap-2.5 bg-green-500/10 border border-green-400/35 text-green-400/75 text-[16px] font-bold px-4 py-2 rounded-xl shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                                        <div className="w-full inline-flex items-center gap-2.5 bg-green-500/10 border border-green-400/35 text-green-400/75 text-[16px] font-bold px-4 py-2 rounded-xl shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                                             <TrendingUp className="w-4 h-4 shrink-0" />
                                             <span>역대최저가 동일</span>
                                         </div>
                                     )
                                 )}
                                 {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
-                                    <p className="text-[15px] text-white/65 font-bold mt-0.5">
+                                    <p className="text-[15px] text-white/65 font-bold">
                                         역대최저 {game.lowestPrice.toLocaleString()}원 근접
                                     </p>
                                 )}
+                                {/* 마감일 */}
                                 {daysLeft !== null && daysLeft >= 0 && (
-                                    <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
+                                    <div className="flex items-center gap-2 pt-2 border-t border-white/10">
                                         {isClosingSoon
                                             ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
                                             : <CalendarDays className="w-5 h-5 text-white/60 shrink-0" />
