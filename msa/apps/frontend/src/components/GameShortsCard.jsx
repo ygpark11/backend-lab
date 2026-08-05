@@ -224,7 +224,7 @@ export default function GameShortsCard({ game }) {
                             )}
                         </div>
                     )}
-                    <h1 className="text-[26px] font-black text-white leading-tight break-keep line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+                    <h1 className="text-[30px] font-black text-white leading-tight break-keep line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                         {title}
                     </h1>
                 </div>
@@ -259,13 +259,11 @@ export default function GameShortsCard({ game }) {
                                         {game.currentPrice.toLocaleString()}
                                         <span className="text-2xl font-medium text-white/40 ml-1">원</span>
                                     </span>
-                                    {/* 할인율 pill + 정가 취소선 + 절약금액 — 한 행 */}
+                                    {/* 할인율 + 정가 취소선 + 절약금액 — 한 행 */}
                                     {game.discountRate > 0 && game.originalPrice > 0 && (
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className={`inline-flex items-center text-[15px] font-black leading-none px-2 pt-[5px] pb-[3px] rounded-md border ${
-                                                game.priceVerdict === 'BUY_NOW'
-                                                    ? 'bg-green-500/20 text-green-400 border-green-400/50'
-                                                    : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
+                                            <span className={`text-[18px] font-black leading-none ${
+                                                game.priceVerdict === 'BUY_NOW' ? 'text-green-400' : 'text-yellow-400'
                                             }`}>
                                                 -{game.discountRate}%
                                             </span>
@@ -320,26 +318,26 @@ export default function GameShortsCard({ game }) {
                             </div>
                             {/* 우: META + USER 점수 — 박스 전체 높이에 구분선 */}
                             {score && (
-                                <div className="w-[37%] shrink-0 border-l border-white/15 flex flex-col items-center justify-center gap-4 p-3">
-                                    <div className="flex flex-col items-center gap-1.5">
-                                        <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider ${
+                                <div className="w-[34%] shrink-0 border-l border-white/15 flex flex-col items-center justify-center gap-5 p-3">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className={`text-[13px] font-black px-2.5 pt-[4px] pb-[2px] rounded-md border tracking-wider ${
                                             scorePct >= 75
                                                 ? 'text-green-400 border-green-400/50 bg-green-400/10'
                                                 : scorePct >= 50
                                                     ? 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10'
                                                     : 'text-red-400 border-red-400/50 bg-red-400/10'
                                         }`}>META</span>
-                                        <span className={`text-[34px] font-black leading-none ${scoreColor}`}>{score}</span>
+                                        <span className={`text-[38px] font-black leading-none ${scoreColor}`}>{score}</span>
                                     </div>
                                     {userScoreValue && (
                                         <>
-                                            <div className="w-8 h-px bg-white/15" />
-                                            <div className="flex flex-col items-center gap-1.5">
+                                            <div className="w-3/4 h-px bg-white/15" />
+                                            <div className="flex flex-col items-center gap-2">
                                                 <div className="flex items-center gap-1">
-                                                    <User className="w-3 h-3 text-white/55" />
-                                                    <span className="text-[11px] font-black text-white/55 tracking-wider">USER</span>
+                                                    <User className="w-3.5 h-3.5 text-white/55" />
+                                                    <span className="text-[12px] font-black text-white/55 tracking-wider">USER</span>
                                                 </div>
-                                                <span className="text-[28px] font-black leading-none text-white/75">{userScoreValue}</span>
+                                                <span className="text-[32px] font-black leading-none text-white/75">{userScoreValue}</span>
                                             </div>
                                         </>
                                     )}
@@ -362,7 +360,7 @@ export default function GameShortsCard({ game }) {
                                     </p>
                                     <div className="flex items-center gap-2">
                                         <span className={`text-[30px] font-black tracking-tighter ${
-                                            game.discountRate > 0 ? 'text-white/30 line-through' : 'text-white/40'
+                                            game.discountRate > 0 ? 'text-white/40 line-through' : 'text-white/40'
                                         }`}>
                                             {game.currentPrice.toLocaleString()}원
                                         </span>
@@ -403,7 +401,7 @@ export default function GameShortsCard({ game }) {
                 {/* 핵심 수치: isBuy면 플레이타임만(가로), 아니면 점수+플레이타임 그리드 */}
                 {isBuy ? (
                     playtimeHours && (
-                        <div className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl px-4 py-5 flex items-center backdrop-blur-sm">
+                        <div className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 flex items-center backdrop-blur-sm">
                             <Clock className="absolute -bottom-1 -right-1 w-12 h-12 opacity-[0.06] text-white" />
                             {/* 좌: PLAY TIME 라벨 */}
                             <div className="relative z-10 flex flex-col items-center leading-[1.1] mr-4 shrink-0">
