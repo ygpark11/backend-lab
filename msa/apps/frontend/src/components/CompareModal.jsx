@@ -82,10 +82,18 @@ export default function CompareModal({ isOpen, onClose }) {
                 ? "가격이 동일하므로"
                 : `예산 차이(${Math.min(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원 vs ${Math.max(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원)와`;
 
+            const bothNew = gameA.isAllTimeLowNew && gameB.isAllTimeLowNew;
+            const eitherNew = gameA.isAllTimeLowNew || gameB.isAllTimeLowNew;
+
             return (
                 <>
-                    <span className="text-green-500 font-black drop-shadow-md">양쪽 모두 역대 최저가</span>를 달성한 엄청난 타이밍입니다!
-                    {priceText} 장르를 고려하여 기분 좋게 선택하세요.
+                    {bothNew
+                        ? <><span className="text-green-400 font-black drop-shadow-md">양쪽 모두 역대 최저가 갱신</span>한 극히 드문 타이밍입니다!</>
+                        : eitherNew
+                            ? <><span className="text-green-500 font-black drop-shadow-md">{gameA.isAllTimeLowNew ? (gameA.title || gameA.name) : (gameB.title || gameB.name)}</span>은 역대최저 갱신, <span className="text-green-400/80 font-black">{!gameA.isAllTimeLowNew ? (gameA.title || gameA.name) : (gameB.title || gameB.name)}</span>은 역대최저 동률입니다.</>
+                            : <><span className="text-green-500 font-black drop-shadow-md">양쪽 모두 역대 최저가</span>를 달성한 엄청난 타이밍입니다!</>
+                    }
+                    {' '}{priceText} 장르를 고려하여 기분 좋게 선택하세요.
                 </>
             );
         }
@@ -137,9 +145,14 @@ export default function CompareModal({ isOpen, onClose }) {
                             -{game.discountRate}%
                         </span>
                     )}
-                    {isLowest && (
-                        <span className="text-[10px] font-bold text-green-500 bg-green-500/10 border border-green-500/30 px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-[0_0_10px_rgba(34,197,94,0.15)]">
-                            <TrendingUp className="w-3 h-3" /> 최저가
+                    {isLowest && game.isAllTimeLowNew && (
+                        <span className="text-[10px] font-black text-green-700 dark:text-green-400 bg-green-500/15 dark:bg-green-500/15 border border-green-500/40 dark:border-green-400/50 px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-[0_0_8px_rgba(34,197,94,0.2)] dark:shadow-[0_0_8px_rgba(34,197,94,0.3)]">
+                            <Sparkles className="w-3 h-3" /> 역대최저 갱신
+                        </span>
+                    )}
+                    {isLowest && !game.isAllTimeLowNew && (
+                        <span className="text-[10px] font-bold text-green-700/70 dark:text-green-500/80 bg-green-500/10 border border-green-500/20 dark:border-green-500/25 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <TrendingUp className="w-3 h-3" /> 역대최저 동률
                         </span>
                     )}
                 </div>

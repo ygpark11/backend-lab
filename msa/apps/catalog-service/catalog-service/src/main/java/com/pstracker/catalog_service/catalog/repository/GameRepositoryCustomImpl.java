@@ -45,7 +45,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.isPs5ProEnhanced,
                         game.bestSellerRank, game.mostDownloadedRank,
                         game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
-                        game.allTimeLowPrice
+                        game.allTimeLowPrice, game.isAllTimeLowNew
                 ))
                 .from(game)
                 .where(
@@ -111,7 +111,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                         game.isPs5ProEnhanced,
                         game.bestSellerRank, game.mostDownloadedRank,
                         game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
-                        game.allTimeLowPrice
+                        game.allTimeLowPrice, game.isAllTimeLowNew
                 ))
                 .from(game)
                 .where(

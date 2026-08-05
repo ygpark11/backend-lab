@@ -24,6 +24,7 @@ import {
     Timer,
     Trash2,
     TrendingDown,
+    TrendingUp,
     Triangle,
     X
 } from 'lucide-react';
@@ -197,10 +198,12 @@ const WishlistPage = () => {
 
 
     const onSaleGames = games.filter(g => g.discountRate > 0);
+    const buyNowNewGames = games.filter(g => g.priceVerdict === 'BUY_NOW' && g.isAllTimeLowNew === true);
     const buyNowGames = games.filter(g => g.priceVerdict === 'BUY_NOW');
     const goodOfferGames = games.filter(g => g.priceVerdict === 'GOOD_OFFER');
     const displayedGames =
         activeFilter === 'onSale' ? onSaleGames :
+        activeFilter === 'buyNowNew' ? buyNowNewGames :
         activeFilter === 'buyNow' ? buyNowGames :
         activeFilter === 'goodOffer' ? goodOfferGames :
         games;
@@ -331,21 +334,47 @@ const WishlistPage = () => {
                             )}
                         </button>
 
+                        {/* 역대최저 갱신만 — shimmer + 강한 글로우로 가장 강한 신호 표현 */}
+                        <button
+                            onClick={() => setActiveFilter(prev => prev === 'buyNowNew' ? null : 'buyNowNew')}
+                            className={`relative overflow-hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
+                                activeFilter === 'buyNowNew'
+                                    ? 'bg-green-500 text-white border-green-500 shadow-[0_0_16px_rgba(34,197,94,0.6)]'
+                                    : buyNowNewGames.length > 0
+                                        ? 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-green-500/60 shadow-[0_0_14px_rgba(34,197,94,0.45)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                                        : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                            }`}
+                        >
+                            {activeFilter !== 'buyNowNew' && buyNowNewGames.length > 0 && (
+                                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
+                            )}
+                            <Flame className={`relative z-10 w-3.5 h-3.5 ${activeFilter !== 'buyNowNew' && buyNowNewGames.length > 0 ? 'animate-pulse' : ''}`} />
+                            <span className="relative z-10">역대최저 갱신만</span>
+                            {buyNowNewGames.length > 0 && (
+                                <span className={`relative z-10 font-black px-1.5 py-0.5 rounded-full ${
+                                    activeFilter === 'buyNowNew' ? 'bg-white/20 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                }`}>
+                                    {buyNowNewGames.length}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* 역대최저만 (갱신+동률) — TrendingUp으로 다른 화면과 동일한 동률 아이콘 사용 */}
                         <button
                             onClick={() => setActiveFilter(prev => prev === 'buyNow' ? null : 'buyNow')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition-all active:scale-95 ${
                                 activeFilter === 'buyNow'
                                     ? 'bg-green-500 text-white border-green-500 shadow-[0_0_14px_rgba(34,197,94,0.45)]'
-                                    : activeFilter !== 'buyNow' && buyNowGames.length > 0
-                                        ? 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-green-500/50 shadow-[0_0_12px_rgba(34,197,94,0.35)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
+                                    : buyNowGames.length > 0
+                                        ? 'bg-[var(--bento-green-from)] text-green-500/70 dark:text-green-400/70 border-green-500/35 shadow-[0_0_8px_rgba(34,197,94,0.2)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
                                         : 'bg-[var(--bento-green-from)] text-green-600 dark:text-green-400 border-[color:var(--bento-green-border)] hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)]'
                             }`}
                         >
-                            <Flame className={`w-3.5 h-3.5 ${activeFilter !== 'buyNow' && buyNowGames.length > 0 ? 'animate-pulse' : ''}`} />
+                            <TrendingUp className="w-3.5 h-3.5" />
                             역대최저만
                             {buyNowGames.length > 0 && (
                                 <span className={`font-black px-1.5 py-0.5 rounded-full ${
-                                    activeFilter === 'buyNow' ? 'bg-white/20 text-white' : 'bg-green-500/15 text-green-600 dark:text-green-400'
+                                    activeFilter === 'buyNow' ? 'bg-white/20 text-white' : 'bg-green-500/10 text-green-500/70 dark:text-green-400/70'
                                 }`}>
                                     {buyNowGames.length}
                                 </span>
@@ -458,7 +487,13 @@ const WishlistPage = () => {
                                     </h3>
 
                                     <div className="mt-auto relative z-20">
-                                        {game.priceVerdict === 'BUY_NOW' && <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
+                                        {game.priceVerdict === 'BUY_NOW' && (
+                                            game.isAllTimeLowNew === true
+                                                ? <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저 갱신</p>
+                                                : game.isAllTimeLowNew === false
+                                                    ? <p className="text-[9px] font-black text-green-600/70 dark:text-green-400/70 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingUp className="w-2.5 h-2.5" />역대최저 동률</p>
+                                                    : <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>
+                                        )}
                                         {game.priceVerdict === 'GOOD_OFFER' && <p className="text-[9px] font-black text-amber-500 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingDown className="w-2.5 h-2.5" />괜찮은 가격</p>}
                                         {game.priceVerdict === 'WAIT' && <p className="text-[9px] font-black text-red-400/80 tracking-wider flex items-center gap-0.5 mb-0.5"><Clock className="w-2.5 h-2.5" />지금비싼편</p>}
                                         {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-secondary line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
@@ -498,10 +533,12 @@ const WishlistPage = () => {
                             activeFilter ? (
                                 <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
                                     {activeFilter === 'onSale' && <TrendingDown className="w-12 h-12 text-muted" />}
-                                    {activeFilter === 'buyNow' && <Flame className="w-12 h-12 text-muted" />}
+                                    {activeFilter === 'buyNowNew' && <Flame className="w-12 h-12 text-muted" />}
+                                    {activeFilter === 'buyNow' && <TrendingUp className="w-12 h-12 text-muted" />}
                                     {activeFilter === 'goodOffer' && <Triangle className="w-12 h-12 text-muted" />}
                                     <p className="text-secondary font-bold">
                                         {activeFilter === 'onSale' && '현재 할인 중인 찜 게임이 없습니다.'}
+                                        {activeFilter === 'buyNowNew' && '역대최저 갱신 중인 찜 게임이 없습니다.'}
                                         {activeFilter === 'buyNow' && '역대최저 가격인 찜 게임이 없습니다.'}
                                         {activeFilter === 'goodOffer' && '괜찮은 가격인 찜 게임이 없습니다.'}
                                     </p>

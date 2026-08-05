@@ -36,6 +36,9 @@ public class WishlistResponse {
     @JsonProperty("isPs5ProEnhanced")
     private boolean isPs5ProEnhanced;
 
+    @JsonProperty("isAllTimeLowNew")
+    private boolean isAllTimeLowNew;
+
     private String pioneerName;
 
     private Integer displayScore;
@@ -60,7 +63,8 @@ public class WishlistResponse {
                        Double hltbMainStory,
                        boolean inCatalog, String pioneerName,
                        LocalDateTime createdAt, LocalDateTime wishedAt,
-                       boolean isPs5ProEnhanced, List<String> vibeTags) {
+                       boolean isPs5ProEnhanced, List<String> vibeTags,
+                       boolean isAllTimeLowNew) {
         this.id = id;
         this.gameId = gameId;
         this.name = gameName;
@@ -84,6 +88,7 @@ public class WishlistResponse {
         this.igdbUserScore = igdbUserScore;
 
         this.hltbMainStory = hltbMainStory;
+        this.isAllTimeLowNew = isAllTimeLowNew;
 
         if (mcMetaScore != null && mcMetaScore > 0) {
             this.displayScore = mcMetaScore;

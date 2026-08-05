@@ -31,17 +31,24 @@ export const getTrafficLight = (verdict, game = {}) => {
         currentPrice = 0,
         originalPrice = 0,
         lowestPrice = 0,
-        priceHistory = []
+        priceHistory = [],
+        isAllTimeLowNew = false,
     } = game;
     const historyCount = priceHistory.length;
 
     switch (verdict) {
         case 'BUY_NOW':
-            return {
-                color: 'bg-green-500',
-                text: '지금이 기회! (역대 최저가)',
-                desc: '이 가격이면 고민할 필요가 없습니다.'
-            };
+            return isAllTimeLowNew
+                ? {
+                    color: 'bg-green-500',
+                    text: '역대 최저가 갱신!',
+                    desc: '추적 이래 가장 낮은 가격이에요. 가격만큼은 최선의 타이밍입니다.'
+                }
+                : {
+                    color: 'bg-green-500',
+                    text: '역대 최저가 동일',
+                    desc: '역대 최저가와 같아요. 가격 면에서 손해 없는 선택이에요.'
+                };
 
         case 'GOOD_OFFER': {
             const safeLowest = lowestPrice > 0 ? lowestPrice : currentPrice;

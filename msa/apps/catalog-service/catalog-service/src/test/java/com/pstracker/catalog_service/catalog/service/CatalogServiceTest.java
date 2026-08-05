@@ -384,6 +384,106 @@ public class CatalogServiceTest {
         assertThat(updated.getHltbCompletionist()).isNull();
     }
 
+    // ── isAllTimeLowNew (역대 최저가 갱신/동률) ──────────────────────────────────
+
+    @Test
+    @DisplayName("첫 수집 시 isAllTimeLowNew는 false다 (기준선, 갱신 아님)")
+    void allTimeLowNew_첫수집_false() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("ATL-001", "게임A", 39800, 39800, 0, null));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-001").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(39800);
+        assertThat(game.isAllTimeLowNew()).isFalse();
+    }
+
+    @Test
+    @DisplayName("할인으로 역대 최저가를 처음 경신하면 isAllTimeLowNew가 true다")
+    void allTimeLowNew_첫갱신_true() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        // 정상가로 첫 수집
+        catalogService.upsertGameData(createDto("ATL-002", "게임B", 39800, 39800, 0, null));
+        em.flush(); em.clear();
+
+        // 할인가로 재수집 → 역대 최저가 갱신
+        catalogService.upsertGameData(createDto("ATL-002", "게임B", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-002").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(29800);
+        assertThat(game.isAllTimeLowNew()).isTrue();
+    }
+
+    @Test
+    @DisplayName("역대 최저가 동일 가격으로 재수집하면 isAllTimeLowNew가 false다 (동률)")
+    void allTimeLowNew_동일가격_재수집_false() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 39800, 0, null));
+        catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        // 같은 할인가로 다시 수집 → 동률
+        catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-003").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(29800);
+        assertThat(game.isAllTimeLowNew()).isFalse();
+    }
+
+    @Test
+    @DisplayName("할인 종료 후 정가 복귀 시 isAllTimeLowNew는 false다")
+    void allTimeLowNew_할인종료_false() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("ATL-004", "게임D", 39800, 39800, 0, null));
+        catalogService.upsertGameData(createDto("ATL-004", "게임D", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        // 할인 종료, 정가 복귀
+        catalogService.upsertGameData(createDto("ATL-004", "게임D", 39800, 39800, 0, null));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-004").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(29800); // ATL은 유지
+        assertThat(game.isAllTimeLowNew()).isFalse();           // 갱신 아님
+    }
+
+    @Test
+    @DisplayName("정가 복귀 후 이전 ATL 동일 가격으로 재할인 시 isAllTimeLowNew는 false다 (동률)")
+    void allTimeLowNew_재할인_동률_false() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 39800, 0, null));
+        catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 39800, 0, null)); // 할인 종료
+        em.flush(); em.clear();
+
+        // 동일 ATL 가격으로 재할인 → 동률 (이미 이 가격을 본 적 있음)
+        catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 29800, 25, LocalDate.now().plusDays(14)));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-005").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(29800);
+        assertThat(game.isAllTimeLowNew()).isFalse();
+    }
+
+    @Test
+    @DisplayName("더 낮은 가격으로 추가 갱신 시 isAllTimeLowNew가 다시 true다")
+    void allTimeLowNew_추가갱신_true() {
+        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
+        catalogService.upsertGameData(createDto("ATL-006", "게임F", 39800, 39800, 0, null));
+        catalogService.upsertGameData(createDto("ATL-006", "게임F", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        // 더 낮은 가격으로 추가 갱신
+        catalogService.upsertGameData(createDto("ATL-006", "게임F", 39800, 19800, 50, LocalDate.now().plusDays(7)));
+        em.flush(); em.clear();
+
+        Game game = gameRepository.findByPsStoreId("ATL-006").orElseThrow();
+        assertThat(game.getAllTimeLowPrice()).isEqualTo(19800);
+        assertThat(game.isAllTimeLowNew()).isTrue();
+    }
+
     // ── bulkDeleteGames ──────────────────────────────────────────────────────
 
     @Test

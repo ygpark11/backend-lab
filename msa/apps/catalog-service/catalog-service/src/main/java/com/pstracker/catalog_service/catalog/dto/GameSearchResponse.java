@@ -41,6 +41,8 @@ public class GameSearchResponse implements Serializable {
     private Integer mostDownloadedRank;
 
     private Integer allTimeLowPrice;
+    @JsonProperty("isAllTimeLowNew")
+    private boolean isAllTimeLowNew;
     private Integer displayScore;
     private String scoreSource;
     private String topVibeTag;
@@ -54,7 +56,7 @@ public class GameSearchResponse implements Serializable {
                                boolean isPs5ProEnhanced,
                                Integer bestSellerRank, Integer mostDownloadedRank,
                                Integer mcMetaScore, Integer igdbCriticScore, List<String> vibeTags,
-                               Integer allTimeLowPrice) {
+                               Integer allTimeLowPrice, boolean isAllTimeLowNew) {
         this.id = id;
         this.name = name;
         this.imageUrl = imageUrl;
@@ -70,6 +72,7 @@ public class GameSearchResponse implements Serializable {
         this.bestSellerRank = bestSellerRank;
         this.mostDownloadedRank = mostDownloadedRank;
         this.allTimeLowPrice = allTimeLowPrice != null ? allTimeLowPrice : 0;
+        this.isAllTimeLowNew = isAllTimeLowNew;
 
         if (mcMetaScore != null && mcMetaScore > 0) {
             this.displayScore = mcMetaScore;

@@ -1,7 +1,7 @@
 // 🎬 YouTube Shorts 촬영 전용 카드 (항상 다크 고정, 9:16 풀스크린)
 // 접근: /games/:id?view=shorts — 사이트 내 링크 없음
 import React from 'react';
-import { Circle, Triangle, X, Square, CalendarDays, TrendingUp, Timer, Clock, User } from 'lucide-react';
+import { Circle, Triangle, X, Square, CalendarDays, Flame, TrendingUp, Timer, Clock, User } from 'lucide-react';
 import PSGameImage from './common/PSGameImage';
 import { differenceInCalendarDays, parseISO } from 'date-fns';
 
@@ -239,69 +239,107 @@ export default function GameShortsCard({ game }) {
                     </div>
 
                     {isBuy ? (
-                        <div className="flex flex-col gap-2">
-                            {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
-                            <div className="flex flex-col gap-1.5">
-                                <div className="flex items-baseline gap-2.5 flex-wrap">
-                                    <span className={`text-[42px] font-black tracking-tighter leading-none ${
-                                        game.isPlusExclusive
-                                            ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
-                                            : game.priceVerdict === 'BUY_NOW'
-                                                ? 'text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]'
-                                                : 'text-white'
-                                    }`}>
-                                        {game.currentPrice.toLocaleString()}
-                                        <span className="text-xl font-medium text-white/40 ml-1">원</span>
-                                    </span>
-                                    {game.discountRate > 0 && (
-                                        <span className={`text-[22px] font-black leading-none px-2.5 py-0.5 rounded-lg border ${
-                                            game.priceVerdict === 'BUY_NOW'
-                                                ? 'bg-green-500/20 text-green-400 border-green-400/50'
-                                                : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
+                        <div className="flex gap-3 items-start">
+                            {/* 좌: 가격 정보 */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-2">
+                                {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
+                                <div className="flex flex-col gap-1.5">
+                                    <div className="flex items-baseline gap-2.5 flex-wrap">
+                                        <span className={`text-[42px] font-black tracking-tighter leading-none ${
+                                            game.isPlusExclusive
+                                                ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                                                : game.priceVerdict === 'BUY_NOW'
+                                                    ? 'text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]'
+                                                    : 'text-white'
                                         }`}>
-                                            -{game.discountRate}%
+                                            {game.currentPrice.toLocaleString()}
+                                            <span className="text-xl font-medium text-white/40 ml-1">원</span>
                                         </span>
-                                    )}
-                                </div>
-                                {game.discountRate > 0 && game.originalPrice > 0 && (
-                                    <div className="flex items-center gap-2.5">
-                                        <p className="text-[15px] text-white/55 font-bold line-through leading-none">
-                                            {game.originalPrice.toLocaleString()}원
-                                        </p>
-                                        {game.originalPrice > game.currentPrice && (
-                                            <span className="text-[13px] text-green-400/80 font-bold">
-                                                {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
+                                        {game.discountRate > 0 && (
+                                            <span className={`text-[22px] font-black leading-none px-2.5 py-0.5 rounded-lg border ${
+                                                game.priceVerdict === 'BUY_NOW'
+                                                    ? 'bg-green-500/20 text-green-400 border-green-400/50'
+                                                    : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
+                                            }`}>
+                                                -{game.discountRate}%
                                             </span>
                                         )}
+                                    </div>
+                                    {game.discountRate > 0 && game.originalPrice > 0 && (
+                                        <div className="flex items-center gap-2.5">
+                                            <p className="text-[15px] text-white/55 font-bold line-through leading-none">
+                                                {game.originalPrice.toLocaleString()}원
+                                            </p>
+                                            {game.originalPrice > game.currentPrice && (
+                                                <span className="text-[13px] text-green-400/80 font-bold">
+                                                    {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {game.priceVerdict === 'BUY_NOW' && (
+                                    game.isAllTimeLowNew ? (
+                                        <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                                            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                                            <Flame className="relative z-10 w-4 h-4 shrink-0" />
+                                            <span className="relative z-10">역대최저가 갱신!</span>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-1 w-fit inline-flex items-center gap-2 bg-green-500/10 border border-green-400/35 text-green-400/75 text-[15px] font-bold px-3.5 py-1.5 rounded-xl shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                                            <TrendingUp className="w-4 h-4 shrink-0" />
+                                            <span>역대최저가 동일</span>
+                                        </div>
+                                    )
+                                )}
+                                {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
+                                    <p className="text-[15px] text-white/65 font-bold mt-0.5">
+                                        역대최저 {game.lowestPrice.toLocaleString()}원 근접
+                                    </p>
+                                )}
+
+                                {daysLeft !== null && daysLeft >= 0 && (
+                                    <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
+                                        {isClosingSoon
+                                            ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
+                                            : <CalendarDays className="w-5 h-5 text-white/60 shrink-0" />
+                                        }
+                                        <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/70'}`}>
+                                            {isClosingSoon
+                                                ? `막차! ${game.saleEndDate?.replace(/-/g, '.')} 마감`
+                                                : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')}`
+                                            }
+                                        </span>
                                     </div>
                                 )}
                             </div>
 
-                            {game.priceVerdict === 'BUY_NOW' && (
-                                <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
-                                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                                    <TrendingUp className="relative z-10 w-4 h-4 shrink-0" />
-                                    <span className="relative z-10">역대최저가 달성!</span>
-                                </div>
-                            )}
-                            {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
-                                <p className="text-[15px] text-white/65 font-bold mt-0.5">
-                                    역대최저 {game.lowestPrice.toLocaleString()}원 근접
-                                </p>
-                            )}
-
-                            {daysLeft !== null && daysLeft >= 0 && (
-                                <div className="flex items-center gap-2 mt-1 pt-2.5 border-t border-white/10">
-                                    {isClosingSoon
-                                        ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
-                                        : <CalendarDays className="w-5 h-5 text-white/60 shrink-0" />
-                                    }
-                                    <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/70'}`}>
-                                        {isClosingSoon
-                                            ? `막차! ${game.saleEndDate?.replace(/-/g, '.')} 마감`
-                                            : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')}`
-                                        }
-                                    </span>
+                            {/* 우: META + USER 점수 */}
+                            {score && (
+                                <div className="shrink-0 flex flex-col items-center justify-center self-center gap-3 pl-3 border-l border-white/15">
+                                    <div className="flex flex-col items-center gap-1">
+                                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border tracking-wider ${
+                                            scorePct >= 75
+                                                ? 'text-green-400 border-green-400/50 bg-green-400/10'
+                                                : scorePct >= 50
+                                                    ? 'text-yellow-400 border-yellow-400/50 bg-yellow-400/10'
+                                                    : 'text-red-400 border-red-400/50 bg-red-400/10'
+                                        }`}>META</span>
+                                        <span className={`text-[28px] font-black leading-none ${scoreColor}`}>{score}</span>
+                                    </div>
+                                    {userScoreValue && (
+                                        <>
+                                            <div className="w-6 h-px bg-white/15" />
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="flex items-center gap-0.5">
+                                                    <User className="w-2.5 h-2.5 text-white/45" />
+                                                    <span className="text-[10px] font-black text-white/45 tracking-wider">USER</span>
+                                                </div>
+                                                <span className="text-[24px] font-black leading-none text-white/70">{userScoreValue}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -350,68 +388,100 @@ export default function GameShortsCard({ game }) {
                     )}
                 </div>
 
-                {/* 핵심 수치: 메타크리틱 + 플레이타임 */}
-                {stats.length > 0 && (
-                    <div className={`grid ${colClass} gap-2`}>
-                        {stats.map(({ label, value, type, sub, userScore }) => (
-                            <div key={label} className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
-                                {type === 'score' && <div className="absolute -bottom-2 -right-2 opacity-[0.06] text-white"><span className="text-[56px] font-black leading-none">M</span></div>}
-                                {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
+                {/* 핵심 수치: isBuy면 플레이타임만(가로), 아니면 점수+플레이타임 그리드 */}
+                {isBuy ? (
+                    playtimeHours && (
+                        <div className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 flex items-center backdrop-blur-sm">
+                            <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />
+                            {/* 좌: PLAY TIME 라벨 */}
+                            <div className="relative z-10 flex flex-col items-center leading-none mr-4 shrink-0">
+                                <span className="text-[11px] font-black text-white/40 tracking-[0.15em]">PLAY</span>
+                                <span className="text-[11px] font-black text-white/40 tracking-[0.15em]">TIME</span>
+                            </div>
+                            <div className="h-8 w-px bg-white/15 mr-4 shrink-0" />
+                            {/* 중앙: 시간 */}
+                            <div className="relative z-10 flex-1">
+                                <span className="text-[30px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                                    {playtimeHours}시간
+                                </span>
+                            </div>
+                            {/* 우: 시간당 가격 */}
+                            {pricePerHour && (
+                                <>
+                                    <div className="h-8 w-px bg-white/15 mx-4 shrink-0" />
+                                    <div className="relative z-10 flex flex-col items-end leading-tight shrink-0">
+                                        <span className="text-[11px] font-black text-white/40 tracking-widest">시간당</span>
+                                        <span className="text-[20px] font-black text-white/80 leading-none mt-0.5">
+                                            {pricePerHour.toLocaleString()}원
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )
+                ) : (
+                    stats.length > 0 && (
+                        <div className={`grid ${colClass} gap-2`}>
+                            {stats.map(({ label, value, type, sub, userScore }) => (
+                                <div key={label} className="relative overflow-hidden bg-white/[0.05] border border-white/10 rounded-xl p-3 text-center backdrop-blur-sm">
+                                    {type === 'score' && <div className="absolute -bottom-2 -right-2 opacity-[0.06] text-white"><span className="text-[56px] font-black leading-none">M</span></div>}
+                                    {type === 'time'  && <Clock className="absolute -bottom-1 -right-1 w-10 h-10 opacity-[0.06] text-white" />}
 
-                                {type === 'score' && userScore ? (
-                                    /* 가로 2분할: 좌=비평가, 우=유저 — 헤더 h-5 고정으로 숫자 높이 정렬 */
-                                    <div className="relative z-10 flex items-start">
-                                        <div className="flex-1 flex flex-col items-center">
-                                            <div className="h-5 flex items-center justify-center mb-2">
-                                                <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider ${
+                                    {type === 'score' && userScore ? (
+                                        /* 가로 2분할: 좌=비평가, 우=유저 — 헤더 h-5 고정으로 숫자 높이 정렬 */
+                                        <div className="relative z-10 flex items-start">
+                                            <div className="flex-1 flex flex-col items-center">
+                                                <div className="h-5 flex items-center justify-center mb-2">
+                                                    <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border tracking-wider ${
+                                                        scorePct >= 75
+                                                            ? 'text-green-400 border-green-400/60 bg-green-400/10'
+                                                            : scorePct >= 50
+                                                                ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
+                                                                : 'text-red-400 border-red-400/60 bg-red-400/10'
+                                                    }`}>META</span>
+                                                </div>
+                                                <p className={`text-[30px] font-black leading-none ${scoreColor}`}>{value}</p>
+                                            </div>
+                                            <div className="w-px h-10 bg-white/15 mx-2 self-center" />
+                                            <div className="flex-1 flex flex-col items-center">
+                                                <div className="h-5 flex items-center justify-center gap-1 mb-2">
+                                                    <User className="w-3 h-3 text-white/55" />
+                                                    <span className="text-[11px] font-black text-white/55 tracking-wider">USER</span>
+                                                </div>
+                                                <p className="text-[30px] font-black leading-none text-white/75">{userScore}</p>
+                                            </div>
+                                        </div>
+                                    ) : type === 'score' ? (
+                                        /* 유저 평점 없음 — 세로 */
+                                        <>
+                                            <div className="relative z-10 flex justify-center mb-2">
+                                                <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-md border tracking-wider ${
                                                     scorePct >= 75
                                                         ? 'text-green-400 border-green-400/60 bg-green-400/10'
                                                         : scorePct >= 50
                                                             ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
                                                             : 'text-red-400 border-red-400/60 bg-red-400/10'
-                                                }`}>META</span>
+                                                }`}>{label}</span>
                                             </div>
-                                            <p className={`text-[30px] font-black leading-none ${scoreColor}`}>{value}</p>
-                                        </div>
-                                        <div className="w-px h-10 bg-white/15 mx-2 self-center" />
-                                        <div className="flex-1 flex flex-col items-center">
-                                            <div className="h-5 flex items-center justify-center gap-1 mb-2">
-                                                <User className="w-3 h-3 text-white/55" />
-                                                <span className="text-[11px] font-black text-white/55 tracking-wider">USER</span>
+                                            <p className={`relative z-10 text-[32px] font-black leading-none ${scoreColor}`}>{value}</p>
+                                        </>
+                                    ) : (
+                                        /* 플레이타임 */
+                                        <>
+                                            <div className="relative z-10 flex items-center justify-center gap-1.5 mb-2">
+                                                <Clock className="w-3.5 h-3.5 text-white/60" />
+                                                <span className="text-[11px] font-black text-white/60 tracking-widest">PLAYTIME</span>
                                             </div>
-                                            <p className="text-[30px] font-black leading-none text-white/75">{userScore}</p>
-                                        </div>
-                                    </div>
-                                ) : type === 'score' ? (
-                                    /* 유저 평점 없음 — 세로 */
-                                    <>
-                                        <div className="relative z-10 flex justify-center mb-2">
-                                            <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-md border tracking-wider ${
-                                                scorePct >= 75
-                                                    ? 'text-green-400 border-green-400/60 bg-green-400/10'
-                                                    : scorePct >= 50
-                                                        ? 'text-yellow-400 border-yellow-400/60 bg-yellow-400/10'
-                                                        : 'text-red-400 border-red-400/60 bg-red-400/10'
-                                            }`}>{label}</span>
-                                        </div>
-                                        <p className={`relative z-10 text-[32px] font-black leading-none ${scoreColor}`}>{value}</p>
-                                    </>
-                                ) : (
-                                    /* 플레이타임 */
-                                    <>
-                                        <div className="relative z-10 flex items-center justify-center gap-1.5 mb-2">
-                                            <Clock className="w-3.5 h-3.5 text-white/60" />
-                                            <span className="text-[11px] font-black text-white/60 tracking-widest">PLAYTIME</span>
-                                        </div>
-                                        <p className="relative z-10 text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{value}</p>
-                                        {sub && (
-                                            <p className="relative z-10 text-[13px] text-white/60 font-bold mt-1.5">{sub}</p>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                                            <p className="relative z-10 text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">{value}</p>
+                                            {sub && (
+                                                <p className="relative z-10 text-[13px] text-white/60 font-bold mt-1.5">{sub}</p>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )
                 )}
 
                 {/* WAIT / TRACKING: 다음 할인 예상 */}

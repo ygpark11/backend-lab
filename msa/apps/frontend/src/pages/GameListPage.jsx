@@ -2036,7 +2036,11 @@ const GameListPage = () => {
                                         </h3>
 
                                         <div className="mt-auto relative z-20">
-                                            {game.priceVerdict === 'BUY_NOW' && <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저</p>}
+                                            {game.priceVerdict === 'BUY_NOW' && (
+                                                game.isAllTimeLowNew
+                                                    ? <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저 갱신</p>
+                                                    : <p className="text-[9px] font-black text-green-600/70 dark:text-green-400/70 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingUp className="w-2.5 h-2.5" />역대최저 동률</p>
+                                            )}
                                             {game.priceVerdict === 'GOOD_OFFER' && <p className="text-[9px] font-black text-amber-500 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingDown className="w-2.5 h-2.5" />괜찮은 가격</p>}
                                             {game.priceVerdict === 'WAIT' && <p className="text-[9px] font-black text-red-400/80 tracking-wider flex items-center gap-0.5 mb-0.5"><Clock className="w-2.5 h-2.5" />지금비싼편</p>}
                                             {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-muted line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}

@@ -25,6 +25,8 @@ public record GameDetailResponse(
         Integer originalPrice,
         Integer lowestPrice,
         Integer discountRate,
+        @JsonProperty("isAllTimeLowNew")
+        boolean isAllTimeLowNew,
         @JsonProperty("isPlusExclusive")
         boolean isPlusExclusive,
         @JsonProperty("isPs5ProEnhanced")
@@ -94,7 +96,7 @@ public record GameDetailResponse(
                 this.id, this.title, this.originalTitle, this.publisher,
                 this.imageUrl, this.description, this.psStoreId,
                 this.currentPrice, this.originalPrice, this.lowestPrice,
-                this.discountRate, this.isPlusExclusive, this.isPs5ProEnhanced,
+                this.discountRate, this.isAllTimeLowNew, this.isPlusExclusive, this.isPs5ProEnhanced,
                 this.saleEndDate, this.releaseDate, this.pioneerName,
                 this.mcMetaScore, this.mcMetaCount, this.mcUserScore, this.mcUserCount,
                 this.igdbCriticScore, this.igdbCriticCount, this.igdbUserScore, this.igdbUserCount,
@@ -143,7 +145,7 @@ public record GameDetailResponse(
         return new GameDetailResponse(
                 game.getId(), game.getName(), game.getEnglishName(), game.getPublisher(),
                 game.getImageUrl(), game.getDescription(), game.getPsStoreId(),
-                currentPrice, originalPrice, lowestPrice, discountRate, game.isPlusExclusive(), game.isPs5ProEnhanced(),
+                currentPrice, originalPrice, lowestPrice, discountRate, game.isAllTimeLowNew(), game.isPlusExclusive(), game.isPs5ProEnhanced(),
                 game.getSaleEndDate(), game.getReleaseDate(), game.getPioneerName(),
                 game.getMcMetaScore(), game.getMcMetaCount(), game.getMcUserScore(), game.getMcUserCount(),
                 game.getIgdbCriticScore(), game.getIgdbCriticCount(), game.getIgdbUserScore(), game.getIgdbUserCount(),

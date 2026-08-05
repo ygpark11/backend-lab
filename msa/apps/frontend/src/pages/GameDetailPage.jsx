@@ -25,6 +25,7 @@ import {
     Clock,
     Crosshair,
     ExternalLink,
+    Flame,
     Gamepad2,
     Gem,
     Heart,
@@ -77,7 +78,7 @@ function generateShortsDesc(game) {
     if (isBuy) {
         let main = verdict;
         if (game.discountRate > 0) main += ` | -${game.discountRate}% 할인`;
-        if (game.priceVerdict === 'BUY_NOW')    main += ' | 역대최저가 달성!';
+        if (game.priceVerdict === 'BUY_NOW')    main += game.isAllTimeLowNew ? ' | 역대최저가 갱신!' : ' | 역대최저가 동률';
         if (game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0) main += ' | 역대최저 근접';
         lines.push(main);
         if (game.saleEndDate && game.discountRate > 0)
@@ -621,9 +622,21 @@ export default function GameDetailPage() {
                                             </span>
                                         )}
                                         {game.lowestPrice > 0 && game.priceVerdict !== 'TRACKING' && (
-                                            <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs bg-surface border border-divider px-3 py-1 rounded-lg shadow-sm font-bold text-primary">
-                                                <TrendingUp className="w-3.5 h-3.5 text-green-500" /> 역대최저가: {game.lowestPrice.toLocaleString()}원
-                                            </span>
+                                            game.priceVerdict === 'BUY_NOW' && game.isAllTimeLowNew ? (
+                                                <span className="whitespace-nowrap relative overflow-hidden inline-flex items-center gap-1.5 text-xs bg-green-500/15 dark:bg-green-500/20 border border-green-500/50 dark:border-green-400/60 px-3 py-1 rounded-lg font-black text-green-700 dark:text-green-400 shadow-[0_0_12px_rgba(34,197,94,0.25)] dark:shadow-[0_0_12px_rgba(34,197,94,0.35)]">
+                                                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                                                    <Flame className="relative z-10 w-3.5 h-3.5 shrink-0" />
+                                                    <span className="relative z-10">역대최저 갱신 {game.lowestPrice.toLocaleString()}원</span>
+                                                </span>
+                                            ) : game.priceVerdict === 'BUY_NOW' ? (
+                                                <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs bg-green-500/10 border border-green-500/25 dark:border-green-500/30 px-3 py-1 rounded-lg font-bold text-green-700 dark:text-green-500">
+                                                    <TrendingUp className="w-3.5 h-3.5 shrink-0" /> 역대최저 동률 {game.lowestPrice.toLocaleString()}원
+                                                </span>
+                                            ) : (
+                                                <span className="whitespace-nowrap inline-flex items-center gap-1.5 text-xs bg-surface border border-divider px-3 py-1 rounded-lg shadow-sm font-bold text-primary">
+                                                    <TrendingUp className="w-3.5 h-3.5 text-green-500" /> 역대최저가: {game.lowestPrice.toLocaleString()}원
+                                                </span>
+                                            )
                                         )}
                                     </div>
 
@@ -676,7 +689,11 @@ export default function GameDetailPage() {
                                     <div className="flex justify-between mt-4 text-[10px] font-bold">
                                         <span className="text-muted tracking-wider">정가</span>
                                         <span className={pricePosition >= 100 ? 'text-green-500 font-black' : pricePosition >= 90 ? 'text-green-500' : 'text-secondary'}>
-                                            {pricePosition >= 100 ? '역대 최저!' : pricePosition >= 90 ? '역대 최저 근접!' : pricePosition > 0 ? `${pricePosition}% 할인 달성` : '할인 미적용'}
+                                            {pricePosition >= 100
+                                                ? (game.isAllTimeLowNew ? '역대 최저 갱신!' : '역대 최저 동률')
+                                                : pricePosition >= 90 ? '역대 최저 근접!'
+                                                : pricePosition > 0 ? `${pricePosition}% 할인 달성`
+                                                : '할인 미적용'}
                                         </span>
                                         <span className="text-green-500 tracking-wider">역대최저</span>
                                     </div>

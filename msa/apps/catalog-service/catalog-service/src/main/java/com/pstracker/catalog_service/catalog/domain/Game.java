@@ -108,6 +108,9 @@ public class Game {
     @Column(name = "all_time_low_price")
     private Integer allTimeLowPrice;
 
+    @Column(name = "is_all_time_low_new", nullable = false)
+    private boolean isAllTimeLowNew = false;
+
     @Column(name = "chosung_name")
     private String chosungName;
 
@@ -382,8 +385,20 @@ public class Game {
         this.inCatalog = inCatalog;
 
         if (currentPrice != null && currentPrice > 0) {
-            if (this.allTimeLowPrice == null || this.allTimeLowPrice == 0 || currentPrice < this.allTimeLowPrice) {
+            if (this.allTimeLowPrice == null || this.allTimeLowPrice == 0) {
+                // 첫 수집: 기준선 설정, 갱신 아님
                 this.allTimeLowPrice = currentPrice;
+                this.isAllTimeLowNew = false;
+            } else if (currentPrice < this.allTimeLowPrice) {
+                // 역대 최저가 갱신
+                this.allTimeLowPrice = currentPrice;
+                this.isAllTimeLowNew = true;
+            } else if (currentPrice.equals(this.allTimeLowPrice)) {
+                // 역대 최저가 동률
+                this.isAllTimeLowNew = false;
+            } else {
+                // 정상가 또는 이전 ATL보다 높은 가격
+                this.isAllTimeLowNew = false;
             }
         }
     }
