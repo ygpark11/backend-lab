@@ -162,10 +162,20 @@ export default function GameShortsCard({ game }) {
             {/* 판정별 카드 외곽 프레임 — TCG 카드처럼 전체를 감싸는 컬러 테두리 */}
             <div className={`absolute inset-0 border-2 pointer-events-none z-50 ${cfg.frameBorder}`} />
 
-            {/* Aurora 배경 — verdict별 색상 */}
+            {/* 배경 레이어: blur 커버(게임 정체성) + Aurora(verdict 색상) */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                {/* 1. 게임 커버 blur — "이 게임"이라는 분위기를 화면 전체에 */}
+                <PSGameImage
+                    src={game.imageUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover scale-110 opacity-20"
+                    style={{ filter: 'blur(32px)' }}
+                />
+                {/* 2. verdict Aurora — 판정 색상 인식 유지 */}
                 <div className={`absolute -top-[20%] -right-[20%] w-[80%] h-[70%] ${cfg.auroraA} rounded-full blur-[90px] animate-[pulse_6s_ease-in-out_infinite]`} />
                 <div className={`absolute top-[50%] -left-[20%] w-[70%] h-[60%] ${cfg.auroraB} rounded-full blur-[90px] animate-[pulse_9s_ease-in-out_infinite]`} />
+                {/* 3. 어두운 overlay — 콘텐츠 가시성 보장 */}
+                <div className="absolute inset-0 bg-[#080810]/55" />
             </div>
 
             {/* ○△×□ 워터마크 */}
@@ -243,19 +253,19 @@ export default function GameShortsCard({ game }) {
                                 </div>
                                 {/* 가격 인라인 — 1행: 현재가 + 할인율pill, 2행: 정가취소선 + 절약금액 */}
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-baseline gap-2.5 flex-wrap">
-                                        <span className={`text-[42px] font-black tracking-tighter leading-none ${
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        <span className={`text-[52px] font-black tracking-tighter leading-none ${
                                             game.isPlusExclusive
-                                                ? 'text-yellow-400 drop-shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                                                ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
                                                 : game.priceVerdict === 'BUY_NOW'
-                                                    ? 'text-white drop-shadow-[0_0_20px_rgba(34,197,94,0.5)]'
+                                                    ? 'text-white drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]'
                                                     : 'text-white'
                                         }`}>
                                             {game.currentPrice.toLocaleString()}
-                                            <span className="text-xl font-medium text-white/40 ml-1">원</span>
+                                            <span className="text-2xl font-medium text-white/40 ml-1">원</span>
                                         </span>
                                         {game.discountRate > 0 && (
-                                            <span className={`text-[22px] font-black leading-none px-2.5 py-0.5 rounded-lg border ${
+                                            <span className={`inline-flex items-center text-[22px] font-black leading-none px-2.5 py-1 rounded-lg border ${
                                                 game.priceVerdict === 'BUY_NOW'
                                                     ? 'bg-green-500/20 text-green-400 border-green-400/50'
                                                     : 'bg-yellow-500/20 text-yellow-400 border-yellow-400/50'
@@ -270,7 +280,7 @@ export default function GameShortsCard({ game }) {
                                                 {game.originalPrice.toLocaleString()}원
                                             </p>
                                             {game.originalPrice > game.currentPrice && (
-                                                <span className="text-[13px] text-green-400/80 font-bold">
+                                                <span className="text-[13px] text-green-400 font-bold drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">
                                                     {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
                                                 </span>
                                             )}
@@ -279,13 +289,13 @@ export default function GameShortsCard({ game }) {
                                 </div>
                                 {game.priceVerdict === 'BUY_NOW' && (
                                     game.isAllTimeLowNew ? (
-                                        <div className="relative overflow-hidden mt-1 w-fit inline-flex items-center gap-2 bg-green-500/20 border border-green-400/60 text-green-400 text-[15px] font-black px-3.5 py-1.5 rounded-xl shadow-[0_0_20px_rgba(34,197,94,0.4)]">
+                                        <div className="relative overflow-hidden mt-1 w-full inline-flex items-center gap-2.5 bg-green-500/20 border border-green-400/60 text-green-400 text-[18px] font-black px-4 py-2 rounded-xl shadow-[0_0_24px_rgba(34,197,94,0.45)]">
                                             <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                                            <Flame className="relative z-10 w-4 h-4 shrink-0" />
+                                            <Flame className="relative z-10 w-5 h-5 shrink-0" />
                                             <span className="relative z-10">역대최저가 갱신!</span>
                                         </div>
                                     ) : (
-                                        <div className="mt-1 w-fit inline-flex items-center gap-2 bg-green-500/10 border border-green-400/35 text-green-400/75 text-[15px] font-bold px-3.5 py-1.5 rounded-xl shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                                        <div className="mt-1 w-full inline-flex items-center gap-2.5 bg-green-500/10 border border-green-400/35 text-green-400/75 text-[16px] font-bold px-4 py-2 rounded-xl shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                                             <TrendingUp className="w-4 h-4 shrink-0" />
                                             <span>역대최저가 동일</span>
                                         </div>
@@ -302,7 +312,11 @@ export default function GameShortsCard({ game }) {
                                             ? <Timer className="w-5 h-5 text-red-400 shrink-0 animate-pulse" />
                                             : <CalendarDays className="w-5 h-5 text-white/60 shrink-0" />
                                         }
-                                        <span className={`text-[15px] font-black ${isClosingSoon ? 'text-red-400' : 'text-white/70'}`}>
+                                        <span className={`text-[15px] font-black ${
+                                            isClosingSoon
+                                                ? 'text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.6)]'
+                                                : 'text-white/70'
+                                        }`}>
                                             {isClosingSoon
                                                 ? `막차! ${game.saleEndDate?.replace(/-/g, '.')} 마감`
                                                 : `할인 종료 ${game.saleEndDate?.replace(/-/g, '.')}`
@@ -415,7 +429,7 @@ export default function GameShortsCard({ game }) {
                                 <>
                                     <div className="h-10 w-px bg-white/15 mx-4 shrink-0" />
                                     <div className="relative z-10 shrink-0">
-                                        <span className="text-[18px] font-black text-white/75 leading-none">
+                                        <span className="text-[18px] font-black text-white/80 leading-none drop-shadow-[0_0_8px_rgba(255,255,255,0.35)]">
                                             시간당 {pricePerHour.toLocaleString()}원
                                         </span>
                                     </div>
