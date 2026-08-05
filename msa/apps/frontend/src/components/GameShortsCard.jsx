@@ -263,7 +263,9 @@ export default function GameShortsCard({ game }) {
                                         </span>
                                         {game.discountRate > 0 && (
                                             <span className={`text-[18px] font-black leading-none ${
-                                                game.priceVerdict === 'BUY_NOW' ? 'text-green-400' : 'text-yellow-400'
+                                                game.priceVerdict === 'BUY_NOW'
+                                                    ? 'text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.6)]'
+                                                    : 'text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.6)]'
                                             }`}>
                                                 -{game.discountRate}%
                                             </span>
