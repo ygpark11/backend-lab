@@ -191,7 +191,7 @@ export default function GameShortsCard({ game }) {
                     className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-[#080810]" />
-                <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/40 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#080810]/25 via-transparent to-transparent" />
 
                 {/* 타이틀 + 뱃지 — pr-16으로 YouTube 우측 버튼 safe zone 확보 */}
                 <div className="absolute bottom-0 left-0 right-0 pl-5 pr-16 pb-4">
@@ -248,29 +248,35 @@ export default function GameShortsCard({ game }) {
                                     </span>
                                 </div>
                                 {/* 가격 + 할인 정보 */}
-                                <div className="flex flex-col gap-1">
-                                    <span className={`text-[52px] font-black tracking-tighter leading-none ${
-                                        game.isPlusExclusive
-                                            ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
-                                            : game.priceVerdict === 'BUY_NOW'
-                                                ? 'text-white drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]'
-                                                : 'text-white'
-                                    }`}>
-                                        {game.currentPrice.toLocaleString()}
-                                        <span className="text-2xl font-medium text-white/40 ml-1">원</span>
-                                    </span>
-                                    {game.discountRate > 0 && game.originalPrice > 0 && (
-                                        <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex flex-col gap-1.5">
+                                    {/* 현재가 + 할인율 — 같은 줄 */}
+                                    <div className="flex items-baseline gap-2.5">
+                                        <span className={`text-[52px] font-black tracking-tighter leading-none ${
+                                            game.isPlusExclusive
+                                                ? 'text-yellow-400 drop-shadow-[0_0_24px_rgba(234,179,8,0.7)]'
+                                                : game.priceVerdict === 'BUY_NOW'
+                                                    ? 'text-white drop-shadow-[0_0_24px_rgba(34,197,94,0.5)]'
+                                                    : 'text-white'
+                                        }`}>
+                                            {game.currentPrice.toLocaleString()}
+                                            <span className="text-2xl font-medium text-white/40 ml-1">원</span>
+                                        </span>
+                                        {game.discountRate > 0 && (
                                             <span className={`text-[18px] font-black leading-none ${
                                                 game.priceVerdict === 'BUY_NOW' ? 'text-green-400' : 'text-yellow-400'
                                             }`}>
                                                 -{game.discountRate}%
                                             </span>
+                                        )}
+                                    </div>
+                                    {/* 취소선 + 절약금액 */}
+                                    {game.discountRate > 0 && game.originalPrice > 0 && (
+                                        <div className="flex items-baseline gap-2 flex-wrap">
                                             <p className="text-[15px] text-white/55 font-bold line-through leading-none">
                                                 {game.originalPrice.toLocaleString()}원
                                             </p>
                                             {game.originalPrice > game.currentPrice && (
-                                                <span className="text-[13px] text-green-400 font-bold drop-shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                                                <span className="text-[15px] text-green-400 font-black drop-shadow-[0_0_14px_rgba(34,197,94,0.7)]">
                                                     {(game.originalPrice - game.currentPrice).toLocaleString()}원 아낌
                                                 </span>
                                             )}
@@ -293,7 +299,7 @@ export default function GameShortsCard({ game }) {
                                     )
                                 )}
                                 {game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0 && (
-                                    <p className="text-[15px] text-white/65 font-bold">
+                                    <p className="text-[15px] text-yellow-300/80 font-bold">
                                         역대최저 {game.lowestPrice.toLocaleString()}원 근접
                                     </p>
                                 )}
@@ -356,7 +362,7 @@ export default function GameShortsCard({ game }) {
                             </div>
                             <div className="flex flex-col gap-2">
                                 <div>
-                                    <p className="text-[12px] text-white/30 font-black tracking-widest mb-0.5">
+                                    <p className="text-[12px] text-white/45 font-black tracking-widest mb-0.5">
                                         {game.discountRate > 0 ? '현재 할인가' : '현재 정가'}
                                     </p>
                                     <div className="flex items-center gap-2">
@@ -366,7 +372,7 @@ export default function GameShortsCard({ game }) {
                                             {game.currentPrice.toLocaleString()}원
                                         </span>
                                         {game.discountRate > 0 && (
-                                            <span className="text-sm font-black text-white/20">-{game.discountRate}%</span>
+                                            <span className="text-sm font-black text-white/35">-{game.discountRate}%</span>
                                         )}
                                     </div>
                                     {game.discountRate > 0 && daysLeft !== null && daysLeft >= 0 && (
@@ -386,9 +392,9 @@ export default function GameShortsCard({ game }) {
                                     <p className="text-[13px] text-white/25 font-bold">역대 할인 이력 부족</p>
                                 )}
                                 {game.lowestPrice > 0 && game.currentPrice > game.lowestPrice && (
-                                    <p className="text-[14px] text-white/35 font-bold pt-1 border-t border-white/10">
+                                    <p className="text-[14px] text-white/50 font-bold pt-1 border-t border-white/10">
                                         지금 사면 역대최저보다{' '}
-                                        <span className="text-amber-400/90 font-black">
+                                        <span className="text-amber-400 font-black">
                                             +{(game.currentPrice - game.lowestPrice).toLocaleString()}원
                                         </span>{' '}
                                         비쌈
