@@ -405,7 +405,7 @@ export default function GameShortsCard({ game }) {
                             </div>
                             <div className="h-10 w-px bg-white/15 mr-4 shrink-0" />
                             {/* 중앙: 시간 */}
-                            <div className="relative z-10 shrink-0">
+                            <div className="relative z-10 flex-1">
                                 <span className="text-[32px] font-black leading-none text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
                                     {playtimeHours}시간
                                 </span>
@@ -414,10 +414,9 @@ export default function GameShortsCard({ game }) {
                             {pricePerHour && (
                                 <>
                                     <div className="h-10 w-px bg-white/15 mx-4 shrink-0" />
-                                    <div className="relative z-10 flex-1 flex flex-col gap-0.5">
-                                        <span className="text-[13px] font-black text-white/65 tracking-widest">시간당</span>
-                                        <span className="text-[22px] font-black text-white/85 leading-none">
-                                            {pricePerHour.toLocaleString()}원
+                                    <div className="relative z-10 shrink-0">
+                                        <span className="text-[18px] font-black text-white/75 leading-none">
+                                            시간당 {pricePerHour.toLocaleString()}원
                                         </span>
                                     </div>
                                 </>
