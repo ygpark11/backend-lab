@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import time
 import random
@@ -19,8 +21,8 @@ CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 RESTART_INTERVAL = {"LOW": 15, "HIGH": 200}.get(CURRENT_MODE, 15)
 
 TARGETS = {
-    "BEST_SELLER": "https://store.playstation.com/ko-kr/pages/browse/{}?sortBy=sales30&sortOrder=desc",
-    "MOST_DOWNLOADED": "https://store.playstation.com/ko-kr/category/3f772501-f6f8-49b7-abac-874a88ca4897/{}?sortBy=downloads30&sortOrder=desc"
+    "BEST_SELLER": "https://store.playstation.com/ko-kr/category/d0446d4b-dc9a-4f1e-86ec-651f099c9b29/{}?sortBy=sales30&sortOrder=desc",
+    "MOST_DOWNLOADED": "https://store.playstation.com/ko-kr/category/d0446d4b-dc9a-4f1e-86ec-651f099c9b29/{}?sortBy=downloads30&sortOrder=desc"
 }
 
 DATA_DIR = 'data'
@@ -109,32 +111,55 @@ def setup_page(context):
 def human_like_delay(min_sec=1.5, max_sec=3.5):
     time.sleep(random.uniform(min_sec, max_sec))
 
-def fetch_product_id_from_concept(bm, concept_url):
+def fetch_product_id_from_concept(bm: "BrowserManager", concept_url: str) -> str | None:
     logger.info(f"신규 컨셉 발견! Product ID 탐색 중... ({concept_url})")
     context = bm.get_context()
     page = setup_page(context)
 
     product_id = None
     try:
-        page.goto("https://store.playstation.com" + concept_url, wait_until="domcontentloaded", timeout=15000)
-        human_like_delay(1.5, 2.5)
+        page.goto("https://store.playstation.com" + concept_url, wait_until="domcontentloaded", timeout=20000)
+        human_like_delay(1.0, 2.0)
 
-        try:
-            meta_loc = page.locator("a[data-telemetry-meta]").first
-            if meta_loc.is_visible(timeout=3000):
-                meta_str = meta_loc.get_attribute("data-telemetry-meta")
-                meta_json = json.loads(meta_str)
-                product_id = meta_json.get("productId")
-        except: pass
+        # 1순위: SSR Apollo 캐시 script에서 추출 (JS 렌더링 불필요, 가장 안정적)
+        product_id = page.evaluate("""
+            () => {
+                const scripts = document.querySelectorAll('script[type="application/json"]');
+                for (const s of scripts) {
+                    try {
+                        const cache = JSON.parse(s.textContent).cache || {};
+                        for (const [key, val] of Object.entries(cache)) {
+                            if (key.startsWith('Concept:') && val.defaultProduct) {
+                                const ref = val.defaultProduct.__ref || '';
+                                if (ref.startsWith('Product:')) return ref.slice(8);
+                            }
+                        }
+                        for (const key of Object.keys(cache)) {
+                            if (key.startsWith('Product:') && key.includes('-')) return key.slice(8);
+                        }
+                    } catch(e) {}
+                }
+                return null;
+            }
+        """)
 
+        # 2순위: CTA 영역 telemetry (SPA 렌더 후)
         if not product_id:
             try:
-                btn_loc = page.locator("button[data-telemetry-meta]").first
-                if btn_loc.count() > 0:
-                    meta_str = btn_loc.get_attribute("data-telemetry-meta")
-                    meta_json = json.loads(meta_str)
-                    product_id = meta_json.get("productId")
-            except: pass
+                meta_str = page.get_attribute('[data-qa="mfeCtaMain#cta"]', 'data-telemetry-meta', timeout=8000)
+                if meta_str:
+                    product_id = json.loads(meta_str).get("productId")
+            except Exception as e:
+                logger.warning(f"CTA telemetry 추출 실패 ({concept_url}): {e}")
+
+        # 3순위: 위시리스트 버튼 telemetry
+        if not product_id:
+            try:
+                meta_str = page.get_attribute('[data-qa="wishlistToggle"]', 'data-telemetry-meta', timeout=5000)
+                if meta_str:
+                    product_id = json.loads(meta_str).get("productId")
+            except Exception as e:
+                logger.warning(f"위시리스트 telemetry 추출 실패 ({concept_url}): {e}")
 
     except Exception as e:
         logger.error(f"컨셉 변환 타임아웃 또는 실패 ({concept_url}): {e}")
@@ -220,24 +245,37 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache, vip_helpers=
         target_url = url_template.format(page_num)
         logger.info(f"{page_num}페이지 목록 탐색 중...")
 
-        extracted_hrefs = []
+        concept_ids = []
 
-        # 1단계: 목록 페이지 열고 글씨만 빠르게 복사한 뒤 즉시 닫기!
+        # 1단계: 목록 페이지 로드 후 JS 단일 호출로 concept ID 일괄 추출
         context = bm.get_context()
         page = setup_page(context)
 
         try:
-            page.goto(target_url, wait_until="domcontentloaded")
-            human_like_delay(2.0, 3.5)
-            page.evaluate("window.scrollBy(0, document.body.scrollHeight / 3)")
+            try:
+                page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+            except Exception:
+                logger.warning(f"{page_num}페이지 goto 재시도...")
+                page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
 
-            page.wait_for_selector("a[href*='/concept/'], a[href*='/product/']", state="attached", timeout=15000)
-            links = page.locator("a[href*='/concept/'], a[href*='/product/']").all()
+            human_like_delay(2.0, 3.0)
 
-            for link in links:
-                href = link.get_attribute("href")
-                if href:
-                    extracted_hrefs.append(href)
+            # SPA 렌더링 완료 확인: 첫 번째 상품 타일 등장 대기
+            page.wait_for_selector('[data-qa="ems-sdk-grid#productTile0"]', timeout=25000)
+
+            # 라이브 Locator 반복(get_attribute 타임아웃 원인) 대신 JS 일괄 추출
+            concept_ids = page.evaluate("""
+                () => {
+                    const anchors = document.querySelectorAll(
+                        'a[data-track="web:store:concept-tile"]'
+                    );
+                    return Array.from(anchors).map(a => {
+                        try {
+                            return JSON.parse(a.getAttribute('data-telemetry-meta')).id || null;
+                        } catch(e) { return null; }
+                    }).filter(id => id != null);
+                }
+            """)
 
         except Exception as e:
             logger.error(f"{page_num}페이지 목록 로드 실패: {e}")
@@ -247,27 +285,18 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache, vip_helpers=
             except: pass
             bm.increment()
 
-        # 2단계: 복사해둔 글씨(URL)들을 하나씩 보면서 수첩 검사 및 심부름 보내기
-        for href in extracted_hrefs:
-            if "/concept/" in href:
-                concept_id = href.split('/')[-1].split('?')[0]
+        # 2단계: concept ID → product ID 변환 (캐시 우선, 미스 시 상세 페이지 탐색)
+        for concept_id in concept_ids:
+            if concept_id in concept_cache:
+                actual_product_id = concept_cache[concept_id]
+            else:
+                actual_product_id = fetch_product_id_from_concept(bm, f"/ko-kr/concept/{concept_id}")
+                if actual_product_id:
+                    concept_cache[concept_id] = actual_product_id
+                    save_cache(concept_cache)
 
-                if concept_id in concept_cache:
-                    actual_product_id = concept_cache[concept_id]
-                else:
-                    # 상세 페이지 심부름
-                    actual_product_id = fetch_product_id_from_concept(bm, href)
-                    if actual_product_id:
-                        concept_cache[concept_id] = actual_product_id
-                        save_cache(concept_cache)
-
-                if actual_product_id and actual_product_id not in ps_store_ids:
-                    ps_store_ids.append(actual_product_id)
-
-            elif "/product/" in href:
-                product_id = href.split('/')[-1].split('?')[0]
-                if product_id not in ps_store_ids:
-                    ps_store_ids.append(product_id)
+            if actual_product_id and actual_product_id not in ps_store_ids:
+                ps_store_ids.append(actual_product_id)
 
         logger.info(f"{page_num}페이지 완료 (누적: {len(ps_store_ids)}개)")
 
