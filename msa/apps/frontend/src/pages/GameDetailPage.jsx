@@ -61,6 +61,17 @@ import {pushRecentGame} from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
 
 // ── Shorts 유튜브 설명 자동생성 ──────────────────────────────────────
+function cleanTitleForDesc(title) {
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = title.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) title = title.slice(0, parenIdx).trim();
+    }
+    return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
+
 function generateShortsDesc(game) {
     const verdictMap = {
         BUY_NOW:    '지금 사세요 ○',
@@ -68,15 +79,17 @@ function generateShortsDesc(game) {
         WAIT:       '기다리세요 ×',
         TRACKING:   '추적 중 □',
     };
-    const verdict = verdictMap[game.priceVerdict] ?? '추적 중 □';
-    const isBuy   = game.priceVerdict === 'BUY_NOW' || game.priceVerdict === 'GOOD_OFFER';
-    const lines   = [];
+    const verdict      = verdictMap[game.priceVerdict] ?? '추적 중 □';
+    const isBuy        = game.priceVerdict === 'BUY_NOW' || game.priceVerdict === 'GOOD_OFFER';
+    const cleanedTitle = cleanTitleForDesc(game.title);
+    const lines        = [];
 
-    lines.push(`${game.title} 지금 살까요? 🎮`);
+    lines.push(`${cleanedTitle} 지금 살까요? 🎮`);
     lines.push('');
 
     if (isBuy) {
         let main = verdict;
+        if (game.currentPrice > 0) main += ` | ${game.currentPrice.toLocaleString()}원`;
         if (game.discountRate > 0) main += ` | -${game.discountRate}% 할인`;
         if (game.priceVerdict === 'BUY_NOW')    main += game.isAllTimeLowNew ? ' | 역대최저가 갱신!' : ' | 역대최저가 동률';
         if (game.priceVerdict === 'GOOD_OFFER' && game.lowestPrice > 0) main += ' | 역대최저 근접';
@@ -87,6 +100,8 @@ function generateShortsDesc(game) {
         let main = verdict;
         if (game.discountRate > 0) main += ` | -${game.discountRate}% 할인 중이나 역대최저 아님`;
         lines.push(main);
+        if (game.currentPrice > 0)
+            lines.push(`현재가: ${game.currentPrice.toLocaleString()}원`);
         if (game.lowestPrice > 0)
             lines.push(`역대최저가: ${game.lowestPrice.toLocaleString()}원 (더 기다리세요)`);
     }
@@ -101,7 +116,7 @@ function generateShortsDesc(game) {
     lines.push('');
     lines.push('PS 가격 추적 → ps-signal.com');
 
-    const gameTag      = '#' + game.title.replace(/[^가-힣a-zA-Z0-9]/g, '').slice(0, 25);
+    const gameTag      = '#' + cleanedTitle.replace(/[^가-힣a-zA-Z0-9]/g, '').slice(0, 25);
     const platformTags = (game.platforms || []).map(p => '#' + p.replace(/\s/g, '')).join(' ');
     lines.push(`#플스세일 #게임할인 ${platformTags} ${gameTag}`.trim());
 
