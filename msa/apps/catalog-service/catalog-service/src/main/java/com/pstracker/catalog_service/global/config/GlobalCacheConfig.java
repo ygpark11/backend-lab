@@ -40,6 +40,11 @@ public class GlobalCacheConfig {
     public static final String INSIGHT_KEY_PT_LONG = "'ptLong'";
     public static final String INSIGHT_KEY_PT_EPIC = "'ptEpic'";
 
+    public static final String INSIGHT_KEY_VERDICT_BUY_NOW    = "'verdictBuyNow'";
+    public static final String INSIGHT_KEY_VERDICT_GOOD_OFFER = "'verdictGoodOffer'";
+    public static final String INSIGHT_KEY_VERDICT_WAIT       = "'verdictWait'";
+    public static final String INSIGHT_KEY_VERDICT_TRACKING   = "'verdictTracking'";
+
     public static final String TRENDING_CACHE = "trendingCache";
     public static final String TRENDING_KEY_TOP_GAMES = "'trendingTopGames'";
 

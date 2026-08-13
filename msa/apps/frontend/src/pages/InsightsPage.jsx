@@ -1,5 +1,6 @@
 import React, {useEffect, useState} from 'react';
 import {
+    Activity,
     AlertTriangle,
     BarChart3,
     ChevronRight,
@@ -136,6 +137,9 @@ const InsightsPage = () => {
     const hasNewDeals = stats.newDiscountCount > 0;
     const ptTotal = (stats.ptShortCount || 0) + (stats.ptMediumCount || 0) + (stats.ptLongCount || 0) + (stats.ptEpicCount || 0);
 
+    const verdictTotal = (stats.verdictBuyNow || 0) + (stats.verdictGoodOffer || 0) + (stats.verdictWait || 0) + (stats.verdictTracking || 0);
+    const verdictPct = (n) => verdictTotal > 0 ? Math.round((n / verdictTotal) * 100) : 0;
+
     return (
         <div className="min-h-screen bg-base text-primary pt-24 pb-20 px-4 sm:px-6 lg:px-8 font-sans relative overflow-hidden transition-colors duration-500">
             <SEO title="인사이트" description="플레이스테이션 게임 가격 동향, 할인율 통계, 장르별 분석 데이터" url="https://ps-signal.com/insights" />
@@ -160,6 +164,125 @@ const InsightsPage = () => {
                 </div>
 
                 <div className="space-y-12">
+
+                    {/* ==========================================
+                        Section 0: 가격신호등 현황판 (Hero Status Strip)
+                    ========================================== */}
+                    <section className="animate-fadeIn" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <h2 className="text-sm font-bold tracking-widest uppercase text-secondary flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-ps-blue" /> Price Signal Board
+                            </h2>
+                            <button onClick={(e) => { e.stopPropagation(); setHelpInfo({ isOpen: true, type: 'VERDICT' }); }} className="text-muted hover:text-primary transition-colors p-2 -m-1.5">
+                                <Info className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {/* ○ BUY NOW */}
+                            <div onClick={() => navigate('/games?isAllTimeLow=true')}
+                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                                           bg-green-500/10 dark:bg-green-500/15 border-green-500/30
+                                           hover:border-green-500/60 hover:shadow-[0_0_28px_rgba(34,197,94,0.12)] dark:hover:shadow-[0_0_28px_rgba(34,197,94,0.25)]
+                                           min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
+                                <Circle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-green-500/10 group-hover:text-green-500/20 transition-colors duration-300 pointer-events-none" />
+                                <div className="relative z-10 flex items-start justify-between">
+                                    <div>
+                                        <Circle className="w-5 h-5 text-green-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(34,197,94,0.7)]" style={{ fill: 'rgba(34,197,94,0.2)' }} />
+                                        <p className="text-[10px] font-black tracking-widest uppercase text-green-700 dark:text-green-500/80">Buy Now</p>
+                                        <p className="text-xs font-bold mt-0.5 break-keep text-green-700/70 dark:text-green-400/60">지금 사도 좋아</p>
+                                    </div>
+                                    <span className="text-xs font-black text-green-700/70 dark:text-green-400/70">{verdictPct(stats.verdictBuyNow || 0)}%</span>
+                                </div>
+                                <div className="relative z-10 mt-3">
+                                    <span className="text-4xl lg:text-5xl font-black tracking-tighter leading-none text-green-600 dark:text-green-400 dark:drop-shadow-[0_0_16px_rgba(34,197,94,0.4)]">
+                                        {(stats.verdictBuyNow || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* △ GOOD OFFER */}
+                            <div onClick={() => navigate('/games?minDiscountRate=30')}
+                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                                           bg-yellow-500/10 dark:bg-yellow-500/15 border-yellow-500/30
+                                           hover:border-yellow-500/60 hover:shadow-[0_0_28px_rgba(234,179,8,0.12)] dark:hover:shadow-[0_0_28px_rgba(234,179,8,0.25)]
+                                           min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
+                                <Triangle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-yellow-500/10 group-hover:text-yellow-500/20 transition-colors duration-300 pointer-events-none" />
+                                <div className="relative z-10 flex items-start justify-between">
+                                    <div>
+                                        <Triangle className="w-5 h-5 text-yellow-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(234,179,8,0.7)]" style={{ fill: 'rgba(234,179,8,0.2)' }} />
+                                        <p className="text-[10px] font-black tracking-widest uppercase text-yellow-700 dark:text-yellow-500/80">Good Offer</p>
+                                        <p className="text-xs font-bold mt-0.5 break-keep text-yellow-700/70 dark:text-yellow-400/60">괜찮은 가격</p>
+                                    </div>
+                                    <span className="text-xs font-black text-yellow-700/70 dark:text-yellow-400/70">{verdictPct(stats.verdictGoodOffer || 0)}%</span>
+                                </div>
+                                <div className="relative z-10 mt-3">
+                                    <span className="text-4xl lg:text-5xl font-black tracking-tighter leading-none text-yellow-600 dark:text-yellow-400 dark:drop-shadow-[0_0_16px_rgba(234,179,8,0.4)]">
+                                        {(stats.verdictGoodOffer || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* × WAIT */}
+                            <div onClick={() => navigate('/games?minDiscountRate=1')}
+                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                                           bg-red-500/10 dark:bg-red-500/15 border-red-500/30
+                                           hover:border-red-500/60 hover:shadow-[0_0_28px_rgba(239,68,68,0.12)] dark:hover:shadow-[0_0_28px_rgba(239,68,68,0.25)]
+                                           min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
+                                <XIcon className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-red-500/10 group-hover:text-red-500/20 transition-colors duration-300 pointer-events-none" />
+                                <div className="relative z-10 flex items-start justify-between">
+                                    <div>
+                                        <XIcon className="w-5 h-5 text-red-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]" />
+                                        <p className="text-[10px] font-black tracking-widest uppercase text-red-700 dark:text-red-500/80">Wait</p>
+                                        <p className="text-xs font-bold mt-0.5 break-keep text-red-700/70 dark:text-red-400/60">더 기다려요</p>
+                                    </div>
+                                    <span className="text-xs font-black text-red-700/70 dark:text-red-400/70">{verdictPct(stats.verdictWait || 0)}%</span>
+                                </div>
+                                <div className="relative z-10 mt-3">
+                                    <span className="text-4xl lg:text-5xl font-black tracking-tighter leading-none text-red-600 dark:text-red-400 dark:drop-shadow-[0_0_16px_rgba(239,68,68,0.4)]">
+                                        {(stats.verdictWait || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* □ TRACKING — Square watermark에 fill:none 명시 (rect 형태라 다른 심볼과 달리 내부가 보임) */}
+                            <div onClick={() => navigate('/games')}
+                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                                           bg-ps-blue/10 dark:bg-ps-blue/15 border-ps-blue/30
+                                           hover:border-ps-blue/60 hover:shadow-[0_0_28px_rgba(0,67,156,0.12)] dark:hover:shadow-[0_0_28px_rgba(0,67,156,0.25)]
+                                           min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
+                                <Square className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-ps-blue/10 group-hover:text-ps-blue/20 transition-colors duration-300 pointer-events-none" style={{ fill: 'none' }} />
+                                <div className="relative z-10 flex items-start justify-between">
+                                    <div>
+                                        <Square className="w-5 h-5 text-ps-blue mb-2 dark:drop-shadow-[0_0_6px_rgba(0,67,156,0.6)]" style={{ fill: 'rgba(0,67,156,0.15)' }} />
+                                        <p className="text-[10px] font-black tracking-widest uppercase text-blue-700 dark:text-ps-blue/80">Tracking</p>
+                                        <p className="text-xs font-bold mt-0.5 break-keep text-blue-700/70 dark:text-ps-blue/50">지켜보는 중</p>
+                                    </div>
+                                    <span className="text-xs font-black text-blue-700/70 dark:text-ps-blue/70">{verdictPct(stats.verdictTracking || 0)}%</span>
+                                </div>
+                                <div className="relative z-10 mt-3">
+                                    <span className="text-4xl lg:text-5xl font-black tracking-tighter leading-none text-blue-700 dark:text-ps-blue dark:drop-shadow-[0_0_16px_rgba(0,67,156,0.4)]">
+                                        {(stats.verdictTracking || 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 4-segment proportion bar — tracking을 flex-1로 나머지 채움 (반올림 오차 방지) */}
+                        {verdictTotal > 0 && (() => {
+                            const bn = verdictPct(stats.verdictBuyNow || 0);
+                            const go = verdictPct(stats.verdictGoodOffer || 0);
+                            const wt = verdictPct(stats.verdictWait || 0);
+                            return (
+                                <div className="flex rounded-full overflow-hidden h-1.5 mt-3">
+                                    {bn > 0 && <div className="bg-green-500/80 dark:bg-green-500/70 transition-all duration-700" style={{ width: `${bn}%` }} />}
+                                    {go > 0 && <div className="bg-yellow-500/80 dark:bg-yellow-500/70 transition-all duration-700" style={{ width: `${go}%` }} />}
+                                    {wt > 0 && <div className="bg-red-500/80 dark:bg-red-500/70 transition-all duration-700" style={{ width: `${wt}%` }} />}
+                                    {(stats.verdictTracking || 0) > 0 && <div className="flex-1 bg-ps-blue/70 dark:bg-ps-blue/60 transition-all duration-700" />}
+                                </div>
+                            );
+                        })()}
+                    </section>
 
                     {/* ==========================================
                         Section 1: Market Radar (시장 동향)

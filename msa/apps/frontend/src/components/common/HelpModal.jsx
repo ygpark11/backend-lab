@@ -1,8 +1,10 @@
 import React from 'react';
 import {
+    Activity,
     BarChart3,
     Bell,
     CalendarDays,
+    Circle,
     Database,
     Gamepad2,
     Globe,
@@ -13,8 +15,10 @@ import {
     ShieldAlert,
     ShieldCheck,
     Sparkles,
+    Square,
     Star,
     Trophy,
+    Triangle,
     X
 } from 'lucide-react';
 
@@ -184,6 +188,30 @@ const HELP_CONTENT = {
             </div>
         ),
         icon: <Layers className="w-5 h-5 text-yellow-500" />
+    },
+    VERDICT: {
+        title: "가격신호등 현황판",
+        content: (
+            <ul className="text-sm text-secondary space-y-3">
+                <li className="flex gap-2 items-start">
+                    <Circle className="w-4 h-4 mt-0.5 text-green-500 shrink-0" style={{ fill: 'rgba(34,197,94,0.2)' }} />
+                    <span><strong className="text-green-400">BUY NOW (○):</strong> 할인 중이면서 현재가가 역대 최저가 이하인 게임. 지금이 살 타이밍입니다.</span>
+                </li>
+                <li className="flex gap-2 items-start">
+                    <Triangle className="w-4 h-4 mt-0.5 text-yellow-400 shrink-0" style={{ fill: 'rgba(234,179,8,0.2)' }} />
+                    <span><strong className="text-yellow-400">GOOD OFFER (△):</strong> 할인 중이고 역대 최저가와 20% 이내인 게임. 합리적인 구매 구간입니다.</span>
+                </li>
+                <li className="flex gap-2 items-start">
+                    <X className="w-4 h-4 mt-0.5 text-red-400 shrink-0" />
+                    <span><strong className="text-red-400">WAIT (×):</strong> 할인 중이지만 역대 최저가 대비 20% 이상 비싼 게임. 더 좋은 할인을 기다리세요.</span>
+                </li>
+                <li className="flex gap-2 items-start">
+                    <Square className="w-4 h-4 mt-0.5 text-ps-blue shrink-0" style={{ fill: 'rgba(0,67,156,0.1)' }} />
+                    <span><strong className="text-ps-blue">TRACKING (□):</strong> 현재 할인이 없는 게임. 위시리스트에 추가하면 할인 시 알림을 받을 수 있습니다.</span>
+                </li>
+            </ul>
+        ),
+        icon: <Activity className="w-5 h-5 text-ps-blue" />
     }
 };
 

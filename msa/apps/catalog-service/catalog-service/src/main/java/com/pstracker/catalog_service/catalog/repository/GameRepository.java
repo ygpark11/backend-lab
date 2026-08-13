@@ -145,6 +145,18 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 100")
     long countEpicPlayTimeGames();
 
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.allTimeLowPrice > 0 AND g.currentPrice <= g.allTimeLowPrice")
+    long countVerdictBuyNow();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.allTimeLowPrice > 0 AND g.currentPrice > g.allTimeLowPrice AND (g.currentPrice - g.allTimeLowPrice) * 1.0 / g.allTimeLowPrice * 100 <= 20")
+    long countVerdictGoodOffer();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND (g.allTimeLowPrice IS NULL OR g.allTimeLowPrice = 0 OR (g.currentPrice > g.allTimeLowPrice AND (g.currentPrice - g.allTimeLowPrice) * 1.0 / g.allTimeLowPrice * 100 > 20))")
+    long countVerdictWait();
+
+    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate = 0 OR g.currentPrice IS NULL OR g.currentPrice = 0")
+    long countVerdictTracking();
+
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM Game g WHERE g.id IN :ids")
     void deleteByIds(@Param("ids") List<Long> ids);

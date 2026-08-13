@@ -66,6 +66,12 @@ public class InsightsController {
         response.put("ptLongCount", insightsService.getLongPlayTimeCount());
         response.put("ptEpicCount", insightsService.getEpicPlayTimeCount());
 
+        // 14. Verdict 현황 집계
+        response.put("verdictBuyNow", insightsService.getVerdictBuyNowCount());
+        response.put("verdictGoodOffer", insightsService.getVerdictGoodOfferCount());
+        response.put("verdictWait", insightsService.getVerdictWaitCount());
+        response.put("verdictTracking", insightsService.getVerdictTrackingCount());
+
         return ResponseEntity.ok(response);
     }
 

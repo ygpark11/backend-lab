@@ -105,7 +105,6 @@ const GameListPage = () => {
     const observer = useRef();
     const recentGamesScrollRef = useRef(null);
     const dragStateRef = useRef({ isDragging: false, startX: 0, scrollLeft: 0, hasDragged: false });
-
     const [isDonationOpen, setIsDonationOpen] = useState(false);
     const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
     const [recentGames, setRecentGames] = useState([]);

@@ -161,6 +161,26 @@ public class InsightsService {
         return gameRepository.countEpicPlayTimeGames();
     }
 
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_VERDICT_BUY_NOW)
+    public long getVerdictBuyNowCount() {
+        return gameRepository.countVerdictBuyNow();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_VERDICT_GOOD_OFFER)
+    public long getVerdictGoodOfferCount() {
+        return gameRepository.countVerdictGoodOffer();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_VERDICT_WAIT)
+    public long getVerdictWaitCount() {
+        return gameRepository.countVerdictWait();
+    }
+
+    @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_VERDICT_TRACKING)
+    public long getVerdictTrackingCount() {
+        return gameRepository.countVerdictTracking();
+    }
+
     @Cacheable(cacheNames = TRENDING_CACHE, key = TRENDING_KEY_TOP_GAMES)
     public List<TrendingGameResponse> getTrendingGames() {
         List<Long> topGameIds = wishlistRepository.findTopGameIdsByWishlistCount(PageRequest.of(0, 20));

@@ -26,7 +26,7 @@ export default {
                 'divider-strong': 'var(--color-border-strong)',
 
                 ps: {
-                    blue: 'var(--color-brand-blue)',
+                    blue: 'rgb(var(--color-brand-blue-rgb) / <alpha-value>)',
                     black: 'var(--color-bg-base)',
                     card: 'var(--color-bg-surface)',
                     hover: 'var(--color-bg-surface-hover)',
