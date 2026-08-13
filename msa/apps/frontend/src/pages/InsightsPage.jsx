@@ -180,12 +180,10 @@ const InsightsPage = () => {
 
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {/* ○ BUY NOW */}
-                            <div onClick={() => navigate('/games?isAllTimeLow=true')}
-                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                            <div className="relative overflow-hidden rounded-2xl border
                                            bg-green-500/10 dark:bg-green-500/15 border-green-500/30
-                                           hover:border-green-500/60 hover:shadow-[0_0_28px_rgba(34,197,94,0.12)] dark:hover:shadow-[0_0_28px_rgba(34,197,94,0.25)]
                                            min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
-                                <Circle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-green-500/10 group-hover:text-green-500/20 transition-colors duration-300 pointer-events-none" />
+                                <Circle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-green-500/10 pointer-events-none" />
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div>
                                         <Circle className="w-5 h-5 text-green-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(34,197,94,0.7)]" style={{ fill: 'rgba(34,197,94,0.2)' }} />
@@ -202,12 +200,10 @@ const InsightsPage = () => {
                             </div>
 
                             {/* △ GOOD OFFER */}
-                            <div onClick={() => navigate('/games?minDiscountRate=30')}
-                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                            <div className="relative overflow-hidden rounded-2xl border
                                            bg-yellow-500/10 dark:bg-yellow-500/15 border-yellow-500/30
-                                           hover:border-yellow-500/60 hover:shadow-[0_0_28px_rgba(234,179,8,0.12)] dark:hover:shadow-[0_0_28px_rgba(234,179,8,0.25)]
                                            min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
-                                <Triangle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-yellow-500/10 group-hover:text-yellow-500/20 transition-colors duration-300 pointer-events-none" />
+                                <Triangle className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-yellow-500/10 pointer-events-none" />
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div>
                                         <Triangle className="w-5 h-5 text-yellow-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(234,179,8,0.7)]" style={{ fill: 'rgba(234,179,8,0.2)' }} />
@@ -224,12 +220,10 @@ const InsightsPage = () => {
                             </div>
 
                             {/* × WAIT */}
-                            <div onClick={() => navigate('/games?minDiscountRate=1')}
-                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                            <div className="relative overflow-hidden rounded-2xl border
                                            bg-red-500/10 dark:bg-red-500/15 border-red-500/30
-                                           hover:border-red-500/60 hover:shadow-[0_0_28px_rgba(239,68,68,0.12)] dark:hover:shadow-[0_0_28px_rgba(239,68,68,0.25)]
                                            min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
-                                <XIcon className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-red-500/10 group-hover:text-red-500/20 transition-colors duration-300 pointer-events-none" />
+                                <XIcon className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-red-500/10 pointer-events-none" />
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div>
                                         <XIcon className="w-5 h-5 text-red-500 mb-2 dark:drop-shadow-[0_0_6px_rgba(239,68,68,0.7)]" />
@@ -245,13 +239,11 @@ const InsightsPage = () => {
                                 </div>
                             </div>
 
-                            {/* □ TRACKING — Square watermark에 fill:none 명시 (rect 형태라 다른 심볼과 달리 내부가 보임) */}
-                            <div onClick={() => navigate('/games')}
-                                className="relative overflow-hidden rounded-2xl cursor-pointer group border transition-all duration-300 active:scale-95 hover:-translate-y-1
+                            {/* □ TRACKING */}
+                            <div className="relative overflow-hidden rounded-2xl border
                                            bg-ps-blue/10 dark:bg-ps-blue/15 border-ps-blue/30
-                                           hover:border-ps-blue/60 hover:shadow-[0_0_28px_rgba(0,67,156,0.12)] dark:hover:shadow-[0_0_28px_rgba(0,67,156,0.25)]
                                            min-h-[116px] sm:min-h-[140px] p-5 flex flex-col justify-between">
-                                <Square className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-ps-blue/10 group-hover:text-ps-blue/20 transition-colors duration-300 pointer-events-none" style={{ fill: 'none' }} />
+                                <Square className="absolute -right-4 -bottom-4 w-24 h-24 stroke-[1.5px] text-ps-blue/10 pointer-events-none" style={{ fill: 'none' }} />
                                 <div className="relative z-10 flex items-start justify-between">
                                     <div>
                                         <Square className="w-5 h-5 text-ps-blue mb-2 dark:drop-shadow-[0_0_6px_rgba(0,67,156,0.6)]" style={{ fill: 'rgba(0,67,156,0.15)' }} />
