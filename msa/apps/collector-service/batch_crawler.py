@@ -1161,10 +1161,10 @@ def run_batch_crawler_logic():
                     target_list_url = f"{base_category_path}/{current_page_num}{search_params}"
                     cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
                     try:
-                        cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=15000)
                     except:
                         cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
-                        cat_page.wait_for_selector("a[href*='/product/']", timeout=10000)
+                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=15000)
 
                     human_like_scroll(cat_page)
 
