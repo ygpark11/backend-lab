@@ -9,6 +9,7 @@ import traceback
 import gc
 import json
 import subprocess
+import zlib
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
 
@@ -1120,7 +1121,7 @@ def run_batch_crawler_logic():
         # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
         if SHARD_TOTAL > 1:
-            targets = [t for i, t in enumerate(targets) if i % SHARD_TOTAL == SHARD_ID]
+            targets = [t for t in targets if zlib.crc32(t.split('/')[-1].encode()) % SHARD_TOTAL == SHARD_ID]
             logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 1 타겟 필터 완료: {len(targets)}개")
 
         with sync_playwright() as p:
@@ -1161,10 +1162,10 @@ def run_batch_crawler_logic():
                     target_list_url = f"{base_category_path}/{current_page_num}{search_params}"
                     cat_page.goto(target_list_url, timeout=CONF['timeout'], wait_until="commit")
                     try:
-                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=15000)
+                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=30000)
                     except:
                         cat_page.reload(timeout=CONF['timeout'], wait_until="commit")
-                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=15000)
+                        cat_page.wait_for_selector("a[href*='/product/']", state="attached", timeout=30000)
 
                     human_like_scroll(cat_page)
 
