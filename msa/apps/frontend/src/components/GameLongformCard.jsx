@@ -415,6 +415,24 @@ export default function GameLongformCard({ game, showOutro = false }) {
 
     // ── 씬별 보조 aurora 색상 (씬 전환마다 분위기 미세 변조) ──
     const currentSceneId = [...SCENES].reverse().find(s => elapsed >= s.from)?.id ?? 'intro';
+
+    // ── 씬별 이미지 parallax transform + filter ──
+    const IMAGE_SCENE_TRANSFORM = {
+        intro:   'scale(1) rotate(0deg) translateX(0px) translateY(0px)',
+        price:   'scale(1.04) rotate(-0.6deg) translateY(-10px)',
+        quality: 'scale(1.05) rotate(0.8deg) translateX(5px)',
+        edition: 'scale(1.03) rotate(-0.4deg) translateX(-5px) translateY(4px)',
+        verdict: 'scale(1.06) rotate(0deg) translateY(-12px)',
+        outro:   'scale(1.02) rotate(0deg) translateY(0px)',
+    };
+    const IMAGE_SCENE_FILTER = {
+        intro:   'brightness(1) saturate(1)',
+        price:   'brightness(0.94) saturate(1.2)',
+        quality: 'brightness(1.06) saturate(1.3)',
+        edition: 'brightness(0.97) saturate(1.1)',
+        verdict: 'brightness(1.1) saturate(1.35)',
+        outro:   'brightness(0.88) saturate(0.9)',
+    };
     const auxAuroraColor = SCENE_AUX_AURORA[currentSceneId] ?? 'transparent';
 
     // ── 가격 데이터 ──
@@ -572,8 +590,17 @@ export default function GameLongformCard({ game, showOutro = false }) {
 
             {/* ════ 왼쪽: 커버 (33%) ════ */}
             <div style={{ width: '33%', height: '100%', position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
-                <div style={{ width: '100%', height: '100%', animation: 'kenBurns 58s ease-in-out forwards' }}>
-                    <PSGameImage src={game.imageUrl} alt={title} priority width={640} className="w-full h-full object-cover object-top" />
+                {/* 씬별 parallax 래퍼: kenBurns와 분리된 별도 레이어 */}
+                <div style={{
+                    width: '100%', height: '100%',
+                    transform: IMAGE_SCENE_TRANSFORM[currentSceneId] ?? 'scale(1)',
+                    filter: IMAGE_SCENE_FILTER[currentSceneId] ?? 'brightness(1)',
+                    transition: 'transform 2.2s cubic-bezier(0.25,0.46,0.45,0.94), filter 2s ease',
+                    willChange: 'transform, filter',
+                }}>
+                    <div style={{ width: '100%', height: '100%', animation: 'kenBurns 58s ease-in-out forwards' }}>
+                        <PSGameImage src={game.imageUrl} alt={title} priority width={640} className="w-full h-full object-cover object-top" />
+                    </div>
                 </div>
                 {/* 우측으로 짙어지는 그라데이션 + 하단 페이드 */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 40%, #080810 100%), linear-gradient(to bottom, rgba(8,8,16,0.45) 0%, transparent 22%, transparent 60%, rgba(8,8,16,0.85) 100%)' }} />
@@ -686,9 +713,19 @@ export default function GameLongformCard({ game, showOutro = false }) {
 
                     {/* 바차트 — 최근 8개만 표시 (그 이상이면 밀집되어 판독 불가) */}
                     {(game.priceHistory?.length ?? 0) > 1 && (
-                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `14px ${HPAD} 0` }}>
-                            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 12, flexShrink: 0 }}>PRICE HISTORY</div>
-                            <div style={{ flex: 1, minHeight: 0 }}>
+                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `14px ${HPAD} 22px` }}>
+                            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 10, flexShrink: 0 }}>PRICE HISTORY</div>
+                            {/* glassmorphism 래퍼: 차트가 배경에 자연스럽게 통합되도록 */}
+                            <div style={{
+                                flex: 1, minHeight: 0,
+                                background: 'rgba(255,255,255,0.025)',
+                                backdropFilter: 'blur(16px)',
+                                WebkitBackdropFilter: 'blur(16px)',
+                                border: '1px solid rgba(255,255,255,0.07)',
+                                borderRadius: 18,
+                                padding: '20px 18px 0',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                            }}>
                                 <PriceHistoryChart history={game.priceHistory.slice(-8)} active={priceChartActive} lowestPrice={game.lowestPrice} />
                             </div>
                         </div>
@@ -716,16 +753,16 @@ export default function GameLongformCard({ game, showOutro = false }) {
                         {hasScores && (
                             <div style={{
                                 flex: hltbMain ? '0 0 52%' : 1,
-                                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                                position: 'relative', paddingRight: hltbMain ? 24 : 0,
+                                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
+                                position: 'relative', paddingRight: hltbMain ? 28 : 0, paddingLeft: 8,
                             }}>
                                 {/* 배경 glow burst */}
                                 <div style={{
-                                    position: 'absolute', top: '40%', left: '35%',
+                                    position: 'absolute', top: '45%', left: '40%',
                                     transform: 'translate(-50%,-50%)',
-                                    width: 260, height: 260,
+                                    width: 300, height: 300,
                                     background: `${scoreColor}18`,
-                                    borderRadius: '50%', filter: 'blur(70px)', pointerEvents: 'none',
+                                    borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none',
                                     opacity: qualityActive ? 1 : 0,
                                     transition: 'opacity 1.2s ease',
                                 }} />
@@ -733,7 +770,7 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 {/* "전문가 N인이 선택한" */}
                                 {(mcCount || igdbCriticCount) && (
                                     <RevealText active={IN.quality} delay={0.3} duration={0.65}>
-                                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.62)', marginBottom: 8, textTransform: 'uppercase', position: 'relative', zIndex: 1 }}>
+                                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.62)', marginBottom: 10, textTransform: 'uppercase', position: 'relative', zIndex: 1 }}>
                                             전문가 {(mcCount ?? igdbCriticCount).toLocaleString()}인이 선택한
                                         </div>
                                     </RevealText>
@@ -741,10 +778,10 @@ export default function GameLongformCard({ game, showOutro = false }) {
 
                                 {/* 메인 점수 — SLAM IN */}
                                 <div style={{
-                                    fontSize: hltbMain ? 136 : 172,
+                                    fontSize: hltbMain ? 140 : 180,
                                     fontWeight: 900, lineHeight: 1, letterSpacing: '-0.04em',
                                     color: scoreColor,
-                                    filter: qualityActive ? `drop-shadow(0 0 55px ${scoreColor})` : 'none',
+                                    filter: qualityActive ? `drop-shadow(0 0 60px ${scoreColor})` : 'none',
                                     transform: IN.quality ? 'scale(1)' : 'scale(0.25)',
                                     opacity: IN.quality ? 1 : 0,
                                     transition: `transform 0.8s 0.5s ${SPRING}, opacity 0.4s 0.5s ease`,
@@ -756,25 +793,29 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 {/* 출처 레이블 */}
                                 <div style={{
                                     fontSize: 13, fontWeight: 900, letterSpacing: '0.3em',
-                                    color: 'rgba(255,255,255,0.52)', marginTop: 8,
+                                    color: 'rgba(255,255,255,0.52)', marginTop: 6,
                                     position: 'relative', zIndex: 1,
                                     ...fadeIn(IN.quality, 0.85),
                                 }}>
                                     {mcScore ? 'METACRITIC' : 'IGDB'}
                                 </div>
 
-                                {/* 유저 평점 + 리뷰 수 */}
+                                {/* 유저 평점 + 리뷰 수 — 크기를 대폭 늘려 공간 활용 */}
                                 {(mcUser || igdbUser) && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18, position: 'relative', zIndex: 1, ...fadeIn(IN.quality, 1.05) }}>
-                                        <div style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 16px' }}>
-                                            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 3 }}>유저 평점</div>
-                                            <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 20, position: 'relative', zIndex: 1, width: '100%', ...fadeIn(IN.quality, 1.05) }}>
+                                        <div style={{
+                                            background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)',
+                                            borderRadius: 16, padding: '14px 22px',
+                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                                        }}>
+                                            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>유저 평점</div>
+                                            <div style={{ fontSize: 44, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.02em' }}>
                                                 {mcUser?.toFixed(1) ?? igdbUser}
                                             </div>
                                         </div>
                                         {(mcUserCount || igdbUserCount) && (
-                                            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-                                                {(mcUserCount ?? igdbUserCount).toLocaleString()}명 참여
+                                            <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                                                {(mcUserCount ?? igdbUserCount).toLocaleString()}<br/><span style={{ fontSize: 11, letterSpacing: '0.12em' }}>명 참여</span>
                                             </div>
                                         )}
                                     </div>
@@ -928,17 +969,12 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                         </div>
                                         {hasContents && (
                                             <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                                {ed.editionContents.slice(0, 4).map((item, idx) => (
+                                                {ed.editionContents.map((item, idx) => (
                                                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '4px 10px' }}>
                                                         <Gem style={{ width: 10, height: 10, color: cfg.color, flexShrink: 0 }} />
                                                         <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}>{item}</span>
                                                     </div>
                                                 ))}
-                                                {ed.editionContents.length > 4 && (
-                                                    <div style={{ display: 'flex', alignItems: 'center', padding: '4px 10px', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.4)' }}>
-                                                        +{ed.editionContents.length - 4}개 더
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -959,32 +995,37 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 </div>
                             )}
 
-                            {/* 에디션 있을 때도 할인 패턴 summary — 구분선으로 명확히 분리 */}
-                            {(defDiscountCount || defNextSale) && (
-                                <div style={{ ...fadeIn(IN.editionItems, 0.5) }}>
+                            {/* 에디션 있을 때도 할인 패턴 summary — Apple PPT 스타일 대형 카드 */}
+                            {(defDiscountCount || defMaxRate || defNextSale) && (
+                                <div style={{ marginTop: 20, ...fadeIn(IN.editionItems, 0.5) }}>
                                     {/* 구분선 + 서브 헤더 */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                                         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                                         <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>할인 이력</span>
                                         <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
                                     </div>
-                                    <div style={{ display: 'flex', gap: 10 }}>
+                                    <div style={{ display: 'flex', gap: 12 }}>
                                         {defDiscountCount && (
-                                            <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '10px 14px' }}>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.62)', marginBottom: 4 }}>할인 횟수</div>
-                                                <div style={{ fontSize: 22, fontWeight: 900, color: '#fff' }}>{defDiscountCount}회</div>
+                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '16px 18px' }}>
+                                                <div style={{ position: 'absolute', right: 6, bottom: -10, fontSize: 68, fontWeight: 900, color: 'rgba(255,255,255,0.04)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>#</div>
+                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>총 할인 횟수</div>
+                                                <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>회</div>
                                             </div>
                                         )}
                                         {defMaxRate && (
-                                            <div style={{ flex: 1, background: `${cfg.glow}0.07)`, border: `1px solid ${cfg.glow}0.22)`, borderRadius: 10, padding: '10px 14px' }}>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.62)', marginBottom: 4 }}>최대 할인율</div>
-                                                <div style={{ fontSize: 22, fontWeight: 900, color: cfg.color }}>{defMaxRate}%</div>
+                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 16, padding: '16px 18px', boxShadow: `0 0 28px ${cfg.glow}0.1)` }}>
+                                                <div style={{ position: 'absolute', right: 4, bottom: -10, fontSize: 68, fontWeight: 900, color: `${cfg.glow}0.07)`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>%</div>
+                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>역대 최저 할인율</div>
+                                                <div style={{ fontSize: 42, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 14px ${cfg.color}90)` }}>-{defMaxRate}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: cfg.color, marginTop: 4, opacity: 0.7 }}>%</div>
                                             </div>
                                         )}
                                         {defNextSale && (
-                                            <div style={{ flex: 1, background: `${cfg.glow}0.05)`, border: `1px solid ${cfg.glow}0.18)`, borderRadius: 10, padding: '10px 14px' }}>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.62)', marginBottom: 4 }}>다음 할인 예상</div>
-                                                <div style={{ fontSize: 16, fontWeight: 900, color: cfg.color }}>{defNextSale.slice(0, 7).replace('-', '년 ')}월</div>
+                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.05)`, border: `1px solid ${cfg.glow}0.18)`, borderRadius: 16, padding: '16px 18px' }}>
+                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>다음 할인 예상</div>
+                                                <div style={{ fontSize: 26, fontWeight: 900, color: cfg.color, lineHeight: 1.2 }}>{defNextSale.slice(0, 7).replace('-', '년 ')}</div>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>월 예정</div>
                                             </div>
                                         )}
                                     </div>
@@ -1001,42 +1042,52 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 </div>
                             </RevealText>
 
-                            {/* 수치 카드 행 */}
+                            {/* 수치 카드 행 — Apple PPT 스타일 대형 카드 */}
                             {(defDiscountCount !== null || defMaxRate || defMonthsPerSale) && (
-                                <div style={{ display: 'flex', gap: 12, ...fadeIn(IN.editionItems, 0) }}>
+                                <div style={{ display: 'flex', gap: 14, ...fadeIn(IN.editionItems, 0) }}>
                                     {defDiscountCount !== null && (
-                                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 18px' }}>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 6 }}>할인 횟수</div>
-                                            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>{defDiscountCount}회</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '20px 22px' }}>
+                                            <div style={{ position: 'absolute', right: 6, bottom: -12, fontSize: 80, fontWeight: 900, color: 'rgba(255,255,255,0.035)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>#</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>총 할인 횟수</div>
+                                            <div style={{ fontSize: 52, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 5 }}>회</div>
                                         </div>
                                     )}
                                     {defMaxRate && (
-                                        <div style={{ flex: 1, background: `${cfg.glow}0.07)`, border: `1px solid ${cfg.glow}0.25)`, borderRadius: 14, padding: '14px 18px' }}>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 6 }}>최대 할인율</div>
-                                            <div style={{ fontSize: 28, fontWeight: 900, color: cfg.color }}>{defMaxRate}%</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 18, padding: '20px 22px', boxShadow: `0 0 32px ${cfg.glow}0.12)` }}>
+                                            <div style={{ position: 'absolute', right: 4, bottom: -12, fontSize: 80, fontWeight: 900, color: `${cfg.glow}0.07)`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>%</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>역대 최저 할인율</div>
+                                            <div style={{ fontSize: 52, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 18px ${cfg.color}90)` }}>-{defMaxRate}</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: cfg.color, marginTop: 5, opacity: 0.7 }}>%</div>
                                         </div>
                                     )}
                                     {defMonthsPerSale && (
-                                        <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 14, padding: '14px 18px' }}>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 6 }}>할인 주기</div>
-                                            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>약 {Math.round(defMonthsPerSale)}개월</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '20px 22px' }}>
+                                            <div style={{ position: 'absolute', right: 6, bottom: -12, fontSize: 80, fontWeight: 900, color: 'rgba(255,255,255,0.03)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>M</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>할인 주기</div>
+                                            <div style={{ fontSize: 52, fontWeight: 900, color: '#fff', lineHeight: 1 }}>약 {Math.round(defMonthsPerSale)}</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 5 }}>개월마다</div>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* 다음 할인 예상 */}
+                            {/* 다음 할인 예상 — 강조 카드 */}
                             {defNextSale && (
                                 <div style={{
-                                    padding: '18px 22px',
-                                    background: `${cfg.glow}0.08)`, border: `1px solid ${cfg.glow}0.28)`,
-                                    borderRadius: 16,
+                                    position: 'relative', overflow: 'hidden',
+                                    padding: '22px 26px',
+                                    background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.30)`,
+                                    borderRadius: 18, boxShadow: `0 0 32px ${cfg.glow}0.12)`,
                                     ...fadeIn(IN.editionItems, 0.2),
                                 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.62)', marginBottom: 8 }}>다음 할인 예상</div>
-                                    <div style={{ fontSize: 32, fontWeight: 900, color: cfg.color}}>
+                                    {/* shimmer overlay */}
+                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)', animation: 'shimmer 4s 1s ease-in-out infinite', pointerEvents: 'none' }} />
+                                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>다음 할인 예상</div>
+                                    <div style={{ fontSize: 38, fontWeight: 900, color: cfg.color, filter: `drop-shadow(0 0 16px ${cfg.color}80)` }}>
                                         {defNextSale.slice(0, 7).replace('-', '년 ')}월
                                     </div>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>예상 기준 — 실제 할인과 다를 수 있습니다</div>
                                 </div>
                             )}
 
