@@ -835,22 +835,20 @@ export default function GameDetailPage() {
                                                         </div>
                                                     </div>
 
-                                                    {/* 구성품 리스트 */}
+                                                    {/* 구성품 칩 */}
                                                     {hasContents && (
-                                                        <ul className="w-full mt-3 pt-3 border-t border-divider/50 space-y-1.5">
+                                                        <div className="w-full mt-3 pt-3 border-t border-divider/50 flex flex-wrap gap-1.5">
                                                             {edition.editionContents.map((item, idx) => (
-                                                                <li key={idx} className="flex items-start gap-2">
-                                                                    <div className={`mt-0.5 shrink-0 w-4 h-4 rounded-full flex items-center justify-center ${
-                                                                        isCurrent
-                                                                            ? 'bg-ps-blue/20 border border-ps-blue/30'
-                                                                            : 'bg-surface border border-divider'
-                                                                    }`}>
-                                                                        <Check className={`w-2.5 h-2.5 stroke-[3] ${isCurrent ? 'text-ps-blue' : 'text-muted'}`} />
-                                                                    </div>
-                                                                    <span className={`text-[11px] font-bold break-keep ${isCurrent ? 'text-secondary' : 'text-muted'}`}>{item}</span>
-                                                                </li>
+                                                                <span key={idx} className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border break-keep leading-tight ${
+                                                                    isCurrent
+                                                                        ? 'bg-ps-blue/10 border-ps-blue/30 text-ps-blue'
+                                                                        : 'bg-base border-divider text-muted'
+                                                                }`}>
+                                                                    <Check className={`w-2 h-2 stroke-[3] shrink-0 ${isCurrent ? 'text-ps-blue' : 'text-muted'}`} />
+                                                                    {item}
+                                                                </span>
                                                             ))}
-                                                        </ul>
+                                                        </div>
                                                     )}
                                                 </button>
                                             );
@@ -877,9 +875,9 @@ export default function GameDetailPage() {
 
                         {/* 평가 대시보드 (Metacritic + IGDB) */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
+                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col">
                                 <Triangle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-green-500/20 transition-colors" />
-                                <div className="relative z-10 flex justify-between items-center mb-6">
+                                <div className="relative z-10 flex justify-between items-center mb-3">
                                     <span className="bg-black dark:bg-white text-white dark:text-black font-black text-xs px-2.5 py-0.5 rounded shadow-sm tracking-wide">M</span>
                                     <span className="text-xs font-bold text-secondary tracking-wide">Metacritic</span>
                                 </div>
@@ -926,9 +924,9 @@ export default function GameDetailPage() {
                                 </div>
                             </div>
 
-                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col justify-between">
+                            <div className="bg-surface border border-divider p-4 md:p-5 rounded-2xl shadow-sm relative overflow-hidden group flex flex-col">
                                 <Circle className="absolute -bottom-4 -right-4 w-24 h-24 text-divider opacity-20 group-hover:text-purple-500/20 transition-colors" />
-                                <div className="relative z-10 flex justify-between items-center mb-6">
+                                <div className="relative z-10 flex justify-between items-center mb-3">
                                     <span className="bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 font-black text-xs px-2.5 py-0.5 rounded border border-[color:var(--bento-purple-border)] shadow-sm tracking-wide">IGDB</span>
                                     <span className="text-xs font-bold text-secondary tracking-wide">Community</span>
                                 </div>
@@ -977,9 +975,13 @@ export default function GameDetailPage() {
                         </div>
 
                         {/* 역대 가격 추이 */}
-                        <div className="bg-surface p-5 rounded-2xl border border-divider shadow-md mb-8">
-                            <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue" /> 역대 가격 추이</h3>
-                            <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                        <div className="bg-glass backdrop-blur-md p-5 rounded-2xl border border-divider shadow-glow mb-8 relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-40 h-40 bg-ps-blue/8 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute -bottom-8 -left-6 w-28 h-28 bg-blue-400/5 rounded-full blur-2xl pointer-events-none" />
+                            <h3 className="relative z-10 text-lg font-bold text-primary mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-ps-blue drop-shadow-[0_0_6px_rgba(59,130,246,0.6)]" /> 역대 가격 추이</h3>
+                            <div className="relative z-10">
+                                <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                            </div>
                         </div>
 
                         {/* 주시자 현황 */}

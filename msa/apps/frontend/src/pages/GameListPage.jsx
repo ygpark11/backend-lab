@@ -2042,7 +2042,7 @@ const GameListPage = () => {
                                         )}
 
                                         <h3 className="text-sm font-bold text-primary leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
-                                            {game.name.trim()}
+                                            {cleanTitle(game.name)}
                                         </h3>
 
                                         <div className="mt-auto relative z-20">
