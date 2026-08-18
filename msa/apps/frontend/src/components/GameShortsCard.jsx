@@ -119,7 +119,7 @@ export default function GameShortsCard({ game }) {
         ? Math.round(game.currentPrice / game.hltbMainStory)
         : null;
 
-    const score      = game.mcMetaScore || game.igdbCriticScore || nu
+    const score      = game.mcMetaScore || game.igdbCriticScore || null;
     const scoreLabel = game.mcMetaScore ? '메타' : 'IGDB';
 
     const nextSaleRaw    = game.defenseInfo?.nextSaleEstimate;

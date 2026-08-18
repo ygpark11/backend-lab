@@ -59,6 +59,7 @@ import DonationModal from '../components/DonationModal';
 import {useAuth} from '../contexts/AuthContext';
 import {pushRecentGame} from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
+import GameLongformCard from '../components/GameLongformCard';
 
 // ── Shorts 유튜브 설명 자동생성 ──────────────────────────────────────
 function cleanTitleForDesc(title) {
@@ -440,6 +441,17 @@ export default function GameDetailPage() {
         );
     }
 
+    // 🎬 롱폼 촬영용 16:9 카드 — /games/:id?view=longform
+    // ?final=true 추가 시 아웃트로 포함 (61s) / 기본은 아웃트로 없음 (52s)
+    if (new URLSearchParams(location.search).get('view') === 'longform') {
+        const showOutro = new URLSearchParams(location.search).get('final') === 'true';
+        return (
+            <div className="fixed inset-0 z-[200] bg-[#080810]">
+                <GameLongformCard game={game} showOutro={showOutro} />
+            </div>
+        );
+    }
+
     const traffic = getTrafficLight(game.priceVerdict, game);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
@@ -562,7 +574,7 @@ export default function GameDetailPage() {
                             </div>
 
                             <div className="flex justify-between items-start gap-4">
-                                <h1 className="text-2xl md:text-4xl font-black leading-tight text-primary drop-shadow-sm flex-1 break-keep break-words">{game.title}</h1>
+                                <h1 className="text-2xl md:text-4xl font-black leading-tight text-primary drop-shadow-sm flex-1 break-keep break-words">{cleanTitleForDesc(game.title)}</h1>
                                 {isAdmin && (
                                     <div className="flex gap-2 shrink-0 pt-2">
                                         <button onClick={handleRefresh} className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-[var(--bento-blue-from)] text-secondary hover:text-ps-blue transition-all"><RefreshCw className="w-4 h-4" /></button>
@@ -1129,7 +1141,7 @@ export default function GameDetailPage() {
                     <div className="flex items-center gap-2.5 flex-1 min-w-0">
                         <div className="shrink-0">{renderMiniVerdictIcon(game.priceVerdict)}</div>
                         <div className="min-w-0">
-                            <p className="text-[10px] sm:text-xs text-secondary font-bold truncate">{game.title}</p>
+                            <p className="text-[10px] sm:text-xs text-secondary font-bold truncate">{cleanTitleForDesc(game.title)}</p>
                             <div className="flex items-baseline gap-1.5 mt-0.5">
                                 <p className={`text-base sm:text-lg font-black leading-none ${game.isPlusExclusive ? 'text-yellow-600 dark:text-yellow-500' : 'text-primary'}`}>
                                     {game.currentPrice.toLocaleString()}원

@@ -36,6 +36,17 @@ import {useCompareStore} from '../store/useCompareStore';
 import CompareModal from '../components/CompareModal';
 import HelpModal from '../components/common/HelpModal';
 
+function cleanTitle(title) {
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = title.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) title = title.slice(0, parenIdx).trim();
+    }
+    return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
+
 const WishlistPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
@@ -483,7 +494,7 @@ const WishlistPage = () => {
                                     )}
 
                                     <h3 className="text-sm font-bold text-primary leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
-                                        {game.name.trim()}
+                                        {cleanTitle(game.name)}
                                     </h3>
 
                                     <div className="mt-auto relative z-20">

@@ -93,6 +93,17 @@ const platformOptions = [
     { value: 'PS4', label: 'PS4 호환' }
 ];
 
+function cleanTitle(title) {
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = title.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) title = title.slice(0, parenIdx).trim();
+    }
+    return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
+
 const GameListPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
@@ -2239,7 +2250,7 @@ const GameListPage = () => {
                                                     <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
                                                         <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
                                                     </div>
-                                                    <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{g.title}</p>
+                                                    <p className="text-xs font-bold text-primary line-clamp-1 w-full text-center">{cleanTitle(g.title)}</p>
                                                     <div className="flex items-center gap-1">
                                                         {g.priceVerdict === 'BUY_NOW' && <Circle className="w-3 h-3 text-green-500 fill-green-500" />}
                                                         {g.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
