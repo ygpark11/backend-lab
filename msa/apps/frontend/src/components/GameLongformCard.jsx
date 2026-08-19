@@ -551,6 +551,35 @@ export default function GameLongformCard({ game, showOutro = false }) {
     const allEditions = (game.familyGames ?? []);
     const hasEditions = allEditions.length > 1;
 
+    // 에디션 가격 인사이트 — hero 배너용 (가격 역전/업그레이드 기회)
+    const editionHeroBadge = (() => {
+        if (!hasEditions) return null;
+        for (const ed of allEditions) {
+            if (ed.id === game.id) continue;
+            const priceGap = ed.currentPrice  - game.currentPrice;
+            const origGap  = ed.originalPrice - game.originalPrice;
+            const isHigher = origGap > 0;
+            const isLower  = origGap < 0;
+            if (isHigher && priceGap < 0)
+                return { Icon: Flame,        color: '#22c55e', bg: 'rgba(34,197,94,0.13)',  border: 'rgba(34,197,94,0.45)',
+                         text: '상위 에디션이 오히려 더 저렴합니다',
+                         sub: `${cleanTitle(ed.name)} — ${fmt(ed.currentPrice)}원` };
+            if (isLower && priceGap > 0)
+                return { Icon: AlertTriangle, color: '#f87171', bg: 'rgba(239,68,68,0.13)',  border: 'rgba(239,68,68,0.45)',
+                         text: '하위 에디션인데 더 비쌉니다',
+                         sub: `현재 에디션보다 ${fmt(priceGap)}원 더 비싼 상황` };
+            if (isHigher && priceGap >= 0 && priceGap <= 15000 && ed.discountRate > 0)
+                return { Icon: TrendingUp,   color: '#facc15', bg: 'rgba(234,179,8,0.10)',   border: 'rgba(234,179,8,0.38)',
+                         text: `${fmt(priceGap)}원 추가로 상위 에디션 선택 가능`,
+                         sub: cleanTitle(ed.name) };
+            if (isLower && priceGap < 0)
+                return { Icon: TrendingDown, color: '#60a5fa', bg: 'rgba(59,130,246,0.10)',  border: 'rgba(59,130,246,0.38)',
+                         text: `기본 에디션으로 ${fmt(Math.abs(priceGap))}원 절약 가능`,
+                         sub: cleanTitle(ed.name) };
+        }
+        return null;
+    })();
+
     // ── Scene 패널 스타일 ──
     const S = {};
     SCENES.forEach(s => { S[s.id] = panelStyle(s, elapsed); });
@@ -993,7 +1022,31 @@ export default function GameLongformCard({ game, showOutro = false }) {
                     {hasEditions ? (
                         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `16px ${HPAD} 0`, gap: 0, position: 'relative', zIndex: 1 }}>
 
-                            {/* ── 에디션 카드 가로 배치 (2개 이하면 나란히, 3개+면 세로) ── */}
+                            {/* ── 가격 인사이트 hero 배너 ── */}
+                            {editionHeroBadge && (() => {
+                                const HeroIcon = editionHeroBadge.Icon;
+                                return (
+                                    <div style={{
+                                        flexShrink: 0, marginBottom: 14,
+                                        padding: '18px 22px',
+                                        background: editionHeroBadge.bg,
+                                        border: `1.5px solid ${editionHeroBadge.border}`,
+                                        borderRadius: 16,
+                                        display: 'flex', alignItems: 'center', gap: 16,
+                                        position: 'relative', overflow: 'hidden',
+                                        ...fadeIn(IN.edition, 0.1),
+                                    }}>
+                                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.03),transparent)', animation: 'shimmer 4s 1s ease-in-out infinite', pointerEvents: 'none' }} />
+                                        <HeroIcon style={{ width: 30, height: 30, color: editionHeroBadge.color, flexShrink: 0, filter: `drop-shadow(0 0 10px ${editionHeroBadge.color}80)`, position: 'relative' }} />
+                                        <div style={{ position: 'relative' }}>
+                                            <div style={{ fontSize: 22, fontWeight: 900, color: editionHeroBadge.color, lineHeight: 1.2 }}>{editionHeroBadge.text}</div>
+                                            {editionHeroBadge.sub && <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginTop: 5 }}>{editionHeroBadge.sub}</div>}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* ── 에디션 카드 (2개 이하면 나란히, 3개+면 세로) ── */}
                             <div style={{
                                 flex: 1, minHeight: 0,
                                 display: 'flex',
@@ -1001,30 +1054,14 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 gap: 12,
                             }}>
                                 {allEditions.map((ed, i) => {
-                                    const isCurrent    = ed.id === game.id;
-                                    const priceGap     = ed.currentPrice - game.currentPrice;
-                                    const origGap      = ed.originalPrice - game.originalPrice;
-                                    const isHigherTier = origGap > 0;
-                                    const isLowerTier  = origGap < 0;
-                                    const hasContents  = (ed.editionContents?.length ?? 0) > 0;
-
-                                    let bpBadge = null;
-                                    if (!isCurrent) {
-                                        if (isHigherTier && priceGap < 0)
-                                            bpBadge = { text: '상위판이 더 저렴! 🔥', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)' };
-                                        else if (isLowerTier && priceGap > 0)
-                                            bpBadge = { text: '하위판인데 더 비쌈 ⚠️', color: '#f87171', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)' };
-                                        else if (isHigherTier && priceGap >= 0 && priceGap <= 15000 && ed.discountRate > 0)
-                                            bpBadge = { text: `+${fmt(priceGap)}원으로 상위판`, color: '#facc15', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.35)' };
-                                        else if (isLowerTier && priceGap < 0)
-                                            bpBadge = { text: `${fmt(Math.abs(priceGap))}원 절약`, color: '#60a5fa', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)' };
-                                    }
-
-                                    const edColor = VCFG[ed.priceVerdict]?.color ?? cfg.color;
+                                    const isCurrent   = ed.id === game.id;
+                                    const hasContents = (ed.editionContents?.length ?? 0) > 0;
+                                    const edColor     = VCFG[ed.priceVerdict]?.color ?? cfg.color;
 
                                     return (
                                         <div key={ed.id} style={{
-                                            flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
+                                            flex: allEditions.length <= 2 && !hasContents ? '0 0 36%' : 1,
+                                            minHeight: 0, position: 'relative', overflow: 'hidden',
                                             background: isCurrent
                                                 ? `linear-gradient(135deg, ${cfg.glow}0.14) 0%, ${cfg.glow}0.06) 100%)`
                                                 : 'rgba(255,255,255,0.04)',
@@ -1076,50 +1113,35 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                                 )}
                                             </div>
 
-                                            {/* bpBadge */}
-                                            {bpBadge && (
-                                                <div style={{
-                                                    display: 'inline-flex', alignItems: 'center',
-                                                    fontSize: 11, fontWeight: 900, color: bpBadge.color,
-                                                    background: bpBadge.bg, border: `1px solid ${bpBadge.border}`,
-                                                    padding: '4px 10px', borderRadius: 8, marginBottom: 10,
-                                                }}>
-                                                    {bpBadge.text}
-                                                </div>
-                                            )}
-
-                                            {/* 구성품 or 대체 콘텐츠 */}
-                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12, marginTop: 4 }}>
+                                            {/* 구성품 bullet 리스트 or 기본판 안내 */}
+                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
                                                 {hasContents ? (
-                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                                                        {ed.editionContents.map((item, idx) => (
-                                                            <div key={idx} style={{
-                                                                display: 'flex', alignItems: 'center', gap: 4,
-                                                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                                                                borderRadius: 7, padding: '3px 9px',
-                                                            }}>
-                                                                <Gem style={{ width: 9, height: 9, color: isCurrent ? cfg.color : 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
-                                                                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                                                        {ed.editionContents.slice(0, 4).map((item, idx) => (
+                                                            <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                                                <div style={{
+                                                                    width: 5, height: 5, borderRadius: '50%', flexShrink: 0, marginTop: 7,
+                                                                    background: isCurrent ? cfg.color : 'rgba(255,255,255,0.35)',
+                                                                    boxShadow: isCurrent ? `0 0 6px ${cfg.color}` : 'none',
+                                                                }} />
+                                                                <span style={{ fontSize: 14, fontWeight: 700, color: isCurrent ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0.58)', lineHeight: 1.4 }}>{item}</span>
                                                             </div>
                                                         ))}
+                                                        {ed.editionContents.length > 4 && (
+                                                            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.3)', paddingLeft: 15 }}>
+                                                                외 {ed.editionContents.length - 4}가지 포함
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ) : (
-                                                    /* 구성품 없을 때: 플랫폼 + 기본판 안내 */
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)' }}>BASE EDITION</div>
+                                                        <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>추가 콘텐츠 없음</div>
                                                         {ed.platforms?.length > 0 && (
-                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
                                                                 {ed.platforms.slice(0, 3).map(p => (
                                                                     <span key={p} style={{ fontSize: 11, fontWeight: 900, color: '#93c5fd', background: 'rgba(30,58,138,0.7)', border: '1px solid rgba(147,197,253,0.35)', padding: '3px 10px', borderRadius: 6 }}>{p}</span>
                                                                 ))}
-                                                            </div>
-                                                        )}
-                                                        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
-                                                            기본 에디션 · 추가 콘텐츠 없음
-                                                        </div>
-                                                        {/* 가격 절약 강조 (현재 에디션 대비) */}
-                                                        {!isCurrent && game.currentPrice > 0 && ed.currentPrice < game.currentPrice && (
-                                                            <div style={{ fontSize: 13, fontWeight: 900, color: '#60a5fa' }}>
-                                                                {fmt(game.currentPrice - ed.currentPrice)}원 저렴
                                                             </div>
                                                         )}
                                                     </div>
@@ -1130,33 +1152,20 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 })}
                             </div>
 
-                            {/* ── 할인 이력 하단 Strip ── */}
-                            {(defDiscountCount || defMaxRate || defNextSale) && (
-                                <div style={{
-                                    flexShrink: 0, display: 'flex', gap: 10,
-                                    padding: '14px 0 20px',
-                                    ...fadeIn(IN.editionItems, 0.4),
-                                }}>
-                                    {defDiscountCount && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 16, padding: '14px 18px' }}>
-                                            <div style={{ position: 'absolute', right: 4, bottom: -8, fontSize: 60, fontWeight: 900, color: 'rgba(255,255,255,0.03)', lineHeight: 1, userSelect: 'none' }}>#</div>
-                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>총 할인</div>
-                                            <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}<span style={{ fontSize: 14, marginLeft: 4, color: 'rgba(255,255,255,0.45)' }}>회</span></div>
+                            {/* ── 다음 할인 예상 (총할인/역대최저할인 제거 — 가격분석 씬과 중복) ── */}
+                            {defNextSale && (
+                                <div style={{ flexShrink: 0, padding: '14px 0 20px', ...fadeIn(IN.editionItems, 0.45) }}>
+                                    <div style={{
+                                        position: 'relative', overflow: 'hidden',
+                                        background: `${cfg.glow}0.07)`, border: `1px solid ${cfg.glow}0.22)`,
+                                        borderRadius: 16, padding: '16px 22px',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    }}>
+                                        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.42)' }}>다음 할인 예상</div>
+                                        <div style={{ fontSize: 30, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 14px ${cfg.color}70)` }}>
+                                            {defNextSale.slice(0, 7).replace('-', '년 ')}월
                                         </div>
-                                    )}
-                                    {defMaxRate && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.08)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 16, padding: '14px 18px', boxShadow: `0 0 20px ${cfg.glow}0.08)` }}>
-                                            <div style={{ position: 'absolute', right: 2, bottom: -8, fontSize: 60, fontWeight: 900, color: `${cfg.glow}0.06)`, lineHeight: 1, userSelect: 'none' }}>%</div>
-                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>역대 최저 할인</div>
-                                            <div style={{ fontSize: 36, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 12px ${cfg.color}80)` }}>-{defMaxRate}<span style={{ fontSize: 14, marginLeft: 2 }}>%</span></div>
-                                        </div>
-                                    )}
-                                    {defNextSale && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.05)`, border: `1px solid ${cfg.glow}0.16)`, borderRadius: 16, padding: '14px 18px' }}>
-                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>다음 할인 예상</div>
-                                            <div style={{ fontSize: 22, fontWeight: 900, color: cfg.color, lineHeight: 1.2 }}>{defNextSale.slice(0, 7).replace('-', '년 ')}월</div>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -1443,7 +1452,7 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                 {cfg.icon(108)}
                             </div>
                             <div>
-                                <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>PS TRACKER 가격 판정</div>
+                                <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 8 }}>PRICE VERDICT</div>
                                 <RevealText active={IN.introVerdict} delay={0.1} duration={0.65}>
                                     <div style={{ fontSize: 66, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 26px ${cfg.glow}0.65))`}}>{cfg.label}</div>
                                 </RevealText>
