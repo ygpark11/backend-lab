@@ -183,104 +183,171 @@ function ScoreRing({ score, max = 100, label, color, active, size = 150 }) {
     );
 }
 
-// ── 가격 히스토리 바차트 + Sweep Line ────────────────────────────────
-const BAR_COL = {
-    BUY_NOW:    { bg: 'rgba(34,197,94,0.8)',   glow: 'rgba(34,197,94,1)'    },
-    GOOD_OFFER: { bg: 'rgba(234,179,8,0.8)',   glow: 'rgba(234,179,8,1)'    },
-    WAIT:       { bg: 'rgba(239,68,68,0.65)',  glow: 'rgba(239,68,68,0.9)'  },
-    TRACKING:   { bg: 'rgba(59,130,246,0.65)', glow: 'rgba(59,130,246,0.9)' },
-};
+// ── 가격 히스토리 라인차트 (SVG 애니메이션) ─────────────────────────
+// 선이 왼쪽→오른쪽으로 직접 그려지는 cinematic reveal
+// 색상: 회색(과거) → verdict 색(현재) 그라데이션
+function PriceHistoryChart({ history, active, lowestPrice, color }) {
+    const [progress, setProgress] = useState(0);
+    const rafRef = useRef(null);
 
-function PriceHistoryChart({ history, active, lowestPrice }) {
+    useEffect(() => {
+        if (!active) { setProgress(0); return; }
+        const DELAY = 150, DUR = 2000;
+        let start = null;
+        const tick = (now) => {
+            if (!start) start = now;
+            const t = Math.min(Math.max(now - start - DELAY, 0) / DUR, 1);
+            setProgress(1 - Math.pow(1 - t, 3)); // easeOutCubic
+            if (t < 1) rafRef.current = requestAnimationFrame(tick);
+        };
+        rafRef.current = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(rafRef.current);
+    }, [active]);
+
+    if (!history?.length) return null;
+
+    const W = 1000, H = 260;
+    const PAD = { top: 20, right: 110, bottom: 46, left: 10 };
+    const cW  = W - PAD.left - PAD.right;
+    const cH  = H - PAD.top  - PAD.bottom;
+    const n   = history.length;
+
     const prices = history.map(h => h.price);
-    // lowestPrice를 범위에 포함 → 기준선이 항상 차트 안에 표시됨
-    const allPrices = (lowestPrice > 0) ? [...prices, lowestPrice] : prices;
-    const maxP = Math.max(...allPrices), minP = Math.min(...allPrices);
-    const range = maxP - minP || 1;
-    const toPct = (p) => 12 + ((p - minP) / range) * 82;
-    const fmtP  = (p) => p >= 10000 ? `${Math.round(p / 1000) / 10}만` : p.toLocaleString();
+    const allP   = lowestPrice > 0 ? [...prices, lowestPrice] : prices;
+    const maxP   = Math.max(...allP), minP = Math.min(...allP);
+    const range  = maxP - minP || 1;
+
+    const toX = (i) => PAD.left + (n < 2 ? cW / 2 : (i / (n - 1)) * cW);
+    const toY = (p)  => PAD.top + cH - ((p - minP) / range) * cH;
+
+    const pts = history.map((h, i) => [toX(i), toY(h.price)]);
+
+    // Cubic bezier 스무딩 (수평 핸들 → 오버슈트 없음)
+    const linePath = pts.reduce((acc, [x, y], i) => {
+        if (i === 0) return `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+        const [px, py] = pts[i - 1];
+        const cx1 = (px + (x - px) * 0.45).toFixed(1);
+        const cx2 = (x  - (x - px) * 0.45).toFixed(1);
+        return `${acc} C ${cx1} ${py.toFixed(1)}, ${cx2} ${y.toFixed(1)}, ${x.toFixed(1)} ${y.toFixed(1)}`;
+    }, '');
+
+    const [lx, ly] = pts[pts.length - 1];
+    const [fx]     = pts[0];
+    const baseY    = PAD.top + cH;
+    const areaPath = `${linePath} L ${lx.toFixed(1)} ${baseY} L ${fx.toFixed(1)} ${baseY} Z`;
+
+    const atlY    = lowestPrice > 0 ? toY(lowestPrice) : null;
+    const clipW   = Math.max(0, (cW + PAD.right + 20) * progress);
+    const showDot = progress > 0.88;
+    const showAtl = progress > 0.4;
+    const fmtL    = (p) => p >= 10000 ? `${(p / 10000).toFixed(1)}만` : p.toLocaleString();
 
     return (
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'flex-end', gap: 6, width: '100%', height: '100%' }}>
+        <svg viewBox={`0 0 ${W} ${H}`}
+             style={{ width: '100%', height: '100%', display: 'block', overflow: 'visible', fontFamily: 'inherit' }}>
+            <defs>
+                {/* 라인 클립: 왼쪽→오른쪽 reveal */}
+                <clipPath id="phcClip">
+                    <rect x={PAD.left - 5} y={0} width={clipW} height={H} />
+                </clipPath>
+                {/* 라인 색상: 회색 → verdict 색 */}
+                <linearGradient id="phcLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%"   stopColor="rgba(255,255,255,0.18)" />
+                    <stop offset="60%"  stopColor={color} stopOpacity="0.7" />
+                    <stop offset="100%" stopColor={color} />
+                </linearGradient>
+                {/* 영역 채우기: 위→아래 페이드 */}
+                <linearGradient id="phcArea" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%"   stopColor={color} stopOpacity="0.22" />
+                    <stop offset="100%" stopColor={color} stopOpacity="0.01" />
+                </linearGradient>
+                {/* 라인 glow */}
+                <filter id="phcGlow" x="-10%" y="-80%" width="120%" height="260%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+                {/* 끝점 dot glow */}
+                <filter id="phcDotGlow" x="-100%" y="-100%" width="300%" height="300%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="blur" />
+                    <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
 
-            {/* 역대최저가 점선 기준선 (GameDetailPage PriceChart에서 차용) */}
-            {lowestPrice > 0 && (
-                <div style={{
-                    position: 'absolute',
-                    bottom: `calc(28px + ${toPct(lowestPrice)}%)`,
-                    left: 0, right: 0, height: 0,
-                    borderTop: '1.5px dashed rgba(34,197,94,0.55)',
-                    pointerEvents: 'none', zIndex: 2,
-                }}>
-                    <span style={{
-                        position: 'absolute', right: 2, bottom: 3,
-                        fontSize: 12, fontWeight: 900, color: '#22c55e',
-                        background: 'rgba(8,8,16,0.85)', padding: '1px 5px', borderRadius: 3,
-                        whiteSpace: 'nowrap',
-                    }}>역대최저 {fmtP(lowestPrice)}</span>
-                </div>
+            {/* 서브 그리드 (매우 희미) */}
+            {[0.33, 0.67].map(t => (
+                <line key={t}
+                    x1={PAD.left} y1={PAD.top + cH * (1 - t)}
+                    x2={W - PAD.right} y2={PAD.top + cH * (1 - t)}
+                    stroke="rgba(255,255,255,0.04)" strokeWidth="1"
+                />
+            ))}
+
+            {/* 역대최저가 기준선 — 라인이 절반 그려진 후 페이드인 */}
+            {atlY !== null && (
+                <g opacity={showAtl ? 1 : 0} style={{ transition: 'opacity 0.7s ease' }}>
+                    <line x1={PAD.left} y1={atlY} x2={W - PAD.right} y2={atlY}
+                          stroke="rgba(34,197,94,0.4)" strokeWidth="1.5" strokeDasharray="8,5" />
+                    <text x={W - PAD.right + 10} y={atlY - 4}
+                          fill="rgba(34,197,94,0.6)" fontSize="15" fontWeight="900">역대최저</text>
+                    <text x={W - PAD.right + 10} y={atlY + 20}
+                          fill="#22c55e" fontSize="24" fontWeight="900">{fmtL(lowestPrice)}</text>
+                </g>
             )}
 
-            {history.map((entry, i) => {
-                const pct    = toPct(entry.price);
-                const col    = BAR_COL[entry.verdict] ?? BAR_COL.TRACKING;
-                const isLast = i === history.length - 1;
+            {/* 영역 채우기 (클립) */}
+            <path d={areaPath} fill="url(#phcArea)" clipPath="url(#phcClip)" />
+
+            {/* 메인 라인 (클립 + glow) */}
+            <path d={linePath} fill="none"
+                  stroke="url(#phcLine)" strokeWidth="3.5"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  clipPath="url(#phcClip)"
+                  filter="url(#phcGlow)"
+            />
+
+            {/* 데이터 포인트 dot — 라인이 지나간 자리에 순차 등장 */}
+            {pts.map(([x, y], i) => {
+                const threshold = n < 2 ? 0.5 : i / (n - 1);
+                const visible   = i < n - 1 && progress > threshold + 0.08;
                 return (
-                    <div key={entry.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end', position: 'relative' }}>
-
-                        {/* 가격 레이블: 배경 pill로 배경에 묻히지 않게 처리 */}
-                        <div style={{
-                            position: 'absolute',
-                            bottom: `calc(28px + ${active ? pct : 2}% + 6px)`,
-                            left: 0, right: 0, textAlign: 'center',
-                            display: 'flex', justifyContent: 'center',
-                            opacity: active ? 1 : 0,
-                            transition: active
-                                ? `opacity 0.4s ${i * 0.08 + 0.95}s ease, bottom 0.85s ${i * 0.08}s cubic-bezier(0.4,0,0.2,1)`
-                                : 'none',
-                            pointerEvents: 'none', zIndex: 3,
-                        }}>
-                            <span style={{
-                                fontSize: isLast ? 12 : 10,
-                                fontWeight: 900,
-                                color: isLast ? col.glow : 'rgba(255,255,255,0.92)',
-                                whiteSpace: 'nowrap',
-                                background: 'rgba(8,8,16,0.72)',
-                                padding: '1px 5px',
-                                borderRadius: 3,
-                                textShadow: isLast ? `0 0 10px ${col.glow}` : 'none',
-                            }}>
-                                {fmtP(entry.price)}
-                            </span>
-                        </div>
-
-                        <div style={{
-                            width: '100%', height: active ? `${pct}%` : '2%',
-                            background: col.bg, borderRadius: '5px 5px 0 0',
-                            transition: active ? `height 0.85s ${i * 0.08}s cubic-bezier(0.4,0,0.2,1)` : 'none',
-                            boxShadow: isLast && active ? `0 0 24px ${col.glow}` : 'none',
-                            animation: isLast && active ? 'lfBarPulse 2.5s 1s ease-in-out infinite' : 'none',
-                            flexShrink: 0,
-                        }} />
-                        <div style={{ fontSize: 13, fontWeight: 900, color: 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                            {entry.date.slice(5).replace('-', '/')}
-                        </div>
-                    </div>
+                    <circle key={i} cx={x} cy={y}
+                            r={visible ? 4.5 : 0} fill={color} fillOpacity={0.6}
+                            style={{ transition: 'r 0.25s ease' }} />
                 );
             })}
 
-            {/* Sweep Line: 바 애니메이션 완료 후 좌→우로 스캔 */}
-            {active && (
-                <div style={{ position: 'absolute', top: 0, bottom: '28px', left: 0, right: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-                    <div style={{
-                        position: 'absolute', top: 0, bottom: 0, width: 3,
-                        background: 'linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.9) 50%, transparent 100%)',
-                        animation: 'lfSweepLine 0.9s 1.4s ease-in-out forwards',
-                        opacity: 0,
-                    }} />
-                </div>
+            {/* 현재가 끝점 — 대형 pulse dot */}
+            {showDot && (
+                <g filter="url(#phcDotGlow)">
+                    <circle cx={lx} cy={ly} r={9} fill={color}
+                            style={{ animation: 'lfBarPulse 2s 0.3s ease-in-out infinite' }} />
+                    <circle cx={lx} cy={ly} r={18} fill="none"
+                            stroke={color} strokeWidth="1.5" strokeOpacity="0.35"
+                            style={{ animation: 'lfBarPulse 2s 0.3s ease-in-out infinite' }} />
+                </g>
             )}
-        </div>
+
+            {/* 날짜 레이블 */}
+            {pts.map(([x], i) => {
+                const show = n <= 3
+                    ? true
+                    : i === 0 || i === n - 1 || (n >= 5 && i % Math.floor(n / 4) === 0);
+                if (!show) return null;
+                return (
+                    <text key={i} x={i === n - 1 ? Math.min(x, W - PAD.right - 10) : x}
+                          y={H - 2} textAnchor={i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}
+                          fill="rgba(255,255,255,0.3)" fontSize="19" fontWeight="700">
+                        {history[i].date.slice(5).replace('-', '/')}
+                    </text>
+                );
+            })}
+        </svg>
     );
 }
 
@@ -678,9 +745,9 @@ export default function GameLongformCard({ game, showOutro = false }) {
                         {game.discountRate > 0 && (
                             <RevealText active={IN.priceHero} delay={0.08} duration={0.65} style={{ textAlign: 'right' }}>
                                 <div style={{
-                                    fontSize: 88, fontWeight: 900, letterSpacing: '-0.04em',
+                                    fontSize: 56, fontWeight: 900, letterSpacing: '-0.03em',
                                     color: cfg.color, lineHeight: 1,
-                                    filter: `drop-shadow(0 0 40px ${cfg.glow}0.7))`,
+                                    filter: `drop-shadow(0 0 28px ${cfg.glow}0.65))`,
                                 }}>
                                     -{game.discountRate}%
                                 </div>
@@ -742,7 +809,7 @@ export default function GameLongformCard({ game, showOutro = false }) {
                         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `12px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
                             <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 8, flexShrink: 0 }}>PRICE HISTORY</div>
                             <div style={{ flex: 1, minHeight: 0 }}>
-                                <PriceHistoryChart history={game.priceHistory.slice(-8)} active={priceChartActive} lowestPrice={game.lowestPrice} />
+                                <PriceHistoryChart history={game.priceHistory.slice(-8)} active={priceChartActive} lowestPrice={game.lowestPrice} color={cfg.color} />
                             </div>
                         </div>
                     ) : <div style={{ flex: 1 }} />}
@@ -901,12 +968,12 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                     <div key={s.key} style={{
                                         flex: 1, display: 'flex', flexDirection: 'column',
                                         alignItems: 'center', justifyContent: 'center',
-                                        padding: '18px 12px',
+                                        padding: '20px 12px',
                                         borderRight: i < strips.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
                                     }}>
-                                        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>{s.label}</div>
-                                        <div style={{ fontSize: 30, fontWeight: 900, color: s.color, lineHeight: 1, letterSpacing: '-0.02em' }}>{s.main}</div>
-                                        {s.sub && <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.38)', marginTop: 4 }}>{s.sub}</div>}
+                                        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.42)', marginBottom: 8 }}>{s.label}</div>
+                                        <div style={{ fontSize: 38, fontWeight: 900, color: s.color, lineHeight: 1, letterSpacing: '-0.02em' }}>{s.main}</div>
+                                        {s.sub && <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.35)', marginTop: 5 }}>{s.sub}</div>}
                                     </div>
                                 ))}
                             </div>
@@ -997,15 +1064,15 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                             </div>
 
                                             {/* 가격 정보 — 크게 */}
-                                            <div style={{ marginBottom: hasContents ? 14 : 0 }}>
+                                            <div style={{ marginBottom: 14 }}>
                                                 {ed.discountRate > 0 && (
-                                                    <div style={{ fontSize: 13, fontWeight: 900, color: edColor, marginBottom: 2 }}>-{ed.discountRate}%</div>
+                                                    <div style={{ fontSize: 14, fontWeight: 900, color: edColor, marginBottom: 4 }}>-{ed.discountRate}%</div>
                                                 )}
-                                                <div style={{ fontSize: allEditions.length <= 2 ? 36 : 26, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.02em' }}>
-                                                    {fmt(ed.currentPrice)}<span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>원</span>
+                                                <div style={{ fontSize: allEditions.length <= 2 ? 46 : 30, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                                                    {fmt(ed.currentPrice)}<span style={{ fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginLeft: 5 }}>원</span>
                                                 </div>
                                                 {ed.discountRate > 0 && (
-                                                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', marginTop: 2 }}>{fmt(ed.originalPrice)}원</div>
+                                                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.25)', textDecoration: 'line-through', marginTop: 4 }}>{fmt(ed.originalPrice)}원</div>
                                                 )}
                                             </div>
 
@@ -1021,21 +1088,43 @@ export default function GameLongformCard({ game, showOutro = false }) {
                                                 </div>
                                             )}
 
-                                            {/* 구성품 */}
-                                            {hasContents && (
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
-                                                    {ed.editionContents.map((item, idx) => (
-                                                        <div key={idx} style={{
-                                                            display: 'flex', alignItems: 'center', gap: 4,
-                                                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                                                            borderRadius: 7, padding: '3px 9px',
-                                                        }}>
-                                                            <Gem style={{ width: 9, height: 9, color: isCurrent ? cfg.color : 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
-                                                            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+                                            {/* 구성품 or 대체 콘텐츠 */}
+                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12, marginTop: 4 }}>
+                                                {hasContents ? (
+                                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                                                        {ed.editionContents.map((item, idx) => (
+                                                            <div key={idx} style={{
+                                                                display: 'flex', alignItems: 'center', gap: 4,
+                                                                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+                                                                borderRadius: 7, padding: '3px 9px',
+                                                            }}>
+                                                                <Gem style={{ width: 9, height: 9, color: isCurrent ? cfg.color : 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
+                                                                <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    /* 구성품 없을 때: 플랫폼 + 기본판 안내 */
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                                        {ed.platforms?.length > 0 && (
+                                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                                                {ed.platforms.slice(0, 3).map(p => (
+                                                                    <span key={p} style={{ fontSize: 11, fontWeight: 900, color: '#93c5fd', background: 'rgba(30,58,138,0.7)', border: '1px solid rgba(147,197,253,0.35)', padding: '3px 10px', borderRadius: 6 }}>{p}</span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.28)', lineHeight: 1.5 }}>
+                                                            기본 에디션 · 추가 콘텐츠 없음
                                                         </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                                        {/* 가격 절약 강조 (현재 에디션 대비) */}
+                                                        {!isCurrent && game.currentPrice > 0 && ed.currentPrice < game.currentPrice && (
+                                                            <div style={{ fontSize: 13, fontWeight: 900, color: '#60a5fa' }}>
+                                                                {fmt(game.currentPrice - ed.currentPrice)}원 저렴
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
