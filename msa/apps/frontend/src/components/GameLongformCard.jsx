@@ -628,114 +628,130 @@ export default function GameLongformCard({ game, showOutro = false }) {
                 <div style={{ position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(8,8,16,0.35) 0%, transparent 40%)' }} />
 
                 {/* ─────────── Scene 1: 가격 분석 ─────────── */}
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, ...S.price }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, overflow: 'hidden', ...S.price }}>
                     <LightSweep active={SWEEP.price} />
 
-                    <div style={{ flexShrink: 0, padding: `28px ${HPAD} 0` }}>
-                        <SceneHeader num={1} label="가격 분석" color={cfg.color} />
-
-                        {/* Hero: 현재가 + 할인율 — Typographic Reveal 적용 */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 24 }}>
-                            <div>
-                                {/* 현재가 — 항상 가장 크게 */}
-                                <RevealText active={IN.priceHero} duration={0.7}>
-                                    <div style={{ fontSize: 80, fontWeight: 900, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1, textShadow: '0 2px 40px rgba(0,0,0,0.9)', filter: isBuy ? `drop-shadow(0 0 20px ${cfg.glow}0.35))` : 'none' }}>
-                                        {fmt(game.currentPrice)}<span style={{ fontSize: 28, fontWeight: 500, color: 'rgba(255,255,255,0.32)', marginLeft: 8 }}>원</span>
-                                    </div>
-                                </RevealText>
-                                {/* 할인율 + 정가 — 현재가 아래 보조 */}
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 8 }}>
-                                    {game.discountRate > 0 && (
-                                        <RevealText active={IN.priceHero} delay={0.1} duration={0.6}>
-                                            <span style={{ fontSize: 52, fontWeight: 900, letterSpacing: '-0.03em', color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 30px ${cfg.glow}0.55))` }}>
-                                                -{game.discountRate}%
-                                            </span>
-                                        </RevealText>
-                                    )}
-                                    {game.originalPrice > 0 && game.discountRate > 0 && (
-                                        <span style={{ fontSize: 20, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through', ...fadeIn(IN.priceHero, 0.2) }}>
-                                            {fmt(game.originalPrice)}원
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 절약 / ATL / 손해 뱃지 — 오버슈트 스프링 */}
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
-                            {isBuy && game.originalPrice > game.currentPrice && (
-                                <div style={{
-                                    display: 'flex', alignItems: 'center', gap: 9,
-                                    background: 'rgba(34,197,94,0.13)', border: '1px solid rgba(34,197,94,0.45)', padding: '10px 20px', borderRadius: 12, boxShadow: '0 0 24px rgba(34,197,94,0.2)',
-                                    transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.8) translateY(14px)',
-                                    opacity:   IN.priceBadge ? 1 : 0,
-                                    transition: `transform 0.55s ${SPRING}, opacity 0.35s ease`,
-                                }}>
-                                    <TrendingDown style={{ width: 20, height: 20, color: '#22c55e', flexShrink: 0 }} />
-                                    <span style={{ fontSize: 20, fontWeight: 900, color: '#22c55e' }}>{fmt(game.originalPrice - game.currentPrice)}원 절약</span>
-                                </div>
-                            )}
-                            {isBuy ? (
-                                <div style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 10,
-                                    background: game.isAllTimeLowNew ? `${cfg.glow}0.14)` : `${cfg.glow}0.07)`,
-                                    border: `1px solid ${cfg.glow}${game.isAllTimeLowNew ? '0.52' : '0.25'})`,
-                                    padding: '10px 20px', borderRadius: 12,
-                                    boxShadow: game.isAllTimeLowNew ? `0 0 28px ${cfg.glow}0.28)` : 'none',
-                                    position: 'relative', overflow: 'hidden',
-                                    transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.8) translateY(14px)',
-                                    opacity:   IN.priceBadge ? 1 : 0,
-                                    transition: `transform 0.55s 0.08s ${SPRING}, opacity 0.35s 0.08s ease`,
-                                }}>
-                                    {game.isAllTimeLowNew && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent)', animation: 'shimmer 2s infinite' }} />}
-                                    <Flame style={{ width: 20, height: 20, color: cfg.color, position: 'relative' }} />
-                                    <span style={{ fontSize: 20, fontWeight: 900, color: cfg.color, position: 'relative' }}>
-                                        {game.isAllTimeLowNew ? '역대최저가 갱신!' : game.priceVerdict === 'BUY_NOW' ? '역대최저가 동일' : `역대최저 ${fmt(game.lowestPrice)}원 근접`}
-                                    </span>
-                                </div>
-                            ) : game.lowestPrice > 0 && game.currentPrice > game.lowestPrice ? (
-                                <div style={{
-                                    display: 'flex', alignItems: 'center', gap: 10,
-                                    background: 'rgba(239,68,68,0.11)', border: '1px solid rgba(239,68,68,0.38)', padding: '10px 20px', borderRadius: 12,
-                                    transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(12px)',
-                                    opacity:   IN.priceBadge ? 1 : 0,
-                                    transition: `transform 0.55s ${SPRING}, opacity 0.35s ease`,
-                                }}>
-                                    <TrendingUp style={{ width: 20, height: 20, color: '#f87171', flexShrink: 0 }} />
-                                    <span style={{ fontSize: 20, fontWeight: 900, color: 'rgba(255,255,255,0.9)' }}>
-                                        지금 사면 <span style={{ color: '#fbbf24', filter: 'drop-shadow(0 0 8px rgba(251,191,36,0.55))' }}>+{fmt(game.currentPrice - game.lowestPrice)}원</span> 손해
-                                    </span>
-                                </div>
-                            ) : null}
-                        </div>
-
+                    {/* ── Ghost: 현재가 배경 타이포 ── */}
+                    <div style={{
+                        position: 'absolute', bottom: '18%', left: '-2%', right: 0,
+                        fontSize: 'clamp(120px,18vw,220px)', fontWeight: 900, letterSpacing: '-0.05em',
+                        color: '#fff', opacity: 0.028, lineHeight: 1,
+                        pointerEvents: 'none', userSelect: 'none', zIndex: 0,
+                        transform: IN.priceHero ? 'translateY(0)' : 'translateY(30px)',
+                        transition: `transform 1.4s 0.2s ${EASE_OUT}`,
+                        whiteSpace: 'nowrap',
+                    }}>
+                        {fmt(game.currentPrice)}
                     </div>
 
-                    {/* 바차트 — 최근 8개만 표시 (그 이상이면 밀집되어 판독 불가) */}
-                    {(game.priceHistory?.length ?? 0) > 1 && (
-                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `14px ${HPAD} 22px` }}>
-                            <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.65)', marginBottom: 10, flexShrink: 0 }}>PRICE HISTORY</div>
-                            {/* glassmorphism 래퍼: 차트가 배경에 자연스럽게 통합되도록 */}
+                    {/* ── 상단: 씬 헤더 ── */}
+                    <div style={{ flexShrink: 0, padding: `26px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
+                        <SceneHeader num={1} label="가격 분석" color={cfg.color} />
+                    </div>
+
+                    {/* ── 히어로 영역: 가격(좌) ↔ 할인율(우) ── */}
+                    <div style={{
+                        flexShrink: 0, position: 'relative', zIndex: 1,
+                        padding: `16px ${HPAD} 0`,
+                        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between',
+                    }}>
+                        {/* 좌: 현재가 */}
+                        <div>
+                            <RevealText active={IN.priceHero} duration={0.7}>
+                                <div style={{
+                                    fontSize: 96, fontWeight: 900, letterSpacing: '-0.04em',
+                                    color: '#fff', lineHeight: 1,
+                                    filter: isBuy ? `drop-shadow(0 0 30px ${cfg.glow}0.4))` : 'none',
+                                }}>
+                                    {fmt(game.currentPrice)}<span style={{ fontSize: 32, fontWeight: 500, color: 'rgba(255,255,255,0.28)', marginLeft: 10 }}>원</span>
+                                </div>
+                            </RevealText>
+                            {/* 정가 취소선 */}
+                            {game.originalPrice > 0 && game.discountRate > 0 && (
+                                <div style={{ fontSize: 18, fontWeight: 600, color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', marginTop: 6, ...fadeIn(IN.priceHero, 0.25) }}>
+                                    {fmt(game.originalPrice)}원
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 우: 할인율 — 오른쪽 끝에서 충돌하듯 등장 */}
+                        {game.discountRate > 0 && (
+                            <RevealText active={IN.priceHero} delay={0.08} duration={0.65} style={{ textAlign: 'right' }}>
+                                <div style={{
+                                    fontSize: 88, fontWeight: 900, letterSpacing: '-0.04em',
+                                    color: cfg.color, lineHeight: 1,
+                                    filter: `drop-shadow(0 0 40px ${cfg.glow}0.7))`,
+                                }}>
+                                    -{game.discountRate}%
+                                </div>
+                            </RevealText>
+                        )}
+                    </div>
+
+                    {/* ── 뱃지 row ── */}
+                    <div style={{ flexShrink: 0, display: 'flex', gap: 10, flexWrap: 'wrap', padding: `12px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
+                        {isBuy && game.originalPrice > game.currentPrice && (
                             <div style={{
-                                flex: 1, minHeight: 0,
-                                background: 'rgba(255,255,255,0.025)',
-                                backdropFilter: 'blur(16px)',
-                                WebkitBackdropFilter: 'blur(16px)',
-                                border: '1px solid rgba(255,255,255,0.07)',
-                                borderRadius: 18,
-                                padding: '20px 18px 0',
-                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.4)',
+                                padding: '8px 18px', borderRadius: 10,
+                                transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.8) translateY(14px)',
+                                opacity: IN.priceBadge ? 1 : 0,
+                                transition: `transform 0.55s ${SPRING}, opacity 0.35s ease`,
                             }}>
+                                <TrendingDown style={{ width: 18, height: 18, color: '#22c55e' }} />
+                                <span style={{ fontSize: 17, fontWeight: 900, color: '#22c55e' }}>{fmt(game.originalPrice - game.currentPrice)}원 절약</span>
+                            </div>
+                        )}
+                        {isBuy ? (
+                            <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8,
+                                background: game.isAllTimeLowNew ? `${cfg.glow}0.16)` : `${cfg.glow}0.08)`,
+                                border: `1px solid ${cfg.glow}${game.isAllTimeLowNew ? '0.55' : '0.28'})`,
+                                padding: '8px 18px', borderRadius: 10, position: 'relative', overflow: 'hidden',
+                                boxShadow: game.isAllTimeLowNew ? `0 0 24px ${cfg.glow}0.3)` : 'none',
+                                transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.8) translateY(14px)',
+                                opacity: IN.priceBadge ? 1 : 0,
+                                transition: `transform 0.55s 0.08s ${SPRING}, opacity 0.35s 0.08s ease`,
+                            }}>
+                                {game.isAllTimeLowNew && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent)', animation: 'shimmer 2s infinite' }} />}
+                                <Flame style={{ width: 18, height: 18, color: cfg.color, position: 'relative' }} />
+                                <span style={{ fontSize: 17, fontWeight: 900, color: cfg.color, position: 'relative' }}>
+                                    {game.isAllTimeLowNew ? '역대최저가 갱신!' : game.priceVerdict === 'BUY_NOW' ? '역대최저가 동일' : `역대최저 ${fmt(game.lowestPrice)}원 근접`}
+                                </span>
+                            </div>
+                        ) : game.lowestPrice > 0 && game.currentPrice > game.lowestPrice ? (
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.35)',
+                                padding: '8px 18px', borderRadius: 10,
+                                transform: IN.priceBadge ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(12px)',
+                                opacity: IN.priceBadge ? 1 : 0,
+                                transition: `transform 0.55s ${SPRING}, opacity 0.35s ease`,
+                            }}>
+                                <TrendingUp style={{ width: 18, height: 18, color: '#f87171' }} />
+                                <span style={{ fontSize: 17, fontWeight: 900, color: 'rgba(255,255,255,0.9)' }}>
+                                    지금 사면 <span style={{ color: '#fbbf24' }}>+{fmt(game.currentPrice - game.lowestPrice)}원</span> 손해
+                                </span>
+                            </div>
+                        ) : null}
+                    </div>
+
+                    {/* ── 바차트: 나머지 공간 전부 ── */}
+                    {(game.priceHistory?.length ?? 0) > 1 ? (
+                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `12px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
+                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 8, flexShrink: 0 }}>PRICE HISTORY</div>
+                            <div style={{ flex: 1, minHeight: 0 }}>
                                 <PriceHistoryChart history={game.priceHistory.slice(-8)} active={priceChartActive} lowestPrice={game.lowestPrice} />
                             </div>
                         </div>
-                    )}
+                    ) : <div style={{ flex: 1 }} />}
 
-                    {/* 마감일 */}
+                    {/* ── 마감일 strip ── */}
                     {daysLeft !== null && daysLeft >= 0 && (
-                        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: `14px ${HPAD}`, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                            <CalendarDays style={{ width: 20, height: 20, color: isClosingSoon ? '#f87171' : 'rgba(255,255,255,0.68)', flexShrink: 0, ...(isClosingSoon && { animation: 'pulse 1s infinite' }) }} />
-                            <span style={{ fontSize: 18, fontWeight: 900, color: isClosingSoon ? '#f87171' : 'rgba(255,255,255,0.6)' }}>
+                        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 10, padding: `12px ${HPAD}`, borderTop: `1px solid ${isClosingSoon ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)'}`, position: 'relative', zIndex: 1 }}>
+                            <CalendarDays style={{ width: 18, height: 18, color: isClosingSoon ? '#f87171' : 'rgba(255,255,255,0.55)', ...(isClosingSoon && { animation: 'pulse 1s infinite' }) }} />
+                            <span style={{ fontSize: 16, fontWeight: 900, color: isClosingSoon ? '#f87171' : 'rgba(255,255,255,0.5)' }}>
                                 {isClosingSoon ? `막차! ${fmtD(game.saleEndDate)} 마감` : `할인 종료 ${fmtD(game.saleEndDate)}`}
                             </span>
                         </div>
@@ -743,365 +759,387 @@ export default function GameLongformCard({ game, showOutro = false }) {
                 </div>
 
                 {/* ─────────── Scene 2: 품질 검증 ─────────── */}
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, padding: `28px ${HPAD} 24px`, ...S.quality }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, overflow: 'hidden', ...S.quality }}>
                     <LightSweep active={SWEEP.quality} />
-                    <SceneHeader num={2} label="품질 검증" color={cfg.color} />
 
-                    <div style={{ flex: 1, display: 'flex', gap: 0, marginTop: 24, minHeight: 0 }}>
-
-                        {/* ── 스코어 극장 (좌측) ── */}
-                        {hasScores && (
+                    {/* ── Ghost 배경: 점수가 화면을 압도 ── */}
+                    {hasScores && (
+                        <div style={{
+                            position: 'absolute', inset: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            pointerEvents: 'none', overflow: 'hidden', zIndex: 0,
+                        }}>
                             <div style={{
-                                flex: hltbMain ? '0 0 52%' : 1,
-                                display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start',
-                                position: 'relative', paddingRight: hltbMain ? 28 : 0, paddingLeft: 8,
+                                fontSize: 480, fontWeight: 900, letterSpacing: '-0.06em',
+                                color: scoreColor, lineHeight: 1,
+                                opacity: qualityActive ? 0.055 : 0,
+                                transform: IN.quality ? 'scale(1) translateY(8%)' : 'scale(0.7) translateY(8%)',
+                                transition: `opacity 1.8s ease, transform 1.4s ${EASE_OUT}`,
+                                userSelect: 'none',
                             }}>
-                                {/* 배경 glow burst */}
-                                <div style={{
-                                    position: 'absolute', top: '45%', left: '40%',
-                                    transform: 'translate(-50%,-50%)',
-                                    width: 300, height: 300,
-                                    background: `${scoreColor}18`,
-                                    borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none',
-                                    opacity: qualityActive ? 1 : 0,
-                                    transition: 'opacity 1.2s ease',
-                                }} />
+                                {mainScore}
+                            </div>
+                        </div>
+                    )}
 
-                                {/* "전문가 N인이 선택한" */}
-                                {(mcCount || igdbCriticCount) && (
-                                    <RevealText active={IN.quality} delay={0.3} duration={0.65}>
-                                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.2em', color: 'rgba(255,255,255,0.62)', marginBottom: 10, textTransform: 'uppercase', position: 'relative', zIndex: 1 }}>
-                                            전문가 {(mcCount ?? igdbCriticCount).toLocaleString()}인이 선택한
-                                        </div>
-                                    </RevealText>
-                                )}
+                    {/* ── 배경 glow burst ── */}
+                    <div style={{
+                        position: 'absolute', top: '35%', left: '50%',
+                        transform: 'translate(-50%,-50%)',
+                        width: 500, height: 500,
+                        background: `${scoreColor}14`,
+                        borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none', zIndex: 0,
+                        opacity: qualityActive ? 1 : 0,
+                        transition: 'opacity 1.5s ease',
+                    }} />
 
-                                {/* 메인 점수 — SLAM IN */}
-                                <div style={{
-                                    fontSize: hltbMain ? 140 : 180,
-                                    fontWeight: 900, lineHeight: 1, letterSpacing: '-0.04em',
-                                    color: scoreColor,
-                                    filter: qualityActive ? `drop-shadow(0 0 60px ${scoreColor})` : 'none',
-                                    transform: IN.quality ? 'scale(1)' : 'scale(0.25)',
-                                    opacity: IN.quality ? 1 : 0,
-                                    transition: `transform 0.8s 0.5s ${SPRING}, opacity 0.4s 0.5s ease`,
-                                    position: 'relative', zIndex: 1,
-                                }}>
-                                    {scoreCountUp}
-                                </div>
+                    {/* ── 씬 헤더 (좌상단 작게) ── */}
+                    <div style={{ flexShrink: 0, padding: `24px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
+                        <SceneHeader num={2} label="품질 검증" color={cfg.color} />
+                    </div>
 
-                                {/* 출처 레이블 */}
-                                <div style={{
-                                    fontSize: 13, fontWeight: 900, letterSpacing: '0.3em',
-                                    color: 'rgba(255,255,255,0.52)', marginTop: 6,
-                                    position: 'relative', zIndex: 1,
-                                    ...fadeIn(IN.quality, 0.85),
-                                }}>
-                                    {mcScore ? 'METACRITIC' : 'IGDB'}
-                                </div>
+                    {/* ── 중앙: 점수 + 출처 ── */}
+                    {hasScores ? (
+                        <div style={{
+                            flex: 1, display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center',
+                            position: 'relative', zIndex: 1, gap: 0,
+                            padding: `0 ${HPAD}`,
+                        }}>
+                            {/* 전문가 N인이 선택한 */}
+                            {(mcCount || igdbCriticCount) && (
+                                <RevealText active={IN.quality} delay={0.2} duration={0.6}>
+                                    <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12, textAlign: 'center' }}>
+                                        전문가 {(mcCount ?? igdbCriticCount).toLocaleString()}인이 선택한
+                                    </div>
+                                </RevealText>
+                            )}
 
-                                {/* 유저 평점 + 리뷰 수 — 크기를 대폭 늘려 공간 활용 */}
-                                {(mcUser || igdbUser) && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 20, position: 'relative', zIndex: 1, width: '100%', ...fadeIn(IN.quality, 1.05) }}>
-                                        <div style={{
-                                            background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)',
-                                            borderRadius: 16, padding: '14px 22px',
-                                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
-                                        }}>
-                                            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>유저 평점</div>
-                                            <div style={{ fontSize: 44, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.02em' }}>
-                                                {mcUser?.toFixed(1) ?? igdbUser}
-                                            </div>
-                                        </div>
-                                        {(mcUserCount || igdbUserCount) && (
-                                            <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
-                                                {(mcUserCount ?? igdbUserCount).toLocaleString()}<br/><span style={{ fontSize: 11, letterSpacing: '0.12em' }}>명 참여</span>
-                                            </div>
-                                        )}
+                            {/* 메인 점수 — 화면 중앙을 지배 */}
+                            <div style={{
+                                fontSize: 210, fontWeight: 900, lineHeight: 0.88, letterSpacing: '-0.05em',
+                                color: scoreColor,
+                                filter: qualityActive ? `drop-shadow(0 0 80px ${scoreColor}) drop-shadow(0 0 40px ${scoreColor})` : 'none',
+                                transform: IN.quality ? 'scale(1)' : 'scale(0.3)',
+                                opacity: IN.quality ? 1 : 0,
+                                transition: `transform 0.9s 0.4s ${SPRING}, opacity 0.45s 0.4s ease, filter 1.2s 0.4s ease`,
+                                textAlign: 'center',
+                            }}>
+                                {scoreCountUp}
+                            </div>
+
+                            {/* 출처 레이블 */}
+                            <div style={{
+                                fontSize: 14, fontWeight: 900, letterSpacing: '0.4em', textTransform: 'uppercase',
+                                color: 'rgba(255,255,255,0.38)', marginTop: 14,
+                                ...fadeIn(IN.quality, 0.9),
+                            }}>
+                                {mcScore ? 'METACRITIC' : 'IGDB'}
+                            </div>
+                        </div>
+                    ) : (
+                        /* 평점 없을 때: 플레이타임만 중앙에 크게 */
+                        hltbMain ? (
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, padding: `0 ${HPAD}` }}>
+                                <RevealText active={IN.qualityPlay} duration={0.8}>
+                                    <div style={{ fontSize: 56, fontWeight: 900, color: '#fff', textAlign: 'center', lineHeight: 1.1 }}>
+                                        {Math.round(hltbMain)}시간의<br/>대모험
+                                    </div>
+                                </RevealText>
+                                {pricePerHr && (
+                                    <div style={{ fontSize: 22, fontWeight: 900, color: cfg.color, marginTop: 18, ...fadeIn(IN.qualityPlay, 0.4) }}>
+                                        {fmt(pricePerHr)}원 / 시간
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        {/* 구분선 */}
-                        {hasScores && hltbMain && (
-                            <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
-                        )}
-
-                        {/* ── 플레이타임 서사 (우측 or 전체) ── */}
-                        {hltbMain && (() => {
-                            const rows = [
-                                { label: '메인 스토리', val: hltbMain },
-                                hltbExtra ? { label: '메인 + 서브', val: hltbExtra } : null,
-                                hltbComp  ? { label: '컴플리트',   val: hltbComp  } : null,
-                            ].filter(Boolean);
-                            const maxVal = Math.max(...rows.map(r => r.val));
-                            const compact = !!hasScores;
-                            return (
-                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: hasScores ? 28 : 0 }}>
-                                    {/* 헤드라인 */}
-                                    <RevealText active={IN.qualityPlay} delay={0} duration={0.75}>
-                                        <div style={{ fontSize: compact ? 22 : 36, fontWeight: 900, color: '#fff', lineHeight: 1.2, marginBottom: compact ? 18 : 24 }}>
-                                            {Math.round(hltbMain)}시간의<br/>대모험
-                                        </div>
-                                    </RevealText>
-
-                                    {/* 타임 바 */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: compact ? 14 : 20 }}>
-                                        {rows.map(({ label, val }, i) => (
-                                            <div key={label} style={{
-                                                opacity: IN.qualityPlay ? 1 : 0,
-                                                transform: IN.qualityPlay ? 'translateX(0)' : 'translateX(-20px)',
-                                                transition: `opacity 0.5s ${i * 0.14}s ease, transform 0.6s ${i * 0.14}s ${EASE_OUT}`,
-                                            }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 7 }}>
-                                                    <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.68)' }}>{label}</span>
-                                                    <span style={{ fontSize: compact ? 22 : 30, fontWeight: 900, color: '#fff', textShadow: '0 2px 14px rgba(0,0,0,0.9)' }}>{Math.round(val)}시간</span>
-                                                </div>
-                                                <div style={{ height: compact ? 6 : 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                                                    <div style={{
-                                                        height: '100%',
-                                                        width: IN.qualityPlay ? `${(val / maxVal) * 100}%` : '0%',
-                                                        background: cfg.color, borderRadius: 4,
-                                                        transition: `width 0.9s ${i * 0.14 + 0.2}s cubic-bezier(0.4,0,0.2,1)`,
-                                                        boxShadow: `0 0 10px ${cfg.glow}0.55)`,
-                                                    }} />
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* 시간당 가격 badge */}
-                                    {pricePerHr && (
-                                        <div style={{
-                                            marginTop: compact ? 16 : 22, padding: '12px 18px',
-                                            background: `${cfg.glow}0.08)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 14,
-                                            transform: IN.qualityPlay ? 'scale(1) translateY(0)' : 'scale(0.88) translateY(10px)',
-                                            opacity: IN.qualityPlay ? 1 : 0,
-                                            transition: `transform 0.55s 0.55s ${SPRING}, opacity 0.4s 0.55s ease`,
-                                        }}>
-                                            <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 4 }}>시간당 가격</div>
-                                            <div style={{ fontSize: compact ? 20 : 26, fontWeight: 900, color: '#fff' }}>{fmt(pricePerHr)}원 / 시간</div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })()}
-
-                        {/* 평점·플레이타임 모두 없을 때 */}
-                        {!hasScores && !hltbMain && (
-                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, ...fadeIn(IN.quality, 0) }}>
-                                {game.publisher && (
-                                    <div>
-                                        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)' }}>PUBLISHER</div>
-                                        <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', marginTop: 4 }}>{game.publisher}</div>
-                                    </div>
-                                )}
+                        ) : (
+                            /* 둘 다 없을 때: 퍼블리셔/장르 */
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 1, gap: 16, ...fadeIn(IN.quality, 0) }}>
+                                {game.publisher && <div style={{ fontSize: 32, fontWeight: 900, color: '#fff' }}>{game.publisher}</div>}
                                 {game.genres?.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
                                         {game.genres.map(g => (
                                             <span key={g} style={{ fontSize: 14, fontWeight: 900, padding: '6px 16px', borderRadius: 24, background: `${cfg.glow}0.12)`, border: `1px solid ${cfg.glow}0.3)`, color: cfg.color }}>{g}</span>
                                         ))}
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        )
+                    )}
+
+                    {/* ── 하단 데이터 Strip ── */}
+                    {(hasScores || hltbMain) && (() => {
+                        const strips = [
+                            (mcUser || igdbUser) ? {
+                                key: 'user', label: '유저 평점',
+                                main: (mcUser?.toFixed(1) ?? igdbUser) + '',
+                                sub: (mcUserCount ?? igdbUserCount) ? `${(mcUserCount ?? igdbUserCount).toLocaleString()}명` : null,
+                                color: '#fff',
+                            } : null,
+                            hltbMain ? {
+                                key: 'time', label: '플레이타임',
+                                main: `${Math.round(hltbMain)}시간`,
+                                sub: hltbExtra ? `서브 ${Math.round(hltbExtra)}시간` : null,
+                                color: '#fff',
+                            } : null,
+                            pricePerHr ? {
+                                key: 'pph', label: '시간당 가격',
+                                main: `${fmt(pricePerHr)}원`,
+                                sub: '/ 시간',
+                                color: cfg.color,
+                            } : null,
+                        ].filter(Boolean);
+
+                        return strips.length > 0 ? (
+                            <div style={{
+                                flexShrink: 0, display: 'flex',
+                                borderTop: '1px solid rgba(255,255,255,0.08)',
+                                position: 'relative', zIndex: 1,
+                                ...fadeIn(IN.qualityPlay, 0),
+                            }}>
+                                {strips.map((s, i) => (
+                                    <div key={s.key} style={{
+                                        flex: 1, display: 'flex', flexDirection: 'column',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        padding: '18px 12px',
+                                        borderRight: i < strips.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                                    }}>
+                                        <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>{s.label}</div>
+                                        <div style={{ fontSize: 30, fontWeight: 900, color: s.color, lineHeight: 1, letterSpacing: '-0.02em' }}>{s.main}</div>
+                                        {s.sub && <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.38)', marginTop: 4 }}>{s.sub}</div>}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null;
+                    })()}
                 </div>
 
-                {/* ─────────── Scene 3: 에디션 비교 / 게임 정보 ─────────── */}
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, padding: `28px ${HPAD} 24px`, ...S.edition }}>
+                {/* ─────────── Scene 3: 에디션 비교 / 할인 이력 ─────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', zIndex: 2, overflow: 'hidden', ...S.edition }}>
                     <LightSweep active={SWEEP.edition} />
-                    <SceneHeader num={3} label={hasEditions ? (hasDefenseInfo ? '에디션 & 할인 이력' : '에디션 비교') : '할인 방어력'} color={cfg.color} />
+
+                    {/* 씬 헤더 */}
+                    <div style={{ flexShrink: 0, padding: `24px ${HPAD} 0`, position: 'relative', zIndex: 1 }}>
+                        <SceneHeader num={3} label={hasEditions ? '에디션 비교' : '할인 패턴'} color={cfg.color} />
+                    </div>
 
                     {hasEditions ? (
-                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22, overflowY: 'hidden' }}>
-                            {allEditions.map((ed, i) => {
-                                const isCurrent    = ed.id === game.id;
-                                const priceGap     = ed.currentPrice - game.currentPrice;
-                                const origGap      = ed.originalPrice - game.originalPrice;
-                                const isHigherTier = origGap > 0;
-                                const isLowerTier  = origGap < 0;
-                                const hasContents  = (ed.editionContents?.length ?? 0) > 0;
+                        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: `16px ${HPAD} 0`, gap: 0, position: 'relative', zIndex: 1 }}>
 
-                                let bpBadge = null;
-                                if (!isCurrent) {
-                                    if (isHigherTier && priceGap < 0)
-                                        bpBadge = { text: '상위판이 더 저렴! 🔥', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)' };
-                                    else if (isLowerTier && priceGap > 0)
-                                        bpBadge = { text: '하위판인데 더 비쌈 ⚠️', color: '#f87171', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)' };
-                                    else if (isHigherTier && priceGap >= 0 && priceGap <= 15000 && ed.discountRate > 0)
-                                        bpBadge = { text: `+${fmt(priceGap)}원으로 상위판`, color: '#facc15', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.35)' };
-                                    else if (isLowerTier && priceGap < 0)
-                                        bpBadge = { text: `${fmt(Math.abs(priceGap))}원 절약`, color: '#60a5fa', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)' };
-                                }
+                            {/* ── 에디션 카드 가로 배치 (2개 이하면 나란히, 3개+면 세로) ── */}
+                            <div style={{
+                                flex: 1, minHeight: 0,
+                                display: 'flex',
+                                flexDirection: allEditions.length <= 2 ? 'row' : 'column',
+                                gap: 12,
+                            }}>
+                                {allEditions.map((ed, i) => {
+                                    const isCurrent    = ed.id === game.id;
+                                    const priceGap     = ed.currentPrice - game.currentPrice;
+                                    const origGap      = ed.originalPrice - game.originalPrice;
+                                    const isHigherTier = origGap > 0;
+                                    const isLowerTier  = origGap < 0;
+                                    const hasContents  = (ed.editionContents?.length ?? 0) > 0;
 
-                                return (
-                                    <div key={ed.id} style={{
-                                        background: isCurrent ? `${cfg.glow}0.10)` : 'rgba(255,255,255,0.04)',
-                                        border: isCurrent ? `2px solid ${cfg.glow}0.45)` : '1px solid rgba(255,255,255,0.1)',
-                                        borderRadius: 16, padding: '14px 20px',
-                                        // 현재 에디션 강조 / 비현재 에디션 opacity 0.4로 시선 집중
-                                        opacity:   IN.editionItems ? (isCurrent ? 1 : 0.68) : 0,
-                                        transform: IN.editionItems ? 'translateX(0) scale(1)' : 'translateX(22px) scale(0.96)',
-                                        transition: `opacity 0.45s ${i * 0.1}s ease, transform 0.5s ${i * 0.1}s ${SPRING}`,
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                            <MiniVerdictDot verdict={ed.priceVerdict} />
+                                    let bpBadge = null;
+                                    if (!isCurrent) {
+                                        if (isHigherTier && priceGap < 0)
+                                            bpBadge = { text: '상위판이 더 저렴! 🔥', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.35)' };
+                                        else if (isLowerTier && priceGap > 0)
+                                            bpBadge = { text: '하위판인데 더 비쌈 ⚠️', color: '#f87171', bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.35)' };
+                                        else if (isHigherTier && priceGap >= 0 && priceGap <= 15000 && ed.discountRate > 0)
+                                            bpBadge = { text: `+${fmt(priceGap)}원으로 상위판`, color: '#facc15', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.35)' };
+                                        else if (isLowerTier && priceGap < 0)
+                                            bpBadge = { text: `${fmt(Math.abs(priceGap))}원 절약`, color: '#60a5fa', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.35)' };
+                                    }
+
+                                    const edColor = VCFG[ed.priceVerdict]?.color ?? cfg.color;
+
+                                    return (
+                                        <div key={ed.id} style={{
+                                            flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden',
+                                            background: isCurrent
+                                                ? `linear-gradient(135deg, ${cfg.glow}0.14) 0%, ${cfg.glow}0.06) 100%)`
+                                                : 'rgba(255,255,255,0.04)',
+                                            border: isCurrent
+                                                ? `2px solid ${cfg.glow}0.5)`
+                                                : '1px solid rgba(255,255,255,0.09)',
+                                            borderRadius: 20,
+                                            padding: allEditions.length <= 2 ? '20px 22px' : '14px 20px',
+                                            boxShadow: isCurrent ? `0 0 40px ${cfg.glow}0.15), inset 0 1px 0 ${cfg.glow}0.2)` : 'none',
+                                            opacity:   IN.editionItems ? 1 : 0,
+                                            transform: IN.editionItems
+                                                ? 'translateY(0) scale(1)'
+                                                : `translateY(${i % 2 === 0 ? '-' : ''}24px) scale(0.95)`,
+                                            transition: `opacity 0.5s ${i * 0.12}s ease, transform 0.6s ${i * 0.12}s ${SPRING}`,
+                                        }}>
+                                            {/* NOW 뱃지 */}
                                             {isCurrent && (
-                                                <span style={{ fontSize: 9, fontWeight: 900, color: '#fff', background: cfg.color, padding: '2px 8px', borderRadius: 4, letterSpacing: '0.1em' }}>NOW</span>
+                                                <div style={{
+                                                    position: 'absolute', top: 14, right: 16,
+                                                    fontSize: 9, fontWeight: 900, color: '#fff',
+                                                    background: cfg.color, padding: '3px 10px', borderRadius: 5,
+                                                    letterSpacing: '0.12em',
+                                                    boxShadow: `0 0 12px ${cfg.glow}0.6)`,
+                                                }}>NOW</div>
                                             )}
-                                            <div style={{ flex: 1, fontSize: 15, fontWeight: 700, color: isCurrent ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {cleanTitle(ed.name)}
+
+                                            {/* 에디션명 */}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                                <MiniVerdictDot verdict={ed.priceVerdict} />
+                                                <div style={{
+                                                    fontSize: 14, fontWeight: 900,
+                                                    color: isCurrent ? '#fff' : 'rgba(255,255,255,0.7)',
+                                                    lineHeight: 1.3, flex: 1,
+                                                }}>
+                                                    {cleanTitle(ed.name)}
+                                                </div>
                                             </div>
-                                            {bpBadge && (
-                                                <span style={{ fontSize: 12, fontWeight: 900, color: bpBadge.color, background: bpBadge.bg, border: `1px solid ${bpBadge.border}`, padding: '4px 10px', borderRadius: 8, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                                    {bpBadge.text}
-                                                </span>
-                                            )}
-                                            <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 8 }}>
+
+                                            {/* 가격 정보 — 크게 */}
+                                            <div style={{ marginBottom: hasContents ? 14 : 0 }}>
                                                 {ed.discountRate > 0 && (
-                                                    <span style={{ fontSize: 12, fontWeight: 900, color: VCFG[ed.priceVerdict]?.color ?? cfg.color, display: 'block' }}>-{ed.discountRate}%</span>
+                                                    <div style={{ fontSize: 13, fontWeight: 900, color: edColor, marginBottom: 2 }}>-{ed.discountRate}%</div>
                                                 )}
-                                                <div style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{fmt(ed.currentPrice)}원</div>
-                                                {ed.discountRate > 0 && <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>{fmt(ed.originalPrice)}원</div>}
+                                                <div style={{ fontSize: allEditions.length <= 2 ? 36 : 26, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                                                    {fmt(ed.currentPrice)}<span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 4 }}>원</span>
+                                                </div>
+                                                {ed.discountRate > 0 && (
+                                                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.28)', textDecoration: 'line-through', marginTop: 2 }}>{fmt(ed.originalPrice)}원</div>
+                                                )}
                                             </div>
+
+                                            {/* bpBadge */}
+                                            {bpBadge && (
+                                                <div style={{
+                                                    display: 'inline-flex', alignItems: 'center',
+                                                    fontSize: 11, fontWeight: 900, color: bpBadge.color,
+                                                    background: bpBadge.bg, border: `1px solid ${bpBadge.border}`,
+                                                    padding: '4px 10px', borderRadius: 8, marginBottom: 10,
+                                                }}>
+                                                    {bpBadge.text}
+                                                </div>
+                                            )}
+
+                                            {/* 구성품 */}
+                                            {hasContents && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 12 }}>
+                                                    {ed.editionContents.map((item, idx) => (
+                                                        <div key={idx} style={{
+                                                            display: 'flex', alignItems: 'center', gap: 4,
+                                                            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
+                                                            borderRadius: 7, padding: '3px 9px',
+                                                        }}>
+                                                            <Gem style={{ width: 9, height: 9, color: isCurrent ? cfg.color : 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
+                                                            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{item}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                        {hasContents && (
-                                            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                                {ed.editionContents.map((item, idx) => (
-                                                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, padding: '4px 10px' }}>
-                                                        <Gem style={{ width: 10, height: 10, color: cfg.color, flexShrink: 0 }} />
-                                                        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}>{item}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
 
-                            {myEditionContents.length > 0 && (
-                                <div style={{ marginTop: 6, ...fadeIn(IN.editionItems, 0.3) }}>
-                                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.62)', marginBottom: 10 }}>이 에디션 구성품</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                                        {myEditionContents.map((item, idx) => (
-                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, background: `${cfg.glow}0.1)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 10, padding: '6px 14px' }}>
-                                                <Check style={{ width: 11, height: 11, color: cfg.color, flexShrink: 0 }} />
-                                                <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>{item}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* 에디션 있을 때도 할인 패턴 summary — Apple PPT 스타일 대형 카드 */}
+                            {/* ── 할인 이력 하단 Strip ── */}
                             {(defDiscountCount || defMaxRate || defNextSale) && (
-                                <div style={{ marginTop: 20, ...fadeIn(IN.editionItems, 0.5) }}>
-                                    {/* 구분선 + 서브 헤더 */}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                                        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-                                        <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.72)', flexShrink: 0 }}>할인 이력</span>
-                                        <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 12 }}>
-                                        {defDiscountCount && (
-                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '16px 18px' }}>
-                                                <div style={{ position: 'absolute', right: 6, bottom: -10, fontSize: 68, fontWeight: 900, color: 'rgba(255,255,255,0.04)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>#</div>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>총 할인 횟수</div>
-                                                <div style={{ fontSize: 42, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}</div>
-                                                <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>회</div>
-                                            </div>
-                                        )}
-                                        {defMaxRate && (
-                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 16, padding: '16px 18px', boxShadow: `0 0 28px ${cfg.glow}0.1)` }}>
-                                                <div style={{ position: 'absolute', right: 4, bottom: -10, fontSize: 68, fontWeight: 900, color: `${cfg.glow}0.07)`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>%</div>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>역대 최저 할인율</div>
-                                                <div style={{ fontSize: 42, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 14px ${cfg.color}90)` }}>-{defMaxRate}</div>
-                                                <div style={{ fontSize: 14, fontWeight: 700, color: cfg.color, marginTop: 4, opacity: 0.7 }}>%</div>
-                                            </div>
-                                        )}
-                                        {defNextSale && (
-                                            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.05)`, border: `1px solid ${cfg.glow}0.18)`, borderRadius: 16, padding: '16px 18px' }}>
-                                                <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>다음 할인 예상</div>
-                                                <div style={{ fontSize: 26, fontWeight: 900, color: cfg.color, lineHeight: 1.2 }}>{defNextSale.slice(0, 7).replace('-', '년 ')}</div>
-                                                <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>월 예정</div>
-                                            </div>
-                                        )}
-                                    </div>
+                                <div style={{
+                                    flexShrink: 0, display: 'flex', gap: 10,
+                                    padding: '14px 0 20px',
+                                    ...fadeIn(IN.editionItems, 0.4),
+                                }}>
+                                    {defDiscountCount && (
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 16, padding: '14px 18px' }}>
+                                            <div style={{ position: 'absolute', right: 4, bottom: -8, fontSize: 60, fontWeight: 900, color: 'rgba(255,255,255,0.03)', lineHeight: 1, userSelect: 'none' }}>#</div>
+                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>총 할인</div>
+                                            <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}<span style={{ fontSize: 14, marginLeft: 4, color: 'rgba(255,255,255,0.45)' }}>회</span></div>
+                                        </div>
+                                    )}
+                                    {defMaxRate && (
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.08)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 16, padding: '14px 18px', boxShadow: `0 0 20px ${cfg.glow}0.08)` }}>
+                                            <div style={{ position: 'absolute', right: 2, bottom: -8, fontSize: 60, fontWeight: 900, color: `${cfg.glow}0.06)`, lineHeight: 1, userSelect: 'none' }}>%</div>
+                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>역대 최저 할인</div>
+                                            <div style={{ fontSize: 36, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 12px ${cfg.color}80)` }}>-{defMaxRate}<span style={{ fontSize: 14, marginLeft: 2 }}>%</span></div>
+                                        </div>
+                                    )}
+                                    {defNextSale && (
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.05)`, border: `1px solid ${cfg.glow}0.16)`, borderRadius: 16, padding: '14px 18px' }}>
+                                            <div style={{ fontSize: 9, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>다음 할인 예상</div>
+                                            <div style={{ fontSize: 22, fontWeight: 900, color: cfg.color, lineHeight: 1.2 }}>{defNextSale.slice(0, 7).replace('-', '년 ')}월</div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     ) : (
-                        /* 에디션 없을 때: 할인 패턴 분석 */
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 20, marginTop: 22, minHeight: 0 }}>
-                            {/* 타이틀 헤드라인 */}
-                            <RevealText active={IN.edition} duration={0.7}>
-                                <div style={{ fontSize: 32, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>
-                                    할인 패턴 분석
-                                </div>
-                            </RevealText>
+                        /* ── 에디션 없음: 할인 패턴을 화면 중앙에 크게 ── */
+                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `0 ${HPAD} 24px`, gap: 20, position: 'relative', zIndex: 1 }}>
 
-                            {/* 수치 카드 행 — Apple PPT 스타일 대형 카드 */}
+                            {/* Ghost 배경 수치 */}
+                            {defMaxRate && (
+                                <div style={{
+                                    position: 'absolute', right: '-4%', top: '50%', transform: 'translateY(-55%)',
+                                    fontSize: 320, fontWeight: 900, lineHeight: 1, letterSpacing: '-0.06em',
+                                    color: cfg.color, opacity: 0.04, pointerEvents: 'none', userSelect: 'none',
+                                }}>
+                                    -{defMaxRate}%
+                                </div>
+                            )}
+
+                            {/* 수치 카드 행 */}
                             {(defDiscountCount !== null || defMaxRate || defMonthsPerSale) && (
                                 <div style={{ display: 'flex', gap: 14, ...fadeIn(IN.editionItems, 0) }}>
                                     {defDiscountCount !== null && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '20px 22px' }}>
-                                            <div style={{ position: 'absolute', right: 6, bottom: -12, fontSize: 80, fontWeight: 900, color: 'rgba(255,255,255,0.035)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>#</div>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>총 할인 횟수</div>
-                                            <div style={{ fontSize: 52, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}</div>
-                                            <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 5 }}>회</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.045)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '22px 24px' }}>
+                                            <div style={{ position: 'absolute', right: 6, bottom: -14, fontSize: 90, fontWeight: 900, color: 'rgba(255,255,255,0.035)', lineHeight: 1, userSelect: 'none' }}>#</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>총 할인 횟수</div>
+                                            <div style={{ fontSize: 60, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{defDiscountCount}</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>회</div>
                                         </div>
                                     )}
                                     {defMaxRate && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.28)`, borderRadius: 18, padding: '20px 22px', boxShadow: `0 0 32px ${cfg.glow}0.12)` }}>
-                                            <div style={{ position: 'absolute', right: 4, bottom: -12, fontSize: 80, fontWeight: 900, color: `${cfg.glow}0.07)`, lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>%</div>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>역대 최저 할인율</div>
-                                            <div style={{ fontSize: 52, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 18px ${cfg.color}90)` }}>-{defMaxRate}</div>
-                                            <div style={{ fontSize: 15, fontWeight: 700, color: cfg.color, marginTop: 5, opacity: 0.7 }}>%</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: `${cfg.glow}0.1)`, border: `1px solid ${cfg.glow}0.32)`, borderRadius: 20, padding: '22px 24px', boxShadow: `0 0 40px ${cfg.glow}0.14)` }}>
+                                            <div style={{ position: 'absolute', right: 2, bottom: -14, fontSize: 90, fontWeight: 900, color: `${cfg.glow}0.07)`, lineHeight: 1, userSelect: 'none' }}>%</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>역대 최저 할인율</div>
+                                            <div style={{ fontSize: 60, fontWeight: 900, color: cfg.color, lineHeight: 1, filter: `drop-shadow(0 0 22px ${cfg.color})` }}>-{defMaxRate}</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: cfg.color, marginTop: 6, opacity: 0.65 }}>%</div>
                                         </div>
                                     )}
                                     {defMonthsPerSale && (
-                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, padding: '20px 22px' }}>
-                                            <div style={{ position: 'absolute', right: 6, bottom: -12, fontSize: 80, fontWeight: 900, color: 'rgba(255,255,255,0.03)', lineHeight: 1, pointerEvents: 'none', userSelect: 'none' }}>M</div>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>할인 주기</div>
-                                            <div style={{ fontSize: 52, fontWeight: 900, color: '#fff', lineHeight: 1 }}>약 {Math.round(defMonthsPerSale)}</div>
-                                            <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 5 }}>개월마다</div>
+                                        <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '22px 24px' }}>
+                                            <div style={{ position: 'absolute', right: 6, bottom: -14, fontSize: 90, fontWeight: 900, color: 'rgba(255,255,255,0.03)', lineHeight: 1, userSelect: 'none' }}>M</div>
+                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 12 }}>할인 주기</div>
+                                            <div style={{ fontSize: 60, fontWeight: 900, color: '#fff', lineHeight: 1 }}>~{Math.round(defMonthsPerSale)}</div>
+                                            <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>개월마다</div>
                                         </div>
                                     )}
                                 </div>
                             )}
 
-                            {/* 다음 할인 예상 — 강조 카드 */}
+                            {/* 다음 할인 예상 — 강조 배너 */}
                             {defNextSale && (
                                 <div style={{
                                     position: 'relative', overflow: 'hidden',
-                                    padding: '22px 26px',
-                                    background: `${cfg.glow}0.09)`, border: `1px solid ${cfg.glow}0.30)`,
-                                    borderRadius: 18, boxShadow: `0 0 32px ${cfg.glow}0.12)`,
-                                    ...fadeIn(IN.editionItems, 0.2),
+                                    padding: '24px 28px',
+                                    background: `linear-gradient(135deg, ${cfg.glow}0.12) 0%, ${cfg.glow}0.05) 100%)`,
+                                    border: `1px solid ${cfg.glow}0.32)`,
+                                    borderRadius: 20, boxShadow: `0 0 40px ${cfg.glow}0.14)`,
+                                    ...fadeIn(IN.editionItems, 0.15),
                                 }}>
-                                    {/* shimmer overlay */}
-                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%)', animation: 'shimmer 4s 1s ease-in-out infinite', pointerEvents: 'none' }} />
-                                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: 10 }}>다음 할인 예상</div>
-                                    <div style={{ fontSize: 38, fontWeight: 900, color: cfg.color, filter: `drop-shadow(0 0 16px ${cfg.color}80)` }}>
+                                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent)', animation: 'shimmer 4s 1.5s ease-in-out infinite', pointerEvents: 'none' }} />
+                                    <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>다음 할인 예상 시점</div>
+                                    <div style={{ fontSize: 44, fontWeight: 900, color: cfg.color, filter: `drop-shadow(0 0 20px ${cfg.color}80)` }}>
                                         {defNextSale.slice(0, 7).replace('-', '년 ')}월
                                     </div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginTop: 6 }}>예상 기준 — 실제 할인과 다를 수 있습니다</div>
                                 </div>
                             )}
 
-                            {/* 할인 데이터 없을 때: publisher + genres */}
+                            {/* 데이터 없을 때 */}
                             {!defDiscountCount && !defNextSale && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, ...fadeIn(IN.edition, 0) }}>
-                                    {game.publisher && (
-                                        <div>
-                                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.62)', marginBottom: 6 }}>PUBLISHER</div>
-                                            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>{game.publisher}</div>
-                                        </div>
-                                    )}
+                                    {game.publisher && <div style={{ fontSize: 32, fontWeight: 900, color: '#fff' }}>{game.publisher}</div>}
                                     {game.genres?.length > 0 && (
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                                             {game.genres.map(g => (
                                                 <span key={g} style={{ fontSize: 15, fontWeight: 900, padding: '7px 18px', borderRadius: 24, background: `${cfg.glow}0.12)`, border: `1px solid ${cfg.glow}0.3)`, color: cfg.color }}>{g}</span>
                                             ))}
