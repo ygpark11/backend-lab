@@ -702,17 +702,48 @@ export default function GameLongformCard({ game, showOutro = false }) {
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 40%, #080810 100%), linear-gradient(to bottom, rgba(8,8,16,0.45) 0%, transparent 22%, transparent 60%, rgba(8,8,16,0.85) 100%)' }} />
 
 
-                <div style={{ position: 'absolute', bottom: 36, left: 22, right: 0 }}>
+                {/* PV + Apple 스타일 메타 정보 — 뱃지 없이 타이포그래피만으로 위계 */}
+                <div style={{ position: 'absolute', bottom: 24, left: 18, right: 12, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                    {/* verdict 색상 얇은 룰 — 인증 구역 선언 */}
+                    <div style={{ width: '60%', height: 1.5, background: cfg.color, opacity: 0.65, borderRadius: 1, boxShadow: `0 0 8px ${cfg.glow}0.5)` }} />
+
+                    {/* 장르 — editorial uppercase */}
                     {game.genres?.[0] && (
-                        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 10, textShadow: '0 2px 8px rgba(0,0,0,0.95)' }}>{game.genres[0]}</div>
+                        <div style={{
+                            fontSize: 18, fontWeight: 900, letterSpacing: '0.24em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.92)',
+                            textShadow: '0 2px 20px rgba(0,0,0,1)',
+                        }}>
+                            {game.genres[0]}
+                        </div>
                     )}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                        {game.platforms?.slice(0, 2).map(p => (
-                            <span key={p} style={{ fontSize: 12, fontWeight: 900, color: '#93c5fd', background: 'rgba(30,58,138,0.95)', border: '1px solid rgba(147,197,253,0.55)', padding: '4px 12px', borderRadius: 7 }}>{p}</span>
-                        ))}
-                        {game.isPs5ProEnhanced && <span style={{ fontSize: 12, fontWeight: 900, color: '#fff', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.4)', padding: '4px 12px', borderRadius: 7 }}>PS5 Pro</span>}
-                        {game.isPlusExclusive  && <span style={{ fontSize: 12, fontWeight: 900, color: '#fde047', background: 'rgba(113,63,18,0.95)', border: '1px solid rgba(253,224,71,0.55)', padding: '4px 12px', borderRadius: 7 }}>PLUS</span>}
-                    </div>
+
+                    {/* 플랫폼 + 속성 — dot separator 인라인, 뱃지 없음 */}
+                    {(() => {
+                        const items = [
+                            ...(game.platforms?.slice(0, 2) ?? []).map(p => ({ text: p, color: 'rgba(255,255,255,0.68)' })),
+                            game.isPs5ProEnhanced ? { text: 'PS5 Pro', color: 'rgba(226,232,240,0.9)' } : null,
+                            game.isPlusExclusive  ? { text: 'PS Plus', color: '#fde047'               } : null,
+                        ].filter(Boolean);
+                        if (!items.length) return null;
+                        return (
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0 }}>
+                                {items.map((item, i) => (
+                                    <React.Fragment key={item.text}>
+                                        <span style={{
+                                            fontSize: 13, fontWeight: 900, letterSpacing: '0.06em',
+                                            color: item.color,
+                                            textShadow: '0 1px 14px rgba(0,0,0,1)',
+                                        }}>{item.text}</span>
+                                        {i < items.length - 1 && (
+                                            <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: 10, margin: '0 9px' }}>·</span>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </div>
+                        );
+                    })()}
                 </div>
             </div>
 
@@ -1297,93 +1328,81 @@ export default function GameLongformCard({ game, showOutro = false }) {
                         </div>
                     )}
 
-                    {/* 핵심 지표 3개 */}
-                    <div style={{ display: 'flex', gap: 16, width: '100%', maxWidth: 740 }}>
-                        {/* 가격 카드 */}
-                        <div style={{
-                            flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '22px 16px', textAlign: 'center',
-                            transform: IN.verdictSub ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(18px)',
+                    {/* 핵심 지표 — 에디토리얼 컬럼 */}
+                    {(() => {
+                        const colDivider = { borderRight: '1px solid rgba(255,255,255,0.1)' };
+                        const colBase = (delay) => ({
+                            flex: 1, padding: '4px 28px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                            transform: IN.verdictSub ? 'translateY(0)' : 'translateY(20px)',
                             opacity:   IN.verdictSub ? 1 : 0,
-                            transition: `transform 0.6s 0s ${SPRING}, opacity 0.4s 0s ease`,
-                        }}>
-                            {isBuy ? <TrendingDown style={{ width: 28, height: 28, color: cfg.color, margin: '0 auto 12px', filter: `drop-shadow(0 0 12px ${cfg.color}90)` }} />
-                                   : <TrendingUp  style={{ width: 28, height: 28, color: '#f87171', margin: '0 auto 12px' }} />}
-                            <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.65)', marginBottom: 10 }}>가격</div>
-                            {game.discountRate > 0 && (
-                                <div style={{ fontSize: 28, fontWeight: 900, color: cfg.color, lineHeight: 1}}>-{game.discountRate}%</div>
-                            )}
-                            <div style={{ fontSize: game.discountRate > 0 ? 18 : 24, fontWeight: 900, color: '#fff', marginTop: 4 }}>{fmt(game.currentPrice)}원</div>
-                            {game.isAllTimeLowNew && (
-                                <div style={{ fontSize: 12, fontWeight: 900, color: cfg.color, marginTop: 6 }}>역대최저 🔥</div>
-                            )}
-                            {!isBuy && game.lowestPrice > 0 && (
-                                <>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.68)', marginTop: 6 }}>역대최저 {fmt(game.lowestPrice)}원 대기</div>
-                                    {game.currentPrice > game.lowestPrice && (
-                                        <div style={{ fontSize: 13, fontWeight: 900, color: '#f87171', marginTop: 3 }}>
-                                            -{fmt(game.currentPrice - game.lowestPrice)}원 더 기다리면
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                            transition: `transform 0.65s ${delay}s ${SPRING}, opacity 0.45s ${delay}s ease`,
+                        });
+                        const labelStyle = { fontSize: 10, fontWeight: 900, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.42)', marginBottom: 2 };
+                        const numStyle   = (color = '#fff') => ({ fontSize: 42, fontWeight: 900, color, lineHeight: 1, letterSpacing: '-0.02em' });
+                        const subStyle   = { fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 };
 
-                        {/* 평점 카드 */}
-                        {hasScores && (
-                            <div style={{
-                                flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '22px 16px', textAlign: 'center',
-                                transform: IN.verdictSub ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(18px)',
-                                opacity:   IN.verdictSub ? 1 : 0,
-                                transition: `transform 0.6s 0.1s ${SPRING}, opacity 0.4s 0.1s ease`,
-                            }}>
-                                <Star style={{ width: 28, height: 28, color: '#facc15', margin: '0 auto 12px', filter: 'drop-shadow(0 0 12px rgba(234,179,8,0.9))' }} />
-                                <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.65)', marginBottom: 10 }}>평점</div>
-                                {mcScore && <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1 }}>META {mcScore}</div>}
-                                {mcUser  && <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginTop: 5 }}>유저 {mcUser.toFixed(1)}</div>}
-                                {igdbScore && !mcScore && <div style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>IGDB {igdbScore}</div>}
-                            </div>
-                        )}
+                        const cols = [];
 
-                        {/* 플레이타임 카드 */}
-                        {hltbMain && (
-                            <div style={{
-                                flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20, padding: '22px 16px', textAlign: 'center',
-                                transform: IN.verdictSub ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(18px)',
-                                opacity:   IN.verdictSub ? 1 : 0,
-                                transition: `transform 0.6s 0.2s ${SPRING}, opacity 0.4s 0.2s ease`,
-                            }}>
-                                <Clock style={{ width: 28, height: 28, color: 'rgba(255,255,255,0.6)', margin: '0 auto 12px' }} />
-                                <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.65)', marginBottom: 10 }}>플레이타임</div>
-                                <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{Math.round(hltbMain)}시간</div>
-                                {pricePerHr && <div style={{ fontSize: 15, fontWeight: 700, color: cfg.color, marginTop: 6 }}>{fmt(pricePerHr)}원 / 시간</div>}
-                            </div>
-                        )}
-
-                        {/* 평점·플레이타임 모두 없을 때 — 퍼블리셔/장르 정보 */}
-                        {!hasScores && !hltbMain && (
-                            <div style={{
-                                flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20, padding: '22px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14,
-                                transform: IN.verdictSub ? 'scale(1) translateY(0)' : 'scale(0.85) translateY(18px)',
-                                opacity:   IN.verdictSub ? 1 : 0,
-                                transition: `transform 0.6s 0.1s ${SPRING}, opacity 0.4s 0.1s ease`,
-                            }}>
-                                <Sparkles style={{ width: 28, height: 28, color: cfg.color, margin: '0 auto', filter: `drop-shadow(0 0 10px ${cfg.color}90)` }} />
-                                {game.publisher && (
-                                    <div>
-                                        <div style={{ fontSize: 11, fontWeight: 900, letterSpacing: '0.18em', color: 'rgba(255,255,255,0.65)', marginBottom: 6 }}>PUBLISHER</div>
-                                        <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{game.publisher}</div>
-                                    </div>
+                        // 가격 컬럼 — 항상 존재
+                        cols.push(
+                            <div key="price" style={{ ...colBase(0), ...colDivider }}>
+                                <div style={labelStyle}>PRICE</div>
+                                {game.discountRate > 0
+                                    ? <div style={numStyle(cfg.color)}>-{game.discountRate}%</div>
+                                    : <div style={numStyle()}>{fmt(game.currentPrice)}원</div>
+                                }
+                                {game.discountRate > 0 && (
+                                    <div style={subStyle}>{fmt(game.currentPrice)}원</div>
                                 )}
-                                {game.genres?.length > 0 && (
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
-                                        {game.genres.slice(0, 3).map(g => (
-                                            <span key={g} style={{ fontSize: 11, fontWeight: 900, padding: '4px 10px', borderRadius: 16, background: `${cfg.glow}0.12)`, border: `1px solid ${cfg.glow}0.28)`, color: cfg.color }}>{g}</span>
-                                        ))}
-                                    </div>
+                                {game.isAllTimeLowNew && (
+                                    <div style={{ fontSize: 12, fontWeight: 900, color: cfg.color, letterSpacing: '0.1em', marginTop: 2 }}>ALL TIME LOW</div>
+                                )}
+                                {!isBuy && game.lowestPrice > 0 && game.currentPrice > game.lowestPrice && (
+                                    <div style={{ ...subStyle, color: '#f87171', marginTop: 2 }}>-{fmt(game.currentPrice - game.lowestPrice)}원 더 기다리면</div>
                                 )}
                             </div>
-                        )}
-                    </div>
+                        );
+
+                        // 평점 컬럼
+                        if (hasScores) {
+                            const scoreNum = mcScore ?? igdbScore;
+                            const scoreLabel = mcScore ? 'METACRITIC' : 'IGDB';
+                            cols.push(
+                                <div key="score" style={{ ...colBase(0.1), ...colDivider }}>
+                                    <div style={labelStyle}>{scoreLabel}</div>
+                                    <div style={numStyle()}>{scoreNum}</div>
+                                    {mcUser && <div style={subStyle}>유저 {mcUser.toFixed(1)}</div>}
+                                </div>
+                            );
+                        }
+
+                        // 플레이타임 컬럼
+                        if (hltbMain) {
+                            cols.push(
+                                <div key="hltb" style={{ ...colBase(0.2) }}>
+                                    <div style={labelStyle}>PLAY TIME</div>
+                                    <div style={numStyle()}>{Math.round(hltbMain)}<span style={{ fontSize: 20, fontWeight: 700, marginLeft: 4, opacity: 0.7 }}>hr</span></div>
+                                    {pricePerHr && <div style={{ ...subStyle, color: cfg.color }}>{fmt(pricePerHr)}원 / hr</div>}
+                                </div>
+                            );
+                        }
+
+                        // 평점·플레이타임 모두 없을 때 — 퍼블리셔 컬럼
+                        if (!hasScores && !hltbMain && game.publisher) {
+                            cols.push(
+                                <div key="pub" style={{ ...colBase(0.1) }}>
+                                    <div style={labelStyle}>PUBLISHER</div>
+                                    <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', lineHeight: 1.25, textAlign: 'center' }}>{game.publisher}</div>
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <div style={{ display: 'flex', width: '100%', maxWidth: 700, alignItems: 'flex-start' }}>
+                                {cols}
+                            </div>
+                        );
+                    })()}
 
                 </div>
 
