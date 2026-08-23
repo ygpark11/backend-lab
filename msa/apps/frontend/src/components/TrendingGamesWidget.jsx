@@ -68,29 +68,25 @@ const TrendingGamesWidget = () => {
     if (!loading && games.length === 0) return null;
 
     return (
-        <div className="mb-8 bg-glass backdrop-blur-md border border-divider rounded-xl p-4 shadow-lg">
+        <div className="mb-8">
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)]" />
+                    <Trophy className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)]" />
                     <h2 className="text-sm font-black text-primary tracking-tight">지갑 수호대 픽</h2>
-                    <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-2 py-0.5 rounded-full tracking-widest shadow-[0_0_6px_rgba(250,204,21,0.15)]">
+                    <span className="text-[10px] font-black text-yellow-400 bg-yellow-400/10 border border-yellow-400/30 px-2 py-0.5 rounded-full tracking-widest">
                         TOP 10
                     </span>
                 </div>
                 <span className="text-[10px] text-muted font-bold hidden sm:block">가장 많이 찜한 게임</span>
             </div>
 
-            {/* 가로 스크롤 */}
+            {/* 시네마틱 가로 스크롤 */}
             {loading ? (
                 <div className="flex gap-3 overflow-hidden">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="shrink-0 w-[100px] sm:w-[120px] flex flex-col gap-1.5 p-2 rounded-xl bg-surface border border-divider">
-                            <div className="relative w-full aspect-[3/4] rounded-lg bg-surface-hover overflow-hidden">
-                                <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-divider-strong to-transparent" />
-                            </div>
-                            <div className="h-3 rounded bg-surface-hover w-3/4 mx-auto" />
-                            <div className="h-2.5 rounded bg-surface-hover w-1/2 mx-auto" />
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="shrink-0 w-[220px] sm:w-[280px] h-[160px] sm:h-[200px] rounded-xl bg-surface border border-divider overflow-hidden relative">
+                            <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-divider-strong to-transparent" />
                         </div>
                     ))}
                 </div>
@@ -107,42 +103,48 @@ const TrendingGamesWidget = () => {
                                 if (dragRef.current.moved) return;
                                 navigate(`/games/${game.id}`, { state: { background: location } });
                             }}
-                            className="shrink-0 snap-center w-[100px] sm:w-[120px] flex flex-col items-center gap-1.5 p-2 rounded-xl bg-surface border border-divider hover:border-ps-blue/50 hover:bg-surface-hover transition-all active:scale-95"
+                            className="group shrink-0 snap-center w-[220px] sm:w-[280px] md:w-[320px] rounded-xl overflow-hidden relative border border-divider bg-surface active:scale-95 transition-transform"
                         >
-                            {/* 이미지 + 등수 배지 */}
-                            <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
+                            {/* 배너 이미지 */}
+                            <div className="relative w-full h-[160px] sm:h-[200px] overflow-hidden">
                                 <PSGameImage
                                     src={game.imageUrl}
                                     alt={game.title}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                                     width={640}
                                 />
-                                <div className="absolute top-0 left-0 z-20 px-1.5 py-0.5 rounded-br-lg backdrop-blur-md border-b border-r bg-glass border-divider">
-                                    <span className={`text-[10px] font-black tracking-tight ${
+                                {/* 그래디언트 오버레이 */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+
+                                {/* 등수 배지 */}
+                                <div className="absolute top-0 left-0 px-2 py-1 rounded-br-xl backdrop-blur-md border-b border-r bg-black/40 border-white/10 z-10">
+                                    <span className={`text-[11px] font-black tracking-tight ${
                                         game.rank === 1 ? 'text-yellow-400' :
-                                        game.rank === 2 ? 'text-gray-400' :
+                                        game.rank === 2 ? 'text-gray-300' :
                                         game.rank === 3 ? 'text-amber-500' :
-                                        'text-secondary'}`}
+                                        'text-white/70'}`}
                                     >
                                         {game.rank}위
                                     </span>
                                 </div>
-                            </div>
 
-                            {/* 타이틀 */}
-                            <p className="text-xs font-bold text-primary line-clamp-2 w-full text-center leading-snug break-keep">{game.title}</p>
-
-                            {/* priceVerdict + 가격 */}
-                            <div className="flex items-center gap-1">
-                                {game.priceVerdict === 'BUY_NOW'    && <Circle   className="w-3 h-3 text-green-500 fill-green-500" />}
-                                {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-3 h-3 text-yellow-400 fill-yellow-400" />}
-                                {game.priceVerdict === 'WAIT'       && <X        className="w-3 h-3 text-red-500" />}
-                                {(game.priceVerdict === 'TRACKING' || !game.priceVerdict) && <Square className="w-3 h-3 text-ps-blue" />}
-                                {game.currentPrice > 0 && (
-                                    <span className="text-[10px] font-bold text-secondary">
-                                        ₩{game.currentPrice.toLocaleString()}
-                                    </span>
-                                )}
+                                {/* 하단 정보: 타이틀 + verdict + 가격 */}
+                                <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
+                                    <p className="text-xs font-bold text-white/90 line-clamp-1 mb-2 text-left break-keep">{game.title}</p>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10">
+                                            {game.priceVerdict === 'BUY_NOW'    && <Circle   className="w-4 h-4 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.9)]" />}
+                                            {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_6px_rgba(234,179,8,0.9)]" />}
+                                            {game.priceVerdict === 'WAIT'       && <X        className="w-4 h-4 text-red-400 drop-shadow-[0_0_6px_rgba(239,68,68,0.9)]" />}
+                                            {(game.priceVerdict === 'TRACKING' || !game.priceVerdict) && <Square className="w-4 h-4 text-blue-400 drop-shadow-[0_0_6px_rgba(59,130,246,0.9)]" />}
+                                            {game.currentPrice > 0 && (
+                                                <span className="text-xs font-black text-white">
+                                                    ₩{game.currentPrice.toLocaleString()}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </button>
                     ))}

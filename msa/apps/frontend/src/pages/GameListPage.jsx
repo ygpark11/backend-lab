@@ -1,5 +1,4 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import client from '../api/client';
 import toast from 'react-hot-toast';
 import SkeletonCard from '../components/SkeletonCard';
@@ -2005,81 +2004,56 @@ const GameListPage = () => {
                                         {isLastCall && <span className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
                                         {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
 
-                                        <button onClick={(e) => handleLike(e, game.id)} className={`absolute bottom-12 right-2 p-2 rounded-full transition-all transform hover:scale-110 z-20 shadow-lg backdrop-blur-sm ${game.liked ? 'bg-red-500/20 text-red-500' : 'bg-glass text-secondary hover:bg-[var(--bento-red-from)] hover:text-red-500'}`}>
+                                        <button onClick={(e) => handleLike(e, game.id)} className={`absolute bottom-2 right-2 p-2 rounded-full transition-all transform hover:scale-110 z-20 shadow-lg backdrop-blur-sm ${game.liked ? 'bg-red-500/20 text-red-500' : 'bg-glass text-secondary hover:bg-[var(--bento-red-from)] hover:text-red-500'}`}>
                                             <Heart className={`w-5 h-5 ${game.liked ? 'fill-current' : ''}`} />
                                         </button>
-
-                                        {game.discountRate > 0 && <span className="absolute bottom-2 right-2 bg-ps-blue text-white text-xs font-bold px-2 py-1 rounded shadow-md z-10">-{game.discountRate}%</span>}
-
-                                        {game.inCatalog && (
-                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-[0_0_10px_rgba(250,204,21,0.6)] z-10 flex items-center gap-1 animate-pulse-slow">
-                                                <Gamepad2 className="w-3 h-3 fill-black" /> EXTRA
-                                            </span>
-                                        )}
-                                        {!game.inCatalog && game.isPlusExclusive && (
-                                            <span className="absolute bottom-2 left-2 bg-yellow-400 text-black text-[10px] font-black px-1.5 py-0.5 rounded z-10 shadow-md">PLUS</span>
-                                        )}
                                     </div>
 
-                                    <div className="p-4 flex flex-col flex-1 bg-transparent relative z-20">
-                                        <div className="flex flex-wrap gap-1 mb-2 min-h-[22px] items-center">
-                                            {game.isPs5ProEnhanced && <span className="text-[10px] px-1.5 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">PRO</span>}
-                                            {game.genres && game.genres.length > 0 ? (
-                                                <>
-                                                    {game.genres.slice(0, 2).map((g, i) => <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded border font-bold transition-colors ${getGenreBadgeStyle(g)}`}>{g}</span>)}
-                                                    {game.genres.length > 2 && <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-muted border-divider">+{game.genres.length - 2}</span>}
-                                                </>
-                                            ) : (
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded border font-bold bg-surface text-secondary border-divider">미분류</span>
-                                            )}
-                                        </div>
-
+                                    <div className="p-4 flex flex-col flex-1 bg-transparent">
                                         {game.pioneerName && (
-                                            <div className="self-start inline-flex items-center gap-1.5 mb-3 -ml-4 bg-surface border-y border-r border-divider border-l-[4px] border-l-ps-blue py-1 pl-3 pr-4 rounded-r-lg shadow-md">
+                                            <div className="self-start inline-flex items-center gap-1.5 mb-2 -ml-4 bg-surface border-y border-r border-divider border-l-[4px] border-l-ps-blue py-1 pl-3 pr-4 rounded-r-lg shadow-md">
                                                 <Pickaxe className="w-3.5 h-3.5 text-ps-blue drop-shadow-sm" />
                                                 <span className="text-[10.5px] sm:text-xs font-black text-ps-blue truncate max-w-[130px] sm:max-w-[160px]">{game.pioneerName}</span>
                                             </div>
                                         )}
 
-                                        <h3 className="text-sm font-bold text-primary leading-[1.3] line-clamp-2 h-[2.6em] overflow-hidden mb-3 group-hover:text-ps-blue transition-colors relative z-20">
+                                        <h3 className="text-sm font-bold text-primary leading-[1.3] line-clamp-2 mb-2 group-hover:text-ps-blue transition-colors">
                                             {cleanTitle(game.name)}
                                         </h3>
 
-                                        <div className="mt-auto relative z-20">
-                                            {game.priceVerdict === 'BUY_NOW' && (
-                                                game.isAllTimeLowNew
-                                                    ? <p className="text-[9px] font-black text-green-500 tracking-wider flex items-center gap-0.5 mb-0.5"><Flame className="w-2.5 h-2.5" />역대최저 갱신</p>
-                                                    : <p className="text-[9px] font-black text-green-600/70 dark:text-green-400/70 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingUp className="w-2.5 h-2.5" />역대최저 동률</p>
-                                            )}
-                                            {game.priceVerdict === 'GOOD_OFFER' && <p className="text-[9px] font-black text-amber-500 tracking-wider flex items-center gap-0.5 mb-0.5"><TrendingDown className="w-2.5 h-2.5" />괜찮은 가격</p>}
-                                            {game.priceVerdict === 'WAIT' && <p className="text-[9px] font-black text-red-400/80 tracking-wider flex items-center gap-0.5 mb-0.5"><Clock className="w-2.5 h-2.5" />지금비싼편</p>}
-                                            {game.discountRate > 0 && <p className="whitespace-nowrap text-xs text-muted line-through mb-1">{game.originalPrice?.toLocaleString()}원</p>}
-                                            <div className="flex justify-between items-end gap-1 sm:gap-2 w-full">
-                                                <p className="whitespace-nowrap text-base sm:text-lg font-black text-primary tracking-tight">
-                                                    {game.currentPrice?.toLocaleString() || game.price?.toLocaleString()}
-                                                    <span className="text-xs sm:text-sm font-medium ml-0.5">원</span>
-                                                </p>
-
-                                                {game.displayScore && (
-                                                    <div className="shrink-0 flex items-center shadow-sm rounded border border-divider overflow-hidden bg-surface">
-
-                                                        <div className={`px-1.5 py-0.5 text-[10px] font-black flex items-center justify-center
-                                                        ${game.scoreSource === 'MC'
-                                                            ? 'bg-black text-white dark:bg-white dark:text-black'
-                                                            : 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300'}`}>
-                                                            {game.scoreSource === 'MC' ? 'M' : 'I'}
-                                                        </div>
-
-                                                        <span className={`px-1.5 py-0.5 text-[11px] font-black tracking-tight
-                                                        ${game.scoreSource === 'MC'
-                                                            ? (game.displayScore >= 75 ? 'text-green-600 dark:text-green-400 bg-green-500/10'
-                                                                : game.displayScore >= 50 ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-500/10'
-                                                                    : 'text-red-600 dark:text-red-400 bg-red-500/10')
-                                                            : 'text-primary'}`}>
+                                        <div className="flex flex-wrap gap-1.5 mb-3 min-h-[22px] items-center">
+                                            {game.isPs5ProEnhanced && <span className="text-[10px] px-2 py-0.5 rounded border font-black bg-gradient-to-r from-gray-300 to-white text-black border-white shadow-[0_0_8px_rgba(255,255,255,0.4)] tracking-wider">PRO</span>}
+                                            {game.inCatalog && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-400/15 text-yellow-500 border border-yellow-400/30">EXTRA</span>}
+                                            {!game.inCatalog && game.isPlusExclusive && <span className="text-[10px] font-black px-2 py-0.5 rounded bg-yellow-400/15 text-yellow-500 border border-yellow-400/30">PLUS</span>}
+                                            {game.displayScore && (
+                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded border flex items-center gap-1 ${game.scoreSource === 'MC' ? 'bg-black/80 border-white/10 dark:bg-white/10 dark:border-white/20' : 'bg-purple-500/10 border-purple-400/30'}`}>
+                                                    <span className="text-white/50">{game.scoreSource === 'MC' ? 'M' : 'I'}</span>
+                                                    <span className={game.scoreSource === 'MC'
+                                                        ? (game.displayScore >= 75 ? 'text-green-400' : game.displayScore >= 50 ? 'text-yellow-400' : 'text-red-400')
+                                                        : 'text-purple-400'}>
                                                         {game.displayScore}
                                                     </span>
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="mt-auto flex items-center justify-between gap-2">
+                                            {game.priceVerdict === 'BUY_NOW' && <Circle className="w-8 h-8 shrink-0 text-green-500 drop-shadow-[0_0_10px_rgba(34,197,94,0.9)]" />}
+                                            {game.priceVerdict === 'GOOD_OFFER' && <Triangle className="w-8 h-8 shrink-0 text-yellow-400 drop-shadow-[0_0_10px_rgba(234,179,8,0.9)]" />}
+                                            {game.priceVerdict === 'WAIT' && <X className="w-8 h-8 shrink-0 text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.9)]" />}
+                                            {(game.priceVerdict === 'TRACKING' || !game.priceVerdict) && <Square className="w-8 h-8 shrink-0 text-ps-blue drop-shadow-[0_0_10px_rgba(59,130,246,0.9)]" />}
+                                            <div className="text-right">
+                                                {game.discountRate > 0 && (
+                                                    <div className="flex items-center justify-end gap-1.5 mb-1">
+                                                        {game.originalPrice && <p className="text-xs text-muted line-through leading-none">{game.originalPrice.toLocaleString()}원</p>}
+                                                        <span className="text-[10px] font-black text-ps-blue bg-ps-blue/10 border border-ps-blue/30 px-1.5 py-0.5 rounded leading-none">
+                                                            -{game.discountRate}%
+                                                        </span>
                                                     </div>
                                                 )}
+                                                <p className="text-base font-black text-primary tracking-tight leading-none">
+                                                    {currentPrice?.toLocaleString()}원
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
