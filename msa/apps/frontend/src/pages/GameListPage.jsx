@@ -2045,7 +2045,7 @@ const GameListPage = () => {
                                             <div className="text-right">
                                                 {game.discountRate > 0 && (
                                                     <div className="flex items-center justify-end gap-1.5 mb-1">
-                                                        {game.originalPrice && <p className="text-xs text-muted line-through leading-none">{game.originalPrice.toLocaleString()}원</p>}
+                                                        {game.originalPrice && <p className="text-xs text-muted line-through leading-none whitespace-nowrap">{game.originalPrice.toLocaleString()}원</p>}
                                                         <span className="text-[10px] font-black text-ps-blue bg-ps-blue/10 border border-ps-blue/30 px-1.5 py-0.5 rounded leading-none">
                                                             -{game.discountRate}%
                                                         </span>
