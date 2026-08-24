@@ -42,6 +42,7 @@ import {
     Share2,
     Sparkles,
     Square,
+    Star,
     Timer,
     Trash2,
     TrendingDown,
@@ -536,6 +537,24 @@ export default function GameDetailPage() {
     const mainScore = hasMetacritic ? game.mcMetaScore : (hasIgdb ? game.igdbCriticScore : null);
     const userScore = hasMetacritic ? game.mcUserScore : (hasIgdb ? (game.igdbUserScore ? game.igdbUserScore / 10 : null) : null);
 
+
+    const getMetacriticBadgeColor = (score, scale = 100) => {
+        if (score === null || score === undefined) return 'bg-base border border-divider text-muted';
+        const normalized = scale === 10 ? score * 10 : score;
+        if (normalized >= 75) return 'bg-green-600 text-white font-black shadow-[0_2px_10px_rgba(22,163,74,0.3)]';
+        if (normalized >= 50) return 'bg-yellow-500 text-black font-black shadow-[0_2px_10px_rgba(234,179,8,0.3)]';
+        return 'bg-red-600 text-white font-black shadow-[0_2px_10px_rgba(220,38,38,0.3)]';
+    };
+
+    const getMetacriticVerdict = (score, scale = 100) => {
+        if (score === null || score === undefined) return { label: '집계 중', icon: null, color: 'text-muted' };
+        const normalized = scale === 10 ? score * 10 : score;
+        if (normalized >= 90) return { label: '명작 인증', icon: 'flame', color: 'text-green-400 font-black' };
+        if (normalized >= 75) return { label: '대체로 호평', icon: 'check', color: 'text-primary font-bold' };
+        if (normalized >= 50) return { label: '호불호 / 평범', icon: null, color: 'text-secondary font-medium' };
+        return { label: '부정적 평가', icon: 'alert', color: 'text-red-400 font-bold' };
+    };
+
     const getScoreColor = (score, scale = 100) => {
         if (!score) return 'text-secondary';
         const percentage = scale === 10 ? score * 10 : score;
@@ -854,11 +873,12 @@ export default function GameDetailPage() {
                         {/* 3. 3-구역 Bento Grid (모바일: 평점+플레이타임 2열 나란히 + 하단 스펙 / PC: 3열 나란히) */}
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
-                            {/* Bento 1: 평점 카드 (모바일: 좌측 1열 / PC: 1열) */}
+                            {/* Bento 1: 평점 카드 (메타크리틱 시그니처 듀얼 뱃지 스타일) */}
                             <div className="col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md relative overflow-hidden">
-                                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                                    <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase">
-                                        {reviewSource ? (reviewSource === 'METACRITIC' ? '전문가 평점' : 'IGDB 평점') : '평가 지표'}
+                                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+                                    <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1">
+                                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                        <span>{reviewSource ? (reviewSource === 'METACRITIC' ? '메타크리틱 평점' : 'IGDB 평점') : '평가 지표'}</span>
                                     </span>
                                     {reviewSource && (
                                         <span className="bg-black text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded border border-white/20">
@@ -868,47 +888,61 @@ export default function GameDetailPage() {
                                 </div>
 
                                 {hasAnyReview ? (
-                                    <>
-                                        <div className="flex items-baseline gap-1.5 my-0.5 sm:my-1">
-                                            <span className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tight ${getScoreColor(mainScore, 100)}`}>
-                                                {mainScore || '-'}
-                                            </span>
-                                            <span className="text-[10px] sm:text-xs text-muted font-bold">/ 100</span>
-                                        </div>
-
-                                        <div className="mt-0.5">
-                                            {mainScore >= 85 ? (
-                                                <span className="inline-block text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-green-500/15 border border-green-500/30 text-green-400">
-                                                    MUST PLAY
+                                    <div className="flex flex-col gap-2 sm:gap-2.5 my-auto">
+                                        {/* 1. 메타스코어 (전문가 - 사각 뱃지) */}
+                                        <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
+                                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-base sm:text-lg shrink-0 ${getMetacriticBadgeColor(mainScore, 100)}`}>
+                                                {mainScore ?? '-'}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
+                                                    {reviewSource === 'METACRITIC' ? '메타스코어' : '전문가 평점'}
                                                 </span>
-                                            ) : mainScore >= 75 ? (
-                                                <span className="inline-block text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-md bg-yellow-500/15 border border-yellow-500/30 text-yellow-400">
-                                                    RECOMMENDED
-                                                </span>
-                                            ) : (
-                                                <span className="inline-block text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-md bg-base border border-divider text-secondary">
-                                                    MIXED
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {userScore !== null && userScore > 0 && (
-                                            <div className="mt-3 pt-2.5 border-t border-divider/60 flex flex-col gap-1">
-                                                <div className="flex justify-between text-[11px] sm:text-xs font-bold">
-                                                    <span className="text-secondary dark:text-zinc-300">유저 평점</span>
-                                                    <span className={getScoreColor(userScore, 10)}>
-                                                        {userScore.toFixed(1)} / 10
-                                                    </span>
-                                                </div>
-                                                <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
-                                                    <div
-                                                        className={`h-full rounded-full ${getScoreBarBg(userScore, 10)}`}
-                                                        style={{ width: `${userScore * 10}%` }}
-                                                    />
+                                                <div className="flex items-center gap-1 mt-0.5">
+                                                    {(() => {
+                                                        const verdict = getMetacriticVerdict(mainScore, 100);
+                                                        return (
+                                                            <>
+                                                                {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
+                                                                {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
+                                                                {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                                                                <span className={`text-xs truncate ${verdict.color}`}>
+                                                                    {verdict.label}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
-                                        )}
-                                    </>
+                                        </div>
+
+                                        {/* 2. 유저 스코어 (원형 뱃지) */}
+                                        <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
+                                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-base sm:text-lg shrink-0 ${getMetacriticBadgeColor(userScore, 10)}`}>
+                                                {userScore !== null ? Number(userScore).toFixed(1) : '-'}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
+                                                    유저 스코어
+                                                </span>
+                                                <div className="flex items-center gap-1 mt-0.5">
+                                                    {(() => {
+                                                        const verdict = getMetacriticVerdict(userScore, 10);
+                                                        return (
+                                                            <>
+                                                                {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
+                                                                {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
+                                                                {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                                                                <span className={`text-xs truncate ${verdict.color}`}>
+                                                                    {verdict.label}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <div className="my-auto text-center py-4">
                                         <p className="text-xs text-secondary font-bold">등록된 공식 평점이 없습니다.</p>
