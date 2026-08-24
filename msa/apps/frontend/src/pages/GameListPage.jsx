@@ -407,10 +407,9 @@ const GameListPage = () => {
     useEffect(() => {
         const fetchDiscount = async () => {
             try {
-                const res = await client.get('/api/v1/ps-plus/discounts');
-                if (res.data && res.data.length > 0) {
-                    const topDiscount = res.data.reduce((max, item) => item.discountRate > max.discountRate ? item : max, res.data[0]);
-                    setPsPlusDiscount(topDiscount);
+                const res = await client.get('/api/v1/subscriptions/ps-plus/pricing');
+                if (res.data && res.data.promotionActive && res.data.promotionDiscountRate) {
+                    setPsPlusDiscount({ discountRate: res.data.promotionDiscountRate });
                 }
             } catch (err) {}
         };
@@ -421,7 +420,7 @@ const GameListPage = () => {
         const timer = setTimeout(() => {
             const trimmed = searchInput.trim();
             if (trimmed.length >= 2) {
-                client.get(`/api/v1/games/search/suggestions?keyword=${encodeURIComponent(trimmed)}`)
+                client.get(`/api/v1/games/suggest?q=${encodeURIComponent(trimmed)}`)
                     .then(res => setSuggestions(res.data))
                     .catch(() => setSuggestions([]));
             } else {
