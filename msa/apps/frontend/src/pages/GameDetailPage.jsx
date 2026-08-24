@@ -1064,18 +1064,13 @@ export default function GameDetailPage() {
                             </div>
                         )}
 
-                        {/* 7. 가격 변동 히스토리 차트 (명도 대비 배경 적용) */}
-                        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-6 shadow-md relative overflow-hidden">
-                            <div className="flex items-center justify-between mb-5">
+                        {/* 7. 가격 변동 추이 차트 */}
+                        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden">
+                            <div className="flex items-center justify-between mb-3.5 sm:mb-4">
                                 <h3 className="text-base font-black text-primary flex items-center gap-2">
                                     <TrendingUp className="w-5 h-5 text-ps-blue" />
-                                    <span>가격 변동 추이 (Price History)</span>
+                                    <span>가격 변동 추이</span>
                                 </h3>
-                                {game.lowestPrice > 0 && (
-                                    <span className="text-xs font-extrabold text-green-400 bg-green-500/10 border border-green-500/30 px-2.5 py-1 rounded-lg">
-                                        역대 최저 ₩{game.lowestPrice.toLocaleString()}
-                                    </span>
-                                )}
                             </div>
                             <div className="relative">
                                 <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
