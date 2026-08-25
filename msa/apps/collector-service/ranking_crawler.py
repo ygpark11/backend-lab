@@ -7,6 +7,7 @@ import logging
 import json
 import gc
 import threading
+import subprocess
 import requests
 
 from playwright.sync_api import sync_playwright
@@ -31,13 +32,6 @@ if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 CACHE_FILE = os.path.join(DATA_DIR, 'concept_map.json')
-
-def _safe_close(obj):
-    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리."""
-    try:
-        obj.close()
-    except Exception:
-        pass
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
@@ -79,14 +73,20 @@ class BrowserManager:
     def get_context(self):
         if self.request_count >= RESTART_INTERVAL:
             logger.info("[메모리 관리] 브라우저 강제 환생! 🧹")
-            # close()가 Playwright 이벤트 루프 교착으로 무한 block될 수 있어
-            # 별도 스레드 + 5초 타임아웃으로 감싸서 hang 방지
-            for target in (self.context, self.browser):
-                if target is None:
-                    continue
-                t = threading.Thread(target=lambda obj=target: _safe_close(obj), daemon=True)
-                t.start()
-                t.join(timeout=5)
+            # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
+            # 같은 스레드에서 close()를 호출하되, 5초 초과 시 Chromium SIGKILL로 강제 unblock.
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    logger.warning("[BrowserManager] close() 교착 → Chromium SIGKILL")
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+
+            try: self.context.close()
+            except Exception: pass
+            try: self.browser.close()
+            except Exception: pass
+            _close_done.set()
 
             self.context = None
             self.browser = None

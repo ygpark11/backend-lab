@@ -85,15 +85,6 @@ CONFIG = {
 }
 CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
 MAX_BATCH_SEC = 10 * 3600  # 10시간: 정상 배치 최대 소요 초과 시 교착으로 판단
-
-def _safe_close(obj):
-    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리.
-    데몬 스레드 내에서 browser/context가 이미 닫혔을 때 발생하는 노이즈 방지용."""
-    try:
-        obj.close()
-    except Exception:
-        pass
-
 logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Engine: Playwright (Manual Stealth)")
 
 SHARD_ID = int(os.getenv('SHARD_ID', '0'))
@@ -149,14 +140,20 @@ class BrowserManager:
 
     def get_context(self):
         if self.request_count >= CONF["restart_interval"]:
-            # close()가 Playwright 이벤트 루프 교착으로 무한 block될 수 있어
-            # 별도 스레드 + 5초 타임아웃으로 감싸서 hang 방지
-            for target in (self.context, self.browser):
-                if target is None:
-                    continue
-                t = threading.Thread(target=lambda obj=target: _safe_close(obj), daemon=True)
-                t.start()
-                t.join(timeout=5)
+            # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
+            # 같은 스레드에서 close()를 호출하되, 5초 초과 시 Chromium SIGKILL로 강제 unblock.
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    logger.warning("[BrowserManager] close() 교착 → Chromium SIGKILL")
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+
+            try: self.context.close()
+            except Exception: pass
+            try: self.browser.close()
+            except Exception: pass
+            _close_done.set()
 
             self.context = None
             self.browser = None
@@ -246,17 +243,13 @@ def run_with_watchdog(bm, url):
             )
             watchdog_fired.set()
 
-            # 1단계: Playwright API로 컨텍스트 graceful 종료 (5초 타임아웃)
-            # context.close() 자체가 교착 상태일 때 블로킹되는 것을 방지하기 위해 별도 스레드에서 실행
-            t = threading.Thread(target=lambda: bm.context.close(), daemon=True)
-            t.start()
-            t.join(timeout=5)
+            # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
+            # SIGKILL로 Chromium을 종료하면 main thread의 blocking Playwright call이
+            # exception으로 unblock되어 자연스럽게 finally → bm 재시작 경로로 진입.
+            subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
 
-            # 2단계: 10초 후에도 main thread가 안 깨어나면 → Chromium 프로세스 SIGKILL
-            # (이벤트 루프 자체가 완전 교착된 경우 context.close()도 블로킹됨)
             if not done.wait(timeout=10):
-                logger.error("[Watchdog] context 종료 실패 → Chromium SIGKILL 실행")
-                subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+                logger.error("[Watchdog] SIGKILL 후 10초 경과, main thread 여전히 blocking")
 
     threading.Thread(target=_watchdog, daemon=True).start()
 
@@ -1139,11 +1132,17 @@ def run_batch_crawler_logic():
             try: crawl_phase0_new_releases(bm)
             except Exception as e: logger.error(f"Phase 0 Error: {e}")
 
-            for _target in (bm.context, bm.browser):
-                if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
-                _t.start()
-                _t.join(timeout=5)
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    logger.warning("[Sync 구간] close() 교착 → Chromium SIGKILL")
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+            try: bm.context.close()
+            except Exception: pass
+            try: bm.browser.close()
+            except Exception: pass
+            _close_done.set()
 
         gc.collect()
         logger.info("[Sync 구간 종료] Pre-Phase + Phase 0 완료. Phase 1/2 순차 수집 시작.")
@@ -1227,11 +1226,17 @@ def run_batch_crawler_logic():
                                     collected_deals.append(res)
                         visited_urls.add(url)
 
-            for _target in (bm.context, bm.browser):
-                if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
-                _t.start()
-                _t.join(timeout=5)
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    logger.warning("[Phase 1/2] close() 교착 → Chromium SIGKILL")
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+            try: bm.context.close()
+            except Exception: pass
+            try: bm.browser.close()
+            except Exception: pass
+            _close_done.set()
 
         logger.info("[System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)

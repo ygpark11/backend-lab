@@ -4,6 +4,7 @@ import re
 import random
 import logging
 import threading
+import subprocess
 import requests
 import gc
 import urllib.parse
@@ -17,13 +18,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0"
 ]
-
-def _safe_close(obj):
-    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리."""
-    try:
-        obj.close()
-    except Exception:
-        pass
 
 def generate_slug(title):
     slug = title.lower()
@@ -131,11 +125,16 @@ def crawl_metacritic_single(game_title):
             logger.error(f"파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            for _target in (page, context, browser):
-                if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
-                _t.start()
-                _t.join(timeout=5)
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+            for _obj in (page, context, browser):
+                if _obj is None: continue
+                try: _obj.close()
+                except Exception: pass
+            _close_done.set()
             gc.collect()
 
     return result
@@ -222,11 +221,16 @@ def crawl_hltb_single(game_title):
             logger.error(f"[HLTB] 파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            for _target in (page, context, browser):
-                if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
-                _t.start()
-                _t.join(timeout=5)
+            _close_done = threading.Event()
+            def _kill_if_stuck():
+                if not _close_done.wait(timeout=5):
+                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            threading.Thread(target=_kill_if_stuck, daemon=True).start()
+            for _obj in (page, context, browser):
+                if _obj is None: continue
+                try: _obj.close()
+                except Exception: pass
+            _close_done.set()
             gc.collect()
 
     return result
