@@ -536,6 +536,7 @@ export default function GameDetailPage() {
     const reviewSource = hasMetacritic ? 'METACRITIC' : (hasIgdb ? 'IGDB' : null);
     const mainScore = hasMetacritic ? game.mcMetaScore : (hasIgdb ? game.igdbCriticScore : null);
     const userScore = hasMetacritic ? game.mcUserScore : (hasIgdb ? (game.igdbUserScore ? game.igdbUserScore / 10 : null) : null);
+    const isKorean = Boolean(game.title && game.title.includes('한국어'));
 
 
     const getMetacriticBadgeColor = (score, scale = 100) => {
@@ -1017,41 +1018,50 @@ export default function GameDetailPage() {
                                     </span>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2 sm:gap-2.5 my-auto">
+                                <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-2.5 my-auto">
                                     {/* 1. 지원 기종 */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center">
-                                        <Tv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue mb-1" />
-                                        <span className="text-[10px] text-secondary dark:text-zinc-400 font-extrabold mb-0.5">지원 기종</span>
-                                        <span className="text-xs font-black text-primary truncate max-w-full">
+                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                            <Tv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue shrink-0" />
+                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">지원 기종</span>
+                                        </div>
+                                        <span className="text-xs sm:text-xs font-black text-primary px-1.5 py-0.5 rounded bg-surface/80 border border-divider truncate max-w-full">
                                             {game.platforms && game.platforms.length > 0 ? game.platforms.join(' / ') : 'PS5 / PS4'}
                                         </span>
                                     </div>
 
                                     {/* 2. PS5 Pro 지원/미지원 */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center">
-                                        <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 mb-1" />
-                                        <span className="text-[10px] text-secondary dark:text-zinc-400 font-extrabold mb-0.5">PS5 Pro</span>
-                                        <span className={`text-xs font-black ${game.isPs5ProEnhanced ? "text-indigo-400" : "text-secondary"}`}>
-                                            {game.isPs5ProEnhanced ? '지원' : '미지원'}
-                                        </span>
+                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 dark:text-zinc-200 shrink-0" />
+                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">PS5 Pro</span>
+                                        </div>
+                                        {game.isPs5ProEnhanced ? (
+                                            <span className="text-[11px] sm:text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-200/90 dark:bg-zinc-700/90 px-1.5 sm:px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-500 shadow-sm whitespace-nowrap">
+                                                Pro 향상 ✨
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
+                                                기본 구동
+                                            </span>
+                                        )}
                                     </div>
 
-                                    {/* 3. 한국어 지원 (데이터 확장 대비 규격화) */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center">
-                                        <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400 mb-1" />
-                                        <span className="text-[10px] text-secondary dark:text-zinc-400 font-extrabold mb-0.5">한국어 지원</span>
-                                        <span className="text-xs font-bold text-muted">
-                                            수집 중
-                                        </span>
-                                    </div>
-
-                                    {/* 4. 콘텐츠 유형 (데이터 확장 대비 규격화) */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center">
-                                        <Gamepad2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 mb-1" />
-                                        <span className="text-[10px] text-secondary dark:text-zinc-400 font-extrabold mb-0.5">콘텐츠 유형</span>
-                                        <span className="text-xs font-bold text-muted">
-                                            수집 중
-                                        </span>
+                                    {/* 3. 한국어 지원 (원본 제목 기반 판정) */}
+                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                            <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">한국어</span>
+                                        </div>
+                                        {isKorean ? (
+                                            <span className="text-[11px] sm:text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                <Check className="w-3 h-3" /> 공식 지원
+                                            </span>
+                                        ) : (
+                                            <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
+                                                미지원 (외국어)
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
