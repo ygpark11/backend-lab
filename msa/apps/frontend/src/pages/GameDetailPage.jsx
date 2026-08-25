@@ -549,10 +549,10 @@ export default function GameDetailPage() {
     const getMetacriticVerdict = (score, scale = 100) => {
         if (score === null || score === undefined) return { label: '집계 중', icon: null, color: 'text-muted' };
         const normalized = scale === 10 ? score * 10 : score;
-        if (normalized >= 90) return { label: '명작 인증', icon: 'flame', color: 'text-green-400 font-black' };
-        if (normalized >= 75) return { label: '대체로 호평', icon: 'check', color: 'text-primary font-bold' };
-        if (normalized >= 50) return { label: '호불호 / 평범', icon: null, color: 'text-secondary font-medium' };
-        return { label: '부정적 평가', icon: 'alert', color: 'text-red-400 font-bold' };
+        if (normalized >= 90) return { label: '명작 인증', icon: 'flame', color: 'text-green-500 dark:text-green-400 font-black' };
+        if (normalized >= 75) return { label: '호평', icon: 'check', color: 'text-green-600 dark:text-green-400 font-bold' };
+        if (normalized >= 50) return { label: '보통', icon: null, color: 'text-secondary dark:text-zinc-400 font-bold' };
+        return { label: '혹평', icon: 'alert', color: 'text-red-500 dark:text-red-400 font-bold' };
     };
 
     const getScoreColor = (score, scale = 100) => {
@@ -758,7 +758,7 @@ export default function GameDetailPage() {
                         </div>
 
                         {/* 2. 대형 가격 신호등 판정 히어로 패널 (Price Hero & Value Tracker) */}
-                        <div className={`p-6 md:p-8 rounded-3xl border-2 backdrop-blur-xl relative overflow-hidden transition-all duration-300 bg-surface/95 dark:bg-surface/90 shadow-md ${currentTheme.border}`}>
+                        <div className={`p-6 md:p-8 rounded-3xl border-2 backdrop-blur-xl relative overflow-hidden transition-all duration-300 bg-surface/95 dark:bg-surface/90 shadow-md transform-gpu ${currentTheme.border}`}>
                             <div className={`absolute -top-20 -right-20 w-48 h-48 ${currentTheme.glowBg} blur-[90px] opacity-15 rounded-full pointer-events-none`} />
 
                             <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -891,7 +891,7 @@ export default function GameDetailPage() {
                                     <div className="flex flex-col gap-2 sm:gap-2.5 my-auto">
                                         {/* 1. 메타스코어 (전문가 - 사각 뱃지) */}
                                         <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
-                                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-base sm:text-lg shrink-0 ${getMetacriticBadgeColor(mainScore, 100)}`}>
+                                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(mainScore, 100)}`}>
                                                 {mainScore ?? '-'}
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -906,7 +906,7 @@ export default function GameDetailPage() {
                                                                 {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
                                                                 {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
                                                                 {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                                                                <span className={`text-xs truncate ${verdict.color}`}>
+                                                                <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
                                                                     {verdict.label}
                                                                 </span>
                                                             </>
@@ -918,7 +918,7 @@ export default function GameDetailPage() {
 
                                         {/* 2. 유저 스코어 (원형 뱃지) */}
                                         <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
-                                            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-base sm:text-lg shrink-0 ${getMetacriticBadgeColor(userScore, 10)}`}>
+                                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(userScore, 10)}`}>
                                                 {userScore !== null ? Number(userScore).toFixed(1) : '-'}
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -933,7 +933,7 @@ export default function GameDetailPage() {
                                                                 {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
                                                                 {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
                                                                 {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                                                                <span className={`text-xs truncate ${verdict.color}`}>
+                                                                <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
                                                                     {verdict.label}
                                                                 </span>
                                                             </>
@@ -970,7 +970,7 @@ export default function GameDetailPage() {
                                             </div>
                                             <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
                                                 <div
-                                                    className="h-full bg-ps-blue rounded-full transition-all duration-500"
+                                                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500"
                                                     style={{ width: `${Math.round(((game.hltbMainStory || 0) / maxPlayTime) * 100)}%` }}
                                                 />
                                             </div>
@@ -983,7 +983,7 @@ export default function GameDetailPage() {
                                             </div>
                                             <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
                                                 <div
-                                                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 rounded-full transition-all duration-500"
                                                     style={{ width: `${Math.round(((game.hltbMainExtra || 0) / maxPlayTime) * 100)}%` }}
                                                 />
                                             </div>
@@ -996,7 +996,7 @@ export default function GameDetailPage() {
                                             </div>
                                             <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
                                                 <div
-                                                    className="h-full bg-yellow-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
                                                     style={{ width: `${Math.round(((game.hltbCompletionist || 0) / maxPlayTime) * 100)}%` }}
                                                 />
                                             </div>
