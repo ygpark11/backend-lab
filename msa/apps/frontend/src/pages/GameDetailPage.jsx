@@ -328,7 +328,7 @@ export default function GameDetailPage() {
                 toast.dismiss(toastId);
                 toast((t) => (
                     <div className="flex flex-col gap-2">
-                        <span className="font-bold text-sm text-primary">로그인이 필요한 기능입니다 🔒</span>
+                        <span className="font-bold text-sm text-primary">로그인이 필요한 기능입니다</span>
                         <span className="text-xs text-secondary mb-1">로그인하고 찜한 게임의 할인 알림을 받아보세요!</span>
                         <div className="flex gap-2 mt-1">
                             <button onClick={() => { toast.dismiss(t.id); openLoginModal(); }} className="bg-ps-blue text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 transition-colors shadow-md flex-1">로그인 하러 가기</button>
@@ -1037,8 +1037,8 @@ export default function GameDetailPage() {
                                             <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">PS5 Pro</span>
                                         </div>
                                         {game.isPs5ProEnhanced ? (
-                                            <span className="text-[11px] sm:text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-200/90 dark:bg-zinc-700/90 px-1.5 sm:px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-500 shadow-sm whitespace-nowrap">
-                                                Pro 향상 ✨
+                                            <span className="text-[11px] sm:text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-200/90 dark:bg-zinc-700/90 px-1.5 sm:px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-500 shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                <Sparkles className="w-3 h-3 text-zinc-600 dark:text-zinc-300" /> Pro 향상
                                             </span>
                                         ) : (
                                             <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
@@ -1353,7 +1353,7 @@ export default function GameDetailPage() {
                             {/* 감자 서버 후원 카드 */}
                             <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md flex flex-col items-center justify-center text-center relative overflow-hidden group">
                                 <Server className="w-8 h-8 text-yellow-400 mb-1.5 group-hover:scale-110 transition-transform" />
-                                <h4 className="font-black text-sm text-primary mb-1">감자 서버 밥 주기 🥔</h4>
+                                <h4 className="font-black text-sm text-primary mb-1">감자 서버 밥 주기</h4>
                                 <p className="text-xs text-secondary dark:text-zinc-300 mb-3">
                                     지속적인 PS 할인 추적과 서버 유지를 응원해 주세요!
                                 </p>
