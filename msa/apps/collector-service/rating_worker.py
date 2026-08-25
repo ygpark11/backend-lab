@@ -18,6 +18,13 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0"
 ]
 
+def _safe_close(obj):
+    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리."""
+    try:
+        obj.close()
+    except Exception:
+        pass
+
 def generate_slug(title):
     slug = title.lower()
     slug = re.sub(r'\b((standard|deluxe|ultimate|premium|sound|digital|special|anniversary|gold|definitive)\s*)*(edition|cut|version|bundle|pack)\b', '', slug)
@@ -126,7 +133,7 @@ def crawl_metacritic_single(game_title):
         finally:
             for _target in (page, context, browser):
                 if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
                 _t.start()
                 _t.join(timeout=5)
             gc.collect()
@@ -217,7 +224,7 @@ def crawl_hltb_single(game_title):
         finally:
             for _target in (page, context, browser):
                 if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
                 _t.start()
                 _t.join(timeout=5)
             gc.collect()

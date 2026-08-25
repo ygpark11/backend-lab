@@ -85,6 +85,15 @@ CONFIG = {
 }
 CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
 MAX_BATCH_SEC = 10 * 3600  # 10시간: 정상 배치 최대 소요 초과 시 교착으로 판단
+
+def _safe_close(obj):
+    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리.
+    데몬 스레드 내에서 browser/context가 이미 닫혔을 때 발생하는 노이즈 방지용."""
+    try:
+        obj.close()
+    except Exception:
+        pass
+
 logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Engine: Playwright (Manual Stealth)")
 
 SHARD_ID = int(os.getenv('SHARD_ID', '0'))
@@ -145,7 +154,7 @@ class BrowserManager:
             for target in (self.context, self.browser):
                 if target is None:
                     continue
-                t = threading.Thread(target=lambda obj=target: obj.close(), daemon=True)
+                t = threading.Thread(target=lambda obj=target: _safe_close(obj), daemon=True)
                 t.start()
                 t.join(timeout=5)
 
@@ -1132,7 +1141,7 @@ def run_batch_crawler_logic():
 
             for _target in (bm.context, bm.browser):
                 if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
                 _t.start()
                 _t.join(timeout=5)
 
@@ -1220,7 +1229,7 @@ def run_batch_crawler_logic():
 
             for _target in (bm.context, bm.browser):
                 if _target is None: continue
-                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t = threading.Thread(target=lambda obj=_target: _safe_close(obj), daemon=True)
                 _t.start()
                 _t.join(timeout=5)
 

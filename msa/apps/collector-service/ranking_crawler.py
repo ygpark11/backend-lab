@@ -32,6 +32,13 @@ if not os.path.exists(DATA_DIR):
 
 CACHE_FILE = os.path.join(DATA_DIR, 'concept_map.json')
 
+def _safe_close(obj):
+    """Playwright close()를 try/except로 감싸 TargetClosedError 등 무음 처리."""
+    try:
+        obj.close()
+    except Exception:
+        pass
+
 def load_cache():
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, 'r', encoding='utf-8') as f:
@@ -77,7 +84,7 @@ class BrowserManager:
             for target in (self.context, self.browser):
                 if target is None:
                     continue
-                t = threading.Thread(target=lambda obj=target: obj.close(), daemon=True)
+                t = threading.Thread(target=lambda obj=target: _safe_close(obj), daemon=True)
                 t.start()
                 t.join(timeout=5)
 
