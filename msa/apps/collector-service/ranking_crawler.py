@@ -6,6 +6,7 @@ import random
 import logging
 import json
 import gc
+import threading
 import requests
 
 from playwright.sync_api import sync_playwright
@@ -71,10 +72,14 @@ class BrowserManager:
     def get_context(self):
         if self.request_count >= RESTART_INTERVAL:
             logger.info("[메모리 관리] 브라우저 강제 환생! 🧹")
-            try: self.context.close()
-            except: pass
-            try: self.browser.close()
-            except: pass
+            # close()가 Playwright 이벤트 루프 교착으로 무한 block될 수 있어
+            # 별도 스레드 + 5초 타임아웃으로 감싸서 hang 방지
+            for target in (self.context, self.browser):
+                if target is None:
+                    continue
+                t = threading.Thread(target=lambda obj=target: obj.close(), daemon=True)
+                t.start()
+                t.join(timeout=5)
 
             self.context = None
             self.browser = None

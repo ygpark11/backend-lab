@@ -84,6 +84,7 @@ CONFIG = {
     }
 }
 CONF = CONFIG.get(CURRENT_MODE, CONFIG["LOW"])
+MAX_BATCH_SEC = 10 * 3600  # 10시간: 정상 배치 최대 소요 초과 시 교착으로 판단
 logger.info(f"🔧 Crawler Config: {CURRENT_MODE} | Engine: Playwright (Manual Stealth)")
 
 SHARD_ID = int(os.getenv('SHARD_ID', '0'))
@@ -139,10 +140,14 @@ class BrowserManager:
 
     def get_context(self):
         if self.request_count >= CONF["restart_interval"]:
-            try: self.context.close()
-            except: pass
-            try: self.browser.close()
-            except: pass
+            # close()가 Playwright 이벤트 루프 교착으로 무한 block될 수 있어
+            # 별도 스레드 + 5초 타임아웃으로 감싸서 hang 방지
+            for target in (self.context, self.browser):
+                if target is None:
+                    continue
+                t = threading.Thread(target=lambda obj=target: obj.close(), daemon=True)
+                t.start()
+                t.join(timeout=5)
 
             self.context = None
             self.browser = None
@@ -1088,6 +1093,21 @@ def run_batch_crawler_logic():
 
     logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Async Parallel Tab)")
 
+    # 배치 전체 타임아웃 워치독: get_context() 내부 교착 등으로 is_batch_running이
+    # 영구 고착되는 것을 방지. MAX_BATCH_SEC 초과 시 강제 초기화.
+    batch_done = threading.Event()
+    def _batch_watchdog():
+        global is_batch_running
+        if not batch_done.wait(timeout=MAX_BATCH_SEC):
+            logger.critical(
+                f"[Batch Watchdog] {MAX_BATCH_SEC // 3600}시간 초과 — 배치 교착 판정. "
+                "is_batch_running 강제 초기화 + Chromium SIGKILL"
+            )
+            with crawler_lock:
+                is_batch_running = False
+            subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+    threading.Thread(target=_batch_watchdog, daemon=True).start()
+
     collected_deals = []
     delisted_games = []
     visited_urls = set()
@@ -1110,10 +1130,11 @@ def run_batch_crawler_logic():
             try: crawl_phase0_new_releases(bm)
             except Exception as e: logger.error(f"Phase 0 Error: {e}")
 
-            try: bm.context.close()
-            except: pass
-            try: bm.browser.close()
-            except: pass
+            for _target in (bm.context, bm.browser):
+                if _target is None: continue
+                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t.start()
+                _t.join(timeout=5)
 
         gc.collect()
         logger.info("[Sync 구간 종료] Pre-Phase + Phase 0 완료. Phase 1/2 순차 수집 시작.")
@@ -1197,10 +1218,11 @@ def run_batch_crawler_logic():
                                     collected_deals.append(res)
                         visited_urls.add(url)
 
-            try: bm.context.close()
-            except: pass
-            try: bm.browser.close()
-            except: pass
+            for _target in (bm.context, bm.browser):
+                if _target is None: continue
+                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t.start()
+                _t.join(timeout=5)
 
         logger.info("[System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
@@ -1210,6 +1232,7 @@ def run_batch_crawler_logic():
         logger.error(f"Critical Error: {e}")
         logger.error(traceback.format_exc())
     finally:
+        batch_done.set()
         with crawler_lock:
             is_batch_running = False
         logger.info("Crawler finished.")

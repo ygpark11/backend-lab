@@ -3,6 +3,7 @@ import time
 import re
 import random
 import logging
+import threading
 import requests
 import gc
 import urllib.parse
@@ -123,12 +124,11 @@ def crawl_metacritic_single(game_title):
             logger.error(f"파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            try: page.close()
-            except: pass
-            try: context.close()
-            except: pass
-            try: browser.close()
-            except: pass
+            for _target in (page, context, browser):
+                if _target is None: continue
+                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t.start()
+                _t.join(timeout=5)
             gc.collect()
 
     return result
@@ -215,12 +215,11 @@ def crawl_hltb_single(game_title):
             logger.error(f"[HLTB] 파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            try: page.close()
-            except: pass
-            try: context.close()
-            except: pass
-            try: browser.close()
-            except: pass
+            for _target in (page, context, browser):
+                if _target is None: continue
+                _t = threading.Thread(target=lambda obj=_target: obj.close(), daemon=True)
+                _t.start()
+                _t.join(timeout=5)
             gc.collect()
 
     return result
