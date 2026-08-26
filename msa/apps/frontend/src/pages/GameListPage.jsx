@@ -126,7 +126,6 @@ const GameListPage = () => {
     const [presetNameInput, setPresetNameInput] = useState('');
     const [presetEditingId, setPresetEditingId] = useState(null);
     const [presetMenuOpenId, setPresetMenuOpenId] = useState(null);
-    const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
@@ -225,8 +224,7 @@ const GameListPage = () => {
 
             if (pageNumber === 0) {
                 setGames(response.data.content);
-                setIsInitialLoad(false);
-            } else {
+                            } else {
                 setGames(prev => {
                     const existingIds = new Set(prev.map(g => g.id));
                     const newGames = response.data.content.filter(g => !existingIds.has(g.id));
@@ -235,7 +233,7 @@ const GameListPage = () => {
             }
             setTotalPages(response.data.totalPages);
             setTotalElements(response.data.totalElements);
-        } catch (error) {
+        } catch {
             toast.error("데이터 로딩 실패");
         } finally {
             setLoading(false);
@@ -411,7 +409,9 @@ const GameListPage = () => {
                 if (res.data && res.data.promotionActive && res.data.promotionDiscountRate) {
                     setPsPlusDiscount({ discountRate: res.data.promotionDiscountRate });
                 }
-            } catch (err) {}
+            } catch {
+                // Ignore optional subscription price fetch errors
+            }
         };
         fetchDiscount();
     }, []);
@@ -973,17 +973,23 @@ const GameListPage = () => {
         }
     };
 
-    if (loading && page === 0 && isInitialLoad) return <div className="min-h-screen pt-20 flex justify-center bg-base"><PSLoader /></div>;
-
+    
     return (
         <div className="min-h-screen text-primary relative">
             <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" url="https://ps-signal.com/games" />
 
             {/* 오로라 배경 앰비언트 */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
+            {/* PS 심볼 배경 워터마크 */}
+            <div className="absolute top-20 right-10 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary select-none">
+                <Triangle className="w-40 h-40 stroke-[2px]" />
+                <Circle className="w-40 h-40 stroke-[2px]" />
+                <X className="w-40 h-40 stroke-[2px]" />
+                <Square className="w-40 h-40 stroke-[2px]" />
+            </div>
                 <div className="absolute inset-0 opacity-40 dark:opacity-30">
-                    <div className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[100px] animate-pulse"></div>
-                    <div className="absolute top-[20%] -left-[10%] w-[45%] h-[45%] bg-blue-600/20 rounded-full blur-[100px] animate-pulse"></div>
+                    <div className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[100px] md:animate-pulse"></div>
+                    <div className="absolute top-[20%] -left-[10%] w-[45%] h-[45%] bg-blue-600/20 rounded-full blur-[100px] md:animate-pulse"></div>
                     <div className="absolute bottom-[-10%] left-[25%] w-[40%] h-[40%] bg-indigo-600/15 rounded-full blur-[100px]"></div>
                 </div>
             </div>
@@ -1495,8 +1501,8 @@ const GameListPage = () => {
 
                 {/* 3:4 그리드 카드 레이아웃 */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
-                    {loading && page === 0 && !isInitialLoad ? (
-                        Array.from({ length: 10 }).map((_, idx) => <SkeletonCard key={idx} />)
+                    {loading && page === 0 ? (
+                        Array.from({ length: 15 }).map((_, idx) => <SkeletonCard key={idx} />)
                     ) : (
                         games.length > 0 ? games.map((game, index) => {
                             const isLastElement = games.length === index + 1;
@@ -1514,7 +1520,7 @@ const GameListPage = () => {
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
                                     onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
-                                    className={`group relative flex flex-col rounded-2xl overflow-hidden bg-glass backdrop-blur-xl border transition-all duration-300 ease-out cursor-pointer hover:-translate-y-1.5 hover:shadow-2xl ${
+                                    className={`group relative flex flex-col rounded-2xl overflow-hidden bg-glass backdrop-blur-xl border transition-all duration-300 ease-out cursor-pointer hover:-translate-y-1.5 hover:shadow-2xl transform-gpu ${
                                         game.priceVerdict === 'BUY_NOW'
                                             ? 'border-green-500/40 hover:shadow-[0_12px_30px_rgba(34,197,94,0.2)]'
                                             : 'border-divider hover:border-ps-blue/60 hover:shadow-[0_12px_30px_rgba(0,112,209,0.2)]'
@@ -1676,7 +1682,7 @@ const GameListPage = () => {
                 {!loading && games.length > 0 && page >= totalPages - 1 && (
                     <div className="py-16 text-center flex flex-col items-center gap-2 border-t border-divider mt-12 opacity-60">
                         <Gamepad2 className="w-6 h-6 text-secondary" />
-                        <p className="text-secondary font-bold text-xs">모든 게임을 다 확인하셨습니다 🎮</p>
+                        <p className="text-secondary font-bold text-xs">모든 게임을 다 확인하셨습니다</p>
                     </div>
                 )}
                 {loading && page > 0 && (

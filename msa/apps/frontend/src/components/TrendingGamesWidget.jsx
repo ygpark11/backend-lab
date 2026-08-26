@@ -5,6 +5,20 @@ import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import PSGameImage from './common/PSGameImage';
 import client from '../api/client';
 
+// 언어 태그 괄호 및 PS4/PS5 suffix 제거
+function cleanTitle(title) {
+    if (!title) return '';
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    let cleaned = title;
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = cleaned.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) cleaned = cleaned.slice(0, parenIdx).trim();
+    }
+    return cleaned.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
+
 const TrendingGamesWidget = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
@@ -119,7 +133,7 @@ const TrendingGamesWidget = () => {
                                 {/* 배경 이미지 */}
                                 <PSGameImage
                                     src={game.imageUrl}
-                                    alt={game.title}
+                                    alt={cleanTitle(game.title)}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
                                     width={640}
                                 />
@@ -138,7 +152,7 @@ const TrendingGamesWidget = () => {
                                 {/* 하단 게임 정보 */}
                                 <div className="absolute bottom-0 left-0 right-0 p-4 z-10 flex flex-col justify-end">
                                     <h3 className="text-sm sm:text-base font-black text-white line-clamp-1 mb-2 drop-shadow-md group-hover:text-primary-fixed transition-colors">
-                                        {game.title}
+                                        {cleanTitle(game.title)}
                                     </h3>
 
                                     <div className="flex items-center justify-between gap-2">

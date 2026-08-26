@@ -87,6 +87,14 @@ public class InsightsService {
         }
     }
 
+    public void refreshTrendingCache() {
+        var cache = cacheManager.getCache(TRENDING_CACHE);
+        if (cache != null) {
+            cache.clear();
+            log.info("Trending 로컬 캐시(Caffeine) 전체 초기화 완료.");
+        }
+    }
+
     @Cacheable(cacheNames = INSIGHTS_CACHE, key = INSIGHT_KEY_LAST_SYNC)
     public String getLastSyncTime() {
         LocalDateTime lastUpdateTime = gameRepository.findLatestUpdateDateTime();

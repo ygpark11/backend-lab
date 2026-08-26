@@ -47,6 +47,7 @@ public class AdminController {
     @PostMapping("/cache/refresh")
     public ResponseEntity<String> refreshAllCaches() {
         insightsService.refreshInsightsCache();
+        insightsService.refreshTrendingCache();
         catalogService.refreshCurationCache();
         subscriptionService.refreshPsPlusPricingCache();
         return ResponseEntity.ok("전체 로컬 캐시가 성공적으로 초기화되었습니다.");

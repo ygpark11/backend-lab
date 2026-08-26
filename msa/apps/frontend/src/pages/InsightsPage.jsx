@@ -400,7 +400,7 @@ const InsightsPage = () => {
                                             </div>
                                             <div>
                                                 <span className="text-[10px] font-black tracking-widest uppercase text-red-500">Historical Anomaly</span>
-                                                <h3 className="text-lg sm:text-xl font-black text-primary leading-tight">역대 최저가 갱신 타이틀</h3>
+                                                <h3 className="text-lg sm:text-xl font-black text-primary leading-tight">역대 최저가 타이틀</h3>
                                             </div>
                                         </div>
                                         <div className="w-8 h-8 rounded-full bg-base border border-divider flex items-center justify-center group-hover:bg-red-500 group-hover:border-red-500 group-hover:text-white text-secondary transition-colors">
