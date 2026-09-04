@@ -273,6 +273,7 @@ public class SubscriptionService {
     @Transactional
     public void collectPsPlusBenefits(PsPlusBenefitCollectRequest request) {
         String currentMonth = YearMonth.now().toString();
+        String previousMonth = YearMonth.now().minusMonths(1).toString();
 
         // 수집된 데이터를 BenefitType(ESSENTIAL, CATALOG) 기준으로 분리
         Map<PsPlusMonthlyHistory.BenefitType, List<PsPlusBenefitCollectRequest.BenefitGameDto>> groupedGames =
@@ -283,30 +284,43 @@ public class SubscriptionService {
             PsPlusMonthlyHistory.BenefitType type = entry.getKey();
             List<PsPlusBenefitCollectRequest.BenefitGameDto> incomingGames = entry.getValue();
 
-            List<String> incomingStoreIds = incomingGames.stream()
-                    .map(PsPlusBenefitCollectRequest.BenefitGameDto::psStoreId)
+            // 이번 달에 이미 저장된 스토어 ID 조회 → 아직 저장되지 않은 게임만 필터링
+            // (배치가 월 중에 재실행될 때 기존 게임은 유지하고 신규 게임만 추가하기 위함)
+            List<String> currentMonthSavedStoreIds = psPlusMonthlyHistoryRepository
+                    .findPsStoreIdsByTargetMonthAndBenefitType(currentMonth, type);
+
+            List<PsPlusBenefitCollectRequest.BenefitGameDto> gamesToSave = incomingGames.stream()
+                    .filter(g -> !currentMonthSavedStoreIds.contains(g.psStoreId()))
                     .toList();
 
-            // 해당 타입(ESSENTIAL or CATALOG)의 가장 최근 적재 이력 조회
-            Optional<PsPlusMonthlyHistory> latestHistory = psPlusMonthlyHistoryRepository.findFirstByBenefitTypeOrderByTargetMonthDesc(type);
+            if (gamesToSave.isEmpty()) {
+                log.debug("[{}] 이번 달 혜택 게임이 이미 모두 적재되어 있습니다. (기준 월: {})", type, currentMonth);
+                continue;
+            }
 
-            if (latestHistory.isPresent()) {
-                String latestSavedTargetMonth = latestHistory.get().getTargetMonth();
-                List<String> latestSavedStoreIds = psPlusMonthlyHistoryRepository.findPsStoreIdsByTargetMonthAndBenefitType(latestSavedTargetMonth, type);
+            // 이번 달 첫 적재 시도인 경우: PS Store 미갱신 여부 확인
+            // gamesToSave 전부가 전월 게임에 포함되면 스토어가 아직 업데이트 안 된 것으로 판단 → skip
+            if (currentMonthSavedStoreIds.isEmpty()) {
+                List<String> previousMonthSavedStoreIds = psPlusMonthlyHistoryRepository
+                        .findPsStoreIdsByTargetMonthAndBenefitType(previousMonth, type);
 
-                // 현재 수집된 게임과 과거 게임 교집합(중복) 확인
-                boolean hasIntersection = incomingStoreIds.stream().anyMatch(latestSavedStoreIds::contains);
+                List<String> newStoreIds = gamesToSave.stream()
+                        .map(PsPlusBenefitCollectRequest.BenefitGameDto::psStoreId)
+                        .toList();
 
-                if (hasIntersection) {
-                    log.debug("[{}] 최신 적재된 묶음과 동일한 데이터가 존재합니다. 갱신 무시 (기준 월: {})", type, latestSavedTargetMonth);
-                    continue; // 교집합이 있으면 이 타입은 건너뛰고 다음 타입(ex. CATALOG) 진행
+                boolean isStoreNotUpdated = !previousMonthSavedStoreIds.isEmpty()
+                        && previousMonthSavedStoreIds.containsAll(newStoreIds);
+
+                if (isStoreNotUpdated) {
+                    log.debug("[{}] PS Store 미갱신 판정 - 전월과 동일한 게임 목록. 적재 skip. (전월: {})", type, previousMonth);
+                    continue;
                 }
             }
 
-            log.info("[{}] 새로운 혜택 게임 교체 감지! 신규 적재 타겟 월: {}", type, currentMonth);
+            log.info("[{}] 신규 혜택 게임 {}건 적재 시작. (기준 월: {})", type, gamesToSave.size(), currentMonth);
 
             // DB 적재 진행
-            for (PsPlusBenefitCollectRequest.BenefitGameDto gameDto : incomingGames) {
+            for (PsPlusBenefitCollectRequest.BenefitGameDto gameDto : gamesToSave) {
                 String psStoreId = gameDto.psStoreId();
 
                 PsPlusMonthlyHistory history = PsPlusMonthlyHistory.createPsPlusMonthlyHistory(
