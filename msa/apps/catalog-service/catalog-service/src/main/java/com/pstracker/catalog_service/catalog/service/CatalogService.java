@@ -313,12 +313,12 @@ public class CatalogService {
 
     /**
      * 업데이트가 필요한 게임 목록 조회 (지난 1일간 업데이트되지 않은 게임)
-     * @return 업데이트 대상 게임 PS 스토어 URL 리스트
+     * @return 업데이트 대상 게임 목록 (DB ID + PS 스토어 URL)
      */
-    public List<String> getGamesToUpdate() {
+    public List<GameTargetResponse> getGamesToUpdate() {
         LocalDate today = LocalDate.now();
         return gameRepository.findGamesToUpdate(today.atStartOfDay(), today).stream()
-                .map(game -> PS_STORE_BASE_URL + game.getPsStoreId())
+                .map(game -> new GameTargetResponse(game.getId(), PS_STORE_BASE_URL + game.getPsStoreId()))
                 .toList();
     }
 

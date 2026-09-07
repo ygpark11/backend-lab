@@ -41,7 +41,7 @@ public class CatalogController {
 
     // 업데이트 대상 게임 조회 API
     @GetMapping("/targets")
-    public ResponseEntity<List<String>> getUpdateTargets() {
+    public ResponseEntity<List<GameTargetResponse>> getUpdateTargets() {
         return ResponseEntity.ok(catalogService.getGamesToUpdate());
     }
 
