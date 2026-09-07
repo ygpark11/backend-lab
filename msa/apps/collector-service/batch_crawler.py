@@ -65,6 +65,7 @@ INTERNAL_SYNC_URL = f"{BASE_URL}/api/internal/scraping/candidates/sync"
 INTERNAL_CALLBACK_URL = f"{BASE_URL}/api/internal/scraping/callback"
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 CRAWLER_SECRET_KEY = os.getenv("CRAWLER_SECRET_KEY", "")
+SITE_BASE_URL = os.getenv("SITE_BASE_URL", "")
 
 CURRENT_MODE = os.getenv("CRAWLER_MODE", "LOW").upper()
 CONFIG = {
@@ -1038,7 +1039,7 @@ def fetch_update_targets():
     try:
         res = session.get(TARGET_API_URL, timeout=10)
         if res.status_code == 200:
-            targets = res.json()
+            targets = res.json()  # [{"id": Long, "url": String}, ...]
             logger.info(f"📥 Received {len(targets)} targets.")
             return targets
     except Exception as e:
@@ -1057,7 +1058,12 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
 
         if total_delisted > 0:
             message += "🚨 **[주의] 단종 의심 게임 (수동 삭제 필요)** 🚨\n"
-            for g in delisted_games: message += f"• ID: `{g['ps_store_id']}`\n"
+            for g in delisted_games:
+                game_id = g.get('game_id')
+                if game_id and SITE_BASE_URL:
+                    message += f"• `{g['ps_store_id']}` → [상세 확인]({SITE_BASE_URL}/games/{game_id})\n"
+                else:
+                    message += f"• `{g['ps_store_id']}`\n"
             message += "━━━━━━━━━━━━━━━━━━\n"
 
         if total_deals > 0:
@@ -1150,7 +1156,7 @@ def run_batch_crawler_logic():
         # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
         if SHARD_TOTAL > 1:
-            targets = [t for t in targets if zlib.crc32(t.split('/')[-1].encode()) % SHARD_TOTAL == SHARD_ID]
+            targets = [t for t in targets if zlib.crc32(t['url'].split('/')[-1].encode()) % SHARD_TOTAL == SHARD_ID]
             logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 1 타겟 필터 완료: {len(targets)}개")
 
         with sync_playwright() as p:
@@ -1160,12 +1166,14 @@ def run_batch_crawler_logic():
             if targets:
                 total_targets = len(targets)
                 logger.info(f"[Phase 1] Updating {total_targets} games...")
-                for i, url in enumerate(targets, 1):
+                for i, target in enumerate(targets, 1):
+                    url, game_id = target['url'], target['id']
                     check_and_run_vip(bm)
                     logger.info(f"[Phase 1] ({i}/{total_targets}) 처리 중: {url.split('/')[-1][:25]}")
                     res = run_with_watchdog(bm, url)
                     if res:
                         if res.get("is_delisted"):
+                            res['game_id'] = game_id
                             delisted_games.append(res)
                         else:
                             total_processed_count += 1
