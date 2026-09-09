@@ -23,6 +23,7 @@ import {
     Shield,
     Sparkles,
     Sun,
+    Trophy,
     UserCircle,
     X
 } from 'lucide-react';
@@ -228,7 +229,7 @@ const Navbar = () => {
             const content = res.data.content ?? [];
             setUnreadNotis(content);
             return content.length;
-        } catch (err) {
+        } catch {
             toast.error("알림을 불러오지 못했습니다.");
             return 0;
         } finally {
@@ -246,7 +247,7 @@ const Navbar = () => {
             setAllNotis(prev => append ? [...prev, ...content] : content);
             setAllPage(page);
             setAllHasNext(hasNext);
-        } catch (err) {
+        } catch {
             toast.error("알림을 불러오지 못했습니다.");
         } finally {
             if (append) setIsLoadingMore(false);
@@ -286,7 +287,7 @@ const Navbar = () => {
         setUnreadCount(0);
         try {
             await client.patch('/api/notifications/read-all');
-        } catch (err) {
+        } catch {
             setUnreadNotis(prevUnreadNotis);
             setAllNotis(prevAllNotis);
             setUnreadCount(prevCount);
@@ -342,18 +343,21 @@ const Navbar = () => {
                     </div>
 
                     {/* 데스크톱 메뉴 */}
-                    <div className="hidden lg:flex items-center gap-2">
-                        <button onClick={() => navigateAndScroll('/games')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                    <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
+                        <button onClick={() => navigateAndScroll('/games')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Gamepad2 className="w-4 h-4" /> 게임 목록
                         </button>
-                        <button onClick={() => navigateAndScroll('/curation')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/curation') ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/curation')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/curation') ? 'text-amber-700 dark:text-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Flame className="w-4 h-4" /> 큐레이션
                         </button>
-                        <button onClick={() => navigateAndScroll('/discover')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/discover')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/discover') ? 'text-blue-700 dark:text-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Sparkles className="w-4 h-4" /> 신작 수집소
                         </button>
-                        <button onClick={() => navigateAndScroll('/insights')} className={`px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/insights')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/insights') ? 'text-purple-700 dark:text-purple-500 bg-purple-500/10 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Activity className="w-4 h-4" /> 통계 인사이트
+                        </button>
+                        <button onClick={() => navigateAndScroll('/arcade')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname.includes('/arcade') ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                            <Trophy className="w-4 h-4 text-emerald-500" /> 미니게임
                         </button>
                     </div>
                 </div>
@@ -577,6 +581,10 @@ const Navbar = () => {
 
                                     <button onClick={() => { navigateAndScroll('/insights'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/insights') ? 'bg-surface-hover border border-divider text-primary' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
                                         <div className="bg-[var(--bento-amber-from)] p-1.5 rounded-lg border border-[color:var(--bento-amber-border)] shadow-sm"><Activity className="w-4 h-4 text-amber-500" /></div> 통계 인사이트
+                                    </button>
+
+                                    <button onClick={() => { navigateAndScroll('/arcade'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/arcade') ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
+                                        <div className="bg-[var(--bento-emerald-from)] p-1.5 rounded-lg border border-[color:var(--bento-emerald-border)] shadow-sm"><Trophy className="w-4 h-4 text-emerald-500" /></div> 미니게임 (사천성)
                                     </button>
                                 </div>
 

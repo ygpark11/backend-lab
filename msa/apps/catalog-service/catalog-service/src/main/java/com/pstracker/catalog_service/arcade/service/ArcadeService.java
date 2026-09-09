@@ -2,7 +2,6 @@ package com.pstracker.catalog_service.arcade.service;
 
 import com.pstracker.catalog_service.arcade.domain.ArcadeGameType;
 import com.pstracker.catalog_service.arcade.domain.ArcadeRecord;
-import com.pstracker.catalog_service.arcade.domain.TrophyGrade;
 import com.pstracker.catalog_service.arcade.dto.LeaderboardEntryDto;
 import com.pstracker.catalog_service.arcade.dto.LeaderboardResponse;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitRequest;
@@ -41,8 +40,6 @@ public class ArcadeService {
 
         int newScore = request.getScore();
         int newClearTime = request.getClearTimeSec();
-        int newMaxCombo = request.getMaxCombo() != null ? request.getMaxCombo() : 0;
-        TrophyGrade trophyGrade = TrophyGrade.fromString(request.getTrophyGrade());
 
         Optional<ArcadeRecord> recordOpt = arcadeRecordRepository.findByMemberIdAndGameType(memberId, gameType);
 
@@ -55,15 +52,13 @@ public class ArcadeService {
                     .gameType(gameType)
                     .score(newScore)
                     .clearTimeSec(newClearTime)
-                    .maxCombo(newMaxCombo)
-                    .trophyGrade(trophyGrade)
                     .build();
             record = arcadeRecordRepository.save(record);
             isNewHighScore = true;
             log.info("새로운 아케이드 기록 생성: member={}, game={}, score={}", member.getNickname(), gameType, newScore);
         } else {
             record = recordOpt.get();
-            isNewHighScore = record.updateIfBetter(newScore, newClearTime, newMaxCombo, trophyGrade);
+            isNewHighScore = record.updateIfBetter(newScore, newClearTime);
             if (isNewHighScore) {
                 log.info("아케이드 신기록 갱신: member={}, game={}, score={}", member.getNickname(), gameType, newScore);
             }
@@ -81,9 +76,6 @@ public class ArcadeService {
                 .isNewHighScore(isNewHighScore)
                 .rank(rank)
                 .score(record.getScore())
-                .clearTimeSec(record.getClearTimeSec())
-                .maxCombo(record.getMaxCombo())
-                .trophyGrade(record.getTrophyGrade().name())
                 .message(isNewHighScore ? "최고 기록이 경신되었습니다!" : "기록이 등록되었습니다.")
                 .build();
     }
@@ -133,13 +125,8 @@ public class ArcadeService {
                 Member member = memberRepository.findById(currentMemberId).orElse(null);
                 myRank = LeaderboardEntryDto.builder()
                         .rank(0)
-                        .userId(currentMemberId)
                         .username(member != null ? member.getNickname() : "플레이어")
                         .score(0)
-                        .clearTimeSec(0)
-                        .maxCombo(0)
-                        .trophyGrade(TrophyGrade.NONE.name())
-                        .createdAt("")
                         .build();
             }
         }

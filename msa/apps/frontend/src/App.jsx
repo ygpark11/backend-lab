@@ -18,6 +18,7 @@ import PsPlusPricingPage from './pages/PsPlusPricingPage';
 import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
 import CurationPage from './pages/CurationPage';
 import AdminPage from './pages/AdminPage';
+import ArcadePage from './pages/ArcadePage';
 
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
@@ -45,6 +46,7 @@ function AppRoutes() {
                     <Route path="/curation" element={<CurationPage />} />
                     <Route path="/discover" element={<PioneerCandidatesPage />} />
                     <Route path="/insights" element={<InsightsPage />} />
+                    <Route path="/arcade" element={<ArcadePage />} />
                     <Route path="/ps-plus" element={<PsPlusPricingPage />} />
                     <Route path="/monthly-games" element={<MonthlyGamesArchivePage />} />
                     <Route

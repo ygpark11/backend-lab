@@ -15,8 +15,5 @@ public class ScoreSubmitResponse {
     private boolean isNewHighScore;
     private long rank;
     private int score;
-    private int clearTimeSec;
-    private int maxCombo;
-    private String trophyGrade;
     private String message;
 }

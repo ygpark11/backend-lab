@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/arcade")
@@ -27,9 +28,6 @@ public class ArcadeController {
             @Valid @RequestBody ScoreSubmitRequest request,
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        if (principal == null) {
-            throw new IllegalArgumentException("점수 등록은 로그인이 필요합니다.");
-        }
         ScoreSubmitResponse response = arcadeService.submitScore(principal.getMemberId(), gameType, request);
         return ResponseEntity.ok(response);
     }

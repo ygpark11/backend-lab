@@ -3,7 +3,6 @@ package com.pstracker.catalog_service.arcade.service;
 import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.arcade.domain.ArcadeGameType;
 import com.pstracker.catalog_service.arcade.domain.ArcadeRecord;
-import com.pstracker.catalog_service.arcade.domain.TrophyGrade;
 import com.pstracker.catalog_service.arcade.dto.LeaderboardResponse;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitRequest;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitResponse;
@@ -89,8 +88,6 @@ class ArcadeServiceTest {
         ScoreSubmitRequest request = ScoreSubmitRequest.builder()
                 .score(10000)
                 .clearTimeSec(60)
-                .maxCombo(8)
-                .trophyGrade("GOLD")
                 .build();
 
         // when
@@ -107,7 +104,7 @@ class ArcadeServiceTest {
         Optional<ArcadeRecord> saved = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN);
         assertThat(saved).isPresent();
         assertThat(saved.get().getScore()).isEqualTo(10000);
-        assertThat(saved.get().getTrophyGrade()).isEqualTo(TrophyGrade.GOLD);
+        assertThat(saved.get().getClearTimeSec()).isEqualTo(60);
     }
 
     @Test
@@ -117,8 +114,6 @@ class ArcadeServiceTest {
         arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(10000)
                 .clearTimeSec(80)
-                .maxCombo(5)
-                .trophyGrade("SILVER")
                 .build());
         em.flush();
         em.clear();
@@ -127,8 +122,6 @@ class ArcadeServiceTest {
         ScoreSubmitResponse response = arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(14000)
                 .clearTimeSec(70)
-                .maxCombo(12)
-                .trophyGrade("PLATINUM")
                 .build());
         em.flush();
         em.clear();
@@ -136,12 +129,10 @@ class ArcadeServiceTest {
         // then
         assertThat(response.isNewHighScore()).isTrue();
         assertThat(response.getScore()).isEqualTo(14000);
-        assertThat(response.getTrophyGrade()).isEqualTo("PLATINUM");
 
         ArcadeRecord updated = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN).orElseThrow();
         assertThat(updated.getScore()).isEqualTo(14000);
-        assertThat(updated.getMaxCombo()).isEqualTo(12);
-        assertThat(updated.getTrophyGrade()).isEqualTo(TrophyGrade.PLATINUM);
+        assertThat(updated.getClearTimeSec()).isEqualTo(70);
     }
 
     @Test
@@ -151,8 +142,6 @@ class ArcadeServiceTest {
         arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(15000)
                 .clearTimeSec(60)
-                .maxCombo(15)
-                .trophyGrade("PLATINUM")
                 .build());
         em.flush();
         em.clear();
@@ -161,8 +150,6 @@ class ArcadeServiceTest {
         ScoreSubmitResponse response = arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(9000)
                 .clearTimeSec(50)
-                .maxCombo(5)
-                .trophyGrade("SILVER")
                 .build());
         em.flush();
         em.clear();
@@ -182,8 +169,6 @@ class ArcadeServiceTest {
         arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(12000)
                 .clearTimeSec(90)
-                .maxCombo(10)
-                .trophyGrade("GOLD")
                 .build());
         em.flush();
         em.clear();
@@ -192,15 +177,12 @@ class ArcadeServiceTest {
         ScoreSubmitResponse response = arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(12000)
                 .clearTimeSec(65)
-                .maxCombo(10)
-                .trophyGrade("GOLD")
                 .build());
         em.flush();
         em.clear();
 
         // then
         assertThat(response.isNewHighScore()).isTrue();
-        assertThat(response.getClearTimeSec()).isEqualTo(65);
 
         ArcadeRecord record = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN).orElseThrow();
         assertThat(record.getClearTimeSec()).isEqualTo(65);
@@ -214,24 +196,18 @@ class ArcadeServiceTest {
         arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(15000)
                 .clearTimeSec(80)
-                .maxCombo(15)
-                .trophyGrade("PLATINUM")
                 .build());
 
         // member2: 12,000점 (클리어 타임 70초) -> 2위
         arcadeService.submitScore(member2.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(12000)
                 .clearTimeSec(70)
-                .maxCombo(10)
-                .trophyGrade("GOLD")
                 .build());
 
         // member3: 12,000점 (클리어 타임 90초) -> 3위 (시간 차이)
         arcadeService.submitScore(member3.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(12000)
                 .clearTimeSec(90)
-                .maxCombo(9)
-                .trophyGrade("GOLD")
                 .build());
 
         em.flush();
@@ -253,13 +229,11 @@ class ArcadeServiceTest {
         assertThat(response.getTopList().get(1).getRank()).isEqualTo(2);
         assertThat(response.getTopList().get(1).getUsername()).isEqualTo("GamerTwo");
         assertThat(response.getTopList().get(1).getScore()).isEqualTo(12000);
-        assertThat(response.getTopList().get(1).getClearTimeSec()).isEqualTo(70);
 
         // 3위 확인
         assertThat(response.getTopList().get(2).getRank()).isEqualTo(3);
         assertThat(response.getTopList().get(2).getUsername()).isEqualTo("GamerThree");
         assertThat(response.getTopList().get(2).getScore()).isEqualTo(12000);
-        assertThat(response.getTopList().get(2).getClearTimeSec()).isEqualTo(90);
 
         // member2의 myRank 검증
         assertThat(response.getMyRank()).isNotNull();
@@ -274,8 +248,6 @@ class ArcadeServiceTest {
         arcadeService.submitScore(member1.getId(), "sichuan", ScoreSubmitRequest.builder()
                 .score(10000)
                 .clearTimeSec(60)
-                .maxCombo(5)
-                .trophyGrade("SILVER")
                 .build());
         em.flush();
         em.clear();

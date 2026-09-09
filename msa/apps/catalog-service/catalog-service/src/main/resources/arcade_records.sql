@@ -5,8 +5,6 @@ CREATE TABLE IF NOT EXISTS arcade_records (
     game_type       VARCHAR(30)     NOT NULL COMMENT '게임 종류 (SICHUAN, REFLEX 등)',
     score           INT             NOT NULL DEFAULT 0 COMMENT '개인 최고 점수',
     clear_time_sec  INT             NOT NULL DEFAULT 0 COMMENT '클리어 소요 시간(초)',
-    max_combo       INT             NOT NULL DEFAULT 0 COMMENT '최대 달성 콤보수',
-    trophy_grade    VARCHAR(20)     NOT NULL DEFAULT 'NONE' COMMENT '획득 트로피 등급',
     created_at      DATETIME(6)     NULL COMMENT '최초 등록 일시',
     updated_at      DATETIME(6)     NULL COMMENT '기록 갱신 일시',
 
