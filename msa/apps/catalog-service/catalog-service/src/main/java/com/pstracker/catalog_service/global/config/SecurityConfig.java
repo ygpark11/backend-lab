@@ -74,11 +74,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/notices/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/insights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/scraping/candidates").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/arcade/**").permitAll()
 
                         .requestMatchers("/api/v1/notices/**").hasRole("ADMIN")
 
                         .requestMatchers(HttpMethod.POST, "/api/v1/games/*/vote").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/scraping/request/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/arcade/**").authenticated()
 
                         .requestMatchers("/api/v1/members/me/**").authenticated()
 
