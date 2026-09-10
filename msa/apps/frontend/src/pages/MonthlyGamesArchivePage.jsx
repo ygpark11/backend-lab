@@ -10,10 +10,7 @@ import {
     Triangle,
     X as XIcon,
     Layers,
-    Sparkles,
-    CheckCircle2,
-    BookmarkCheck,
-    PlayCircle
+    Sparkles
 } from 'lucide-react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import { useLocation } from 'react-router-dom';
@@ -50,11 +47,11 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
         }
     };
 
-    // 미수집(isGhost) 카드: 실제 썸네일/타이틀 노출 + 추적 대기 오버레이 연출
+    // 미수집(isGhost) 카드: 실제 썸네일/타이틀 노출 + 추적 대기 상태 안내
     if (isGhost) {
         return (
             <article
-                className="group/card relative overflow-hidden rounded-2xl bg-surface/60 backdrop-blur-xl border border-divider/60 flex flex-col justify-between p-3.5 sm:p-4.5 cursor-default transition-all duration-300"
+                className="group/card relative overflow-hidden rounded-2xl bg-surface/60 backdrop-blur-xl border border-divider/60 flex flex-col justify-between p-3.5 sm:p-4 cursor-default transition-all duration-300"
             >
                 <div className="flex flex-col gap-3">
                     {/* 16:9 썸네일 + 반투명 틴트 및 자물쇠 오버레이 */}
@@ -74,14 +71,14 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
                             </div>
                         </div>
 
-                        {/* HUD 좌하단 상태 태그 */}
+                        {/* 상태 뱃지 */}
                         <span className="absolute bottom-2 left-2 text-[9px] sm:text-[10px] font-bold text-yellow-400/90 flex items-center gap-1 bg-black/80 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-yellow-500/20 whitespace-nowrap shadow-sm">
                             <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse shrink-0"></span>
                             <span>데이터 수집 대기</span>
                         </span>
                     </div>
 
-                    {/* 실제 게임 타이틀 및 직관적 안내 문구 */}
+                    {/* 실제 게임 타이틀 및 미추적 안내 */}
                     <div>
                         <h3 className="font-black text-sm sm:text-base leading-snug line-clamp-2 break-keep text-primary/80">
                             {game.title}
@@ -94,7 +91,7 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
                 </div>
 
                 {/* 카드 푸터 */}
-                <div className="mt-3.5 sm:mt-4 pt-3 flex items-center justify-between border-t border-divider/60 gap-2">
+                <div className="mt-3 sm:mt-3.5 pt-3 flex items-center justify-between border-t border-divider/60 gap-2">
                     <span className="px-2 py-0.5 rounded bg-surface-hover text-secondary text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0">
                         UNTRACKED
                     </span>
@@ -110,7 +107,7 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
         <article
             onClick={handleClick}
             className={`
-                group/card relative overflow-hidden rounded-2xl bg-surface/80 backdrop-blur-xl border flex flex-col justify-between p-3.5 sm:p-4.5 cursor-pointer
+                group/card relative overflow-hidden rounded-2xl bg-surface/80 backdrop-blur-xl border flex flex-col justify-between p-3.5 sm:p-4 cursor-pointer
                 transition-all duration-300
                 ${isLatestMonth
                     ? 'border-divider hover:border-emerald-500/60 hover:shadow-[0_0_25px_rgba(52,211,153,0.18)] hover:-translate-y-1'
@@ -119,7 +116,7 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
             `}
         >
             <div className="flex flex-col gap-3">
-                {/* 16:9 와이드 시네마틱 썸네일 & HUD 오버레이 */}
+                {/* 16:9 와이드 시네마틱 썸네일 (HUD 태그를 걷어내어 순수한 포스터 비주얼 강조) */}
                 <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-base border border-divider/50 shrink-0">
                     <PSGameImage
                         src={game.imageUrl}
@@ -127,59 +124,28 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
                         width={640}
                         className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-90"></div>
-
-                    {/* HUD 좌하단: 최신 월 상태 태그 */}
-                    {isLatestMonth && (
-                        <span className="absolute bottom-2 left-2 text-[9px] sm:text-[10px] font-black text-emerald-400 flex items-center gap-1 bg-black/80 backdrop-blur-md px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md border border-emerald-500/30 whitespace-nowrap shadow-sm">
-                            {isEssential ? (
-                                <>
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                                    <span>라이브러리 등록 가능</span>
-                                </>
-                            ) : (
-                                <>
-                                    <PlayCircle className="w-3 h-3 text-emerald-400 shrink-0" />
-                                    <span>카탈로그 플레이 가능</span>
-                                </>
-                            )}
-                        </span>
-                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-surface via-transparent to-transparent opacity-80"></div>
                 </div>
 
-                {/* 게임 타이틀 & 본문 안내 (단어 단위 줄바꿈 break-keep 및 2줄 클램프) */}
+                {/* 게임 타이틀 (단어 단위 줄바꿈 break-keep 및 2줄 클램프) */}
                 <div>
                     <h3 className={`font-black text-sm sm:text-base leading-snug line-clamp-2 break-keep transition-colors ${
                         isLatestMonth ? 'text-primary group-hover/card:text-emerald-400' : 'text-primary group-hover/card:text-ps-blue'
                     }`}>
                         {game.title}
                     </h3>
-                    
-                    <p className="text-xs text-secondary mt-1.5 flex items-center gap-1.5 font-medium break-keep">
-                        {isEssential ? (
-                            <>
-                                <BookmarkCheck className="w-3.5 h-3.5 text-ps-blue shrink-0" />
-                                <span className="line-clamp-1 break-keep">등록 시 구독 기간 영구 소장 플레이</span>
-                            </>
-                        ) : (
-                            <>
-                                <PlayCircle className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
-                                <span className="line-clamp-1 break-keep">스페셜·디럭스 요금제 무제한 플레이</span>
-                            </>
-                        )}
-                    </p>
                 </div>
             </div>
 
-            {/* 카드 푸터: flex-nowrap 및 축소 방지 */}
-            <div className="mt-3.5 sm:mt-4 pt-3 flex items-center justify-between border-t border-divider gap-2">
+            {/* 카드 푸터: 간결하고 직관적인 상태 및 바로가기 */}
+            <div className="mt-3 sm:mt-3.5 pt-3 flex items-center justify-between border-t border-divider gap-2">
                 {isLatestMonth ? (
                     <span className="px-2 sm:px-2.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[9px] sm:text-[10px] font-black uppercase tracking-wider shrink-0">
-                        {isEssential ? 'CLAIM FREE' : 'PLAY NOW'}
+                        PLAY NOW
                     </span>
                 ) : (
                     <span className="px-2 py-0.5 rounded bg-surface-hover text-secondary text-[9px] sm:text-[10px] font-bold uppercase tracking-wider shrink-0">
-                        {isEssential ? 'SAVED ARCHIVE' : 'CATALOG HISTORY'}
+                        {isEssential ? 'ARCHIVED' : 'CATALOG'}
                     </span>
                 )}
 
