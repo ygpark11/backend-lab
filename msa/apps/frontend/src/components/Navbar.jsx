@@ -584,7 +584,7 @@ const Navbar = () => {
                                     </button>
 
                                     <button onClick={() => { navigateAndScroll('/arcade'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-bold mt-1 transition-all ${location.pathname.includes('/arcade') ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'text-secondary hover:bg-surface-hover hover:text-primary'}`}>
-                                        <div className="bg-[var(--bento-emerald-from)] p-1.5 rounded-lg border border-[color:var(--bento-emerald-border)] shadow-sm"><Trophy className="w-4 h-4 text-emerald-500" /></div> 미니게임 (사천성)
+                                        <div className="bg-[var(--bento-emerald-from)] p-1.5 rounded-lg border border-[color:var(--bento-emerald-border)] shadow-sm"><Trophy className="w-4 h-4 text-emerald-500" /></div> 미니게임
                                     </button>
                                 </div>
 

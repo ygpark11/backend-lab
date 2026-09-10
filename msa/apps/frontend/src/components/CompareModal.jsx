@@ -96,7 +96,7 @@ export default function CompareModal({ isOpen, onClose }) {
     const userA = getUser(gameA);
     const userB = getUser(gameB);
 
-    // --- 승패 판정 (양쪽 모두 양수 유효값이 존재할 때만 판정) ---
+    // --- 기본 승패 판정 (단순 크기 비교) ---
     const calcWinner = (valA, valB, isLowerBetter = false) => {
         if (valA == null || valB == null || valA <= 0 || valB <= 0) return null;
         if (valA === valB) return 'TIE';
@@ -120,31 +120,28 @@ export default function CompareModal({ isOpen, onClose }) {
         volume: calcWinner(hltbA, hltbB)
     };
 
-    // 스코어 집계: 유효하게 대결이 성립한 지표만 카운트
-    let scoreA = 0;
-    let scoreB = 0;
-    let validCount = 0;
-
-    if (winners.price) { validCount++; if (winners.price === 'A') scoreA++; else if (winners.price === 'B') scoreB++; }
-    if (winners.meta) { validCount++; if (winners.meta === 'A') scoreA++; else if (winners.meta === 'B') scoreB++; }
-    if (winners.userVote) { validCount++; if (winners.userVote === 'A') scoreA++; else if (winners.userVote === 'B') scoreB++; }
-    if (winners.volume) { validCount++; if (winners.volume === 'A') scoreA++; else if (winners.volume === 'B') scoreB++; }
-
     // 최저가 판정
     const isALowest = gameA.discountRate > 0 && gameA.lowestPrice > 0 && priceA <= gameA.lowestPrice;
     const isBLowest = gameB.discountRate > 0 && gameB.lowestPrice > 0 && priceB <= gameB.lowestPrice;
+
+    // 카탈로그 구독 포함 여부
+    const isACatalog = Boolean(gameA.inCatalog);
+    const isBCatalog = Boolean(gameB.inCatalog);
 
     // 미출시/데이터부족 여부
     const isBUnreleased = !criticB.val && !userB.val && !hltbB;
     const isAUnreleased = !criticA.val && !userA.val && !hltbA;
 
-    // 자연스럽고 명확한 지표 판정 결과 생성 (중복 pill 없이 단일 플로우)
+    // =========================================================================
+    // 🎯 4대 지표 정밀 평가 엔진 (게이머 실구매 관점 다각도 분석)
+    // =========================================================================
     const getVerdictText = () => {
-        if (validCount === 0) {
+        const validMetrics = [winners.price, winners.meta, winners.userVote, winners.volume].filter(Boolean);
+        if (validMetrics.length === 0) {
             return '현재 비교 가능한 세부 지표 데이터가 집계되지 않았습니다.';
         }
 
-        // Case 1: 한쪽이 미출시/데이터 미집계 타이틀인 경우
+        // [우선순위 1] 한쪽이 미출시/데이터 미집계 타이틀인 경우
         if (isBUnreleased && !isAUnreleased) {
             return (
                 <>
@@ -164,47 +161,181 @@ export default function CompareModal({ isOpen, onClose }) {
             );
         }
 
-        // Case 2: 양쪽 모두 최저가인 경우
+        // [우선순위 2] PS Plus 게임 카탈로그 포함작 혜택 안내 (무료 플레이 가능 여부)
+        if (isACatalog && !isBCatalog) {
+            return (
+                <>
+                    <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>는 <span className="text-amber-500 font-bold">PS Plus 게임 카탈로그</span> 등록작입니다. 스페셜/디럭스 구독자라면 추가 결제 없이 무료로 플레이 가능합니다.
+                </>
+            );
+        }
+        if (isBCatalog && !isACatalog) {
+            return (
+                <>
+                    <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>는 <span className="text-amber-500 font-bold">PS Plus 게임 카탈로그</span> 등록작입니다. 스페셜/디럭스 구독자라면 추가 결제 없이 무료로 플레이 가능합니다.
+                </>
+            );
+        }
+        if (isACatalog && isBCatalog) {
+            return (
+                <>
+                    두 작품 모두 <span className="text-amber-500 font-bold">PS Plus 카탈로그</span> 포함작으로, 구독자라면 비용 부담 없이 취향에 맞춰 자유롭게 즐길 수 있습니다.
+                </>
+            );
+        }
+
+        // --- 지표별 유의미한 격차(Significance Delta) 계산 ---
+        const priceDiff = (priceA && priceB) ? Math.abs(priceA - priceB) : 0;
+        const isPriceSig = priceDiff >= 3000;
+        const isPriceBig = priceDiff >= 15000;
+
+        const metaDiff = (criticA.val && criticB.val) ? Math.abs(criticA.val - criticB.val) : 0;
+        const isMetaSig = metaDiff >= 3;
+        const isMetaBig = metaDiff >= 8;
+
+        const userDiff = (userA.val && userB.val) ? Math.abs(userA.val - userB.val) : 0;
+        const isUserSig = userDiff >= 0.5;
+
+        const volumeRatio = (hltbA && hltbB) ? (Math.max(hltbA, hltbB) / Math.min(hltbA, hltbB)) : 1;
+        const isVolumeSig = volumeRatio >= 1.3;
+
+        // --- 퀄리티(작품성) 축 vs 경제성(가성비) 축 점수화 ---
+        let qualityScoreA = 0, qualityScoreB = 0;
+        if (isMetaSig) {
+            if (criticA.val > criticB.val) qualityScoreA += isMetaBig ? 2 : 1;
+            else qualityScoreB += isMetaBig ? 2 : 1;
+        }
+        if (isUserSig) {
+            if (userA.val > userB.val) qualityScoreA += 1;
+            else qualityScoreB += 1;
+        }
+
+        let valueScoreA = 0, valueScoreB = 0;
+        if (isPriceSig) {
+            if (priceA < priceB) valueScoreA += isPriceBig ? 2 : 1;
+            else valueScoreB += isPriceBig ? 2 : 1;
+        }
+        if (isALowest && !isBLowest) valueScoreA += 1;
+        if (isBLowest && !isALowest) valueScoreB += 1;
+        if (isVolumeSig) {
+            if (hltbA > hltbB) valueScoreA += 1;
+            else valueScoreB += 1;
+        }
+
+        // [우선순위 3] 두 타이틀 모두 비평가 점수 80점 이상 수작인데, 한쪽만 '역대 최저가' 세일 중
+        const isBothGreat = (criticA.val >= 80 || !criticA.val) && (criticB.val >= 80 || !criticB.val);
+        if (isBothGreat && isALowest && !isBLowest) {
+            return (
+                <>
+                    두 작품 모두 완성도가 높으나, 현재 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 역대 최저가에 도달하여 타이밍상 가장 합리적인 선택입니다.
+                </>
+            );
+        }
+        if (isBothGreat && isBLowest && !isALowest) {
+            return (
+                <>
+                    두 작품 모두 완성도가 높으나, 현재 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 역대 최저가에 도달하여 타이밍상 가장 합리적인 선택입니다.
+                </>
+            );
+        }
+
+        // [우선순위 4] 두 타이틀 모두 '역대 최저가' 도달
         if (isALowest && isBLowest) {
             return (
                 <>
-                    두 타이틀 모두 <span className="text-emerald-600 dark:text-emerald-400 font-bold">역대 최저가</span> 도달 상태입니다. 선호 장르와 플레이타임에 맞춰 선택하세요.
+                    두 타이틀 모두 <span className="text-emerald-600 dark:text-emerald-400 font-bold">역대 최저가</span> 도달 상태입니다. 
+                    {hltbA && hltbB ? ` 볼륨(${Math.round(hltbA)}h vs ${Math.round(hltbB)}h)과 장르 취향에 맞춰 선택하세요.` : ' 취향에 맞춰 선택해 보세요.'}
                 </>
             );
         }
 
-        // Case 3: 한쪽만 최저가인 경우
-        if (isALowest && !isBLowest) {
+        // [우선순위 5] 시간당 체감 비용 역전 (단순 가격은 비싸지만 볼륨으로 가성비 압승)
+        if (pricePerHrA && pricePerHrB && Math.max(pricePerHrA, pricePerHrB) / Math.min(pricePerHrA, pricePerHrB) >= 1.8) {
+            if (pricePerHrA < pricePerHrB && priceA >= priceB) {
+                return (
+                    <>
+                        단순 결제가는 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 낮지만, 플레이타임 대비 시간당 비용은 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>(시간당 ~{pricePerHrA.toLocaleString()}원)가 훨씬 경제적입니다.
+                    </>
+                );
+            }
+            if (pricePerHrB < pricePerHrA && priceB >= priceA) {
+                return (
+                    <>
+                        단순 결제가는 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 낮지만, 플레이타임 대비 시간당 비용은 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>(시간당 ~{pricePerHrB.toLocaleString()}원)가 훨씬 경제적입니다.
+                    </>
+                );
+            }
+        }
+
+        // [우선순위 6] 작품성(퀄리티) vs 가성비(가격/볼륨)의 확실한 트레이드오프
+        if (qualityScoreA >= 2 && valueScoreB >= 2) {
             return (
                 <>
-                    <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 역대 최저가에 도달하여 현재 구매 메리트가 가장 높습니다.
+                    작품성과 몰입도를 원하신다면 평점이 높은 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>, 부담 없는 가격과 긴 플레이타임을 원하신다면 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>를 추천합니다.
                 </>
             );
         }
-        if (isBLowest && !isALowest) {
+        if (qualityScoreB >= 2 && valueScoreA >= 2) {
             return (
                 <>
-                    <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 역대 최저가에 도달하여 현재 구매 메리트가 가장 높습니다.
+                    작품성과 몰입도를 원하신다면 평점이 높은 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>, 부담 없는 가격과 긴 플레이타임을 원하신다면 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>를 추천합니다.
                 </>
             );
         }
 
-        // Case 4: 지표 승패 기반
-        if (scoreA > scoreB) {
+        // [우선순위 7] 유저 평점의 뚜렷한 지지 (평론가 점수는 비등하나 실제 유저 만족도 격차)
+        if (!isMetaSig && isUserSig) {
+            if (userA.val > userB.val) {
+                return (
+                    <>
+                        전문가 평가는 비등하나, 실제 플레이 유저 평점에서는 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>(★{userA.val})가 더 높은 만족도를 얻고 있습니다.
+                    </>
+                );
+            }
+            if (userB.val > userA.val) {
+                return (
+                    <>
+                        전문가 평가는 비등하나, 실제 플레이 유저 평점에서는 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>(★{userB.val})가 더 높은 만족도를 얻고 있습니다.
+                    </>
+                );
+            }
+        }
+
+        // [우선순위 8] 한쪽의 전방위적 우세 (퀄리티 + 가성비 모두 앞섬)
+        if (qualityScoreA >= 1 && valueScoreA >= 2) {
             return (
                 <>
-                    비교 지표 중 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 {scoreA}개 부문에서 앞서며 전반적인 밸런스가 우세합니다.
+                    <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 높은 평가와 함께 가격 경쟁력까지 갖추어 전반적인 만족도가 더 높을 것으로 기대됩니다.
                 </>
             );
         }
-        if (scoreB > scoreA) {
+        if (qualityScoreB >= 1 && valueScoreB >= 2) {
             return (
                 <>
-                    비교 지표 중 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 {scoreB}개 부문에서 앞서며 전반적인 밸런스가 우세합니다.
+                    <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 높은 평가와 함께 가격 경쟁력까지 갖추어 전반적인 만족도가 더 높을 것으로 기대됩니다.
                 </>
             );
         }
 
+        // [우선순위 9] 단순 점수 총합 우세
+        const totalA = qualityScoreA + valueScoreA;
+        const totalB = qualityScoreB + valueScoreB;
+        if (totalA > totalB) {
+            return (
+                <>
+                    종합 스펙 지표에서 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 더 우세한 밸런스를 보여주고 있습니다.
+                </>
+            );
+        }
+        if (totalB > totalA) {
+            return (
+                <>
+                    종합 스펙 지표에서 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 더 우세한 밸런스를 보여주고 있습니다.
+                </>
+            );
+        }
+
+        // [기본값] 팽팽한 호각세
         return (
             <>
                 가격과 평가 지표가 팽팽합니다. 선호하는 장르와 플레이 스타일에 맞춰 선택해 보세요.
@@ -214,7 +345,7 @@ export default function CompareModal({ isOpen, onClose }) {
 
     const verdictContent = getVerdictText();
 
-    // --- 2x2 벤토 카드 컴포넌트 (라이트/다크 및 모바일 완벽 대응) ---
+    // --- 2x2 벤토 카드 컴포넌트 ---
     const BentoCard = ({
         icon: Icon,
         title,
@@ -419,7 +550,7 @@ export default function CompareModal({ isOpen, onClose }) {
                             </span>
                         </div>
 
-                        {/* 타이틀 정보 (중앙 VS와 겹치지 않게 pr-8 sm:pr-14) */}
+                        {/* 타이틀 정보 */}
                         <div className="absolute bottom-2 sm:bottom-3 left-2.5 sm:left-5 pr-8 sm:pr-14 z-20">
                             <h2 className="text-xs sm:text-base md:text-lg font-black text-white leading-tight drop-shadow-md line-clamp-1">
                                 {titleA}
@@ -448,7 +579,7 @@ export default function CompareModal({ isOpen, onClose }) {
                             </span>
                         </div>
 
-                        {/* 타이틀 정보 (중앙 VS와 겹치지 않게 pl-8 sm:pl-14) */}
+                        {/* 타이틀 정보 */}
                         <div className="absolute bottom-2 sm:bottom-3 right-2.5 sm:right-5 pl-8 sm:pl-14 z-20 text-right">
                             <h2 className="text-xs sm:text-base md:text-lg font-black text-white leading-tight drop-shadow-md line-clamp-1">
                                 {titleB}
@@ -554,10 +685,10 @@ export default function CompareModal({ isOpen, onClose }) {
                 </div>
 
                 {/* ========================================================================= */}
-                {/* 3. VERDICT SUMMARY & DUAL ACTION FOOTER (말줄임 없이 자연스러운 요약)      */}
+                {/* 3. VERDICT SUMMARY & DUAL ACTION FOOTER (정밀 분석 결과)                   */}
                 {/* ========================================================================= */}
                 <div className="p-3 sm:p-4 bg-base border-t border-divider flex flex-col gap-2.5 sm:gap-3 shrink-0">
-                    {/* 중복 pill 제거 & 말줄임 없는 자연스러운 인포 배너 */}
+                    {/* 정밀 평가 인포 배너 */}
                     <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-surface border border-divider text-xs sm:text-[13px] leading-relaxed shadow-sm">
                         <div className="p-1 rounded-md bg-surface-hover text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
                             <Scale className="w-3.5 h-3.5" />
