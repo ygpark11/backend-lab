@@ -1,50 +1,93 @@
-import React, {useEffect, useState} from 'react';
-import {Circle, Sparkles, Square, TrendingUp, Triangle, X as XIcon, X} from 'lucide-react';
-import {useCompareStore} from '../store/useCompareStore';
+import React, { useEffect, useState } from 'react';
+import {
+    Banknote,
+    Hourglass,
+    Swords,
+    Trophy,
+    Users,
+    X,
+    ChevronRight,
+    Scale
+} from 'lucide-react';
+import { useCompareStore } from '../store/useCompareStore';
 import PSGameImage from './common/PSGameImage';
-import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
-import {useLocation} from 'react-router-dom';
+import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import { useLocation } from 'react-router-dom';
+
+// 게임 타이틀 전처리 로직 (언어 괄호 및 플랫폼 접미사 제거)
+function cleanTitle(title) {
+    if (!title) return '';
+    const langKeywords = ['한국어', '영어', '일본어', '중국어', '태국어', '독일어', '프랑스어', '스페인어'];
+    const indices = langKeywords.map(k => title.indexOf(k)).filter(i => i !== -1);
+    if (indices.length > 0) {
+        const firstLangIdx = Math.min(...indices);
+        const parenIdx = title.lastIndexOf('(', firstLangIdx);
+        if (parenIdx > 0) title = title.slice(0, parenIdx).trim();
+    }
+    return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
+}
 
 export default function CompareModal({ isOpen, onClose }) {
     const { compareList } = useCompareStore();
     const [animateIn, setAnimateIn] = useState(false);
-    const [animateVs, setAnimateVs] = useState(false);
 
     const navigate = useTransitionNavigate();
     const location = useLocation();
 
+    // 키보드 ESC 키 닫기 이벤트 리스너 (UI 텍스트 없이 백그라운드 지원)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+        };
+        if (isOpen) {
+            window.addEventListener('keydown', handleKeyDown);
+        }
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
+
+    // 배경 스크롤 락 및 진입 트랜지션
     useEffect(() => {
         if (isOpen) {
             const scrollY = window.scrollY;
             document.body.style.position = 'fixed';
             document.body.style.top = `-${scrollY}px`;
             document.body.style.width = '100%';
-            setTimeout(() => setAnimateIn(true), 50);
-            setTimeout(() => setAnimateVs(true), 450);
+            const timerIn = setTimeout(() => setAnimateIn(true), 30);
+            return () => clearTimeout(timerIn);
         } else {
             const scrollY = document.body.style.top;
             document.body.style.position = '';
             document.body.style.top = '';
             document.body.style.width = '';
-            if (scrollY) window.scrollTo(0, parseInt(scrollY) * -1);
+            if (scrollY) window.scrollTo(0, parseInt(scrollY || '0') * -1);
             setAnimateIn(false);
-            setAnimateVs(false);
         }
     }, [isOpen]);
 
     if (!isOpen || compareList.length !== 2) return null;
 
     const [gameA, gameB] = compareList;
+    const titleA = cleanTitle(gameA.title || gameA.name);
+    const titleB = cleanTitle(gameB.title || gameB.name);
 
+    // --- 점수 추출 유틸리티 (0점이나 부재값은 null 처리) ---
     const getCritic = (g) => {
-        if (g.mcMetaScore > 0) return { val: g.mcMetaScore, calcVal: g.mcMetaScore, scale: 100, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbCriticScore > 0) return { val: g.igdbCriticScore, calcVal: g.igdbCriticScore, scale: 100, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
-        return { val: null, calcVal: null, scale: null, src: null };
+        if (g.mcMetaScore && g.mcMetaScore > 0) {
+            return { val: g.mcMetaScore, scale: 100, src: 'MC', badge: g.mcMetaScore >= 90 ? 'MUST-PLAY' : g.mcMetaScore >= 75 ? 'GREAT' : null };
+        }
+        if (g.igdbCriticScore && g.igdbCriticScore > 0) {
+            return { val: Math.round(g.igdbCriticScore), scale: 100, src: 'IGDB', badge: g.igdbCriticScore >= 85 ? 'HIGH' : null };
+        }
+        return { val: null, scale: null, src: null, badge: null };
     };
 
     const getUser = (g) => {
-        if (g.mcUserScore > 0) return { val: g.mcUserScore, calcVal: g.mcUserScore * 10, scale: 10, src: 'M', bg: 'bg-black dark:bg-white text-white dark:text-black border border-divider shadow-sm' };
-        if (g.igdbUserScore > 0) return { val: Math.round(g.igdbUserScore), calcVal: g.igdbUserScore, scale: 100, src: 'IGDB', bg: 'bg-[var(--bento-purple-from)] text-purple-700 dark:text-purple-300 border border-[color:var(--bento-purple-border)] shadow-sm' };
+        if (g.mcUserScore && g.mcUserScore > 0) {
+            return { val: Number(g.mcUserScore.toFixed(1)), calcVal: g.mcUserScore * 10, scale: 10, src: 'MC' };
+        }
+        if (g.igdbUserScore && g.igdbUserScore > 0) {
+            return { val: Math.round(g.igdbUserScore), calcVal: g.igdbUserScore, scale: 100, src: 'IGDB' };
+        }
         return { val: null, calcVal: null, scale: null, src: null };
     };
 
@@ -53,245 +96,499 @@ export default function CompareModal({ isOpen, onClose }) {
     const userA = getUser(gameA);
     const userB = getUser(gameB);
 
+    // --- 승패 판정 (양쪽 모두 양수 유효값이 존재할 때만 판정) ---
     const calcWinner = (valA, valB, isLowerBetter = false) => {
-        if (!valA || !valB) return null;
+        if (valA == null || valB == null || valA <= 0 || valB <= 0) return null;
         if (valA === valB) return 'TIE';
         if (isLowerBetter) return valA < valB ? 'A' : 'B';
         return valA > valB ? 'A' : 'B';
     };
 
+    const priceA = (gameA.currentPrice != null && gameA.currentPrice > 0) ? gameA.currentPrice : ((gameA.price != null && gameA.price > 0) ? gameA.price : null);
+    const priceB = (gameB.currentPrice != null && gameB.currentPrice > 0) ? gameB.currentPrice : ((gameB.price != null && gameB.price > 0) ? gameB.price : null);
+
+    const hltbA = (gameA.hltbMainStory && gameA.hltbMainStory > 0) ? gameA.hltbMainStory : null;
+    const hltbB = (gameB.hltbMainStory && gameB.hltbMainStory > 0) ? gameB.hltbMainStory : null;
+
+    const pricePerHrA = (hltbA && priceA) ? Math.round(priceA / hltbA) : null;
+    const pricePerHrB = (hltbB && priceB) ? Math.round(priceB / hltbB) : null;
+
     const winners = {
-        price: calcWinner(gameA.currentPrice, gameB.currentPrice, true),
-        meta: calcWinner(criticA.calcVal, criticB.calcVal),
-        userVote: calcWinner(userA.calcVal, userB.calcVal)
+        price: calcWinner(priceA, priceB, true),
+        meta: calcWinner(criticA.val, criticB.val),
+        userVote: calcWinner(userA.calcVal, userB.calcVal),
+        volume: calcWinner(hltbA, hltbB)
     };
 
+    // 스코어 집계: 유효하게 대결이 성립한 지표만 카운트
+    let scoreA = 0;
+    let scoreB = 0;
+    let validCount = 0;
+
+    if (winners.price) { validCount++; if (winners.price === 'A') scoreA++; else if (winners.price === 'B') scoreB++; }
+    if (winners.meta) { validCount++; if (winners.meta === 'A') scoreA++; else if (winners.meta === 'B') scoreB++; }
+    if (winners.userVote) { validCount++; if (winners.userVote === 'A') scoreA++; else if (winners.userVote === 'B') scoreB++; }
+    if (winners.volume) { validCount++; if (winners.volume === 'A') scoreA++; else if (winners.volume === 'B') scoreB++; }
+
+    // 최저가 판정
+    const isALowest = gameA.discountRate > 0 && gameA.lowestPrice > 0 && priceA <= gameA.lowestPrice;
+    const isBLowest = gameB.discountRate > 0 && gameB.lowestPrice > 0 && priceB <= gameB.lowestPrice;
+
+    // 미출시/데이터부족 여부
+    const isBUnreleased = !criticB.val && !userB.val && !hltbB;
+    const isAUnreleased = !criticA.val && !userA.val && !hltbA;
+
+    // 자연스럽고 명확한 지표 판정 결과 생성 (중복 pill 없이 단일 플로우)
     const getVerdictText = () => {
-        let scoreA = 0;
-        let scoreB = 0;
+        if (validCount === 0) {
+            return '현재 비교 가능한 세부 지표 데이터가 집계되지 않았습니다.';
+        }
 
-        if (winners.price === 'A') scoreA++; else if (winners.price === 'B') scoreB++;
-        if (winners.meta === 'A') scoreA++; else if (winners.meta === 'B') scoreB++;
-        if (winners.userVote === 'A') scoreA++; else if (winners.userVote === 'B') scoreB++;
-
-        const isALowest = gameA.discountRate > 0 && gameA.lowestPrice > 0 && gameA.currentPrice <= gameA.lowestPrice;
-        const isBLowest = gameB.discountRate > 0 && gameB.lowestPrice > 0 && gameB.currentPrice <= gameB.lowestPrice;
-
-        if (isALowest && isBLowest) {
-            const priceText = gameA.currentPrice === gameB.currentPrice
-                ? "가격이 동일하므로"
-                : `예산 차이(${Math.min(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원 vs ${Math.max(gameA.currentPrice, gameB.currentPrice).toLocaleString()}원)와`;
-
-            const bothNew = gameA.isAllTimeLowNew && gameB.isAllTimeLowNew;
-            const eitherNew = gameA.isAllTimeLowNew || gameB.isAllTimeLowNew;
-
+        // Case 1: 한쪽이 미출시/데이터 미집계 타이틀인 경우
+        if (isBUnreleased && !isAUnreleased) {
             return (
                 <>
-                    {bothNew
-                        ? <><span className="text-green-400 font-black drop-shadow-md">양쪽 모두 역대 최저가 갱신</span>한 극히 드문 타이밍입니다!</>
-                        : eitherNew
-                            ? <><span className="text-green-500 font-black drop-shadow-md">{gameA.isAllTimeLowNew ? (gameA.title || gameA.name) : (gameB.title || gameB.name)}</span>은 역대최저 갱신, <span className="text-green-400/80 font-black">{!gameA.isAllTimeLowNew ? (gameA.title || gameA.name) : (gameB.title || gameB.name)}</span>은 역대최저 동률입니다.</>
-                            : <><span className="text-green-500 font-black drop-shadow-md">양쪽 모두 역대 최저가</span>를 달성한 엄청난 타이밍입니다!</>
-                    }
-                    {' '}{priceText} 장르를 고려하여 기분 좋게 선택하세요.
+                    <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>는 검증된 평가와 함께 
+                    {isALowest ? ' 현재 역대 최저가 세일 중입니다.' : ' 즉시 플레이 가능한 명작입니다.'} 
+                    {' '}<span className="text-secondary font-medium">({titleB}는 아직 세부 지표 집계 대기작)</span>
+                </>
+            );
+        }
+        if (isAUnreleased && !isBUnreleased) {
+            return (
+                <>
+                    <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>는 검증된 평가와 함께 
+                    {isBLowest ? ' 현재 역대 최저가 세일 중입니다.' : ' 즉시 플레이 가능한 명작입니다.'} 
+                    {' '}<span className="text-secondary font-medium">({titleA}는 아직 세부 지표 집계 대기작)</span>
                 </>
             );
         }
 
-        if (scoreA > scoreB) {
-            return <><span className="text-blue-500 font-black underline decoration-blue-500/50 decoration-2 underline-offset-4 drop-shadow-md">좌측 게임({gameA.title || gameA.name})</span>이(가) 스펙 지표에서 종합적으로 우세합니다.</>;
-        } else if (scoreB > scoreA) {
-            return <><span className="text-rose-500 font-black underline decoration-rose-500/50 decoration-2 underline-offset-4 drop-shadow-md">우측 게임({gameB.title || gameB.name})</span>이(가) 스펙 지표에서 종합적으로 우세합니다.</>;
+        // Case 2: 양쪽 모두 최저가인 경우
+        if (isALowest && isBLowest) {
+            return (
+                <>
+                    두 타이틀 모두 <span className="text-emerald-600 dark:text-emerald-400 font-bold">역대 최저가</span> 도달 상태입니다. 선호 장르와 플레이타임에 맞춰 선택하세요.
+                </>
+            );
         }
 
-        if (isALowest && !isBLowest) return <><span className="text-blue-500 font-black underline decoration-blue-500/50 decoration-2 underline-offset-4 drop-shadow-md">좌측 게임</span>만 역대 최저가를 달성하여 현재 구매 타이밍이 더 훌륭합니다.</>;
-        if (isBLowest && !isALowest) return <><span className="text-rose-500 font-black underline decoration-rose-500/50 decoration-2 underline-offset-4 drop-shadow-md">우측 게임</span>만 역대 최저가를 달성하여 현재 구매 타이밍이 더 훌륭합니다.</>;
+        // Case 3: 한쪽만 최저가인 경우
+        if (isALowest && !isBLowest) {
+            return (
+                <>
+                    <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 역대 최저가에 도달하여 현재 구매 메리트가 가장 높습니다.
+                </>
+            );
+        }
+        if (isBLowest && !isALowest) {
+            return (
+                <>
+                    <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 역대 최저가에 도달하여 현재 구매 메리트가 가장 높습니다.
+                </>
+            );
+        }
 
-        return <>양쪽 모두 장단점이 비등합니다. <span className="text-green-500 font-bold">할인율</span>과 <span className="text-purple-500 font-bold">평가 출처</span>를 고려하여 취향에 맞게 선택하세요.</>;
+        // Case 4: 지표 승패 기반
+        if (scoreA > scoreB) {
+            return (
+                <>
+                    비교 지표 중 <span className="text-cyan-600 dark:text-cyan-300 font-bold">{titleA}</span>가 {scoreA}개 부문에서 앞서며 전반적인 밸런스가 우세합니다.
+                </>
+            );
+        }
+        if (scoreB > scoreA) {
+            return (
+                <>
+                    비교 지표 중 <span className="text-rose-600 dark:text-rose-300 font-bold">{titleB}</span>가 {scoreB}개 부문에서 앞서며 전반적인 밸런스가 우세합니다.
+                </>
+            );
+        }
+
+        return (
+            <>
+                가격과 평가 지표가 팽팽합니다. 선호하는 장르와 플레이 스타일에 맞춰 선택해 보세요.
+            </>
+        );
     };
 
-    // 💡 3번 버그 해결: 텐션 바 내부 비율 계산용 calcA, calcB 프롭스 추가
-    const TensionBar = ({ label, valA, valB, calcA, calcB, winner, isLowerBetter = false, psIcon, srcA, srcB, gameAData, gameBData }) => {
+    const verdictContent = getVerdictText();
+
+    // --- 2x2 벤토 카드 컴포넌트 (라이트/다크 및 모바일 완벽 대응) ---
+    const BentoCard = ({
+        icon: Icon,
+        title,
+        valA,
+        valB,
+        winner,
+        isLowerBetter = false,
+        calcA,
+        calcB,
+        badgeA,
+        badgeB,
+        subA,
+        subB,
+        winBadgeText,
+        unit = ''
+    }) => {
+        const hasBoth = valA != null && valB != null;
         let ratioA = 50, ratioB = 50;
-        const hasMissingData = !valA || !valB;
 
-        const formatVal = (val) => {
-            if (typeof val !== 'number') return val;
-            return Number.isInteger(val) ? val : val.toFixed(1);
-        };
-
-        if (!hasMissingData && valA !== valB) {
-            const activeCalcA = calcA !== undefined ? calcA : valA;
-            const activeCalcB = calcB !== undefined ? calcB : valB;
-
-            if (isLowerBetter) {
-                const total = activeCalcA + activeCalcB;
-                ratioA = (activeCalcB / total) * 100;
-                ratioB = (activeCalcA / total) * 100;
-            } else {
-                const total = activeCalcA + activeCalcB;
-                ratioA = (activeCalcA / total) * 100;
-                ratioB = (activeCalcB / total) * 100;
+        if (hasBoth && valA !== valB) {
+            const a = calcA !== undefined ? calcA : valA;
+            const b = calcB !== undefined ? calcB : valB;
+            if (a + b > 0) {
+                ratioA = isLowerBetter
+                    ? Math.max(20, Math.min(80, (b / (a + b)) * 100))
+                    : Math.max(20, Math.min(80, (a / (a + b)) * 100));
+                ratioB = 100 - ratioA;
             }
         }
 
-        const renderPriceBadges = (game) => {
-            if (!game) return null;
-            const isLowest = game.discountRate > 0 && game.lowestPrice > 0 && game.currentPrice <= game.lowestPrice;
-            return (
-                <div className="flex items-center gap-1.5 mt-1">
-                    {game.discountRate > 0 && (
-                        <span className="text-[10px] font-black text-white bg-ps-blue px-1.5 py-0.5 rounded shadow-sm transform -rotate-2">
-                            -{game.discountRate}%
-                        </span>
-                    )}
-                    {isLowest && game.isAllTimeLowNew && (
-                        <span className="text-[10px] font-black text-green-700 dark:text-green-400 bg-green-500/15 dark:bg-green-500/15 border border-green-500/40 dark:border-green-400/50 px-1.5 py-0.5 rounded flex items-center gap-0.5 shadow-[0_0_8px_rgba(34,197,94,0.2)] dark:shadow-[0_0_8px_rgba(34,197,94,0.3)]">
-                            <Sparkles className="w-3 h-3" /> 역대최저 갱신
-                        </span>
-                    )}
-                    {isLowest && !game.isAllTimeLowNew && (
-                        <span className="text-[10px] font-bold text-green-700/70 dark:text-green-500/80 bg-green-500/10 border border-green-500/20 dark:border-green-500/25 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                            <TrendingUp className="w-3 h-3" /> 역대최저 동률
-                        </span>
-                    )}
-                </div>
-            );
-        };
-
         return (
-            <div className="mb-10">
-                <h4 className="text-center text-xs sm:text-sm font-black text-primary mb-5 uppercase tracking-widest drop-shadow-md flex items-center justify-center gap-2">
-                    <span className="w-4 h-[1px] bg-divider-strong"></span>
-                    {label}
-                    <span className="w-4 h-[1px] bg-divider-strong"></span>
-                </h4>
-
-                <div className="flex items-start justify-between px-2 sm:px-6 mb-3">
-                    {/* 좌측 게임 (Game A) */}
-                    <div className={`flex flex-col items-start transition-all duration-700 ${winner === 'A' ? 'scale-110 drop-shadow-md z-10' : 'scale-95'}`}>
-                        <div className="flex items-center gap-2">
-                            {winner === 'A' && psIcon}
-                            <div className={`flex items-baseline gap-0.5 font-black text-xl sm:text-3xl tracking-tight ${winner === 'A' ? 'text-primary' : (!valA ? 'text-muted' : 'text-secondary')}`}>
-                                {valA ? (
-                                    isLowerBetter ? `${valA.toLocaleString()}원` : (
-                                        <>
-                                            <span>{formatVal(valA)}</span>
-                                            {srcA?.scale && <span className="text-[11px] sm:text-sm font-bold opacity-50">/{srcA.scale}</span>}
-                                        </>
-                                    )
-                                ) : '-'}
-                            </div>
-                            {srcA?.src && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcA.bg}`}>{srcA.src}</span>}
+            <div className="bg-surface border border-divider rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between transition-all hover:border-divider-strong shadow-sm">
+                {/* 카드 상단: 아이콘 + 지표명 + 승자 배지 */}
+                <div className="flex items-center justify-between gap-2 pb-2 border-b border-divider">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-surface-hover border border-divider flex items-center justify-center text-secondary shrink-0">
+                            <Icon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-600 dark:text-cyan-400" />
                         </div>
-                        {isLowerBetter && renderPriceBadges(gameAData)}
+                        <span className="text-[11px] sm:text-xs font-bold text-primary truncate">{title}</span>
                     </div>
 
-                    {/* 우측 게임 (Game B) */}
-                    <div className={`flex flex-col items-end transition-all duration-700 ${winner === 'B' ? 'scale-110 drop-shadow-md z-10' : 'scale-95'}`}>
-                        <div className="flex items-center gap-2">
-                            {srcB?.src && <span className={`text-[9px] px-1.5 py-0.5 font-black rounded ${srcB.bg}`}>{srcB.src}</span>}
-                            <div className={`flex items-baseline gap-0.5 font-black text-xl sm:text-3xl tracking-tight ${winner === 'B' ? 'text-primary' : (!valB ? 'text-muted' : 'text-secondary')}`}>
-                                {valB ? (
-                                    isLowerBetter ? `${valB.toLocaleString()}원` : (
-                                        <>
-                                            <span>{formatVal(valB)}</span>
-                                            {srcB?.scale && <span className="text-[11px] sm:text-sm font-bold opacity-50">/{srcB.scale}</span>}
-                                        </>
-                                    )
-                                ) : '-'}
-                            </div>
-                            {winner === 'B' && psIcon}
+                    {winBadgeText ? (
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black border tracking-tight shrink-0 ${
+                            winner === 'A'
+                                ? 'bg-cyan-50 dark:bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-400/30'
+                                : winner === 'B'
+                                ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-400/30'
+                                : 'bg-surface-hover text-secondary border-divider'
+                        }`}>
+                            {winBadgeText}
+                        </span>
+                    ) : (
+                        <span className="text-[10px] font-medium text-muted">-</span>
+                    )}
+                </div>
+
+                {/* 카드 본문: 좌측(A) 대조 우측(B) */}
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 py-2 sm:py-2.5 items-center">
+                    {/* Game A */}
+                    <div className="flex flex-col items-start min-w-0">
+                        <div className="flex items-center gap-1 mb-0.5 w-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 shrink-0"></span>
+                            <span className="text-[10px] font-bold text-secondary truncate">{titleA}</span>
                         </div>
-                        {isLowerBetter && renderPriceBadges(gameBData)}
+                        <div className="flex items-baseline gap-1 sm:gap-1.5 flex-wrap">
+                            <span className={`text-sm sm:text-lg md:text-xl font-black ${
+                                winner === 'A'
+                                    ? 'text-cyan-600 dark:text-cyan-300'
+                                    : valA != null
+                                    ? 'text-primary'
+                                    : 'text-muted'
+                            }`}>
+                                {valA != null ? (typeof valA === 'number' ? valA.toLocaleString() : valA) : '-'}
+                                {valA != null && unit && <span className="text-[10px] sm:text-xs font-normal text-secondary ml-0.5">{unit}</span>}
+                            </span>
+                            {badgeA}
+                        </div>
+                        {subA && <div className="text-[9px] sm:text-[10px] text-secondary mt-0.5 truncate max-w-full">{subA}</div>}
+                    </div>
+
+                    {/* Game B */}
+                    <div className="flex flex-col items-end min-w-0 text-right">
+                        <div className="flex items-center justify-end gap-1 mb-0.5 w-full">
+                            <span className="text-[10px] font-bold text-secondary truncate">{titleB}</span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                        </div>
+                        <div className="flex items-baseline justify-end gap-1 sm:gap-1.5 flex-wrap">
+                            {badgeB}
+                            <span className={`text-sm sm:text-lg md:text-xl font-black ${
+                                winner === 'B'
+                                    ? 'text-rose-600 dark:text-rose-300'
+                                    : valB != null
+                                    ? 'text-primary'
+                                    : 'text-muted'
+                            }`}>
+                                {valB != null ? (typeof valB === 'number' ? valB.toLocaleString() : valB) : '-'}
+                                {valB != null && unit && <span className="text-[10px] sm:text-xs font-normal text-secondary ml-0.5">{unit}</span>}
+                            </span>
+                        </div>
+                        {subB && <div className="text-[9px] sm:text-[10px] text-secondary mt-0.5 truncate max-w-full">{subB}</div>}
                     </div>
                 </div>
 
-                {hasMissingData ? (
-                    <div className="relative h-4 sm:h-5 w-full bg-surface/40 rounded-lg border-2 border-dashed border-divider mx-auto max-w-[90%] flex items-center justify-center shadow-inner">
-                        <span className="text-[10px] font-bold text-muted tracking-widest">데이터 부족 (비교 불가)</span>
-                    </div>
-                ) : (
-                    <div className="relative h-3 sm:h-4 w-full bg-black/25 rounded-full overflow-hidden border border-white/10 shadow-inner mx-auto max-w-[90%]">
-                        <div className="absolute inset-0 flex transition-all duration-1000 ease-[cubic-bezier(0.25,1,0.5,1)]">
-                            <div className="h-full bg-gradient-to-r from-blue-700 to-blue-400 transition-all duration-1000 relative" style={{ width: `${ratioA}%` }}>
-                                <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/30 blur-[2px]"></div>
-                            </div>
-                            <div className="h-full bg-gradient-to-l from-rose-700 to-rose-400 transition-all duration-1000 relative" style={{ width: `${ratioB}%` }}>
-                                <div className="absolute left-0 top-0 bottom-0 w-4 bg-white/30 blur-[2px]"></div>
-                            </div>
+                {/* 하단 미니 게이지 바 (라이트/다크 대응) */}
+                <div className="pt-0.5">
+                    {hasBoth ? (
+                        <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden flex border border-divider">
+                            <div
+                                className="h-full bg-cyan-500 dark:bg-cyan-400 transition-all duration-700"
+                                style={{ width: `${ratioA}%` }}
+                            />
+                            <div className="w-[1px] h-full bg-white/80 dark:bg-white/40"></div>
+                            <div
+                                className="h-full bg-rose-500 dark:bg-rose-400 transition-all duration-700"
+                                style={{ width: `${ratioB}%` }}
+                            />
                         </div>
-                        <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white/90 -translate-x-1/2 z-10 shadow-[0_0_8px_rgba(255,255,255,0.8)]"></div>
-                    </div>
-                )}
+                    ) : (
+                        <div className="h-1.5 w-full bg-black/5 dark:bg-white/5 rounded-full border border-divider"></div>
+                    )}
+                </div>
             </div>
         );
     };
 
+    // 승자 요약 배지 텍스트
+    const priceDiff = (priceA && priceB) ? Math.abs(priceA - priceB) : null;
+    const priceWinText = priceDiff != null
+        ? (winners.price === 'A' ? `₩${priceDiff.toLocaleString()} 저렴` : winners.price === 'B' ? `₩${priceDiff.toLocaleString()} 저렴` : '동일가')
+        : null;
+
+    const metaDiff = (criticA.val && criticB.val) ? Math.abs(criticA.val - criticB.val) : null;
+    const metaWinText = metaDiff != null
+        ? (winners.meta === 'A' ? `+${metaDiff}점 우세` : winners.meta === 'B' ? `+${metaDiff}점 우세` : '동점')
+        : null;
+
+    const userDiff = (userA.val && userB.val) ? Math.abs(Number((userA.val - userB.val).toFixed(1))) : null;
+    const userWinText = userDiff != null
+        ? (winners.userVote === 'A' ? `+${userDiff}점 우세` : winners.userVote === 'B' ? `+${userDiff}점 우세` : '동점')
+        : null;
+
+    const volumeWinText = (hltbA && hltbB)
+        ? (winners.volume === 'A'
+            ? `${(hltbA / hltbB).toFixed(1)}배 볼륨`
+            : winners.volume === 'B'
+            ? `${(hltbB / hltbA).toFixed(1)}배 볼륨`
+            : '동일')
+        : null;
+
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 sm:p-6 md:p-10">
-            <div className={`absolute inset-0 bg-backdrop/90 backdrop-blur-xl transition-opacity duration-500 ${animateIn ? 'opacity-100' : 'opacity-0'}`} onClick={onClose}></div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-2 sm:p-4 md:p-6 select-none">
+            {/* 뒷배경 오버레이 */}
+            <div
+                className={`fixed inset-0 bg-black/75 dark:bg-black/85 backdrop-blur-xl transition-opacity duration-300 ${animateIn ? 'opacity-100' : 'opacity-0'}`}
+                onClick={onClose}
+            />
 
-            <div className={`relative w-full h-full sm:h-auto max-w-5xl bg-base border-x-0 sm:border border-divider sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
+            {/* 모달 메인 프레임 (PC/모바일 반응형 + 다크/라이트 완벽 지원) */}
+            <div className={`relative w-full max-w-4xl bg-base border border-divider rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] z-20 backdrop-blur-2xl transition-all duration-400 ease-out ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+                
+                {/* 상단 얇은 액센트 라인 */}
+                <div className="h-[2px] w-full bg-gradient-to-r from-cyan-500 via-white/50 to-rose-500 opacity-80 shrink-0"></div>
 
-                <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-50 pointer-events-none">
-                    <div className="absolute left-1/2 -translate-x-1/2 top-4 sm:top-6 flex flex-col items-center">
-                        <span className={`text-3xl sm:text-5xl font-black italic tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${animateVs ? 'scale-100 opacity-100' : 'scale-0 opacity-0'}`}>V S</span>
-                        <div className="w-1 h-8 sm:h-12 bg-gradient-to-b from-white to-transparent mt-2 opacity-30"></div>
+                {/* 헤더 바 */}
+                <div className="px-3.5 sm:px-6 py-2 sm:py-2.5 border-b border-divider flex items-center justify-between bg-surface/80 shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-surface-hover border border-divider text-[10px] font-black uppercase tracking-wider text-cyan-600 dark:text-cyan-400">
+                            <Swords className="w-3 h-3" />
+                            <span>VS ARENA</span>
+                        </div>
+                        <span className="text-xs font-bold text-secondary hidden sm:inline">타이틀 1:1 비교</span>
                     </div>
-                    <div className="w-full flex justify-end pointer-events-auto">
-                        <button onClick={onClose} className="p-2 bg-black/60 hover:bg-red-500/80 rounded-full text-white transition-colors border border-white/20 backdrop-blur-md shadow-lg">
-                            <XIcon className="w-6 h-6" />
-                        </button>
-                    </div>
+
+                    <button
+                        onClick={onClose}
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-surface-hover hover:bg-rose-500/10 hover:text-rose-500 border border-divider flex items-center justify-center text-secondary transition-colors"
+                        title="닫기"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
                 </div>
 
-                <div className="relative w-full h-48 sm:h-64 flex overflow-hidden bg-black shrink-0">
-                    <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : '-translate-x-full'}`}>
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/60 to-transparent z-10 mix-blend-overlay"></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameA.imageUrl} width={640} className="w-full h-full object-cover object-top opacity-80" />
-                        <div className="absolute bottom-4 left-4 right-6 z-30">
-                            <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 max-w-[85%]">{gameA.title || gameA.name}</h2>
+                {/* ========================================================================= */}
+                {/* 1. 슬림 히어로 쇼케이스 (모바일/PC 컴팩트 높이 + 잘림 없는 미니멀 VS)     */}
+                {/* ========================================================================= */}
+                <div className="relative w-full h-32 sm:h-40 md:h-44 shrink-0 bg-black overflow-hidden flex select-none border-b border-divider">
+                    {/* LEFT FIGHTER (Cyan) */}
+                    <div className="w-1/2 h-full relative overflow-hidden group">
+                        <PSGameImage
+                            src={gameA.imageUrl}
+                            alt={titleA}
+                            width={500}
+                            className="w-full h-full object-cover object-center opacity-70 group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-cyan-950/80 via-cyan-950/25 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                        {/* P1 배지 */}
+                        <div className="absolute top-2 left-2.5 sm:top-2.5 sm:left-5 z-20">
+                            <span className="px-1.5 sm:px-2 py-0.5 rounded bg-cyan-500/25 border border-cyan-400/50 text-cyan-300 text-[9px] sm:text-[10px] font-black tracking-wider uppercase">
+                                P1
+                            </span>
+                        </div>
+
+                        {/* 타이틀 정보 (중앙 VS와 겹치지 않게 pr-8 sm:pr-14) */}
+                        <div className="absolute bottom-2 sm:bottom-3 left-2.5 sm:left-5 pr-8 sm:pr-14 z-20">
+                            <h2 className="text-xs sm:text-base md:text-lg font-black text-white leading-tight drop-shadow-md line-clamp-1">
+                                {titleA}
+                            </h2>
+                            <p className="text-[9px] sm:text-[11px] text-gray-300 font-medium line-clamp-1 mt-0.5">
+                                {gameA.genres?.[0] || 'PlayStation'} • {gameA.publisher || 'Store'}
+                            </p>
                         </div>
                     </div>
 
-                    <div className={`w-1/2 h-full relative transition-transform duration-1000 ease-[cubic-bezier(0.2,1.2,0.3,1)] ${animateIn ? 'translate-x-0' : 'translate-x-full'}`}>
-                        <div className="absolute inset-0 bg-gradient-to-l from-rose-900/60 to-transparent z-10 mix-blend-overlay"></div>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent z-20"></div>
-                        <PSGameImage src={gameB.imageUrl} width={640} className="w-full h-full object-cover object-top opacity-80" />
-                        <div className="absolute bottom-4 left-6 right-4 z-30 flex justify-end">
-                            <h2 className="text-base sm:text-2xl font-black text-white leading-tight break-keep drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] line-clamp-2 text-right max-w-[85%]">{gameB.title || gameB.name}</h2>
+                    {/* RIGHT FIGHTER (Rose) */}
+                    <div className="w-1/2 h-full relative overflow-hidden group">
+                        <PSGameImage
+                            src={gameB.imageUrl}
+                            alt={titleB}
+                            width={500}
+                            className="w-full h-full object-cover object-center opacity-70 group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-l from-rose-950/80 via-rose-950/25 to-transparent"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+
+                        {/* P2 배지 */}
+                        <div className="absolute top-2 right-2.5 sm:top-2.5 sm:right-5 z-20">
+                            <span className="px-1.5 sm:px-2 py-0.5 rounded bg-rose-500/25 border border-rose-400/50 text-rose-300 text-[9px] sm:text-[10px] font-black tracking-wider uppercase">
+                                P2
+                            </span>
+                        </div>
+
+                        {/* 타이틀 정보 (중앙 VS와 겹치지 않게 pl-8 sm:pl-14) */}
+                        <div className="absolute bottom-2 sm:bottom-3 right-2.5 sm:right-5 pl-8 sm:pl-14 z-20 text-right">
+                            <h2 className="text-xs sm:text-base md:text-lg font-black text-white leading-tight drop-shadow-md line-clamp-1">
+                                {titleB}
+                            </h2>
+                            <p className="text-[9px] sm:text-[11px] text-gray-300 font-medium line-clamp-1 mt-0.5">
+                                {gameB.genres?.[0] || 'PlayStation'} • {gameB.publisher || 'Store'}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* CENTER: 미니멀하고 글자 잘림 없는 클래식 VS 엠블럼 */}
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 flex items-center justify-center z-30 pointer-events-none">
+                        <div className="absolute inset-y-0 w-[1.5px] bg-gradient-to-b from-transparent via-white/70 to-transparent"></div>
+                        <div className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/90 border border-white/40 shadow-lg flex items-center justify-center">
+                            <span className="text-[11px] sm:text-xs font-black italic tracking-tighter text-white">
+                                VS
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-surface/90 backdrop-blur-2xl custom-scrollbar relative z-30 border-t border-divider">
-                    <TensionBar label="현재 결제가 (최저가)" valA={gameA.currentPrice} valB={gameB.currentPrice} winner={winners.price} isLowerBetter={true} gameAData={gameA} gameBData={gameB} psIcon={<Triangle className="w-5 h-5 sm:w-6 sm:h-6 text-[#00A39D] stroke-[3px] animate-pulse drop-shadow-[0_0_8px_rgba(0,163,157,0.6)]" />} />
-                    <TensionBar label="전문가 평점 (MC/IGDB)" valA={criticA.val} valB={criticB.val} calcA={criticA.calcVal} calcB={criticB.calcVal} srcA={criticA} srcB={criticB} winner={winners.meta} psIcon={<Circle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF3E3E] stroke-[3px] animate-pulse drop-shadow-[0_0_8px_rgba(255,62,62,0.6)]" />} />
-                    <TensionBar label="유저 평점 (MC/IGDB)" valA={userA.val} valB={userB.val} calcA={userA.calcVal} calcB={userB.calcVal} srcA={userA} srcB={userB} winner={winners.userVote} psIcon={<X className="w-5 h-5 sm:w-6 sm:h-6 text-[#4E6CBB] stroke-[4px] animate-pulse drop-shadow-[0_0_8px_rgba(78,108,187,0.6)]" />} />
+                {/* ========================================================================= */}
+                {/* 2. 2x2 BENTO GRID (모바일 세로/PC 가로 반응형 + 스크롤 안전성)           */}
+                {/* ========================================================================= */}
+                <div className="p-3 sm:p-4 md:p-5 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                        {/* BENTO 1: 체감 결제가 */}
+                        <BentoCard
+                            icon={Banknote}
+                            title="체감 결제가"
+                            valA={priceA}
+                            valB={priceB}
+                            unit="원"
+                            isLowerBetter={true}
+                            winner={winners.price}
+                            winBadgeText={priceWinText}
+                            badgeA={gameA.discountRate > 0 ? (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-ps-blue text-white">
+                                    -{gameA.discountRate}%
+                                </span>
+                            ) : null}
+                            badgeB={gameB.discountRate > 0 ? (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-ps-blue text-white">
+                                    -{gameB.discountRate}%
+                                </span>
+                            ) : null}
+                            subA={isALowest ? '역대 최저가' : gameA.lowestPrice ? `최저 ${gameA.lowestPrice.toLocaleString()}원` : null}
+                            subB={isBLowest ? '역대 최저가' : gameB.lowestPrice ? `최저 ${gameB.lowestPrice.toLocaleString()}원` : null}
+                        />
+
+                        {/* BENTO 2: 전문가 평점 */}
+                        <BentoCard
+                            icon={Trophy}
+                            title="전문가 평점"
+                            valA={criticA.val}
+                            valB={criticB.val}
+                            calcA={criticA.val}
+                            calcB={criticB.val}
+                            winner={winners.meta}
+                            winBadgeText={metaWinText}
+                            badgeA={criticA.badge ? (
+                                <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-200 dark:border-emerald-500/30 px-1 py-0.2 rounded">
+                                    {criticA.badge}
+                                </span>
+                            ) : null}
+                            badgeB={criticB.badge ? (
+                                <span className="text-[9px] font-black text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/15 border border-yellow-200 dark:border-yellow-500/30 px-1 py-0.2 rounded">
+                                    {criticB.badge}
+                                </span>
+                            ) : null}
+                            subA={criticA.src ? `${criticA.src} 기준` : null}
+                            subB={criticB.src ? `${criticB.src} 기준` : null}
+                        />
+
+                        {/* BENTO 3: 유저 평점 */}
+                        <BentoCard
+                            icon={Users}
+                            title="유저 평가 점수"
+                            valA={userA.val}
+                            valB={userB.val}
+                            calcA={userA.calcVal}
+                            calcB={userB.calcVal}
+                            winner={winners.userVote}
+                            winBadgeText={userWinText}
+                            subA={userA.src ? `${userA.src} 기준` : null}
+                            subB={userB.src ? `${userB.src} 기준` : null}
+                        />
+
+                        {/* BENTO 4: 플레이 볼륨 */}
+                        <BentoCard
+                            icon={Hourglass}
+                            title="플레이 볼륨"
+                            valA={hltbA ? `${Math.round(hltbA)}h` : null}
+                            valB={hltbB ? `${Math.round(hltbB)}h` : null}
+                            calcA={hltbA}
+                            calcB={hltbB}
+                            winner={winners.volume}
+                            winBadgeText={volumeWinText}
+                            subA={pricePerHrA ? `시간당 ~${pricePerHrA.toLocaleString()}원` : null}
+                            subB={pricePerHrB ? `시간당 ~${pricePerHrB.toLocaleString()}원` : null}
+                        />
+                    </div>
                 </div>
 
-                <div className="p-4 sm:p-6 bg-surface border-t border-divider shrink-0 z-40 relative backdrop-blur-xl">
-                    <Square className="absolute top-4 right-6 w-12 h-12 text-[#E8789C] stroke-[2px] opacity-10 animate-[spin_10s_linear_infinite]" />
-
-                    <div className="flex items-start gap-3 mb-5 p-4 rounded-xl border border-divider bg-base/60 shadow-inner">
-                        <Sparkles className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5 animate-pulse" />
-                        <p className="text-xs sm:text-sm text-primary font-bold leading-relaxed">{getVerdictText()}</p>
+                {/* ========================================================================= */}
+                {/* 3. VERDICT SUMMARY & DUAL ACTION FOOTER (말줄임 없이 자연스러운 요약)      */}
+                {/* ========================================================================= */}
+                <div className="p-3 sm:p-4 bg-base border-t border-divider flex flex-col gap-2.5 sm:gap-3 shrink-0">
+                    {/* 중복 pill 제거 & 말줄임 없는 자연스러운 인포 배너 */}
+                    <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl bg-surface border border-divider text-xs sm:text-[13px] leading-relaxed shadow-sm">
+                        <div className="p-1 rounded-md bg-surface-hover text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5">
+                            <Scale className="w-3.5 h-3.5" />
+                        </div>
+                        <p className="text-primary/90 font-medium break-keep">
+                            {verdictContent}
+                        </p>
                     </div>
 
-                    <div className="flex gap-3">
+                    {/* 하단 듀얼 바로가기 버튼 */}
+                    <div className="flex gap-2 sm:gap-2.5">
                         <button
-                            onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameA.gameId || gameA.id}`, { state: { background: location } }), 300); }}
-                            className="flex-1 py-3.5 bg-blue-500/10 border border-blue-500/30 hover:border-blue-500/70 hover:bg-blue-500/20 rounded-xl font-black text-sm text-blue-400 transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.2)] active:scale-95 group"
+                            onClick={() => {
+                                onClose();
+                                setTimeout(() => navigate(`/games/${gameA.gameId || gameA.id}`, { state: { background: location } }), 150);
+                            }}
+                            className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 hover:bg-cyan-100 dark:hover:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-500/30 text-cyan-800 dark:text-cyan-300 text-xs font-bold transition-all flex items-center justify-between group active:scale-[0.99] min-w-0"
                         >
-                            <span className="line-clamp-1">{gameA.title || gameA.name}</span>
+                            <span className="truncate">{titleA}</span>
+                            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform shrink-0 ml-1 text-cyan-600 dark:text-cyan-400" />
                         </button>
+
                         <button
-                            onClick={() => { onClose(); setTimeout(() => navigate(`/games/${gameB.gameId || gameB.id}`, { state: { background: location } }), 300); }}
-                            className="flex-1 py-3.5 bg-rose-500/10 border border-rose-500/30 hover:border-rose-500/70 hover:bg-rose-500/20 rounded-xl font-black text-sm text-rose-400 transition-all hover:shadow-[0_0_20px_rgba(225,29,72,0.2)] active:scale-95 group"
+                            onClick={() => {
+                                onClose();
+                                setTimeout(() => navigate(`/games/${gameB.gameId || gameB.id}`, { state: { background: location } }), 150);
+                            }}
+                            className="flex-1 py-2 sm:py-2.5 px-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/30 text-rose-800 dark:text-rose-300 text-xs font-bold transition-all flex items-center justify-between group active:scale-[0.99] min-w-0"
                         >
-                            <span className="line-clamp-1">{gameB.title || gameB.name}</span>
+                            <span className="truncate">{titleB}</span>
+                            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform shrink-0 ml-1 text-rose-600 dark:text-rose-400" />
                         </button>
                     </div>
                 </div>
