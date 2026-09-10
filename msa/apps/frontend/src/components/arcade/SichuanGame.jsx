@@ -496,62 +496,62 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
                 </div>
 
                 {/* 대시보드 (시간, 점수, 콤보 + 힌트/셔플) */}
-                <div className="flex items-center justify-between gap-2 bg-surface/90 backdrop-blur-md border border-divider p-1.5 sm:p-2 rounded-2xl">
-                    <div className="flex items-center gap-2 sm:gap-3 flex-1">
+                <div className="flex items-center justify-between gap-1.5 sm:gap-2 bg-surface/90 backdrop-blur-md border border-divider p-1.5 sm:p-2 rounded-2xl overflow-hidden">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0">
                         {/* 타이머 */}
-                        <div className={`flex flex-col items-center justify-center px-3 py-1 rounded-xl border transition-all ${
+                        <div className={`flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-3 py-1 rounded-xl border transition-all whitespace-nowrap ${
                             timeLeft <= 20
                                 ? 'bg-red-500/20 border-red-500/50 text-red-500 animate-pulse font-black'
                                 : 'bg-base border-divider text-primary'
                         }`}>
-                            <div className="flex items-center gap-1 text-[10px] text-secondary font-bold">
-                                <Timer className="w-3 h-3 text-ps-blue" />
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-secondary font-bold whitespace-nowrap">
+                                <Timer className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-ps-blue shrink-0" />
                                 <span>시간</span>
                             </div>
-                            <span className="text-xs sm:text-sm font-black tracking-tight">{timeLeft}s</span>
+                            <span className="text-xs sm:text-sm font-black tracking-tight whitespace-nowrap">{timeLeft}s</span>
                         </div>
 
                         {/* 점수 */}
-                        <div className="flex flex-col items-center justify-center px-3 py-1 rounded-xl bg-base border border-divider">
-                            <div className="flex items-center gap-1 text-[10px] text-secondary font-bold">
-                                <Sparkles className="w-3 h-3 text-yellow-500" />
+                        <div className="flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-3 py-1 rounded-xl bg-base border border-divider whitespace-nowrap">
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-secondary font-bold whitespace-nowrap">
+                                <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500 shrink-0" />
                                 <span>점수</span>
                             </div>
-                            <span className="text-xs sm:text-sm font-black text-primary tracking-tight">
+                            <span className="text-xs sm:text-sm font-black text-primary tracking-tight whitespace-nowrap">
                                 {score.toLocaleString()}
                             </span>
                         </div>
 
                         {/* 콤보 */}
-                        <div className={`flex flex-col items-center justify-center px-3 py-1 rounded-xl border transition-all ${
+                        <div className={`flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-3 py-1 rounded-xl border transition-all whitespace-nowrap ${
                             combo >= 2
                                 ? 'bg-amber-500/15 border-amber-500/50 text-amber-500 font-black'
                                 : 'bg-base border-divider text-secondary'
                         }`}>
-                            <div className="flex items-center gap-1 text-[10px] font-bold">
-                                <Flame className={`w-3 h-3 ${combo >= 2 ? 'text-amber-500 animate-bounce' : 'text-secondary'}`} />
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-bold whitespace-nowrap">
+                                <Flame className={`w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 ${combo >= 2 ? 'text-amber-500 animate-bounce' : 'text-secondary'}`} />
                                 <span>콤보</span>
                             </div>
-                            <span className="text-xs sm:text-sm font-black tracking-tight">
+                            <span className="text-xs sm:text-sm font-black tracking-tight whitespace-nowrap">
                                 {combo > 0 ? `x${combo}!` : '-'}
                             </span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         {/* 힌트 버튼 */}
                         <button
                             onClick={handleUseHint}
                             disabled={hintCount <= 0 || gameState !== 'PLAYING'}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 touch-manipulation shadow-sm ${
+                            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 touch-manipulation shadow-sm whitespace-nowrap ${
                                 hintCount > 0
                                     ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-500/25'
                                     : 'opacity-40 border-divider text-muted cursor-not-allowed'
                             }`}
                         >
-                            <Lightbulb className="w-4 h-4 text-yellow-500" />
+                            <Lightbulb className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500 shrink-0" />
                             <span>힌트</span>
-                            <span className="px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-[11px] font-black text-yellow-600 dark:text-yellow-400">
+                            <span className="px-1.5 py-0.5 rounded-full bg-yellow-500/20 text-[10px] sm:text-[11px] font-black text-yellow-600 dark:text-yellow-400">
                                 {hintCount}
                             </span>
                         </button>
@@ -560,15 +560,15 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
                         <button
                             onClick={handleShuffleBoard}
                             disabled={shuffleCount <= 0 || gameState !== 'PLAYING'}
-                            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 touch-manipulation shadow-sm ${
+                            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl border font-bold text-xs sm:text-sm transition-all active:scale-95 touch-manipulation shadow-sm whitespace-nowrap ${
                                 shuffleCount > 0
                                     ? 'bg-blue-500/15 border-blue-500/40 text-ps-blue hover:bg-blue-500/25'
                                     : 'opacity-40 border-divider text-muted cursor-not-allowed'
                             }`}
                         >
-                            <Shuffle className="w-4 h-4 text-ps-blue" />
+                            <Shuffle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue shrink-0" />
                             <span>셔플</span>
-                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-[11px] font-black text-ps-blue">
+                            <span className="px-1.5 py-0.5 rounded-full bg-blue-500/20 text-[10px] sm:text-[11px] font-black text-ps-blue">
                                 {shuffleCount}
                             </span>
                         </button>
@@ -603,14 +603,14 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
             </main>
 
             {/* 하단 푸터 */}
-            <footer className="w-full max-w-md md:max-w-4xl lg:max-w-5xl shrink-0 px-2 py-0.5 flex items-center justify-between text-[11px] text-secondary">
-                <div className="flex items-center gap-1.5">
-                    <Award className="w-3.5 h-3.5 text-ps-blue" />
+            <footer className="w-full max-w-md md:max-w-4xl lg:max-w-5xl shrink-0 px-2 py-0.5 flex items-center justify-between text-[11px] text-secondary whitespace-nowrap">
+                <div className="flex items-center gap-1.5 whitespace-nowrap">
+                    <Award className="w-3.5 h-3.5 text-ps-blue shrink-0" />
                     <span>최고 기록: <strong className="text-primary font-bold">{highScore.score.toLocaleString()}P</strong></span>
                 </div>
                 <button
                     onClick={() => onOpenLeaderboard && onOpenLeaderboard('sichuan')}
-                    className="hover:text-primary underline cursor-pointer font-bold text-ps-blue"
+                    className="hover:text-primary underline cursor-pointer font-bold text-ps-blue whitespace-nowrap"
                 >
                     명예의 전당 보기
                 </button>
@@ -624,29 +624,29 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
                             <Trophy className="w-9 h-9" />
                         </div>
 
-                        <h3 className="text-2xl font-black text-primary mb-1">
+                        <h3 className="text-2xl font-black text-primary mb-1 whitespace-nowrap">
                             {gameState === 'CLEARED' ? '보드 올 클리어!' : '타임오버!'}
                         </h3>
-                        <p className="text-xs text-secondary mb-6">
+                        <p className="text-xs text-secondary mb-6 whitespace-nowrap">
                             {gameState === 'CLEARED'
                                 ? '축하합니다! 모든 패를 성공적으로 맞췄습니다.'
                                 : '120초의 제한 시간이 종료되었습니다.'}
                         </p>
 
                         <div className="w-full bg-base border border-divider rounded-2xl p-4 mb-4 flex flex-col gap-2.5 text-xs">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between whitespace-nowrap">
                                 <span className="text-secondary font-bold">최종 점수</span>
                                 <span className="text-lg font-black text-ps-blue">
                                     {resultSummary.finalScore.toLocaleString()}P
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between whitespace-nowrap">
                                 <span className="text-secondary font-bold">제거한 패</span>
                                 <span className="text-sm font-bold text-primary">
                                     {resultSummary.clearedTiles} / {BOARD_CONFIG.tileCount}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between whitespace-nowrap">
                                 <span className="text-secondary font-bold">최대 콤보</span>
                                 <span className="text-sm font-bold text-amber-500">
                                     {resultSummary.maxCombo} 콤보
@@ -656,14 +656,14 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
 
                         {/* 로그인 상태별 리더보드 안내 배너 */}
                         {user ? (
-                            <div className="w-full py-2.5 px-3.5 mb-5 rounded-2xl bg-ps-blue/10 border border-ps-blue/25 text-xs text-ps-blue font-bold flex items-center justify-center gap-1.5">
-                                <Trophy className="w-4 h-4 text-ps-blue" />
+                            <div className="w-full py-2.5 px-3.5 mb-5 rounded-2xl bg-ps-blue/10 border border-ps-blue/25 text-xs text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                <Trophy className="w-4 h-4 text-ps-blue shrink-0" />
                                 <span>명예의 전당에 점수가 자동 등록되었습니다!</span>
                             </div>
                         ) : (
                             <div className="w-full p-3.5 mb-5 rounded-2xl bg-surface-hover/80 border border-divider text-left flex flex-col gap-2.5">
                                 <div className="flex items-start gap-2">
-                                    <span className="text-base leading-none">💡</span>
+                                    <Lightbulb className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
                                     <div className="text-[11px] text-secondary leading-relaxed">
                                         <strong className="text-primary block font-bold mb-0.5">기록을 영구 보존하시겠습니까?</strong>
                                         로그인하시면 지금 달성한 {resultSummary.finalScore.toLocaleString()}점을 명예의 전당에 영구 기록할 수 있습니다.

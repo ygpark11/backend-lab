@@ -421,8 +421,8 @@ export default function GameDetailPage() {
             await adminApi.refreshGame(id);
             toast.success("수집 요청 완료! 잠시 후 새로고침 됩니다.", { id: loadId });
             setTimeout(() => window.location.reload(), 4000);
-        } catch {
-            toast.error("수집 요청 실패: 관리자 권한을 확인하세요.", { id: loadId });
+        } catch (e) {
+            toast.error(e?.response?.data?.message ?? '수집 요청 실패', { id: loadId });
         }
     };
 

@@ -3,8 +3,6 @@ package com.pstracker.catalog_service.global.client.config;
 import com.pstracker.catalog_service.global.client.collector.CollectorApiClient;
 import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
 import com.pstracker.catalog_service.global.client.gemini.GeminiApiClient;
-import com.pstracker.catalog_service.global.client.igdb.IgdbAuthClient;
-import com.pstracker.catalog_service.global.client.igdb.IgdbGameClient;
 import com.pstracker.catalog_service.global.client.interceptor.LoggingAndRetryInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -27,12 +25,6 @@ import java.util.List;
 @Configuration
 public class HttpClientConfig {
 
-    @Value("${igdb.auth-url}")
-    private String igdbAuthUrl;
-
-    @Value("${igdb.api-url}")
-    private String igdbApiUrl;
-
     @Value("${crawler.primary-url}")
     private String crawlerPrimaryUrl;
 
@@ -42,28 +34,6 @@ public class HttpClientConfig {
     private static final int CONNECT_TIMEOUT_SECONDS = 5;
     private static final int DEFAULT_READ_TIMEOUT_SECONDS = 30;
     private static final int GEMINI_READ_TIMEOUT_SECONDS = 120;
-
-    @Bean
-    public IgdbAuthClient igdbAuthClient() {
-        RestClient restClient = baseBuilder(CONNECT_TIMEOUT_SECONDS, DEFAULT_READ_TIMEOUT_SECONDS)
-                .baseUrl(igdbAuthUrl)
-                .build();
-        return HttpServiceProxyFactory
-                .builderFor(RestClientAdapter.create(restClient))
-                .build()
-                .createClient(IgdbAuthClient.class);
-    }
-
-    @Bean
-    public IgdbGameClient igdbGameClient() {
-        RestClient restClient = baseBuilder(CONNECT_TIMEOUT_SECONDS, DEFAULT_READ_TIMEOUT_SECONDS)
-                .baseUrl(igdbApiUrl)
-                .build();
-        return HttpServiceProxyFactory
-                .builderFor(RestClientAdapter.create(restClient))
-                .build()
-                .createClient(IgdbGameClient.class);
-    }
 
     @Bean
     public GeminiApiClient geminiApiClient() {

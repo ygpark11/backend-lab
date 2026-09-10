@@ -7,7 +7,6 @@ import com.pstracker.catalog_service.arcade.dto.LeaderboardResponse;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitRequest;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitResponse;
 import com.pstracker.catalog_service.arcade.repository.ArcadeRecordRepository;
-import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.domain.Role;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
@@ -41,9 +40,6 @@ class ArcadeServiceTest {
 
     @Autowired
     private EntityManager em;
-
-    @MockitoBean
-    private IgdbEnrichmentService igdbEnrichmentService;
 
     @MockitoBean
     private AiService aiService;
@@ -258,5 +254,28 @@ class ArcadeServiceTest {
         // then
         assertThat(response.getTopList()).hasSize(1);
         assertThat(response.getMyRank()).isNull();
+    }
+
+    @Test
+    @DisplayName("신규 게임 타입 flight(PS 드래곤 플라이트) 점수 등록 및 리더보드 조회가 정상 동작한다")
+    void submitAndGetLeaderboard_flightGame() {
+        // given
+        arcadeService.submitScore(member1.getId(), "flight", ScoreSubmitRequest.builder()
+                .score(85000)
+                .clearTimeSec(120)
+                .build());
+        em.flush();
+        em.clear();
+
+        // when
+        LeaderboardResponse response = arcadeService.getLeaderboard("flight", member1.getId());
+
+        // then
+        assertThat(response.getGameType()).isEqualTo("flight");
+        assertThat(response.getTopList()).hasSize(1);
+        assertThat(response.getTopList().get(0).getScore()).isEqualTo(85000);
+        assertThat(response.getMyRank()).isNotNull();
+        assertThat(response.getMyRank().getRank()).isEqualTo(1);
+        assertThat(response.getMyRank().getScore()).isEqualTo(85000);
     }
 }

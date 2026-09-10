@@ -488,8 +488,8 @@ function GameManagementTab() {
                                         try {
                                             await refreshSingleGame(game.id);
                                             toast.success('재수집 요청 완료');
-                                        } catch {
-                                            toast.error('재수집 요청 실패');
+                                        } catch (e) {
+                                            toast.error(e?.response?.data?.message ?? '재수집 요청 실패');
                                         }
                                     }}
                                     title="재수집"

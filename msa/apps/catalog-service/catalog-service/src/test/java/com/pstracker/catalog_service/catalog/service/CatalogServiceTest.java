@@ -6,9 +6,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.GamePriceHistory;
 import com.pstracker.catalog_service.catalog.dto.AdminGameUpdateRequest;
 import com.pstracker.catalog_service.catalog.dto.CollectRequest;
-import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
-import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import com.pstracker.catalog_service.catalog.repository.CrawlJobRepository;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
@@ -26,11 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.BDDMockito.any;
-import static org.mockito.BDDMockito.given;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -54,9 +49,6 @@ public class CatalogServiceTest {
     private CrawlJobRepository crawlJobRepository;
 
     @MockitoBean
-    private IgdbEnrichmentService igdbEnrichmentService;
-
-    @MockitoBean
     private AiService aiService;
 
     @Autowired
@@ -67,7 +59,6 @@ public class CatalogServiceTest {
     void save_NewGame() {
         // given
         CollectRequest request = createDto("PROD-001", "Elden Ring", 69800, 69800, 0, null);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         // when
         catalogService.upsertGameData(request);
@@ -174,7 +165,6 @@ public class CatalogServiceTest {
     void save_NewGame_shouldSetTimestamps() {
         // given
         CollectRequest request = createDto("PROD-AUDIT-001", "Audit Test Game", 60000, 60000, 0, null);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         // when
         catalogService.upsertGameData(request);
@@ -192,7 +182,6 @@ public class CatalogServiceTest {
     void upsert_ExistingGame_shouldUpdateLastUpdated() throws InterruptedException {
         // given
         CollectRequest initial = createDto("PROD-AUDIT-002", "Update Test Game", 60000, 60000, 0, null);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(initial);
         em.flush();
         em.clear();
@@ -214,83 +203,9 @@ public class CatalogServiceTest {
     }
 
     @Test
-    @DisplayName("IGDB 응답이 있으면 평점이 Game에 반영되어야 한다.")
-    void upsert_IgdbSuccess_RatingsApplied() {
-        // given
-        IgdbGameResponse igdbResponse = new IgdbGameResponse(
-                1L, "Elden Ring", 90.5, 48, 87.3, 1200, null, 1248);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(igdbResponse);
-
-        CollectRequest request = createDto("PROD-IGDB-001", "Elden Ring", 70000, 70000, 0, null);
-
-        // when
-        catalogService.upsertGameData(request);
-        em.flush();
-        em.clear();
-
-        // then
-        Game game = gameRepository.findByPsStoreId("PROD-IGDB-001").orElseThrow();
-        assertThat(game.getIgdbCriticScore()).isEqualTo(91);   // Math.round(90.5)
-        assertThat(game.getIgdbCriticCount()).isEqualTo(48);
-        assertThat(game.getIgdbUserScore()).isEqualTo(87.3);
-        assertThat(game.getIgdbUserCount()).isEqualTo(1200);
-    }
-
-    @Test
-    @DisplayName("IGDB 호출이 별도 가상 스레드에서 실행된다. (병렬 실행 검증)")
-    void upsert_IgdbCalledOnSeparateThread() {
-        // given
-        String testThreadName = Thread.currentThread().getName();
-        AtomicReference<String> igdbThreadName = new AtomicReference<>();
-
-        given(igdbEnrichmentService.searchGame(any())).willAnswer(inv -> {
-            igdbThreadName.set(Thread.currentThread().getName());
-            return null;
-        });
-
-        // when
-        catalogService.upsertGameData(createDto("PROD-IGDB-002", "Thread Test", 50000, 50000, 0, null));
-
-        // then: IGDB는 호출됐고, upsertGameData를 호출한 스레드와 다른 스레드에서 실행됐어야 함
-        assertThat(igdbThreadName.get())
-                .isNotNull()
-                .isNotEqualTo(testThreadName);
-    }
-
-    // ── adminUpdateGame ──────────────────────────────────────────────────────
-
-    @Test
-    @DisplayName("adminUpdateGame — 영문명이 이미 있어도 새 값으로 수정된다 (updateInfo 버그 수정 검증)")
-    void adminUpdateGame_영문명_덮어쓰기() {
-        // given: 영문명이 이미 설정된 게임 생성
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
-        catalogService.upsertGameData(createDto("PROD-ADMIN-001", "엘든 링", 70000, 70000, 0, null));
-        em.flush(); em.clear();
-
-        Game game = gameRepository.findByPsStoreId("PROD-ADMIN-001").orElseThrow();
-        assertThat(game.getEnglishName()).isEqualTo("엘든 링 (Eng)");
-
-        AdminGameUpdateRequest req = new AdminGameUpdateRequest(
-                null, "Elden Ring", null,
-                null, null, null, null,
-                null, null, null, null,
-                null, null, null, null
-        );
-
-        // when
-        catalogService.adminUpdateGame(game.getId(), req);
-        em.flush(); em.clear();
-
-        // then: 기존 값 무관하게 영문명 수정됨
-        Game updated = gameRepository.findById(game.getId()).orElseThrow();
-        assertThat(updated.getEnglishName()).isEqualTo("Elden Ring");
-    }
-
-    @Test
     @DisplayName("adminUpdateGame — name/englishName은 null 가드 보호 (지우기 불가)")
     void adminUpdateGame_name_englishName_null_보호() {
         // given
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("PROD-ADMIN-002", "사이버펑크", 50000, 50000, 0, null));
         em.flush(); em.clear();
 
@@ -316,43 +231,9 @@ public class CatalogServiceTest {
     }
 
     @Test
-    @DisplayName("adminUpdateGame — IGDB null 전달 시 기존 평점 초기화 (폼 전체 제출 전제, 의도적 삭제 허용)")
-    void adminUpdateGame_IGDB_null_시_기존값_초기화() {
-        // given: IGDB 평점이 설정된 게임 생성
-        given(igdbEnrichmentService.searchGame(any())).willReturn(
-                new IgdbGameResponse(1L, "갓 오브 워", 90.5, 48, 87.3, 1200, null, 1248)
-        );
-        catalogService.upsertGameData(createDto("PROD-ADMIN-003", "갓 오브 워", 60000, 60000, 0, null));
-        em.flush(); em.clear();
-
-        Game game = gameRepository.findByPsStoreId("PROD-ADMIN-003").orElseThrow();
-        assertThat(game.getIgdbCriticScore()).isNotNull(); // 초기 IGDB 데이터 확인
-
-        // IGDB 전체 null (관리자가 평점 정보 지우기)
-        AdminGameUpdateRequest req = new AdminGameUpdateRequest(
-                null, null, null,
-                null, null, null, null,
-                null, null, null, null,
-                null, null, null, null
-        );
-
-        // when
-        catalogService.adminUpdateGame(game.getId(), req);
-        em.flush(); em.clear();
-
-        // then: IGDB 필드 전부 null로 초기화됨
-        Game updated = gameRepository.findById(game.getId()).orElseThrow();
-        assertThat(updated.getIgdbCriticScore()).isNull();
-        assertThat(updated.getIgdbCriticCount()).isNull();
-        assertThat(updated.getIgdbUserScore()).isNull();
-        assertThat(updated.getIgdbUserCount()).isNull();
-    }
-
-    @Test
     @DisplayName("adminUpdateGame — HLTB null 전달 시 기존 플레이타임 초기화")
     void adminUpdateGame_HLTB_null_시_기존값_초기화() {
         // given: HLTB 값 세팅
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("PROD-ADMIN-004", "엘든 링", 70000, 70000, 0, null));
         em.flush(); em.clear();
 
@@ -389,7 +270,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("첫 수집 시 isAllTimeLowNew는 false다 (기준선, 갱신 아님)")
     void allTimeLowNew_첫수집_false() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("ATL-001", "게임A", 39800, 39800, 0, null));
         em.flush(); em.clear();
 
@@ -401,7 +281,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("할인으로 역대 최저가를 처음 경신하면 isAllTimeLowNew가 true다")
     void allTimeLowNew_첫갱신_true() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         // 정상가로 첫 수집
         catalogService.upsertGameData(createDto("ATL-002", "게임B", 39800, 39800, 0, null));
         em.flush(); em.clear();
@@ -418,7 +297,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("역대 최저가 동일 가격으로 재수집하면 isAllTimeLowNew가 false다 (동률)")
     void allTimeLowNew_동일가격_재수집_false() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 39800, 0, null));
         catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(7)));
         em.flush(); em.clear();
@@ -435,7 +313,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("할인 종료 후 정가 복귀 시 isAllTimeLowNew는 false다")
     void allTimeLowNew_할인종료_false() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("ATL-004", "게임D", 39800, 39800, 0, null));
         catalogService.upsertGameData(createDto("ATL-004", "게임D", 39800, 29800, 25, LocalDate.now().plusDays(7)));
         em.flush(); em.clear();
@@ -452,7 +329,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("정가 복귀 후 이전 ATL 동일 가격으로 재할인 시 isAllTimeLowNew는 false다 (동률)")
     void allTimeLowNew_재할인_동률_false() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 39800, 0, null));
         catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 29800, 25, LocalDate.now().plusDays(7)));
         catalogService.upsertGameData(createDto("ATL-005", "게임E", 39800, 39800, 0, null)); // 할인 종료
@@ -470,7 +346,6 @@ public class CatalogServiceTest {
     @Test
     @DisplayName("더 낮은 가격으로 추가 갱신 시 isAllTimeLowNew가 다시 true다")
     void allTimeLowNew_추가갱신_true() {
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("ATL-006", "게임F", 39800, 39800, 0, null));
         catalogService.upsertGameData(createDto("ATL-006", "게임F", 39800, 29800, 25, LocalDate.now().plusDays(7)));
         em.flush(); em.clear();
@@ -490,7 +365,6 @@ public class CatalogServiceTest {
     @DisplayName("bulkDeleteGames — 게임과 연관 가격 이력이 모두 삭제된다")
     void bulkDeleteGames_게임과_이력_모두_삭제() {
         // given: 게임 2개 생성 (price_history 포함)
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("PROD-BULK-001", "벌크삭제1", 50000, 50000, 0, null));
         catalogService.upsertGameData(createDto("PROD-BULK-002", "벌크삭제2", 60000, 60000, 0, null));
         em.flush(); em.clear();
@@ -518,7 +392,6 @@ public class CatalogServiceTest {
     @DisplayName("bulkDeleteGames — 존재하지 않는 ID를 포함해도 예외 없이 존재하는 게임만 삭제된다")
     void bulkDeleteGames_존재하지않는ID_포함() {
         // given
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
         catalogService.upsertGameData(createDto("PROD-BULK-003", "벌크삭제3", 50000, 50000, 0, null));
         em.flush(); em.clear();
 
@@ -551,7 +424,6 @@ public class CatalogServiceTest {
         // given: 세일 중 최초 수집 (releaseDate 2주 전 → isRecentRelease=true)
         LocalDate recentRelease = LocalDate.now().minusWeeks(2);
         LocalDate saleEndPast  = LocalDate.now().minusDays(3);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         CollectRequest onSale = createDtoWithReleaseDate(
                 "PROD-BUG-001", "Voidtrain", 39800, 31840, 20, saleEndPast, recentRelease);
@@ -591,7 +463,6 @@ public class CatalogServiceTest {
     void upsert_RecentRelease_SamePrice_ExistingDoneJob_MetadataUpdated() {
         // given: 게임 최초 수집 후 CrawlJob DONE 전환
         LocalDate recentRelease = LocalDate.now().minusWeeks(2);
-        given(igdbEnrichmentService.searchGame(any())).willReturn(null);
 
         CollectRequest initial = createDtoWithReleaseDate(
                 "PROD-BUG-002", "TestGame", 39800, 39800, 0, null, recentRelease);

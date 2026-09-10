@@ -6,7 +6,6 @@ import com.pstracker.catalog_service.announcement.domain.AnnouncementType;
 import com.pstracker.catalog_service.announcement.dto.AnnouncementRequest;
 import com.pstracker.catalog_service.announcement.dto.AnnouncementResponse;
 import com.pstracker.catalog_service.announcement.repository.AnnouncementRepository;
-import com.pstracker.catalog_service.catalog.service.IgdbEnrichmentService;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,9 +30,6 @@ class AnnouncementServiceTest {
 
     @Autowired
     private EntityManager em;
-
-    @MockitoBean
-    private IgdbEnrichmentService igdbEnrichmentService;
 
     @MockitoBean
     private AiService aiService;

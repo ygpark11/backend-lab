@@ -8,6 +8,7 @@ import java.util.Arrays;
 @Getter
 @RequiredArgsConstructor
 public enum ArcadeGameType {
+    FLIGHT("flight", "PS 드래곤 플라이트"),
     SICHUAN("sichuan", "PS 트로피 사천성"),
     REFLEX("reflex", "PS 퀵 리액션 QTE");
 

@@ -28,7 +28,7 @@ const formatPlayerName = (item) => {
 const LeaderboardModal = ({
     isOpen,
     onClose,
-    initialGameType = 'sichuan',
+    initialGameType = 'flight',
     isAuthenticated = false,
     user = null,
     openLoginModal
@@ -101,29 +101,39 @@ const LeaderboardModal = ({
                 </div>
 
                 {/* 게임 전환 탭 */}
-                <div className="px-5 pt-3 pb-2 flex items-center gap-2 border-b border-divider/60 bg-base shrink-0">
+                <div className="px-5 pt-3 pb-2 flex items-center gap-2 border-b border-divider/60 bg-base shrink-0 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => handleTabChange('flight')}
+                        className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                            activeGame === 'flight'
+                                ? 'bg-ps-blue text-white shadow-md'
+                                : 'text-secondary hover:text-primary hover:bg-surface-hover'
+                        }`}
+                    >
+                        <Trophy className="w-4 h-4 text-yellow-400" />
+                        <span>PS 플라이트</span>
+                    </button>
+
                     <button
                         onClick={() => handleTabChange('sichuan')}
-                        className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 ${
+                        className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                             activeGame === 'sichuan'
                                 ? 'bg-ps-blue text-white shadow-md'
                                 : 'text-secondary hover:text-primary hover:bg-surface-hover'
                         }`}
                     >
-                        <Trophy className="w-4 h-4" />
-                        <span>트로피 사천성</span>
+                        <span>사천성</span>
                     </button>
 
                     <button
                         onClick={() => handleTabChange('reflex')}
-                        className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 ${
+                        className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                             activeGame === 'reflex'
                                 ? 'bg-ps-blue text-white shadow-md'
                                 : 'text-secondary hover:text-primary hover:bg-surface-hover'
                         }`}
                     >
-                        <Zap className="w-4 h-4" />
-                        <span>퀵 리액션 (QTE)</span>
+                        <span>퀵 리액션</span>
                     </button>
                 </div>
 

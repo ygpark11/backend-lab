@@ -14,8 +14,10 @@ import {
     Gamepad2,
     Crown,
     LogIn,
-    ChevronRight
+    ChevronRight,
+    Rocket
 } from 'lucide-react';
+import DragonFlightGame from '../components/arcade/DragonFlightGame';
 import SichuanGame from '../components/arcade/SichuanGame';
 import QuickReflexGame from '../components/arcade/QuickReflexGame';
 import LeaderboardModal from '../components/arcade/LeaderboardModal';
@@ -25,29 +27,35 @@ import { arcadeApi } from '../api/arcadeApi';
 const ArcadePage = () => {
     const { isAuthenticated, user, openLoginModal } = useAuth();
 
-    // 뷰 모드: 'HUB' (아케이드 메인 라운지) | 'SICHUAN' (사천성) | 'REFLEX' (퀵 리액션)
+    // 뷰 모드: 'HUB' (아케이드 메인 라운지) | 'FLIGHT' (PS 플라이트) | 'SICHUAN' (사천성) | 'REFLEX' (퀵 리액션)
     const [activeView, setActiveView] = useState('HUB');
 
     // 리더보드 모달 상태
     const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
-    const [leaderboardGameType, setLeaderboardGameType] = useState('sichuan');
+    const [leaderboardGameType, setLeaderboardGameType] = useState('flight');
 
     // 서버 DB 기반 내 최고 기록
-    const [userBestScores, setUserBestScores] = useState({ sichuan: 0, reflex: 0 });
+    const [userBestScores, setUserBestScores] = useState({
+        flight: 0,
+        sichuan: 0,
+        reflex: 0
+    });
 
     const fetchUserBestScores = useCallback(async () => {
         if (!isAuthenticated || !user) {
-            setUserBestScores({ sichuan: 0, reflex: 0 });
+            setUserBestScores({ flight: 0, sichuan: 0, reflex: 0 });
             return;
         }
 
         try {
-            const [sichuanData, reflexData] = await Promise.all([
-                arcadeApi.getLeaderboard('sichuan', user),
-                arcadeApi.getLeaderboard('reflex', user)
+            const [flightData, sichuanData, reflexData] = await Promise.all([
+                arcadeApi.getLeaderboard('flight', user).catch(() => null),
+                arcadeApi.getLeaderboard('sichuan', user).catch(() => null),
+                arcadeApi.getLeaderboard('reflex', user).catch(() => null)
             ]);
 
             setUserBestScores({
+                flight: flightData?.myRank?.score || 0,
                 sichuan: sichuanData?.myRank?.score || 0,
                 reflex: reflexData?.myRank?.score || 0
             });
@@ -62,12 +70,32 @@ const ArcadePage = () => {
         }
     }, [activeView, fetchUserBestScores]);
 
-    const handleOpenLeaderboard = (gameType = 'sichuan') => {
+    const handleOpenLeaderboard = (gameType = 'flight') => {
         setLeaderboardGameType(gameType);
         setIsLeaderboardOpen(true);
     };
 
-    // 사천성 플레이 뷰
+    // 1. PS 플라이트 플레이 뷰
+    if (activeView === 'FLIGHT') {
+        return (
+            <>
+                <DragonFlightGame
+                    onBack={() => setActiveView('HUB')}
+                    onOpenLeaderboard={handleOpenLeaderboard}
+                />
+                <LeaderboardModal
+                    isOpen={isLeaderboardOpen}
+                    onClose={() => setIsLeaderboardOpen(false)}
+                    initialGameType={leaderboardGameType}
+                    isAuthenticated={isAuthenticated}
+                    user={user}
+                    openLoginModal={openLoginModal}
+                />
+            </>
+        );
+    }
+
+    // 2. 사천성 플레이 뷰
     if (activeView === 'SICHUAN') {
         return (
             <>
@@ -91,7 +119,7 @@ const ArcadePage = () => {
         );
     }
 
-    // 퀵 리액션 플레이 뷰
+    // 3. 퀵 리액션 플레이 뷰
     if (activeView === 'REFLEX') {
         return (
             <>
@@ -135,17 +163,17 @@ const ArcadePage = () => {
                     </div>
 
                     <h1 className="text-2xl sm:text-4xl font-black italic tracking-tight text-primary mb-3 bg-clip-text text-transparent bg-gradient-to-r from-primary via-ps-blue to-cyan-400">
-                        PS 아케이드 미니게임 라운지
+                        PS 아케이드 라운지
                     </h1>
                     <p className="text-xs sm:text-sm text-secondary leading-relaxed font-medium">
-                        PlayStation 아이덴티티를 담은 캐주얼 미니게임에 도전하세요.<br className="hidden sm:inline" />
-                        타임어택 챌린지를 완수하고 명예의 전당 리더보드에 이름을 남겨보세요!
+                        PlayStation 감성의 아케이드 게임에 도전하세요.<br className="hidden sm:inline" />
+                        자신의 한계를 시험하고 글로벌 명예의 전당 리더보드에 이름을 남겨보세요!
                     </p>
 
                     {/* 통합 명예의 전당 CTA 버튼 */}
                     <div className="mt-5 flex items-center justify-center gap-3">
                         <button
-                            onClick={() => handleOpenLeaderboard('sichuan')}
+                            onClick={() => handleOpenLeaderboard('flight')}
                             className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-surface border border-divider hover:border-ps-blue/50 text-xs sm:text-sm font-bold text-primary hover:bg-surface-hover shadow-sm active:scale-95 transition-all group"
                         >
                             <Crown className="w-4 h-4 text-yellow-500 transition-transform group-hover:scale-110" />
@@ -165,11 +193,70 @@ const ArcadePage = () => {
                     </div>
                 </div>
 
-                {/* 게임 선택 Bento 그리드 카드 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 w-full">
-                    {/* 게임 1: PS 트로피 사천성 */}
-                    <div className="group relative bg-surface/90 backdrop-blur-md border border-divider hover:border-ps-blue/50 rounded-3xl p-6 sm:p-7 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                        {/* 상단 은은한 배경 글로우 */}
+                {/* 🎮 아케이드 3대 게임 전면 카드 그리드 */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 w-full">
+                    {/* 게임 1: PS 플라이트 (드래곤 플라이트) */}
+                    <div className="group relative bg-surface/90 backdrop-blur-md border-2 border-ps-blue/40 hover:border-ps-blue rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
+                        <div className="absolute -top-16 -right-16 w-40 h-40 bg-ps-blue/20 blur-3xl rounded-full pointer-events-none group-hover:bg-ps-blue/30 transition-all" />
+
+                        <div>
+                            {/* 상단 뱃지 & 아이콘 */}
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-3 rounded-2xl bg-ps-blue/15 border border-ps-blue/30 text-ps-blue">
+                                    <Rocket className="w-6 h-6" />
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="px-2.5 py-1 rounded-full bg-ps-blue text-white text-[10px] font-black uppercase tracking-wide">
+                                        신규 • 슈팅
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full bg-base border border-divider text-[10px] font-bold text-secondary">
+                                        라이프 2개+쉴드
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* 타이틀 & 설명 */}
+                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight text-primary mb-2 group-hover:text-ps-blue transition-colors">
+                                PS 플라이트
+                            </h2>
+                            <p className="text-xs sm:text-sm text-secondary leading-relaxed mb-6 font-medium">
+                                5개 레인에서 쏟아지는 적들을 격추하며 끝없이 질주하세요!
+                                파워샷, 자석, 하이퍼 무적 대시와 폭탄(Space)으로 최고 거리를 돌파하세요.
+                            </p>
+
+                            {/* 스탯 프리뷰 */}
+                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-base border border-divider mb-6">
+                                <Award className="w-4 h-4 text-yellow-500 shrink-0" />
+                                <div className="flex-1 flex items-center justify-between text-xs">
+                                    <span className="text-secondary font-bold">내 최고 기록</span>
+                                    <span className={`font-black ${isAuthenticated ? 'text-primary' : 'text-secondary text-[11px]'}`}>
+                                        {isAuthenticated ? `${userBestScores.flight.toLocaleString()}P` : '로그인 시 기록'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 하단 액션 버튼 */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-divider/60">
+                            <button
+                                onClick={() => setActiveView('FLIGHT')}
+                                className="flex-1 py-3 px-4 rounded-2xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(0,112,209,0.4)] hover:shadow-[0_0_20px_rgba(0,112,209,0.6)] active:scale-95 transition-all"
+                            >
+                                <Play className="w-4 h-4 fill-current" />
+                                <span>플레이하기</span>
+                            </button>
+                            <button
+                                onClick={() => handleOpenLeaderboard('flight')}
+                                className="py-3 px-3.5 rounded-2xl bg-base hover:bg-surface-hover border border-divider text-secondary hover:text-primary transition-colors text-xs font-bold"
+                                title="플라이트 랭킹 보기"
+                            >
+                                <Trophy className="w-4 h-4 text-yellow-500" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 게임 2: PS 트로피 사천성 */}
+                    <div className="group relative bg-surface/90 backdrop-blur-md border border-divider hover:border-ps-blue/50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
                         <div className="absolute -top-16 -right-16 w-40 h-40 bg-ps-blue/15 blur-3xl rounded-full pointer-events-none group-hover:bg-ps-blue/25 transition-all" />
 
                         <div>
@@ -228,9 +315,8 @@ const ArcadePage = () => {
                         </div>
                     </div>
 
-                    {/* 게임 2: PS 퀵 리액션 (QTE) */}
-                    <div className="group relative bg-surface/90 backdrop-blur-md border border-divider hover:border-amber-500/50 rounded-3xl p-6 sm:p-7 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                        {/* 상단 은은한 배경 글로우 */}
+                    {/* 게임 3: PS 퀵 리액션 (QTE) */}
+                    <div className="group relative bg-surface/90 backdrop-blur-md border border-divider hover:border-amber-500/50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
                         <div className="absolute -top-16 -right-16 w-40 h-40 bg-amber-500/15 blur-3xl rounded-full pointer-events-none group-hover:bg-amber-500/25 transition-all" />
 
                         <div>
@@ -241,7 +327,7 @@ const ArcadePage = () => {
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-500">
-                                        신규 • QTE
+                                        피지컬 • QTE
                                     </span>
                                     <span className="px-2.5 py-1 rounded-full bg-base border border-divider text-[10px] font-bold text-secondary">
                                         45초

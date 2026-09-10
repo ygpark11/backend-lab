@@ -9,7 +9,9 @@ import {
     VolumeX,
     ArrowLeft,
     Zap,
-    Award
+    Award,
+    Lightbulb,
+    CheckCircle2
 } from 'lucide-react';
 import {
     REFLEX_SYMBOLS,
@@ -302,31 +304,31 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
                 </div>
 
                 {/* 정보 바 (시간, 점수, 콤보) */}
-                <div className="flex items-center justify-between gap-2 bg-surface/90 backdrop-blur-md border border-divider p-2 rounded-2xl">
-                    <div className={`flex flex-col items-center justify-center px-3 py-1 rounded-xl border transition-all ${timeLeft <= 10 ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-base border-divider text-primary'}`}>
-                        <div className="flex items-center gap-1 text-[10px] text-secondary font-bold">
-                            <Timer className="w-3 h-3 text-ps-blue" />
+                <div className="flex items-center justify-between gap-1.5 sm:gap-2 bg-surface/90 backdrop-blur-md border border-divider p-1.5 sm:p-2 rounded-2xl overflow-hidden">
+                    <div className={`flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-3 py-1 rounded-xl border transition-all whitespace-nowrap ${timeLeft <= 10 ? 'bg-red-500/20 border-red-500 text-red-500 animate-pulse' : 'bg-base border-divider text-primary'}`}>
+                        <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-secondary font-bold whitespace-nowrap">
+                            <Timer className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-ps-blue shrink-0" />
                             <span>시간</span>
                         </div>
-                        <span className="text-xs sm:text-sm font-black">{timeLeft}s</span>
+                        <span className="text-xs sm:text-sm font-black whitespace-nowrap">{timeLeft}s</span>
                     </div>
 
-                    <div className="flex flex-col items-center justify-center px-4 py-1 rounded-xl bg-base border border-divider flex-1">
-                        <div className="flex items-center gap-1 text-[10px] text-secondary font-bold">
-                            <Sparkles className="w-3 h-3 text-yellow-500" />
+                    <div className="flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-4 py-1 rounded-xl bg-base border border-divider whitespace-nowrap">
+                        <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-secondary font-bold whitespace-nowrap">
+                            <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-500 shrink-0" />
                             <span>점수</span>
                         </div>
-                        <span className="text-sm sm:text-base font-black text-primary">
+                        <span className="text-xs sm:text-base font-black text-primary whitespace-nowrap">
                             {score.toLocaleString()}
                         </span>
                     </div>
 
-                    <div className={`flex flex-col items-center justify-center px-3 py-1 rounded-xl border transition-all ${isFeverActive ? 'bg-amber-500/20 border-amber-500 text-amber-500 animate-bounce' : 'bg-base border-divider text-secondary'}`}>
-                        <div className="flex items-center gap-1 text-[10px] font-bold">
-                            <Flame className={`w-3 h-3 ${isFeverActive ? 'text-amber-500' : 'text-secondary'}`} />
+                    <div className={`flex flex-col items-center justify-center flex-1 min-w-0 px-1 sm:px-3 py-1 rounded-xl border transition-all whitespace-nowrap ${isFeverActive ? 'bg-amber-500/20 border-amber-500 text-amber-500 animate-bounce' : 'bg-base border-divider text-secondary'}`}>
+                        <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs font-bold whitespace-nowrap">
+                            <Flame className={`w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 ${isFeverActive ? 'text-amber-500' : 'text-secondary'}`} />
                             <span>콤보</span>
                         </div>
-                        <span className="text-xs sm:text-sm font-black">
+                        <span className="text-xs sm:text-sm font-black whitespace-nowrap">
                             {combo > 0 ? `x${combo}` : '-'}
                         </span>
                     </div>
@@ -463,29 +465,29 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
                             <Trophy className="w-8 h-8" />
                         </div>
 
-                        <h3 className="text-xl font-black text-primary mb-1">
+                        <h3 className="text-xl font-black text-primary mb-1 whitespace-nowrap">
                             타임오버! 챌린지 완료
                         </h3>
-                        <p className="text-xs text-secondary mb-4">
+                        <p className="text-xs text-secondary mb-4 whitespace-nowrap">
                             45초간 듀얼센스 퀵 리액션을 완수했습니다.
                         </p>
 
                         <div className="w-full bg-base border border-divider rounded-2xl p-4 mb-3 flex flex-col gap-2">
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-xs whitespace-nowrap">
                                 <span className="text-secondary font-bold">최종 점수</span>
-                                <span className="text-base font-black text-ps-blue">
+                                <span className="text-base font-black text-ps-blue font-mono">
                                     {resultSummary.finalScore.toLocaleString()}P
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-xs whitespace-nowrap">
                                 <span className="text-secondary font-bold">최대 콤보</span>
-                                <span className="text-sm font-black text-amber-500">
+                                <span className="text-sm font-black text-amber-500 font-mono">
                                     {resultSummary.maxCombo} 콤보
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center justify-between text-xs whitespace-nowrap">
                                 <span className="text-secondary font-bold">퍼펙트 판정</span>
-                                <span className="text-sm font-bold text-emerald-500">
+                                <span className="text-sm font-bold text-emerald-500 font-mono">
                                     {resultSummary.perfectCount}회
                                 </span>
                             </div>
@@ -493,14 +495,14 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
 
                         {/* 로그인 상태별 리더보드 안내 배너 */}
                         {user ? (
-                            <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5">
-                                <Trophy className="w-3.5 h-3.5 text-ps-blue" />
+                            <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
                                 <span>명예의 전당에 점수가 자동 등록되었습니다!</span>
                             </div>
                         ) : (
                             <div className="w-full p-3 mb-4 rounded-2xl bg-surface-hover/80 border border-divider text-left flex flex-col gap-2">
                                 <div className="flex items-start gap-1.5">
-                                    <span className="text-sm leading-none">💡</span>
+                                    <Lightbulb className="w-4 h-4 text-yellow-500 shrink-0 mt-0.5" />
                                     <div className="text-[11px] text-secondary leading-relaxed">
                                         <strong className="text-primary block font-bold mb-0.5">기록을 영구 보존하시겠습니까?</strong>
                                         로그인하시면 지금 달성한 {resultSummary.finalScore.toLocaleString()}점을 명예의 전당에 영구 등록할 수 있습니다.

@@ -2,7 +2,6 @@ package com.pstracker.catalog_service.catalog.service;
 
 import com.pstracker.catalog_service.catalog.domain.*;
 import com.pstracker.catalog_service.catalog.dto.*;
-import com.pstracker.catalog_service.catalog.dto.igdb.IgdbGameResponse;
 import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.client.collector.CollectorClientManager;
@@ -19,11 +18,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,8 +43,6 @@ public class CatalogService {
     private final GameVoteRepository gameVoteRepository;
     private final CrawlJobRepository crawlJobRepository;
     private final ApplicationEventPublisher eventPublisher;
-    private final IgdbEnrichmentService igdbEnrichmentService;
-    private final Executor igdbExecutor;
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
@@ -65,12 +61,6 @@ public class CatalogService {
             return;
         }
 
-        // IGDB 호출 선제 시작 — DB 작업과 병렬로 진행
-        String searchTitle = StringUtils.hasText(request.getEnglishTitle())
-                ? request.getEnglishTitle() : request.getTitle();
-        CompletableFuture<IgdbGameResponse> igdbFuture =
-                CompletableFuture.supplyAsync(() -> fetchIgdbSafely(searchTitle), igdbExecutor);
-
         Set<Genre> genreEntities = resolveGenres(request.getGenreIds());
         Game game = findOrCreateGame(request);
         boolean isNewGame = game.getId() == null;
@@ -78,9 +68,6 @@ public class CatalogService {
 
         updateGameMetadata(game, request, genreEntities);
         boolean editionContentsChanged = game.updateEditionContents(request.getEditionContents());
-
-        // DB 작업이 끝난 시점에 IGDB 결과 합류
-        applyIgdbRatings(game, igdbFuture.join(), searchTitle);
 
         game.updatePriceSearchInfo(
                 request.getOriginalPrice(),
@@ -222,31 +209,6 @@ public class CatalogService {
         return platforms;
     }
 
-    /**
-     * IGDB 평점을 게임 엔티티에 적용한다.
-     * igdbInfo가 null(Miss/실패)이면 기존 값을 그대로 유지한다.
-     */
-    private void applyIgdbRatings(Game game, IgdbGameResponse igdbInfo, String searchTitle) {
-        if (igdbInfo == null) {
-            log.debug("IGDB Miss or Failed: {}", searchTitle);
-            return;
-        }
-        Integer criticScore = igdbInfo.criticScore() != null ? (int) Math.round(igdbInfo.criticScore()) : null;
-        game.updateIgdbRatings(criticScore, igdbInfo.criticCount(), igdbInfo.userScore(), igdbInfo.userCount());
-        log.debug("IGDB Ratings updated for: {}", searchTitle);
-    }
-
-    /**
-     * IGDB API 호출 — 예외 발생 시 null 반환 (내부 로직에 영향 없음)
-     */
-    private IgdbGameResponse fetchIgdbSafely(String searchTitle) {
-        try {
-            return igdbEnrichmentService.searchGame(searchTitle);
-        } catch (Exception e) {
-            log.warn("IGDB Sync Failed for '{}': {}", searchTitle, e.getMessage());
-            return null;
-        }
-    }
 
     /**
      * 가격 정보 처리: 변동 감지, 이력 저장, 가격 하락 알림 발행
@@ -504,6 +466,13 @@ public class CatalogService {
         try {
             String response = clientManager.getPrimary().triggerSingleCrawl(new SingleCrawlRequest(targetUrl, internalSecretKey));
             log.info("Crawler Response: {}", response);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 429) {
+                log.warn("크롤러 작업 충돌 (429): {}", e.getMessage());
+                throw new IllegalStateException("다른 수집 작업이 실행 중입니다. 잠시 후 시도해주세요.");
+            }
+            log.error("Crawler Trigger Failed: {}", e.getMessage());
+            throw new RuntimeException("크롤러 서버 연결 실패: " + e.getMessage());
         } catch (Exception e) {
             log.error("Crawler Trigger Failed: {}", e.getMessage());
             throw new RuntimeException("크롤러 서버 연결 실패: " + e.getMessage());

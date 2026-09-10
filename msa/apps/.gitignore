@@ -1,0 +1,4 @@
+# Planning & Internal Design Notes (Git 커밋 제외)
+plans/
+*.plan.md
+*.proposal.md
