@@ -459,8 +459,17 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
 
             {/* 게임 결과 모달 */}
             {isResultOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-                    <div className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-6 shadow-2xl text-center flex flex-col items-center">
+                <div
+                    onClick={() => {
+                        setIsResultOpen(false);
+                        setShowOverlay(true);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200 cursor-pointer"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-6 shadow-2xl text-center flex flex-col items-center cursor-default"
+                    >
                         <div className="w-14 h-14 rounded-2xl bg-ps-blue/20 border border-ps-blue/40 flex items-center justify-center text-ps-blue mb-3">
                             <Trophy className="w-8 h-8" />
                         </div>

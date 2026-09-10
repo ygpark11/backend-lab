@@ -141,9 +141,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             floatingTexts: [],
             stars: [],
 
-            // 웨이브 스폰 타이머
+            // 웨이브 및 기습 운석 스폰 타이머
             waveCount: 0,
             lastSpawnTime: 0,
+            lastStrayMeteorTime: 0,
+            meteorWarnings: [],
             spawnInterval: 1300,
             gameStartTime: Date.now(),
             lastFrameTime: performance.now(),
@@ -419,9 +421,13 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 }
             }
 
-            // 4. 적 웨이브 스폰
-            const difficultyFactor = Math.min(2.6, 1 + engine.distance / 1800);
-            const currentSpawnInterval = Math.max(680, 1350 / difficultyFactor);
+            // 4. 난이도 및 적 웨이브 / 기습 운석 스케일링
+            // 거리(km)와 점수(score) 기반 부드러운 로그형 성장곡선 (30만점 이상에서도 지속적인 긴장감 제공)
+            // 단, 플레이어 탄환 화력(최대 3열)을 고려하여 적 HP는 엄격히 제한(크루저 최대 4 HP)하고 난이도는 속도와 운석/회피 기믹으로 부여
+            const distKm = engine.distance / 1000;
+            const scoreProgression = Math.log10(Math.max(1, engine.score / 10000) + 1); // 0 at 0, ~0.6 at 30k, ~1.5 at 300k
+            const difficultyFactor = Math.min(4.2, 1 + Math.log2(1 + distKm * 0.7) * 0.75 + scoreProgression * 0.35);
+            const currentSpawnInterval = Math.max(580, 1350 / (1 + (difficultyFactor - 1) * 0.6));
 
             if (currentTime - engine.lastSpawnTime > currentSpawnInterval) {
                 engine.lastSpawnTime = currentTime;
@@ -431,17 +437,30 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 const isWallWave = engine.distance > 300 && (engine.waveCount % 5 === 0);
 
                 if (isWallWave) {
-                    // 전열 장벽: 5개 레인 전체에 스폰하되, 무조건 1개 레인은 탈출구(1-HP 스카우트 or 골드)로 배정
+                    // 전열 장벽: 5개 레인 전체에 스폰하되, 무조건 1개 레인은 탈출구(1-HP 스카우트 or 골드)로 보장
                     const escapeLaneIdx = Math.floor(Math.random() * LANES.length);
                     engine.addFloatingText('WALL WAVE ALERT!', 225, 120, '#ef4444', 22);
+
+                    // 고거리/고득점일수록 장벽 내 파괴 불가 운석 비중 조절 (최대 2개 레인까지만 배치하여 탈출로 보장)
+                    const meteorLanes = new Set();
+                    if (engine.distance > 1500 || engine.score > 40000) {
+                        const nonEscapeLanes = [0, 1, 2, 3, 4].filter(idx => idx !== escapeLaneIdx);
+                        // 1500m 이상: 운석 1개, 5000m or 150,000점 이상: 운석 2개
+                        const targetMCount = (engine.distance > 5000 || engine.score > 150000) ? 2 : 1;
+                        nonEscapeLanes.sort(() => 0.5 - Math.random());
+                        for (let m = 0; m < targetMCount && m < nonEscapeLanes.length; m++) {
+                            meteorLanes.add(nonEscapeLanes[m]);
+                        }
+                    }
 
                     for (let i = 0; i < LANES.length; i++) {
                         const laneX = LANES[i];
                         const isEscape = (i === escapeLaneIdx);
+                        const isMeteorWall = meteorLanes.has(i);
 
                         let type = 'scout';
                         let hp = 1;
-                        let speed = 2.4 * difficultyFactor;
+                        let speed = Math.min(6.5, 2.4 * (1 + (difficultyFactor - 1) * 0.45));
                         let score = 150;
                         let color = '#ef4444';
                         let pattern = 'straight';
@@ -451,25 +470,23 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                             if (Math.random() < 0.35) {
                                 type = 'gold';
                                 hp = 2;
-                                speed = 2.8 * difficultyFactor;
+                                speed = Math.min(7.0, 2.8 * (1 + (difficultyFactor - 1) * 0.45));
                                 score = 600;
                                 color = '#f59e0b';
                             }
+                        } else if (isMeteorWall) {
+                            type = 'meteor';
+                            hp = 999;
+                            speed = Math.min(6.0, 2.2 * (1 + (difficultyFactor - 1) * 0.4));
+                            score = 0;
+                            color = '#475569';
                         } else {
-                            // 일반 벽: 크루저 혹은 (700m 이후) 메테오
-                            if (engine.distance > 700 && Math.random() < 0.3) {
-                                type = 'meteor';
-                                hp = 999;
-                                speed = 2.0 * difficultyFactor;
-                                score = 0;
-                                color = '#475569';
-                            } else {
-                                type = 'cruiser';
-                                hp = Math.min(5, Math.floor(2.2 + difficultyFactor));
-                                speed = 1.8 * difficultyFactor;
-                                score = 420;
-                                color = '#9333ea';
-                            }
+                            // 일반 벽: 크루저 (절대 HP 과도 팽창 금지 - 최대 4 HP 상한)
+                            type = 'cruiser';
+                            hp = Math.min(4, Math.floor(2.0 + (difficultyFactor - 1) * 0.45));
+                            speed = Math.min(5.5, 1.8 * (1 + (difficultyFactor - 1) * 0.4));
+                            score = 420;
+                            color = '#9333ea';
                         }
 
                         engine.enemies.push({
@@ -490,8 +507,8 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                         });
                     }
                 } else {
-                    // 일반 웨이브: 거리 비례 2~4개 레인에 적 동시 생성
-                    const numEnemies = Math.min(4, Math.floor(1.5 + Math.random() * 1.8 + engine.distance / 3200));
+                    // 일반 웨이브: 거리 & 점수 비례 2~4개 레인에 적 동시 생성
+                    const numEnemies = Math.min(4, Math.floor(1.8 + Math.random() * 1.5 + distKm * 0.25));
                     const availableLanes = [...LANES].sort(() => 0.5 - Math.random());
 
                     for (let i = 0; i < numEnemies; i++) {
@@ -500,39 +517,42 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
 
                         let type = 'scout'; // 1 HP 날렵한 정찰기
                         let hp = 1;
-                        let speed = (2.5 + Math.random() * 1.2) * difficultyFactor;
+                        let speed = Math.min(7.2, (2.5 + Math.random() * 1.2) * (1 + (difficultyFactor - 1) * 0.45));
                         let score = 150;
                         let color = '#ef4444';
                         let pattern = 'straight';
 
-                        // 450m 이상 지그재그 패턴 부여
-                        if (engine.distance > 450 && Math.random() < 0.32) {
+                        // 거리 기반 지그재그 및 급강하 패턴
+                        if (engine.distance > 450 && Math.random() < Math.min(0.45, 0.25 + distKm * 0.04)) {
                             pattern = 'zigzag';
-                        } else if (engine.distance > 600 && Math.random() < 0.28) {
+                        } else if (engine.distance > 600 && Math.random() < Math.min(0.40, 0.22 + distKm * 0.03)) {
                             pattern = 'dive';
                         }
 
-                        if (roll < 0.25) {
-                            type = 'cruiser'; // 중장갑 탱크함
-                            hp = Math.min(5, Math.floor(2.2 + difficultyFactor));
-                            speed = (1.5 + Math.random() * 0.7) * difficultyFactor;
+                        // 운석 등장 확률: 거리 & 점수에 비례해 상승
+                        const meteorChance = Math.min(0.35, 0.10 + (distKm * 0.02) + (scoreProgression * 0.04));
+
+                        if (roll < 0.22) {
+                            type = 'cruiser'; // 중장갑 탱크함 (최대 4 HP 상한)
+                            hp = Math.min(4, Math.floor(2.0 + (difficultyFactor - 1) * 0.45));
+                            speed = Math.min(5.5, (1.6 + Math.random() * 0.6) * (1 + (difficultyFactor - 1) * 0.4));
                             score = 420;
                             color = '#9333ea';
                             pattern = 'straight';
-                        } else if (roll < 0.36) {
+                        } else if (roll < 0.32) {
                             type = 'gold'; // 보너스 황금 적
                             hp = 2;
-                            speed = 3.0 * difficultyFactor;
+                            speed = Math.min(7.5, 3.0 * (1 + (difficultyFactor - 1) * 0.45));
                             score = 600;
                             color = '#f59e0b';
                             pattern = 'straight';
-                        } else if (roll < 0.46 && engine.distance > 700) {
+                        } else if (engine.distance > 650 && roll < 0.32 + meteorChance) {
                             type = 'meteor'; // 파괴 불가 운석
                             hp = 999;
-                            speed = (1.8 + Math.random() * 0.6) * difficultyFactor;
+                            speed = Math.min(6.5, (2.0 + Math.random() * 0.8) * (1 + (difficultyFactor - 1) * 0.4));
                             score = 0;
                             color = '#475569';
-                            pattern = Math.random() < 0.5 ? 'diagonal' : 'straight';
+                            pattern = (engine.distance > 2000 && Math.random() < 0.45) ? 'diagonal' : 'straight';
                         }
 
                         engine.enemies.push({
@@ -556,6 +576,72 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                             rotSpeed: (Math.random() - 0.5) * 0.06,
                             diving: false
                         });
+                    }
+                }
+            }
+
+            // 4-B. 비정기 불규칙 기습 운석 난입 (Stray Meteor Hazard)
+            // 거리와 점수에 비례하여 웨이브 주기와 독립적으로 낙하하며 긴장감 극대화
+            if (engine.distance > 600 || engine.score > 15000) {
+                const strayBaseInterval = Math.max(1600, 4800 / (1 + distKm * 0.32 + scoreProgression * 0.38));
+                if (currentTime - engine.lastStrayMeteorTime > strayBaseInterval) {
+                    engine.lastStrayMeteorTime = currentTime + (Math.random() * 600 - 300); // ±300ms 불규칙 지터
+
+                    // 경고를 표시할 타겟 레인 선정
+                    const chosenLaneIdx = Math.floor(Math.random() * LANES.length);
+                    const targetLaneX = LANES[chosenLaneIdx];
+                    const isDiagonal = (engine.distance > 3000 || engine.score > 80000) && Math.random() < 0.45;
+                    const meteorSpeed = Math.min(7.0, (2.6 + Math.random() * 1.0) * (1 + (difficultyFactor - 1) * 0.35));
+
+                    // 480ms 전 사전 시각 경고 등록
+                    engine.meteorWarnings.push({
+                        laneX: targetLaneX,
+                        dropTime: currentTime + 480,
+                        speed: meteorSpeed,
+                        pattern: isDiagonal ? 'diagonal' : 'straight'
+                    });
+
+                    // 7000m or 20만점 이상 극후반부: 30% 확률로 다른 레인에 2중 기습 운석 추가 등록
+                    if ((engine.distance > 7000 || engine.score > 200000) && Math.random() < 0.30) {
+                        const secondLaneCandidates = LANES.filter(lx => lx !== targetLaneX);
+                        const secondLaneX = secondLaneCandidates[Math.floor(Math.random() * secondLaneCandidates.length)];
+                        engine.meteorWarnings.push({
+                            laneX: secondLaneX,
+                            dropTime: currentTime + 680,
+                            speed: meteorSpeed * 1.08,
+                            pattern: 'straight'
+                        });
+                    }
+                }
+            }
+
+            // 사전 경고 시간이 도달한 기습 운석 실제 생성
+            if (engine.meteorWarnings && engine.meteorWarnings.length > 0) {
+                for (let wIdx = engine.meteorWarnings.length - 1; wIdx >= 0; wIdx--) {
+                    const w = engine.meteorWarnings[wIdx];
+                    if (currentTime >= w.dropTime) {
+                        engine.enemies.push({
+                            x: w.laneX,
+                            y: -44,
+                            baseX: w.laneX,
+                            width: 44,
+                            height: 44,
+                            type: 'meteor',
+                            hp: 999,
+                            maxHp: 999,
+                            speed: w.speed,
+                            score: 0,
+                            color: '#475569',
+                            pattern: w.pattern,
+                            phase: Math.random() * Math.PI * 2,
+                            freq: 0.035,
+                            amp: 26,
+                            vx: (Math.random() > 0.5 ? 1 : -1) * (1.6 + Math.random() * 1.0),
+                            rotation: 0,
+                            rotSpeed: (Math.random() - 0.5) * 0.08,
+                            diving: false
+                        });
+                        engine.meteorWarnings.splice(wIdx, 1);
                     }
                 }
             }
@@ -821,6 +907,32 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 ctx.stroke();
             });
             ctx.setLineDash([]);
+
+            // [기습 운석 경고 인디케이터 (Hazard Warning)]
+            if (engine.meteorWarnings && engine.meteorWarnings.length > 0) {
+                engine.meteorWarnings.forEach(w => {
+                    const pulse = (Math.sin(currentTime * 0.024) + 1) * 0.5;
+                    const alpha = 0.3 + pulse * 0.5;
+
+                    // 해당 레인 반투명 붉은색 경고 빔
+                    ctx.fillStyle = `rgba(239, 68, 68, ${alpha * 0.22})`;
+                    ctx.fillRect(w.laneX - 25, 0, 50, 160);
+
+                    // 레인 상단 경고 비콘 및 아이콘
+                    ctx.save();
+                    ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
+                    ctx.font = 'bold 15px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('▲ ! ▲', w.laneX, 24);
+
+                    // 경고 테두리 박스
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.75})`;
+                    ctx.lineWidth = 1.5;
+                    ctx.strokeRect(w.laneX - 24, 6, 48, 36);
+                    ctx.restore();
+                });
+            }
 
             // [충격파 및 파티클 렌더링]
             engine.particles.forEach(p => {
@@ -1208,11 +1320,15 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
         // 로그인된 경우 백엔드 리더보드 등록
         if (isAuthenticated && user) {
             try {
-                await arcadeApi.submitScore('flight', finalScore, playTimeSec);
+                const res = await arcadeApi.submitScore('flight', {
+                    score: finalScore,
+                    clearTimeSec: playTimeSec,
+                    user
+                });
                 setGameOverStats(prev => ({
                     ...prev,
                     isSubmitting: false,
-                    submitSuccess: true
+                    submitSuccess: res.success !== false
                 }));
             } catch (err) {
                 console.error('[DragonFlight] 점수 등록 실패:', err);
@@ -1344,8 +1460,14 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
 
                 {/* 게임 오버 결과 모달 */}
                 {gameState === 'GAMEOVER' && (
-                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 backdrop-blur-md p-5 animate-in fade-in duration-300">
-                        <div className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
+                    <div
+                        onClick={() => setGameState('IDLE')}
+                        className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 backdrop-blur-md p-5 animate-in fade-in duration-300 cursor-pointer"
+                    >
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center cursor-default"
+                        >
                             {/* 트로피 / 신기록 뱃지 */}
                             {gameOverStats.isNewRecord ? (
                                 <div className="p-3.5 rounded-2xl bg-yellow-500/15 border border-yellow-500/30 text-yellow-500 mb-3 animate-bounce">

@@ -618,8 +618,17 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
 
             {/* 결과 모달 */}
             {isResultModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-                    <div className="w-full max-w-md bg-surface border border-divider rounded-3xl p-6 shadow-2xl text-center flex flex-col items-center">
+                <div
+                    onClick={() => {
+                        setIsResultModalOpen(false);
+                        setShowOverlay(true);
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200 cursor-pointer"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-md bg-surface border border-divider rounded-3xl p-6 shadow-2xl text-center flex flex-col items-center cursor-default"
+                    >
                         <div className="w-16 h-16 rounded-2xl bg-ps-blue/20 border border-ps-blue/40 flex items-center justify-center text-ps-blue mb-4">
                             <Trophy className="w-9 h-9" />
                         </div>

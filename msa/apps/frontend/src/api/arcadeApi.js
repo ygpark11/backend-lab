@@ -41,23 +41,31 @@ export const arcadeApi = {
 
     /**
      * 점수 등록 (로그인 회원 전용)
+     * 객체 형태({ score, clearTimeSec, user }) 또는 직접 파라미터(score, clearTimeSec, user) 모두 지원
      */
-    async submitScore(gameType, { score, clearTimeSec, user }) {
-        // 비로그인 사용자는 서버 요청 및 저장을 전면 차단
-        if (!user) {
-            return { success: false, isGuest: true };
+    async submitScore(gameType, optionsOrScore, maybeClearTimeSec = 0, maybeUser = null) {
+        let score, clearTimeSec, user;
+
+        if (typeof optionsOrScore === 'object' && optionsOrScore !== null) {
+            score = optionsOrScore.score;
+            clearTimeSec = optionsOrScore.clearTimeSec;
+            user = optionsOrScore.user;
+        } else {
+            score = optionsOrScore;
+            clearTimeSec = maybeClearTimeSec;
+            user = maybeUser;
         }
 
         const payload = {
-            score,
-            clearTimeSec
+            score: Math.floor(Number(score) || 0),
+            clearTimeSec: Math.floor(Number(clearTimeSec) || 0)
         };
 
         try {
             const response = await client.post(`/api/v1/arcade/${gameType}/score`, payload);
             return response.data || { success: true };
         } catch (error) {
-            console.error('[arcadeApi] 점수 등록 실패:', error?.message);
+            console.error(`[arcadeApi] ${gameType} 점수 등록 실패:`, error?.message);
             return { success: false, error: error?.response?.data || error?.message };
         }
     }
