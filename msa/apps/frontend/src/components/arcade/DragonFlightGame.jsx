@@ -583,7 +583,7 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             // 4-B. 비정기 불규칙 기습 운석 난입 (Stray Meteor Hazard)
             // 거리와 점수에 비례하여 웨이브 주기와 독립적으로 낙하하며 긴장감 극대화
             if (engine.distance > 600 || engine.score > 15000) {
-                const strayBaseInterval = Math.max(1600, 4800 / (1 + distKm * 0.32 + scoreProgression * 0.38));
+                const strayBaseInterval = Math.max(1500, 4600 / (1 + distKm * 0.32 + scoreProgression * 0.38));
                 if (currentTime - engine.lastStrayMeteorTime > strayBaseInterval) {
                     engine.lastStrayMeteorTime = currentTime + (Math.random() * 600 - 300); // ±300ms 불규칙 지터
 
@@ -591,23 +591,24 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                     const chosenLaneIdx = Math.floor(Math.random() * LANES.length);
                     const targetLaneX = LANES[chosenLaneIdx];
                     const isDiagonal = (engine.distance > 3000 || engine.score > 80000) && Math.random() < 0.45;
-                    const meteorSpeed = Math.min(7.0, (2.6 + Math.random() * 1.0) * (1 + (difficultyFactor - 1) * 0.35));
+                    // 초고속 관통 속도 (기존 2.6~7.0에서 9.5~15.5로 대폭 상향하여 경고 후 순식간에 낙하)
+                    const meteorSpeed = Math.min(15.5, (9.5 + Math.random() * 2.5) * (1 + (difficultyFactor - 1) * 0.25));
 
-                    // 480ms 전 사전 시각 경고 등록
+                    // 550ms 전 강력한 시각 경고 등록 (전체 레인 빔 + WARNING 비콘)
                     engine.meteorWarnings.push({
                         laneX: targetLaneX,
-                        dropTime: currentTime + 480,
+                        dropTime: currentTime + 550,
                         speed: meteorSpeed,
                         pattern: isDiagonal ? 'diagonal' : 'straight'
                     });
 
-                    // 7000m or 20만점 이상 극후반부: 30% 확률로 다른 레인에 2중 기습 운석 추가 등록
-                    if ((engine.distance > 7000 || engine.score > 200000) && Math.random() < 0.30) {
+                    // 7000m or 20만점 이상 극후반부: 35% 확률로 다른 레인에 2중 기습 운석 추가 등록
+                    if ((engine.distance > 7000 || engine.score > 200000) && Math.random() < 0.35) {
                         const secondLaneCandidates = LANES.filter(lx => lx !== targetLaneX);
                         const secondLaneX = secondLaneCandidates[Math.floor(Math.random() * secondLaneCandidates.length)];
                         engine.meteorWarnings.push({
                             laneX: secondLaneX,
-                            dropTime: currentTime + 680,
+                            dropTime: currentTime + 750,
                             speed: meteorSpeed * 1.08,
                             pattern: 'straight'
                         });
@@ -622,23 +623,24 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                     if (currentTime >= w.dropTime) {
                         engine.enemies.push({
                             x: w.laneX,
-                            y: -44,
+                            y: -50,
                             baseX: w.laneX,
-                            width: 44,
-                            height: 44,
+                            width: 46,
+                            height: 46,
                             type: 'meteor',
+                            isStray: true, // 초고속 기습 운석 플래그 (화염 트레일 활성화)
                             hp: 999,
                             maxHp: 999,
                             speed: w.speed,
                             score: 0,
-                            color: '#475569',
+                            color: '#ea580c',
                             pattern: w.pattern,
                             phase: Math.random() * Math.PI * 2,
                             freq: 0.035,
                             amp: 26,
-                            vx: (Math.random() > 0.5 ? 1 : -1) * (1.6 + Math.random() * 1.0),
+                            vx: (Math.random() > 0.5 ? 1 : -1) * (2.4 + Math.random() * 1.6),
                             rotation: 0,
-                            rotSpeed: (Math.random() - 0.5) * 0.08,
+                            rotSpeed: (Math.random() - 0.5) * 0.12,
                             diving: false
                         });
                         engine.meteorWarnings.splice(wIdx, 1);
@@ -908,28 +910,57 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             });
             ctx.setLineDash([]);
 
-            // [기습 운석 경고 인디케이터 (Hazard Warning)]
+            // [기습 운석 경고 인디케이터 (Intensified Hazard Warning)]
             if (engine.meteorWarnings && engine.meteorWarnings.length > 0) {
                 engine.meteorWarnings.forEach(w => {
-                    const pulse = (Math.sin(currentTime * 0.024) + 1) * 0.5;
-                    const alpha = 0.3 + pulse * 0.5;
+                    const pulse = (Math.sin(currentTime * 0.032) + 1) * 0.5; // 빠른 펄스 점멸
+                    const alpha = 0.45 + pulse * 0.5;
 
-                    // 해당 레인 반투명 붉은색 경고 빔
-                    ctx.fillStyle = `rgba(239, 68, 68, ${alpha * 0.22})`;
-                    ctx.fillRect(w.laneX - 25, 0, 50, 160);
+                    // 1. 해당 레인 전체 높이(0 ~ GAME_HEIGHT)를 비추는 강렬한 적색 경고 레이저 빔
+                    const beamGrad = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+                    beamGrad.addColorStop(0, `rgba(239, 68, 68, ${0.55 * alpha})`);
+                    beamGrad.addColorStop(0.3, `rgba(239, 68, 68, ${0.35 * alpha})`);
+                    beamGrad.addColorStop(0.7, `rgba(239, 68, 68, ${0.20 * alpha})`);
+                    beamGrad.addColorStop(1, `rgba(239, 68, 68, ${0.08 * alpha})`);
+                    ctx.fillStyle = beamGrad;
+                    ctx.fillRect(w.laneX - 30, 0, 60, GAME_HEIGHT);
 
-                    // 레인 상단 경고 비콘 및 아이콘
-                    ctx.save();
-                    ctx.fillStyle = `rgba(239, 68, 68, ${alpha})`;
-                    ctx.font = 'bold 15px sans-serif';
+                    // 2. 레인 좌우 경고 격벽 라인
+                    ctx.strokeStyle = `rgba(239, 68, 68, ${0.7 + pulse * 0.3})`;
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(w.laneX - 30, 0);
+                    ctx.lineTo(w.laneX - 30, GAME_HEIGHT);
+                    ctx.moveTo(w.laneX + 30, 0);
+                    ctx.lineTo(w.laneX + 30, GAME_HEIGHT);
+                    ctx.stroke();
+
+                    // 3. 레인을 따라 아래로 빠르게 흐르는 하향 위험 화살표 (▼) 애니메이션
+                    const arrowOffset = (currentTime * 0.4) % 75;
+                    ctx.fillStyle = `rgba(254, 202, 202, ${0.6 + pulse * 0.4})`;
+                    ctx.font = 'bold 18px sans-serif';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
-                    ctx.fillText('▲ ! ▲', w.laneX, 24);
+                    for (let y = arrowOffset; y < GAME_HEIGHT; y += 75) {
+                        ctx.fillText('▼', w.laneX, y);
+                    }
 
-                    // 경고 테두리 박스
-                    ctx.strokeStyle = `rgba(239, 68, 68, ${alpha * 0.75})`;
-                    ctx.lineWidth = 1.5;
-                    ctx.strokeRect(w.laneX - 24, 6, 48, 36);
+                    // 4. 레인 상단 강렬한 네온 경고 헤드업 배지
+                    ctx.save();
+                    ctx.shadowColor = '#ef4444';
+                    ctx.shadowBlur = 18;
+                    ctx.fillStyle = `rgba(185, 28, 28, ${0.9 + pulse * 0.1})`;
+                    ctx.fillRect(w.laneX - 36, 8, 72, 44);
+                    ctx.strokeStyle = '#fecaca';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(w.laneX - 36, 8, 72, 44);
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '900 12px sans-serif';
+                    ctx.fillText('WARNING', w.laneX, 22);
+                    ctx.fillStyle = '#fef08a';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText('▲ ! ▲', w.laneX, 39);
                     ctx.restore();
                 });
             }
@@ -1159,16 +1190,40 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
 
                 } else if (enemy.type === 'meteor') {
                     // 4. 메테오 (Meteor): 파괴 불가 암석 운석 (44x44)
+                    // 초고속 기습 운석일 경우 회전 전 후방(상공)으로 맹렬한 대기 마찰 화염 스트릭 렌더링
+                    if (enemy.isStray || enemy.speed > 7) {
+                        ctx.save();
+                        // 1. 긴 마찰 화염 꼬리
+                        const trailLen = Math.min(85, 45 + enemy.speed * 3);
+                        ctx.fillStyle = 'rgba(234, 88, 12, 0.65)';
+                        ctx.beginPath();
+                        ctx.moveTo(-16, -10);
+                        ctx.lineTo(0, -trailLen);
+                        ctx.lineTo(16, -10);
+                        ctx.closePath();
+                        ctx.fill();
+
+                        // 2. 고열 황금빛 코어 꼬리
+                        ctx.fillStyle = 'rgba(251, 191, 36, 0.85)';
+                        ctx.beginPath();
+                        ctx.moveTo(-8, -8);
+                        ctx.lineTo(0, -trailLen * 0.55);
+                        ctx.lineTo(8, -8);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
                     if (enemy.rotation) ctx.rotate(enemy.rotation);
 
                     // 타오르는 화염 꼬리 / 열기
-                    ctx.shadowColor = '#ea580c';
-                    ctx.shadowBlur = 14;
+                    ctx.shadowColor = enemy.isStray ? '#f97316' : '#ea580c';
+                    ctx.shadowBlur = enemy.isStray ? 24 : 14;
 
                     // 울퉁불퉁 암석 다각형
-                    ctx.fillStyle = '#334155';
-                    ctx.strokeStyle = '#ea580c';
-                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = enemy.isStray ? '#451a03' : '#334155';
+                    ctx.strokeStyle = enemy.isStray ? '#fb923c' : '#ea580c';
+                    ctx.lineWidth = enemy.isStray ? 3 : 2.5;
                     ctx.beginPath();
                     ctx.moveTo(0, 19);
                     ctx.lineTo(14, 14);
