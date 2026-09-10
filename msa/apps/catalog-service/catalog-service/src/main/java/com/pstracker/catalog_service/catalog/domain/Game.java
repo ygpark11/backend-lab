@@ -393,13 +393,11 @@ public class Game {
                 // 역대 최저가 갱신
                 this.allTimeLowPrice = currentPrice;
                 this.isAllTimeLowNew = true;
-            } else if (currentPrice.equals(this.allTimeLowPrice)) {
-                // 역대 최저가 동률
-                this.isAllTimeLowNew = false;
-            } else {
+            } else if (currentPrice > this.allTimeLowPrice) {
                 // 정상가 또는 이전 ATL보다 높은 가격
                 this.isAllTimeLowNew = false;
             }
+            // currentPrice == allTimeLowPrice: 동률 — isAllTimeLowNew 유지
         }
     }
 

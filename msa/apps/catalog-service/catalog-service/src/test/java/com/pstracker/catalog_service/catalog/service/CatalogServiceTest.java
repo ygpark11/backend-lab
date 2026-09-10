@@ -295,19 +295,19 @@ public class CatalogServiceTest {
     }
 
     @Test
-    @DisplayName("역대 최저가 동일 가격으로 재수집하면 isAllTimeLowNew가 false다 (동률)")
-    void allTimeLowNew_동일가격_재수집_false() {
+    @DisplayName("갱신 후 같은 할인가로 배치 재수집되어도 isAllTimeLowNew는 true를 유지한다")
+    void allTimeLowNew_갱신후_재수집_true유지() {
         catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 39800, 0, null));
         catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(7)));
         em.flush(); em.clear();
 
-        // 같은 할인가로 다시 수집 → 동률
-        catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(7)));
+        // 다음 날 배치에서 동일 할인가 재수집 → 갱신 상태 유지
+        catalogService.upsertGameData(createDto("ATL-003", "게임C", 39800, 29800, 25, LocalDate.now().plusDays(6)));
         em.flush(); em.clear();
 
         Game game = gameRepository.findByPsStoreId("ATL-003").orElseThrow();
         assertThat(game.getAllTimeLowPrice()).isEqualTo(29800);
-        assertThat(game.isAllTimeLowNew()).isFalse();
+        assertThat(game.isAllTimeLowNew()).isTrue();
     }
 
     @Test
