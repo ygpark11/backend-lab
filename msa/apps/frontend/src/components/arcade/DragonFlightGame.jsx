@@ -172,6 +172,10 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
 
             // 부가 유틸
             createExplosion(x, y, color = '#f59e0b', count = 12) {
+                // 모바일 GPU/메모리 부하 및 발열 방지를 위한 파티클 상한 제어
+                if (this.particles.length > 50) {
+                    this.particles.splice(0, this.particles.length - 50);
+                }
                 for (let i = 0; i < count; i++) {
                     const angle = Math.random() * Math.PI * 2;
                     const speed = 1.5 + Math.random() * 4.5;
@@ -295,9 +299,21 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
 
-        // 마우스 / 터치 조작 리스너 (Canvas 기준 상대 좌표 계산)
+        // 마우스 / 터치 조작 리스너 (Canvas 기준 상대 좌표 계산 & 레이아웃 쓰레싱/발열 방지 캐싱)
+        let cachedRect = null;
+        let lastRectTime = 0;
+        const getCanvasRect = () => {
+            const now = performance.now();
+            if (!cachedRect || now - lastRectTime > 500) {
+                cachedRect = canvas.getBoundingClientRect();
+                lastRectTime = now;
+            }
+            return cachedRect;
+        };
+
         const updatePlayerTargetX = (clientX) => {
-            const rect = canvas.getBoundingClientRect();
+            const rect = getCanvasRect();
+            if (!rect || rect.width === 0) return;
             const scaleX = GAME_WIDTH / rect.width;
             const relativeX = (clientX - rect.left) * scaleX;
             engine.player.targetX = Math.max(30, Math.min(GAME_WIDTH - 30, relativeX));
@@ -315,29 +331,50 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             }
         };
 
+        const handleTouchStart = (e) => {
+            // 터치 시작 시 화면 위치 갱신
+            cachedRect = canvas.getBoundingClientRect();
+            lastRectTime = performance.now();
+            if (e.touches.length > 0) {
+                updatePlayerTargetX(e.touches[0].clientX);
+            }
+        };
+
+        const handleResize = () => {
+            cachedRect = null;
+        };
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+
         canvas.addEventListener('mousemove', handleMouseMove);
         canvas.addEventListener('touchmove', handleTouchMove, { passive: true });
-        canvas.addEventListener('touchstart', handleTouchMove, { passive: true });
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: true });
 
-        // 메인 60FPS 애니메이션 루프
+        // 메인 애니메이션 루프 (가변 주사율 60Hz/120Hz 완벽 대응 Delta Time 정규화)
         let lastTime = performance.now();
 
         const loop = (currentTime) => {
             if (!engine.running) return;
 
-            const delta = Math.min(currentTime - lastTime, 40); // 캡
+            const delta = Math.min(currentTime - lastTime, 50); // 비정상 지연(탭 비활성화 등) 캡
             lastTime = currentTime;
 
-            // 1. 키보드 입력 처리
+            // 60FPS(약 16.667ms) 기준 1.0 정규화 계수
+            // 120Hz에서는 0.5가 되어 2배 프레임에서도 동일한 초당 물리 이동 거리 보장!
+            const timeScale = Math.min(2.0, Math.max(0.2, delta / 16.667));
+
+            // 1. 키보드 입력 처리 (timeScale 보정)
+            const keySpeed = 9 * timeScale;
             if (keysDown['ArrowLeft'] || keysDown['KeyA']) {
-                engine.player.targetX = Math.max(30, engine.player.targetX - 9);
+                engine.player.targetX = Math.max(30, engine.player.targetX - keySpeed);
             }
             if (keysDown['ArrowRight'] || keysDown['KeyD']) {
-                engine.player.targetX = Math.min(GAME_WIDTH - 30, engine.player.targetX + 9);
+                engine.player.targetX = Math.min(GAME_WIDTH - 30, engine.player.targetX + keySpeed);
             }
 
-            // 플레이어 부드러운 이동 (보간)
-            engine.player.x += (engine.player.targetX - engine.player.x) * 0.28;
+            // 플레이어 부드러운 이동 (지수 감쇠 보간 - 120Hz/60Hz 균등 보정)
+            const lerpFactor = Math.min(1.0, 0.28 * timeScale);
+            engine.player.x += (engine.player.targetX - engine.player.x) * lerpFactor;
 
             // 2. 비행 거리 & 난이도 계산
             const speedMultiplier = engine.hyperTime > 0 ? 3.5 : 1.0;
@@ -372,11 +409,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 }
             }
 
-            // 탄환 이동 및 정리
+            // 탄환 이동 및 정리 (timeScale 보정)
             for (let i = engine.bullets.length - 1; i >= 0; i--) {
                 const b = engine.bullets[i];
-                b.x += b.vx;
-                b.y += b.vy;
+                b.x += b.vx * timeScale;
+                b.y += b.vy * timeScale;
                 if (b.y < -30 || b.x < -20 || b.x > GAME_WIDTH + 20) {
                     engine.bullets.splice(i, 1);
                 }
@@ -529,8 +566,8 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             for (let eIdx = engine.enemies.length - 1; eIdx >= 0; eIdx--) {
                 const enemy = engine.enemies[eIdx];
 
-                // 행동 패턴별 좌표 이동
-                enemy.y += enemy.speed * enemySpeedBoost;
+                // 행동 패턴별 좌표 이동 (timeScale 보정)
+                enemy.y += enemy.speed * enemySpeedBoost * timeScale;
 
                 if (enemy.pattern === 'zigzag') {
                     enemy.x = enemy.baseX + Math.sin(enemy.y * (enemy.freq || 0.035) + enemy.phase) * (enemy.amp || 26);
@@ -542,7 +579,7 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                         engine.addFloatingText('!', enemy.x, enemy.y - 25, '#ef4444', 28);
                     }
                 } else if (enemy.pattern === 'diagonal') {
-                    enemy.x += (enemy.vx || 1.2) * enemySpeedBoost;
+                    enemy.x += (enemy.vx || 1.2) * enemySpeedBoost * timeScale;
                     if (enemy.x < 30) {
                         enemy.x = 30;
                         enemy.vx = Math.abs(enemy.vx);
@@ -550,7 +587,7 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                         enemy.x = GAME_WIDTH - 30;
                         enemy.vx = -Math.abs(enemy.vx);
                     }
-                    enemy.rotation = (enemy.rotation || 0) + (enemy.rotSpeed || 0.04);
+                    enemy.rotation = (enemy.rotation || 0) + (enemy.rotSpeed || 0.04) * timeScale;
                 }
 
                 // 탄환과 충돌 판정
@@ -669,11 +706,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                     const dy = engine.player.y - item.y;
                     const dist = Math.hypot(dx, dy);
                     if (dist > 1) {
-                        item.x += (dx / dist) * 11;
-                        item.y += (dy / dist) * 11;
+                        item.x += (dx / dist) * 11 * timeScale;
+                        item.y += (dy / dist) * 11 * timeScale;
                     }
                 } else {
-                    item.y += item.vy * (engine.hyperTime > 0 ? 3.0 : 1.0);
+                    item.y += item.vy * (engine.hyperTime > 0 ? 3.0 : 1.0) * timeScale;
                 }
 
                 // 플레이어 획득 판정
@@ -716,16 +753,16 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 }
             }
 
-            // 6. 파티클 및 텍스트 업데이트
+            // 6. 파티클 및 텍스트 업데이트 (timeScale 보정)
             for (let i = engine.particles.length - 1; i >= 0; i--) {
                 const p = engine.particles[i];
                 if (p.isWave) {
-                    p.radius += 12;
-                    p.alpha -= p.decay;
+                    p.radius += 12 * timeScale;
+                    p.alpha -= p.decay * timeScale;
                 } else {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.alpha -= p.decay;
+                    p.x += p.vx * timeScale;
+                    p.y += p.vy * timeScale;
+                    p.alpha -= p.decay * timeScale;
                 }
                 if (p.alpha <= 0) {
                     engine.particles.splice(i, 1);
@@ -734,8 +771,8 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
 
             for (let i = engine.floatingTexts.length - 1; i >= 0; i--) {
                 const ft = engine.floatingTexts[i];
-                ft.y += ft.vy;
-                ft.alpha -= 0.025;
+                ft.y += ft.vy * timeScale;
+                ft.alpha -= 0.025 * timeScale;
                 if (ft.alpha <= 0) {
                     engine.floatingTexts.splice(i, 1);
                 }
@@ -751,11 +788,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-            // [별빛 렌더링]
+            // [별빛 렌더링 (timeScale 보정)]
             const starSpeed = engine.hyperTime > 0 ? 12 : 1;
             ctx.fillStyle = '#ffffff';
             engine.stars.forEach(star => {
-                star.y += star.speed * starSpeed;
+                star.y += star.speed * starSpeed * timeScale;
                 if (star.y > GAME_HEIGHT) star.y = 0;
                 ctx.globalAlpha = star.alpha;
                 ctx.beginPath();
@@ -803,24 +840,26 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             });
             ctx.globalAlpha = 1.0;
 
-            // [탄환 렌더링]
-            engine.bullets.forEach(b => {
+            // [탄환 렌더링 (모바일 GPU 발열/부하 방지 최적화)]
+            if (engine.bullets.length > 0) {
                 ctx.shadowColor = '#38bdf8';
-                ctx.shadowBlur = 10;
+                ctx.shadowBlur = 6;
                 ctx.fillStyle = '#67e8f9';
-                ctx.beginPath();
-                ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
-                ctx.fill();
+                engine.bullets.forEach(b => {
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
+                    ctx.fill();
 
-                // 탄환 꼬리
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(b.x, b.y);
-                ctx.lineTo(b.x - b.vx * 2, b.y - b.vy * 2);
-                ctx.stroke();
-            });
-            ctx.shadowBlur = 0;
+                    // 탄환 꼬리
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(b.x, b.y);
+                    ctx.lineTo(b.x - b.vx * 2, b.y - b.vy * 2);
+                    ctx.stroke();
+                });
+                ctx.shadowBlur = 0;
+            }
 
             // [아이템 / 보석 렌더링]
             engine.items.forEach(item => {
@@ -1117,8 +1156,9 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 ctx.restore();
             });
 
-            // 주기적 HUD 동기화 (5프레임마다)
-            if (Math.floor(currentTime / 16) % 5 === 0) {
+            // 주기적 HUD 동기화 (100ms 쓰로틀링 - 불필요한 리액트 리렌더링 및 모바일 발열/배터리 소모 방지)
+            if (currentTime - (engine.lastHudSync || 0) > 100) {
+                engine.lastHudSync = currentTime;
                 engine.syncHud();
             }
 
@@ -1132,9 +1172,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             cancelAnimationFrame(animFrameIdRef.current);
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', handleResize);
             canvas.removeEventListener('mousemove', handleMouseMove);
             canvas.removeEventListener('touchmove', handleTouchMove);
-            canvas.removeEventListener('touchstart', handleTouchMove);
+            canvas.removeEventListener('touchstart', handleTouchStart);
         };
     }, [gameState]);
 
