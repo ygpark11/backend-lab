@@ -328,8 +328,11 @@ const Navbar = () => {
 
     return (
         <>
-            <nav className={`fixed top-0 w-full z-50 bg-glass backdrop-blur-md border-b border-divider h-16 transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-            <div className="max-w-7xl mx-auto px-3 sm:px-6 h-full flex items-center justify-between">
+            <nav
+                className={`fixed top-0 w-full z-50 bg-glass backdrop-blur-md border-b border-divider transition-transform duration-300 ease-in-out ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}
+                style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between">
 
                 <div className="flex items-center gap-2 md:gap-4 lg:gap-4 shrink-0">
                     {/* 로고 */}
@@ -422,7 +425,7 @@ const Navbar = () => {
                             </button>
 
                             {isNotiOpen && (
-                                <div className="fixed sm:absolute top-[72px] sm:top-full right-4 sm:right-0 left-4 sm:left-auto sm:mt-2 sm:w-80 md:w-96 bg-base border border-divider rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[100] origin-top-right">
+                                <div className="fixed sm:absolute top-[calc(72px+env(safe-area-inset-top,0px))] sm:top-full right-4 sm:right-0 left-4 sm:left-auto sm:mt-2 sm:w-80 md:w-96 bg-base border border-divider rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 z-[100] origin-top-right">
 
                                     {/* 헤더: 탭 + 액션 버튼 */}
                                     <div className="flex items-center justify-between px-3 py-2.5 border-b border-divider bg-surface/50">

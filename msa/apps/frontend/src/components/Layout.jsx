@@ -7,7 +7,7 @@ const Layout = () => {
         <div className="min-h-screen bg-base text-primary flex flex-col transition-colors duration-500">
             <Navbar />
 
-            <main className="flex-grow">
+            <main className="flex-grow" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
                 <Outlet />
             </main>
 

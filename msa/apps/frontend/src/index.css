@@ -4,7 +4,13 @@
 
 @layer base {
     :root {
-        /* ⚫ PS4 Dark Mode */
+        /* iOS Safe Area Insets (다이나믹 아일랜드 및 노치 대응) */
+        --safe-area-top: env(safe-area-inset-top, 0px);
+        --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-left: env(safe-area-inset-left, 0px);
+        --safe-area-right: env(safe-area-inset-right, 0px);
+
+        /* PS4 Dark Mode */
         --color-bg-base: #121212;
         --color-bg-surface: rgba(255, 255, 255, 0.03);
         --color-bg-surface-hover: rgba(255, 255, 255, 0.08);
@@ -77,7 +83,7 @@
         --bento-yellow-shadow: 0 10px 40px rgba(234, 179, 8, 0.25);
     }
 
-    /* ⚪ PS5 Light Mode */
+    /* [Theme] PS5 Light Mode */
     [data-theme='ps5'] {
         --color-bg-base: #f8f9fb;
         --color-bg-surface: #ffffff;
@@ -321,4 +327,97 @@ html { scrollbar-gutter: stable; }
 
 .animate-tile-shake {
     animation: tileShake 0.25s ease-in-out;
+}
+
+@keyframes screenShake {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    20%, 60% { transform: translate3d(-3px, 2px, 0); }
+    40%, 80% { transform: translate3d(3px, -2px, 0); }
+}
+
+.animate-screen-shake {
+    animation: screenShake 0.22s ease-in-out;
+}
+
+@keyframes bounceGentle {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -6px, 0); }
+}
+
+.animate-bounce-gentle {
+    animation: bounceGentle 2.5s ease-in-out infinite;
+}
+
+/* PS 심볼 포지 강화 이펙트 하드웨어 가속 애니메이션 */
+@keyframes streamFlow {
+    from { stroke-dashoffset: 32; }
+    to { stroke-dashoffset: 0; }
+}
+
+.animate-stream-flow {
+    animation: streamFlow 1.2s linear infinite;
+}
+
+@keyframes streamFlowFast {
+    from { stroke-dashoffset: 32; }
+    to { stroke-dashoffset: 0; }
+}
+
+.animate-stream-flow-fast {
+    animation: streamFlowFast 0.65s linear infinite;
+}
+
+@keyframes hyperPulse {
+    0%, 100% {
+        transform: scale(0.88);
+        opacity: 0.75;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+    }
+}
+
+.animate-hyper-pulse {
+    animation: hyperPulse 2.2s ease-in-out infinite;
+    transform-origin: 120px 120px;
+}
+
+@keyframes coreBeaconPulse {
+    0%, 100% {
+        transform: scale(0.92);
+        opacity: 0.75;
+    }
+    50% {
+        transform: scale(1.22);
+        opacity: 1;
+    }
+}
+
+.animate-core-beacon {
+    animation: coreBeaconPulse 1.8s ease-in-out infinite;
+    transform-origin: 120px 120px;
+}
+
+@keyframes lightningJitter {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    18% { opacity: 0.35; transform: scale(0.98); }
+    35% { opacity: 1; transform: scale(1.02); }
+    60% { opacity: 0.45; transform: scale(0.99); }
+    80% { opacity: 0.95; transform: scale(1.01); }
+}
+
+.animate-lightning-jitter {
+    animation: lightningJitter 0.5s steps(2, start) infinite;
+    transform-origin: 120px 120px;
+}
+
+@keyframes cosmicVortex {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.animate-cosmic-vortex {
+    animation: cosmicVortex 4s linear infinite;
+    transform-origin: 120px 120px;
 }
