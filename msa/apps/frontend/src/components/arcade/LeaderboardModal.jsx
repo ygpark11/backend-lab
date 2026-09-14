@@ -7,28 +7,9 @@ import {
     LogIn,
     User,
     RotateCw,
-    Zap,
-    Hammer
+    Zap
 } from 'lucide-react';
 import { arcadeApi } from '../../api/arcadeApi';
-
-// PS 심볼 포지 인코딩 점수 디코더
-// Score = (level * 1,000,000) + (symbolCode * 100,000) + Math.min(gold, 99,999)
-const decodeForgeScore = (score) => {
-    if (!score || score <= 0) return { level: 0, symbolName: '미등록', color: '#94A3B8', gold: 0 };
-    const level = Math.floor(score / 1000000);
-    const symbolCode = Math.floor((score % 1000000) / 100000);
-    const gold = score % 100000;
-
-    const map = {
-        1: { name: '트라이앵글', color: '#10B981' },
-        2: { name: '서클', color: '#EF4444' },
-        3: { name: '크로스', color: '#0070D1' },
-        4: { name: '스퀘어', color: '#D946EF' }
-    };
-    const sym = map[symbolCode] || { name: '심볼', color: '#0070D1' };
-    return { level, symbolName: sym.name, color: sym.color, gold };
-};
 
 const formatPlayerName = (item) => {
     if (!item) return '플레이어';
@@ -52,9 +33,6 @@ const LeaderboardModal = ({
     user = null,
     openLoginModal
 }) => {
-    // 심볼 포지 게임 정식 오픈 전 리더보드 탭 비공개 플래그 (true로 변경 시 노출)
-    const SHOW_FORGE_LEADERBOARD = false;
-
     const [activeGame, setActiveGame] = useState(initialGameType);
     const [leaderboardData, setLeaderboardData] = useState({ topList: [], myRank: null });
     const [isLoading, setIsLoading] = useState(false);
@@ -128,7 +106,7 @@ const LeaderboardModal = ({
                         onClick={() => handleTabChange('flight')}
                         className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                             activeGame === 'flight'
-                                ? 'bg-ps-blue text-white shadow-md'
+                                ? 'bg-ps-blue text-white shadow-md shadow-ps-blue/20'
                                 : 'text-secondary hover:text-primary hover:bg-surface-hover'
                         }`}
                     >
@@ -138,9 +116,9 @@ const LeaderboardModal = ({
 
                     <button
                         onClick={() => handleTabChange('sichuan')}
-                        className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                        className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                             activeGame === 'sichuan'
-                                ? 'bg-ps-blue text-white shadow-md'
+                                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
                                 : 'text-secondary hover:text-primary hover:bg-surface-hover'
                         }`}
                     >
@@ -149,28 +127,14 @@ const LeaderboardModal = ({
 
                     <button
                         onClick={() => handleTabChange('reflex')}
-                        className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                        className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
                             activeGame === 'reflex'
-                                ? 'bg-ps-blue text-white shadow-md'
+                                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
                                 : 'text-secondary hover:text-primary hover:bg-surface-hover'
                         }`}
                     >
-                        <span>퀵 리액션</span>
+                        <span>PS 퀵 리액션</span>
                     </button>
-
-                    {SHOW_FORGE_LEADERBOARD && (
-                        <button
-                            onClick={() => handleTabChange('forge')}
-                            className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
-                                activeGame === 'forge'
-                                    ? 'bg-ps-blue text-white shadow-md'
-                                    : 'text-secondary hover:text-primary hover:bg-surface-hover'
-                            }`}
-                        >
-                            <Hammer className="w-4 h-4 text-amber-400" />
-                            <span>심볼 포지</span>
-                        </button>
-                    )}
                 </div>
 
                 {/* 메인 랭킹 리스트 영역 (비로그인도 자유롭게 열람 가능) */}
@@ -194,106 +158,55 @@ const LeaderboardModal = ({
                             </p>
                         </div>
                     ) : (
-                        /* 실시간 TOP 10 랭킹 목록 (심볼 포지는 공동 순위 적용) */
-                        (() => {
-                            const isForge = activeGame === 'forge';
-                            // 공동 순위 맵 사전 계산
-                            const coRanks = [];
-                            let currentRank = 1;
-                            const topList = leaderboardData.topList || [];
-                            for (let i = 0; i < topList.length; i++) {
-                                if (i === 0) {
-                                    coRanks.push({ rank: 1, isCo: false });
-                                } else {
-                                    const prevDec = decodeForgeScore(topList[i - 1]?.score);
-                                    const currDec = decodeForgeScore(topList[i]?.score);
-                                    if (prevDec.level === currDec.level) {
-                                        coRanks.push({ rank: coRanks[i - 1].rank, isCo: true });
-                                        coRanks[i - 1].isCo = true;
-                                    } else {
-                                        currentRank = i + 1;
-                                        coRanks.push({ rank: currentRank, isCo: false });
-                                    }
-                                }
-                            }
+                        /* 실시간 TOP 10 랭킹 목록 */
+                        leaderboardData.topList.map((item, index) => {
+                            const displayName = formatPlayerName(item);
+                            const rank = index + 1;
 
-                            return topList.map((item, index) => {
-                                const displayName = formatPlayerName(item);
-                                const forgeData = isForge ? decodeForgeScore(item.score) : null;
-                                const rankInfo = isForge && coRanks[index] ? coRanks[index] : { rank: index + 1, isCo: false };
-
-                                return (
-                                    <div
-                                        key={item.rank || index}
-                                        className={`flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
-                                            index === 0
-                                                ? 'bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.08)]'
-                                                : index === 1
-                                                ? 'bg-slate-400/10 border-slate-400/30'
-                                                : index === 2
-                                                ? 'bg-amber-700/10 border-amber-700/30'
-                                                : 'bg-base border-divider'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                                            {/* 순위 아이콘/숫자 */}
-                                            <div className="w-10 text-center font-black shrink-0 flex flex-col items-center justify-center">
-                                                {rankInfo.rank === 1 ? (
-                                                    <div className="flex items-center gap-0.5">
-                                                        <Crown className="w-4 h-4 text-yellow-500" />
-                                                        {rankInfo.isCo && <span className="text-[9px] text-yellow-500 font-bold">공동</span>}
-                                                    </div>
-                                                ) : rankInfo.rank === 2 ? (
-                                                    <div className="flex items-center gap-0.5">
-                                                        <Medal className="w-4 h-4 text-slate-300" />
-                                                        {rankInfo.isCo && <span className="text-[9px] text-slate-400 font-bold">공동</span>}
-                                                    </div>
-                                                ) : rankInfo.rank === 3 ? (
-                                                    <div className="flex items-center gap-0.5">
-                                                        <Medal className="w-4 h-4 text-amber-600" />
-                                                        {rankInfo.isCo && <span className="text-[9px] text-amber-600 font-bold">공동</span>}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-xs text-secondary font-bold">
-                                                        {rankInfo.isCo ? `공동 ${rankInfo.rank}` : rankInfo.rank}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* 유저 닉네임 */}
-                                            <span className="text-xs sm:text-sm font-bold text-primary truncate">
-                                                {displayName}
-                                            </span>
+                            return (
+                                <div
+                                    key={item.rank || index}
+                                    className={`flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
+                                        index === 0
+                                            ? 'bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.08)]'
+                                            : index === 1
+                                            ? 'bg-slate-400/10 border-slate-400/30'
+                                            : index === 2
+                                            ? 'bg-amber-700/10 border-amber-700/30'
+                                            : 'bg-base border-divider'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                                        {/* 순위 아이콘/숫자 */}
+                                        <div className="w-10 text-center font-black shrink-0 flex items-center justify-center">
+                                            {rank === 1 ? (
+                                                <Crown className="w-4 h-4 text-yellow-500" />
+                                            ) : rank === 2 ? (
+                                                <Medal className="w-4 h-4 text-slate-300" />
+                                            ) : rank === 3 ? (
+                                                <Medal className="w-4 h-4 text-amber-600" />
+                                            ) : (
+                                                <span className="text-xs text-secondary font-bold">
+                                                    {rank}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        {/* 점수 또는 포지 강화 뱃지 */}
-                                        {isForge && forgeData ? (
-                                            <div className="text-right shrink-0 pl-2 flex flex-col items-end">
-                                                <span
-                                                    className="px-2 py-0.5 rounded-lg text-xs sm:text-sm font-black border shadow-sm"
-                                                    style={{
-                                                        backgroundColor: `${forgeData.color}20`,
-                                                        borderColor: `${forgeData.color}50`,
-                                                        color: forgeData.color
-                                                    }}
-                                                >
-                                                    +{forgeData.level}강 [{forgeData.symbolName}]
-                                                </span>
-                                                <span className="text-[10px] text-amber-500 font-bold mt-0.5">
-                                                    자산: {forgeData.gold.toLocaleString()} G
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <div className="text-right shrink-0 pl-3">
-                                                <span className="text-xs sm:text-sm font-black text-ps-blue">
-                                                    {(item.score || 0).toLocaleString()}P
-                                                </span>
-                                            </div>
-                                        )}
+                                        {/* 유저 닉네임 */}
+                                        <span className="text-xs sm:text-sm font-bold text-primary truncate">
+                                            {displayName}
+                                        </span>
                                     </div>
-                                );
-                            });
-                        })()
+
+                                    {/* 점수 */}
+                                    <div className="text-right shrink-0 pl-3">
+                                        <span className="text-xs sm:text-sm font-black text-ps-blue font-mono">
+                                            {(item.score || 0).toLocaleString()} P
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
 
@@ -320,29 +233,11 @@ const LeaderboardModal = ({
                                 </div>
                             </div>
 
-                            {activeGame === 'forge' ? (
-                                <div className="text-right flex flex-col items-end">
-                                    <span
-                                        className="px-2 py-0.5 rounded-lg text-xs sm:text-sm font-black border shadow-sm"
-                                        style={{
-                                            backgroundColor: `${decodeForgeScore(leaderboardData.myRank.score).color}20`,
-                                            borderColor: `${decodeForgeScore(leaderboardData.myRank.score).color}50`,
-                                            color: decodeForgeScore(leaderboardData.myRank.score).color
-                                        }}
-                                    >
-                                        +{decodeForgeScore(leaderboardData.myRank.score).level}강 [{decodeForgeScore(leaderboardData.myRank.score).symbolName}]
-                                    </span>
-                                    <span className="text-[10px] text-amber-500 font-bold mt-0.5">
-                                        자산: {decodeForgeScore(leaderboardData.myRank.score).gold.toLocaleString()} G
-                                    </span>
-                                </div>
-                            ) : (
-                                <div className="text-right">
-                                    <span className="text-sm sm:text-base font-black text-ps-blue">
-                                        {(leaderboardData.myRank.score || 0).toLocaleString()}P
-                                    </span>
-                                </div>
-                            )}
+                            <div className="text-right">
+                                <span className="text-sm sm:text-base font-black text-ps-blue font-mono">
+                                    {(leaderboardData.myRank.score || 0).toLocaleString()} P
+                                </span>
+                            </div>
                         </div>
                     ) : (
                         <div className="p-3.5 sm:p-4 bg-surface-hover/60 border-t border-divider flex items-center justify-between shrink-0 text-xs text-secondary">

@@ -10,8 +10,7 @@ import java.util.Arrays;
 public enum ArcadeGameType {
     FLIGHT("flight", "PS 드래곤 플라이트"),
     SICHUAN("sichuan", "PS 트로피 사천성"),
-    REFLEX("reflex", "PS 퀵 리액션 QTE"),
-    FORGE("forge", "PS 심볼 포지");
+    REFLEX("reflex", "PS 퀵 리액션 QTE");
 
     private final String code;
     private final String title;
