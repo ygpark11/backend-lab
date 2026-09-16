@@ -135,6 +135,18 @@ const LeaderboardModal = ({
                     >
                         <span>PS 퀵 리액션</span>
                     </button>
+
+                    <button
+                        onClick={() => handleTabChange('neon_run')}
+                        className={`py-2 px-3.5 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 shrink-0 ${
+                            activeGame === 'neon_run'
+                                ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/20'
+                                : 'text-secondary hover:text-primary hover:bg-surface-hover'
+                        }`}
+                    >
+                        <Zap className="w-4 h-4 text-cyan-300" />
+                        <span>PS 네온 런</span>
+                    </button>
                 </div>
 
                 {/* 메인 랭킹 리스트 영역 (비로그인도 자유롭게 열람 가능) */}

@@ -253,4 +253,41 @@ class ArcadeControllerTest {
 
         verify(arcadeService).submitScore(eq(memberId), eq("reflex"), any(ScoreSubmitRequest.class));
     }
+
+    @Test
+    @DisplayName("[점수 저장] neon_run 게임 타입도 정상적으로 저장 요청이 처리된다")
+    void submitScore_neonRunGameType_success() throws Exception {
+        Long memberId = 99L;
+        MemberPrincipal principal = new MemberPrincipal(memberId, "runner@test.com", "USER");
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        ScoreSubmitRequest request = ScoreSubmitRequest.builder()
+                .score(18500)
+                .clearTimeSec(95)
+                .build();
+
+        ScoreSubmitResponse response = ScoreSubmitResponse.builder()
+                .success(true)
+                .isNewHighScore(true)
+                .rank(2L)
+                .score(18500)
+                .message("최고 기록이 경신되었습니다!")
+                .build();
+
+        given(arcadeService.submitScore(eq(memberId), eq("neon_run"), any(ScoreSubmitRequest.class)))
+                .willReturn(response);
+
+        mockMvc.perform(post("/api/v1/arcade/neon_run/score")
+                        .with(csrf())
+                        .with(authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.rank").value(2))
+                .andExpect(jsonPath("$.score").value(18500));
+
+        verify(arcadeService).submitScore(eq(memberId), eq("neon_run"), any(ScoreSubmitRequest.class));
+    }
 }

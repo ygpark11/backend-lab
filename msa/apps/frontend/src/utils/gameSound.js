@@ -780,6 +780,326 @@ class SoundManager {
         osc.start(now);
         osc.stop(now + 0.18);
     }
+
+    // ==========================================
+    // 🏃 PS 네온 런 (Neon Run) 전용 사운드
+    // ==========================================
+
+    // 1. 기본 점프음 (맑은 도약음)
+    playJump() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(640, now + 0.1);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.1);
+    }
+
+    // 2. 2단 점프음 (더 높은 고주파 공중 도약음)
+    playDoubleJump() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(580, now);
+        osc.frequency.exponentialRampToValueAtTime(1160, now + 0.12);
+
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.12);
+    }
+
+    // 3. PS 세이프티 트랙터 빔 구출음 (SF 미래형 상승 빔 + 차임)
+    playRescueBeam() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        // 저음에서 초고음으로 솟구치는 트랙터 빔 스윕
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.35);
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+
+        // 구출 완료 차임
+        [880, 1320].forEach((freq, idx) => {
+            const chimeOsc = this.ctx.createOscillator();
+            const chimeGain = this.ctx.createGain();
+            const t = now + 0.15 + idx * 0.08;
+
+            chimeOsc.type = 'sine';
+            chimeOsc.frequency.setValueAtTime(freq, t);
+            chimeGain.gain.setValueAtTime(0.22, t);
+            chimeGain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+            chimeOsc.connect(chimeGain);
+            chimeGain.connect(this.ctx.destination);
+            chimeOsc.start(t);
+            chimeOsc.stop(t + 0.25);
+        });
+    }
+
+    // 4. 4대 심볼 진화 팡파르 (도형 업그레이드)
+    playEvolution() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+        notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = now + idx * 0.06;
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.22, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+        });
+    }
+
+    // 5. 장애물 충돌 / 글리치 피격음
+    playObstacleHit() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(240, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    // 6. 연속 코인 획득 사운드 (콤보에 따라 반음씩 피치 상승! 중독적 아케이드 챠링)
+    playCoinPickup(combo = 1) {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        // 콤보 1~15단계에 따라 도-레-미-파-솔-라-시-도 반음씩 피치 스케일 상승
+        const step = Math.min(14, Math.max(0, Math.floor((combo - 1) * 3)));
+        const baseFreq = 587.33 * Math.pow(2, step / 12); // D5 기준 반음 상승
+
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, now + 0.08);
+
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.08);
+
+        // 10콤보 이상 도달 시 고음 화음 팡파르
+        if (combo >= 3.0 && combo % 1 === 0) {
+            this.playFeverFanfare();
+        }
+    }
+
+    // 7. 피버 팡파레 (화려한 3화음 벨소리)
+    playFeverFanfare() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        [880, 1108.73, 1318.51].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const t = now + idx * 0.04;
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.15, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+        });
+    }
+
+    // 8. 공 튀기기 공중 점프 리차저 (네온 점프 젬) 획득음 (경쾌한 에어 바운스 스프링 사운드)
+    playJumpGem() {
+        if (this.isMuted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        // 통-! 하고 솟구치는 상승 바운스
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(440, now);
+        osc1.frequency.exponentialRampToValueAtTime(1050, now + 0.12);
+        gain1.gain.setValueAtTime(0.24, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc1.connect(gain1);
+        gain1.connect(this.ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.14);
+
+        // 청량한 에메랄드 크리스탈 차임
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1320, now + 0.04);
+        gain2.gain.setValueAtTime(0.18, now + 0.04);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc2.connect(gain2);
+        gain2.connect(this.ctx.destination);
+        osc2.start(now + 0.04);
+        osc2.stop(now + 0.2);
+    }
+
+    // =========================================================================
+    // 🎧 0KB Web Audio API 네온 신스웨이브 드럼 & 베이스 비트 루퍼
+    // =========================================================================
+    startNeonBeat(initialBpm = 118) {
+        if (this.isMuted || this.beatTimer) return;
+        this.init();
+        if (!this.ctx) return;
+
+        this.beatBpm = initialBpm;
+        this.beatStep = 0;
+        this.isBeatPlaying = true;
+
+        const playBeatStep = () => {
+            if (!this.isBeatPlaying || this.isMuted) {
+                this.stopNeonBeat();
+                return;
+            }
+
+            const now = this.ctx.currentTime;
+            const step = this.beatStep % 8; // 8스텝 루프
+
+            // 1. 킥 드럼 (스텝 0, 4 - 4 on the floor)
+            if (step === 0 || step === 4) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(45, now + 0.09);
+
+                gain.gain.setValueAtTime(0.22, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.09);
+            }
+
+            // 2. 신스 스네어 / 림샷 (스텝 2, 6)
+            if (step === 2 || step === 6) {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(280, now);
+                osc.frequency.exponentialRampToValueAtTime(90, now + 0.07);
+
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.07);
+            }
+
+            // 3. 펑키 네온 베이스 (스텝마다 옥타브 바운스)
+            const bassNotes = [110, 110, 220, 164.8, 110, 130.8, 146.8, 164.8];
+            const bassOsc = this.ctx.createOscillator();
+            const bassGain = this.ctx.createGain();
+            bassOsc.type = 'sawtooth';
+            bassOsc.frequency.setValueAtTime(bassNotes[step], now);
+
+            bassGain.gain.setValueAtTime(0.06, now);
+            bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+            bassOsc.connect(bassGain);
+            bassGain.connect(this.ctx.destination);
+            bassOsc.start(now);
+            bassOsc.stop(now + 0.08);
+
+            this.beatStep += 1;
+
+            // 다음 비트 간격 계산 (BPM 연동 8분음표)
+            const intervalMs = (60 / this.beatBpm) * 500;
+            this.beatTimer = setTimeout(playBeatStep, intervalMs);
+        };
+
+        playBeatStep();
+    }
+
+    setNeonBeatBpm(bpm) {
+        this.beatBpm = Math.min(150, Math.max(105, bpm));
+    }
+
+    stopNeonBeat() {
+        this.isBeatPlaying = false;
+        if (this.beatTimer) {
+            clearTimeout(this.beatTimer);
+            this.beatTimer = null;
+        }
+    }
 }
 
 export const gameSound = new SoundManager();

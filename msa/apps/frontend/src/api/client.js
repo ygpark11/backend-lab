@@ -35,7 +35,7 @@ client.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config || {};
 
-        if (originalRequest?.url && !originalRequest.url.includes('/actuator/health')) {
+        if (originalRequest?.url && !originalRequest.url.includes('/actuator/health') && !originalRequest.url.includes('/arcade/')) {
             if (!error.response || [502, 503, 504].includes(error.response?.status)) {
                 window.dispatchEvent(new Event('backend-booting'));
                 return Promise.reject(error);

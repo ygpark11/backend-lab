@@ -21,6 +21,7 @@ import {
 import DragonFlightGame from '../components/arcade/DragonFlightGame';
 import SichuanGame from '../components/arcade/SichuanGame';
 import QuickReflexGame from '../components/arcade/QuickReflexGame';
+import NeonRunGame from '../components/arcade/NeonRunGame';
 import LeaderboardModal from '../components/arcade/LeaderboardModal';
 import { useAuth } from '../contexts/AuthContext';
 import { arcadeApi } from '../api/arcadeApi';
@@ -28,7 +29,7 @@ import { arcadeApi } from '../api/arcadeApi';
 const ArcadePage = () => {
     const { isAuthenticated, user, openLoginModal } = useAuth();
 
-    // 뷰 모드: 'HUB' (아케이드 메인 라운지) | 'FLIGHT' (PS 플라이트) | 'SICHUAN' (사천성) | 'REFLEX' (퀵 리액션)
+    // 뷰 모드: 'HUB' (아케이드 메인 라운지) | 'FLIGHT' (PS 플라이트) | 'SICHUAN' (사천성) | 'REFLEX' (퀵 리액션) | 'NEON_RUN' (PS 네온 런)
     const [activeView, setActiveView] = useState('HUB');
 
     // 리더보드 모달 상태
@@ -39,26 +40,29 @@ const ArcadePage = () => {
     const [userBestScores, setUserBestScores] = useState({
         flight: 0,
         sichuan: 0,
-        reflex: 0
+        reflex: 0,
+        neon_run: 0
     });
 
     const fetchUserBestScores = useCallback(async () => {
         if (!isAuthenticated || !user) {
-            setUserBestScores({ flight: 0, sichuan: 0, reflex: 0 });
+            setUserBestScores({ flight: 0, sichuan: 0, reflex: 0, neon_run: 0 });
             return;
         }
 
         try {
-            const [flightData, sichuanData, reflexData] = await Promise.all([
+            const [flightData, sichuanData, reflexData, neonRunData] = await Promise.all([
                 arcadeApi.getLeaderboard('flight', user).catch(() => null),
                 arcadeApi.getLeaderboard('sichuan', user).catch(() => null),
-                arcadeApi.getLeaderboard('reflex', user).catch(() => null)
+                arcadeApi.getLeaderboard('reflex', user).catch(() => null),
+                arcadeApi.getLeaderboard('neon_run', user).catch(() => null)
             ]);
 
             setUserBestScores({
                 flight: flightData?.myRank?.score || 0,
                 sichuan: sichuanData?.myRank?.score || 0,
-                reflex: reflexData?.myRank?.score || 0
+                reflex: reflexData?.myRank?.score || 0,
+                neon_run: neonRunData?.myRank?.score || 0
             });
         } catch (e) {
             console.error('[ArcadePage] 내 최고 기록 조회 실패:', e);
@@ -128,6 +132,30 @@ const ArcadePage = () => {
                     user={user}
                     isAuthenticated={isAuthenticated}
                     initialBestScore={userBestScores.reflex}
+                    onBack={() => setActiveView('HUB')}
+                    onOpenLeaderboard={handleOpenLeaderboard}
+                    openLoginModal={openLoginModal}
+                />
+                <LeaderboardModal
+                    isOpen={isLeaderboardOpen}
+                    onClose={() => setIsLeaderboardOpen(false)}
+                    initialGameType={leaderboardGameType}
+                    isAuthenticated={isAuthenticated}
+                    user={user}
+                    openLoginModal={openLoginModal}
+                />
+            </>
+        );
+    }
+
+    // 4. PS 네온 런 플레이 뷰
+    if (activeView === 'NEON_RUN') {
+        return (
+            <>
+                <NeonRunGame
+                    user={user}
+                    isAuthenticated={isAuthenticated}
+                    initialBestScore={userBestScores.neon_run}
                     onBack={() => setActiveView('HUB')}
                     onOpenLeaderboard={handleOpenLeaderboard}
                     openLoginModal={openLoginModal}
@@ -378,43 +406,63 @@ const ArcadePage = () => {
                         </div>
                     </div>
 
-                    {/* 슬롯 4: 차기작 준비 중 (COMING SOON) */}
-                    <div className="group relative bg-surface/50 backdrop-blur-md border border-dashed border-divider/80 rounded-3xl p-6 flex flex-col justify-between overflow-hidden opacity-80 hover:opacity-100 transition-all">
+                    {/* 게임 4: PS 네온 런 (Beat Jump) */}
+                    <div className="group relative bg-surface/90 backdrop-blur-md border border-divider hover:border-cyan-400/50 rounded-3xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden">
+                        <div className="absolute -top-16 -right-16 w-40 h-40 bg-cyan-400/15 blur-3xl rounded-full pointer-events-none group-hover:bg-cyan-400/25 transition-all" />
+
                         <div>
                             {/* 상단 뱃지 & 아이콘 */}
                             <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 rounded-2xl bg-surface border border-divider text-secondary">
-                                    <Sparkles className="w-6 h-6 text-yellow-500 animate-pulse" />
+                                <div className="p-3 rounded-2xl bg-cyan-400/15 border border-cyan-400/30 text-cyan-400">
+                                    <Zap className="w-6 h-6" />
                                 </div>
-                                <span className="px-2.5 py-1 rounded-full bg-base border border-divider text-[10px] font-black text-secondary tracking-wider">
-                                    NEXT CHALLENGE
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="px-2.5 py-1 rounded-full bg-cyan-400/15 border border-cyan-400/30 text-[10px] font-black text-cyan-400">
+                                        원버튼 • 점프 러너
+                                    </span>
+                                    <span className="px-2.5 py-1 rounded-full bg-base border border-divider text-[10px] font-bold text-secondary">
+                                        하트 3개 (즉사 없음)
+                                    </span>
+                                </div>
                             </div>
 
                             {/* 타이틀 & 설명 */}
-                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight text-primary/70 mb-2">
-                                신규 아케이드 게임
+                            <h2 className="text-xl sm:text-2xl font-black italic tracking-tight text-primary mb-2 group-hover:text-cyan-400 transition-colors">
+                                PS 네온 런 (Beat Jump)
                             </h2>
                             <p className="text-xs sm:text-sm text-secondary leading-relaxed mb-6 font-medium">
-                                더 직관적이고 강력한 도파민의 새로운 아케이드 타이틀을 준비하고 있습니다.
-                                곧 공개될 명예의 전당의 다음 주인공에 도전하세요!
+                                사이버 네온 트랙을 질주하며 비트에 맞춰 장애물을 도약하세요!
+                                300m마다 4대 심볼로 진화하며 2단 점프와 자석 쉴드가 활성화됩니다.
                             </p>
 
                             {/* 스탯 프리뷰 */}
-                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-base/50 border border-divider/60 mb-6">
-                                <Gamepad2 className="w-4 h-4 text-secondary shrink-0" />
-                                <div className="flex-1 flex items-center justify-between text-xs text-secondary font-medium">
-                                    <span>출시 예정</span>
-                                    <span className="font-mono font-bold text-ps-blue">COMING SOON</span>
+                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-base border border-divider mb-6">
+                                <Award className="w-4 h-4 text-cyan-400 shrink-0" />
+                                <div className="flex-1 flex items-center justify-between text-xs">
+                                    <span className="text-secondary font-bold">내 최고 기록</span>
+                                    <span className={`font-black ${isAuthenticated ? 'text-primary' : 'text-secondary text-[11px]'}`}>
+                                        {isAuthenticated ? `${userBestScores.neon_run.toLocaleString()}P` : '로그인 시 기록'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 하단 버튼 */}
-                        <div className="pt-2 border-t border-divider/40">
-                            <div className="w-full py-3 px-4 rounded-2xl bg-surface border border-divider text-secondary text-xs font-bold text-center">
-                                🚀 곧 찾아옵니다!
-                            </div>
+                        {/* 하단 액션 버튼 */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-divider/60">
+                            <button
+                                onClick={() => setActiveView('NEON_RUN')}
+                                className="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] active:scale-95 transition-all"
+                            >
+                                <Play className="w-4 h-4 fill-current" />
+                                <span>플레이하기</span>
+                            </button>
+                            <button
+                                onClick={() => handleOpenLeaderboard('neon_run')}
+                                className="py-3 px-3.5 rounded-2xl bg-base hover:bg-surface-hover border border-divider text-secondary hover:text-primary transition-colors text-xs font-bold"
+                                title="네온 런 랭킹 보기"
+                            >
+                                <Trophy className="w-4 h-4 text-yellow-500" />
+                            </button>
                         </div>
                     </div>
                 </div>
