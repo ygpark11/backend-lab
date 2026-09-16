@@ -10,6 +10,8 @@ const GameStartOverlay = ({
     instructions = [],
     highScore = 0,
     timeLimit = 120,
+    infoLabel = '제한 시간',
+    infoValue = null,
     onStart,
     onBack
 }) => {
@@ -57,7 +59,7 @@ const GameStartOverlay = ({
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
             {step === 'BRIEFING' ? (
                 /* 1단계: 브리핑 & 시작 준비 화면 */
-                <div className="relative w-full max-w-lg bg-surface/95 border border-divider/80 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden flex flex-col items-center text-center">
+                <div className="relative w-full max-w-lg bg-surface/95 border border-divider/80 rounded-3xl p-5 sm:p-8 shadow-2xl max-h-[92dvh] overflow-y-auto flex flex-col items-center text-center">
                     {/* 상단 장식 글로우 */}
                     <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-ps-blue/20 blur-3xl rounded-full pointer-events-none" />
 
@@ -79,12 +81,12 @@ const GameStartOverlay = ({
                     <h2 className="text-2xl sm:text-3xl font-black italic tracking-tight text-primary mb-1">
                         {title}
                     </h2>
-                    <p className="text-xs sm:text-sm text-secondary mb-6 font-medium">
+                    <p className="text-xs sm:text-sm text-secondary mb-4 sm:mb-6 font-medium">
                         {subtitle}
                     </p>
 
-                    {/* 게임 정보 카드 (최고 기록 + 제한 시간) */}
-                    <div className="grid grid-cols-2 gap-3 w-full mb-6">
+                    {/* 게임 정보 카드 (최고 기록 + 제한 시간 / 정보) */}
+                    <div className="grid grid-cols-2 gap-3 w-full mb-4 sm:mb-6">
                         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-base border border-divider">
                             <div className="flex items-center gap-1.5 text-xs text-secondary font-bold mb-1">
                                 <Trophy className="w-4 h-4 text-yellow-500" />
@@ -97,10 +99,10 @@ const GameStartOverlay = ({
                         <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-base border border-divider">
                             <div className="flex items-center gap-1.5 text-xs text-secondary font-bold mb-1">
                                 <Zap className="w-4 h-4 text-ps-blue" />
-                                <span>제한 시간</span>
+                                <span>{infoLabel}</span>
                             </div>
-                            <span className="text-lg sm:text-xl font-black text-primary">
-                                {timeLimit}초
+                            <span className="text-base sm:text-xl font-black text-primary">
+                                {infoValue || (timeLimit ? `${timeLimit}초` : '무한 질주')}
                             </span>
                         </div>
                     </div>
@@ -150,7 +152,7 @@ const GameStartOverlay = ({
 
                     <div className="mt-6 flex items-center gap-3 text-secondary text-xs font-bold opacity-70">
                         <Flame className="w-4 h-4 text-amber-500 animate-spin" />
-                        <span>타임어택 시작 준비 중!</span>
+                        <span>도전 시작 준비 중!</span>
                     </div>
                 </div>
             )}

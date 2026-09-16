@@ -4,17 +4,17 @@ import {
     Trophy,
     Sparkles,
     RotateCcw,
-    ChevronLeft,
+    ArrowLeft,
     Volume2,
     VolumeX,
     Play,
     Pause,
-    Award,
     Shield,
     Flame,
     Zap,
     Crown
 } from 'lucide-react';
+import GameStartOverlay from './GameStartOverlay';
 import { gameSound } from '../../utils/gameSound';
 import { arcadeApi } from '../../api/arcadeApi';
 
@@ -56,8 +56,8 @@ const EVOLUTION_STAGES = [
         bgGradient: 'from-amber-950/40 via-slate-900 to-black',
         jumpStrength: -11.8,
         gravity: 0.62,
-        maxJumps: 2, // 🔥 2단 점프 활성화
-        desc: '🔥 2단 점프(Double Jump) 해금!'
+        maxJumps: 2, // 2단 점프 활성화
+        desc: '2단 점프(Double Jump) 해금'
     },
     {
         form: 'CROSS',
@@ -70,7 +70,7 @@ const EVOLUTION_STAGES = [
         jumpStrength: -12.2,
         gravity: 0.62,
         maxJumps: 2,
-        desc: '⚡ 코인 자석 흡수 + 1회 보호 쉴드!'
+        desc: '코인 자석 흡수 + 1회 보호 쉴드'
     }
 ];
 
@@ -88,6 +88,9 @@ const NeonRunGame = ({
 
     // 사운드 음소거 상태
     const [isMuted, setIsMuted] = useState(() => gameSound.getMuted());
+
+    // 인트로 브리핑 오버레이 상태 (GameStartOverlay 연동)
+    const [showOverlay, setShowOverlay] = useState(true);
 
     // 게임 상태: 'READY' | 'PLAYING' | 'PAUSED' | 'GAMEOVER'
     const [gameState, setGameState] = useState('READY');
@@ -509,8 +512,15 @@ const NeonRunGame = ({
         setGameState('PLAYING');
     }, [generateNextChunk]);
 
+    // 인트로 카운트다운 완료 후 게임 시작
+    const handleStartAfterCountdown = useCallback(() => {
+        setShowOverlay(false);
+        resetGame();
+    }, [resetGame]);
+
     // 점프 입력 처리 (키 다운 / 터치 시작)
     const handleJump = useCallback(() => {
+        if (showOverlay) return;
         const world = worldRef.current;
         if (gameState !== 'PLAYING') {
             if (gameState === 'READY') {
@@ -872,7 +882,7 @@ const NeonRunGame = ({
                 p.y = safePlat.y - 10;
                 p.invincibleTimer = 2.0; // 2초간 무적 (착지 후 연속 피격 억까 완전 차단)
 
-                showBanner('RESCUED! (-1 ❤️)', '#ff4444');
+                showBanner('RESCUED! (-1 LIFE)', '#ff4444');
                 return;
             }
         }
@@ -956,7 +966,7 @@ const NeonRunGame = ({
             const dy = (p.y + p.size / 2) - it.y;
             if (Math.hypot(dx, dy) < p.size / 2 + 18) {
                 if (it.type === 'JUMP_GEM') {
-                    // ⚡ 공 튀기기 공중 점프 리차저: 점프 횟수 즉시 리필 + 경쾌한 에어 바운스!
+                    // 공 튀기기 공중 점프 리차저: 점프 횟수 즉시 리필 + 경쾌한 에어 바운스!
                     p.jumpCount = 0;
                     p.vy = -7.8;
                     world.score += 250 * world.combo;
@@ -968,7 +978,7 @@ const NeonRunGame = ({
                     world.floatingTexts.push({
                         x: it.x,
                         y: it.y - 18,
-                        text: 'AIR JUMP ⚡',
+                        text: 'AIR JUMP',
                         color: '#00ffcc',
                         life: 0.9,
                         maxLife: 0.9
@@ -1000,7 +1010,7 @@ const NeonRunGame = ({
                     world.floatingTexts.push({
                         x: it.x,
                         y: it.y - 15,
-                        text: `+500P 🏆 x${world.combo}`,
+                        text: `+500P x${world.combo}`,
                         color: '#ffd700',
                         life: 1.0,
                         maxLife: 1.0
@@ -1487,29 +1497,60 @@ const NeonRunGame = ({
     const currentStageInfo = EVOLUTION_STAGES[hudData.stageIndex];
 
     return (
-        <div className="relative w-full min-h-[calc(100dvh-4rem)] mt-16 bg-slate-950 text-white flex flex-col items-center justify-center select-none overflow-hidden p-2 sm:p-4">
-            {/* 상단 네비게이션 & 사운드 컨트롤 바 */}
-            <div className="w-full max-w-4xl flex items-center justify-between mb-3 px-2">
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface/80 hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-secondary hover:text-primary transition-all"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                    <span>라운지 복귀</span>
-                </button>
+        <div className="relative w-full h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] mt-16 bg-base text-primary px-2 py-1.5 sm:py-2 flex flex-col items-center justify-between select-none overflow-hidden touch-manipulation">
+            {/* 시작 전 READY... GO! 브리핑 & 카운트다운 오버레이 (사천성, 플라이트와 통일) */}
+            {showOverlay && (
+                <GameStartOverlay
+                    title="PS 네온 런 (Beat Jump)"
+                    subtitle="PlayStation 4대 심볼과 함께 질주하는 원버튼 비트 점프 러너"
+                    badgeText="BEAT JUMP"
+                    badgeColor="bg-ps-blue"
+                    highScore={bestScore}
+                    infoLabel="생명력"
+                    infoValue="3 라이프 (낙하 구출)"
+                    instructions={[
+                        "스페이스바(PC) 또는 화면 터치(모바일)로 장애물을 뛰어넘으세요.",
+                        "길게 누르면 대점프, 살짝 누르면 소점프로 도약 높이를 조절합니다.",
+                        "500m마다 스퀘어 ➔ 서클 ➔ 트라이앵글(2단점프) ➔ 크로스(피버)로 진화합니다.",
+                        "공중 에메랄드 젬을 획득하면 점프 횟수가 즉시 충전되어 추가 도약이 가능합니다."
+                    ]}
+                    onStart={handleStartAfterCountdown}
+                    onBack={onBack}
+                />
+            )}
 
-                <div className="flex items-center gap-2">
+            {/* 상단 네비게이션 & 사운드 컨트롤 바 */}
+            <header className="w-full max-w-4xl shrink-0 flex items-center justify-between px-1 mb-1 sm:mb-2 z-10">
+                <div className="flex items-center gap-1.5">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-1 text-xs font-bold text-secondary hover:text-primary transition-colors p-1.5 rounded-xl hover:bg-surface-hover"
+                        title="라운지 복귀"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">라운지</span>
+                    </button>
+
+                    <span className="p-1.5 rounded-lg bg-ps-blue text-white shadow-sm">
+                        <Zap className="w-4 h-4" />
+                    </span>
+                    <h1 className="text-sm sm:text-base font-black italic tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-ps-blue">
+                        PS 네온 런 <span className="text-xs font-normal not-italic text-secondary hidden xs:inline">(Beat Jump)</span>
+                    </h1>
+                </div>
+
+                <div className="flex items-center gap-1.5">
                     <button
                         onClick={() => onOpenLeaderboard('neon_run')}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-surface/80 hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-all"
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-surface border border-divider text-yellow-500 hover:text-yellow-400 text-xs font-bold transition-all"
                     >
-                        <Trophy className="w-4 h-4" />
-                        <span>명예의 전당</span>
+                        <Trophy className="w-3.5 h-3.5" />
+                        <span>TOP 10</span>
                     </button>
 
                     <button
                         onClick={handleToggleMute}
-                        className="p-2 rounded-xl bg-surface/80 hover:bg-surface border border-divider text-secondary hover:text-primary transition-all"
+                        className="p-1.5 rounded-xl bg-surface border border-divider text-secondary hover:text-primary transition-colors"
                         title={isMuted ? '음소거 해제' : '음소거'}
                     >
                         {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-ps-blue" />}
@@ -1518,7 +1559,7 @@ const NeonRunGame = ({
                     {gameState === 'PLAYING' && (
                         <button
                             onClick={() => setGameState('PAUSED')}
-                            className="p-2 rounded-xl bg-surface/80 hover:bg-surface border border-divider text-amber-400 hover:text-amber-300 transition-all"
+                            className="p-1.5 rounded-xl bg-surface border border-divider text-amber-400 hover:text-amber-300 transition-all"
                             title="일시 정지 (ESC)"
                         >
                             <Pause className="w-4 h-4" />
@@ -1527,17 +1568,17 @@ const NeonRunGame = ({
                     {gameState === 'PAUSED' && (
                         <button
                             onClick={() => setGameState('PLAYING')}
-                            className="p-2 rounded-xl bg-surface/80 hover:bg-surface border border-divider text-emerald-400 hover:text-emerald-300 transition-all"
+                            className="p-1.5 rounded-xl bg-surface border border-divider text-emerald-400 hover:text-emerald-300 transition-all"
                             title="계속하기 (ESC)"
                         >
                             <Play className="w-4 h-4 fill-current" />
                         </button>
                     )}
                 </div>
-            </div>
+            </header>
 
-            {/* 메인 캔버스 뷰포트 컨테이너 */}
-            <div className="relative w-full max-w-4xl aspect-[16/9] bg-black rounded-3xl border-2 border-ps-blue/40 shadow-[0_0_30px_rgba(0,112,209,0.3)] overflow-hidden flex items-center justify-center">
+            {/* 메인 캔버스 뷰포트 컨테이너 (16:9 비율 유지, 화면 높이에 맞춰 유연한 스케일) */}
+            <main className="relative w-full max-w-4xl flex-1 min-h-0 aspect-[16/9] max-h-[540px] bg-black rounded-2xl sm:rounded-3xl border-2 border-ps-blue/40 shadow-[0_0_30px_rgba(0,112,209,0.3)] overflow-hidden flex items-center justify-center my-auto">
                 <canvas
                     ref={canvasRef}
                     width={960}
@@ -1552,19 +1593,19 @@ const NeonRunGame = ({
                         e.preventDefault();
                         handleJumpRelease();
                     }}
-                    className="w-full h-full object-contain cursor-pointer"
+                    className="w-full h-full object-contain cursor-pointer touch-none"
                 />
 
                 {/* 인게임 실시간 HUD 오버레이 */}
                 {gameState === 'PLAYING' && (
-                    <div className="absolute top-0 left-0 right-0 p-4 sm:p-5 flex items-center justify-between pointer-events-none">
+                    <div className="absolute top-0 left-0 right-0 p-2 sm:p-5 flex items-center justify-between pointer-events-none">
                         {/* 좌측: 생명력(하트) & 현재 심볼 폼 */}
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/10">
+                        <div className="flex flex-col gap-1 sm:gap-2">
+                            <div className="flex items-center gap-1 sm:gap-1.5 bg-black/60 backdrop-blur-md px-2 sm:px-3 py-1 sm:py-1.5 rounded-2xl border border-white/10">
                                 {[...Array(3)].map((_, i) => (
                                     <Heart
                                         key={i}
-                                        className={`w-5 h-5 transition-all ${
+                                        className={`w-3.5 h-3.5 sm:w-5 sm:h-5 transition-all ${
                                             i < hudData.hearts
                                                 ? 'text-red-500 fill-red-500 filter drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]'
                                                 : 'text-zinc-600 fill-zinc-800'
@@ -1572,46 +1613,46 @@ const NeonRunGame = ({
                                     />
                                 ))}
                                 {hudData.hasShield && (
-                                    <div className="ml-1 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500 text-purple-300 text-[10px] font-black flex items-center gap-1">
-                                        <Shield className="w-3 h-3" />
+                                    <div className="ml-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500 text-purple-300 text-[9px] sm:text-[10px] font-black flex items-center gap-1">
+                                        <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                         <span>SHIELD</span>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-2xl border border-white/10 w-fit">
+                            <div className="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2 sm:px-3 py-0.5 sm:py-1 rounded-2xl border border-white/10 w-fit">
                                 <span
-                                    className="font-mono text-sm font-black"
+                                    className="font-mono text-xs sm:text-sm font-black"
                                     style={{ color: currentStageInfo.color }}
                                 >
                                     {currentStageInfo.symbol} {currentStageInfo.name}
                                 </span>
                                 {currentStageInfo.maxJumps > 1 && (
-                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                                        2단 점프 ON
+                                    <span className="text-[9px] sm:text-[10px] font-bold px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                        2단 점프
                                     </span>
                                 )}
                             </div>
                         </div>
 
                         {/* 중앙: 거리 미터계 */}
-                        <div className="flex flex-col items-center bg-black/60 backdrop-blur-md px-5 py-2 rounded-2xl border border-white/10">
-                            <span className="text-[11px] font-bold text-zinc-400 tracking-wider">DISTANCE</span>
-                            <span className="text-xl sm:text-2xl font-black italic tracking-tight font-mono text-cyan-400">
+                        <div className="flex flex-col items-center bg-black/60 backdrop-blur-md px-3 sm:px-5 py-1 sm:py-2 rounded-2xl border border-white/10">
+                            <span className="text-[9px] sm:text-[11px] font-bold text-zinc-400 tracking-wider">DISTANCE</span>
+                            <span className="text-base sm:text-2xl font-black italic tracking-tight font-mono text-cyan-400">
                                 {hudData.distance.toLocaleString()}m
                             </span>
                         </div>
 
                         {/* 우측: 실시간 점수 & 콤보 */}
                         <div className="flex flex-col items-end gap-1">
-                            <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 text-right">
-                                <span className="text-[10px] font-bold text-zinc-400 block tracking-wider">SCORE</span>
-                                <span className="text-lg sm:text-2xl font-black font-mono text-yellow-400">
+                            <div className="bg-black/60 backdrop-blur-md px-2.5 sm:px-4 py-1 sm:py-2 rounded-2xl border border-white/10 text-right">
+                                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 block tracking-wider">SCORE</span>
+                                <span className="text-sm sm:text-2xl font-black font-mono text-yellow-400">
                                     {hudData.score.toLocaleString()}P
                                 </span>
                             </div>
                             {hudData.combo > 1 && (
-                                <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 px-2.5 py-0.5 rounded-full text-[11px] font-black text-amber-400 animate-pulse">
+                                <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black text-amber-400 animate-pulse">
                                     COMBO x{hudData.combo}
                                 </div>
                             )}
@@ -1621,167 +1662,24 @@ const NeonRunGame = ({
 
                 {/* 팝업 배너 알림 (진화, 구출 등) */}
                 {bannerAlert && (
-                    <div className="absolute top-20 pointer-events-none animate-in fade-in slide-in-from-top duration-300">
+                    <div className="absolute top-12 sm:top-20 pointer-events-none animate-in fade-in slide-in-from-top duration-300">
                         <div
-                            className="px-6 py-2.5 rounded-full bg-black/85 backdrop-blur-md border-2 font-black text-sm sm:text-base tracking-wide shadow-2xl flex items-center gap-2"
+                            className="px-4 sm:px-6 py-1.5 sm:py-2.5 rounded-full bg-black/85 backdrop-blur-md border-2 font-black text-xs sm:text-base tracking-wide shadow-2xl flex items-center gap-2"
                             style={{
                                 borderColor: bannerAlert.color,
                                 color: bannerAlert.color,
                                 boxShadow: `0 0 25px ${bannerAlert.color}60`
                             }}
                         >
-                            <Zap className="w-4 h-4 fill-current" />
+                            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
                             <span>{bannerAlert.text}</span>
                         </div>
                     </div>
                 )}
+            </main>
 
-                {/* 1. 시작 화면 (READY 오버레이) */}
-                {gameState === 'READY' && (
-                    <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-300">
-                        <div className="p-4 rounded-3xl bg-ps-blue/15 border border-ps-blue/40 text-ps-blue mb-4 shadow-[0_0_20px_rgba(0,112,209,0.4)] animate-bounce">
-                            <Zap className="w-10 h-10" />
-                        </div>
-
-                        <h2 className="text-2xl sm:text-4xl font-black italic tracking-tight text-white mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-ps-blue to-purple-400">
-                            PS 네온 런 (Beat Jump)
-                        </h2>
-                        <p className="text-xs sm:text-sm text-zinc-300 max-w-md mb-6 leading-relaxed">
-                            네온 트랙 위를 질주하며 장애물을 뛰어넘으세요!<br />
-                            500m마다 <strong className="text-cyan-400">■</strong> ➔ <strong className="text-pink-400">●</strong> ➔ <strong className="text-yellow-400">▲ (2단점프)</strong> ➔ <strong className="text-purple-400">✖ (피버)</strong>로 진화합니다.
-                        </p>
-
-                        <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-bold text-zinc-400 mb-8 bg-surface/50 border border-divider px-4 py-2.5 rounded-2xl">
-                            <span>🎮 PC: Space / ↑ 키 (소점프/대점프)</span>
-                            <span>•</span>
-                            <span>📱 모바일: 터치</span>
-                            <span>•</span>
-                            <span className="text-emerald-400">💎 공중 점프 보석 (점프 횟수 리셋 & 부스트)</span>
-                            <span>•</span>
-                            <span className="text-pink-400">❤️ 라이프 3개 (낙하 구출)</span>
-                        </div>
-
-                        <button
-                            onClick={resetGame}
-                            className="px-8 py-3.5 rounded-2xl bg-ps-blue hover:bg-blue-600 text-white font-black text-sm sm:text-base flex items-center gap-2 shadow-[0_0_25px_rgba(0,112,209,0.6)] active:scale-95 transition-all"
-                        >
-                            <Play className="w-5 h-5 fill-current" />
-                            <span>질주 시작 (SPACE)</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* 2. 게임오버 화면 */}
-                {gameState === 'GAMEOVER' && (
-                    <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in zoom-in-95 duration-300">
-                        {isNewRecord ? (
-                            <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-xs font-black uppercase tracking-wider mb-3 animate-pulse">
-                                <Crown className="w-4 h-4" />
-                                <span>NEW HIGH SCORE! 신기록 달성</span>
-                            </div>
-                        ) : (
-                            <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">
-                                SESSION FINISHED
-                            </div>
-                        )}
-
-                        <h2 className="text-3xl sm:text-5xl font-black italic tracking-tight font-mono text-white mb-4">
-                            {gameOverStats.score.toLocaleString()} <span className="text-xl text-ps-blue font-sans">POINTS</span>
-                        </h2>
-
-                        {/* 세부 통계 그리드 */}
-                        <div className="grid grid-cols-3 gap-3 w-full max-w-sm mb-6">
-                            <div className="p-3 rounded-2xl bg-surface/80 border border-divider flex flex-col items-center">
-                                <span className="text-[10px] text-zinc-400 font-bold">완주 거리</span>
-                                <span className="text-base font-black font-mono text-cyan-400">
-                                    {gameOverStats.distance.toLocaleString()}m
-                                </span>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-surface/80 border border-divider flex flex-col items-center">
-                                <span className="text-[10px] text-zinc-400 font-bold">황금 트로피</span>
-                                <span className="text-base font-black font-mono text-yellow-400 flex items-center gap-1">
-                                    <Trophy className="w-3.5 h-3.5" />
-                                    <span>{gameOverStats.trophies}</span>
-                                </span>
-                            </div>
-                            <div className="p-3 rounded-2xl bg-surface/80 border border-divider flex flex-col items-center">
-                                <span className="text-[10px] text-zinc-400 font-bold">생존 시간</span>
-                                <span className="text-base font-black font-mono text-zinc-200">
-                                    {gameOverStats.clearTimeSec}초
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* 리더보드 순위 알림 */}
-                        {isAuthenticated ? (
-                            <p className="text-xs text-secondary font-medium mb-6">
-                                {myRank ? `🏆 글로벌 리더보드 현재 ${myRank}위에 등극했습니다!` : '✅ 서버에 점수가 안전하게 동기화되었습니다.'}
-                            </p>
-                        ) : (
-                            <div className="mb-6 flex items-center gap-2">
-                                <button
-                                    onClick={openLoginModal}
-                                    className="px-4 py-2 rounded-xl bg-ps-blue/20 border border-ps-blue/40 text-ps-blue text-xs font-bold hover:bg-ps-blue/30 transition-all"
-                                >
-                                    로그인하고 명예의 전당에 점수 영구 등록 ➔
-                                </button>
-                            </div>
-                        )}
-
-                        {/* 재도전 및 랭킹 버튼 */}
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={resetGame}
-                                className="px-6 py-3 rounded-2xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(0,112,209,0.5)] active:scale-95 transition-all"
-                            >
-                                <RotateCcw className="w-4 h-4" />
-                                <span>다시 달리기 (SPACE / ENTER)</span>
-                            </button>
-                            <button
-                                onClick={() => onOpenLeaderboard('neon_run')}
-                                className="px-5 py-3 rounded-2xl bg-surface hover:bg-surface-hover border border-divider text-xs sm:text-sm font-bold text-primary flex items-center gap-2 transition-all"
-                            >
-                                <Trophy className="w-4 h-4 text-yellow-500" />
-                                <span>랭킹 보기</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* 3. 일시정지 (PAUSED) 화면 */}
-                {gameState === 'PAUSED' && (
-                    <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
-                        <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-400 mb-4 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
-                            <Pause className="w-8 h-8" />
-                        </div>
-                        <h2 className="text-2xl sm:text-3xl font-black italic tracking-tight text-white mb-2">
-                            GAME PAUSED
-                        </h2>
-                        <p className="text-xs sm:text-sm text-zinc-400 mb-6">
-                            달리기가 일시 정지되었습니다.
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setGameState('PLAYING')}
-                                className="px-6 py-3 rounded-2xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center gap-2 shadow-[0_0_20px_rgba(0,112,209,0.5)] active:scale-95 transition-all"
-                            >
-                                <Play className="w-4 h-4 fill-current" />
-                                <span>계속 달리기 (SPACE / ESC)</span>
-                            </button>
-                            <button
-                                onClick={resetGame}
-                                className="px-5 py-3 rounded-2xl bg-surface hover:bg-surface-hover border border-divider text-xs sm:text-sm font-bold text-secondary hover:text-primary flex items-center gap-2 transition-all"
-                            >
-                                <RotateCcw className="w-4 h-4" />
-                                <span>처음부터 다시하기</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* 하단 진화 단계 가이드 바 & 실시간 충전 게이지 */}
-            <div className="w-full max-w-4xl mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 px-1">
+            {/* 하단 진화 단계 컴팩트 가이드 바 (단일 행 4컬럼 칩) */}
+            <footer className="w-full max-w-4xl shrink-0 grid grid-cols-4 gap-1 sm:gap-2 px-1 py-1 z-10">
                 {EVOLUTION_STAGES.map((st, idx) => {
                     const isPassed = hudData.distance >= (st.maxDistance || Infinity);
                     const isCurrent = hudData.stageIndex === idx;
@@ -1799,45 +1697,165 @@ const NeonRunGame = ({
                     return (
                         <div
                             key={st.form}
-                            className={`relative p-2.5 rounded-2xl border transition-all text-center flex flex-col items-center justify-center overflow-hidden ${
+                            className={`relative p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border transition-all text-center flex flex-col items-center justify-center overflow-hidden ${
                                 isCurrent
-                                    ? 'bg-slate-900/90 border-2 shadow-lg'
+                                    ? 'bg-surface border-2 shadow-md'
                                     : isPassed
-                                    ? 'bg-slate-900/40 border-white/5 opacity-60'
-                                    : 'bg-slate-950/40 border-white/5 opacity-30'
+                                    ? 'bg-surface/50 border-divider opacity-60'
+                                    : 'bg-surface/20 border-divider opacity-30'
                             }`}
                             style={{
                                 borderColor: isCurrent ? st.color : undefined,
-                                boxShadow: isCurrent ? `0 0 16px ${st.color}40` : undefined
+                                boxShadow: isCurrent ? `0 0 12px ${st.color}30` : undefined
                             }}
                         >
-                            {/* 내부 실시간 네온 게이지 충전 바 */}
-                            {isCurrent && (
-                                <div
-                                    className="absolute bottom-0 left-0 top-0 opacity-20 transition-all duration-150 pointer-events-none"
-                                    style={{
-                                        width: `${stageProgress}%`,
-                                        backgroundColor: st.color
-                                    }}
-                                />
-                            )}
+                            {/* 내부 실시간 네온 충전 바 */}
+                            <div
+                                className="absolute bottom-0 left-0 h-1 transition-all duration-200"
+                                style={{
+                                    width: isPassed ? '100%' : `${stageProgress}%`,
+                                    backgroundColor: st.color,
+                                    boxShadow: isCurrent ? `0 0 6px ${st.color}` : undefined
+                                }}
+                            />
 
-                            <div className="relative z-10 flex items-center gap-1.5 text-xs font-black mb-0.5">
+                            <div className="relative z-10 flex items-center gap-1 text-[11px] sm:text-xs font-black">
                                 <span style={{ color: st.color }}>{st.symbol}</span>
-                                <span className="truncate">{st.name}</span>
+                                <span className="truncate text-primary">{st.name.replace('PS ', '')}</span>
                             </div>
-                            <div className="relative z-10 flex items-center justify-between w-full px-1.5 text-[10px] font-mono text-zinc-400">
+                            <div className="relative z-10 flex items-center justify-between w-full px-0.5 sm:px-1 text-[9px] sm:text-[10px] font-mono text-secondary mt-0.5">
                                 <span>{st.minDistance}m+</span>
-                                {isCurrent && (
-                                    <span className="font-bold font-mono" style={{ color: st.color }}>
-                                        {st.maxDistance === Infinity ? '⚡ MAX' : `${stageProgress}%`}
-                                    </span>
-                                )}
+                                <span className="font-bold" style={{ color: isCurrent ? st.color : undefined }}>
+                                    {isPassed ? '완료' : isCurrent ? `${stageProgress}%` : '잠김'}
+                                </span>
                             </div>
                         </div>
                     );
                 })}
-            </div>
+            </footer>
+
+            {/* 게임 오버 결과 모달 (전체 화면 오버레이 - 모바일 최적화) */}
+            {gameState === 'GAMEOVER' && (
+                <div
+                    onClick={() => {
+                        if (Date.now() - (worldRef.current.gameOverTime || 0) > 350) {
+                            resetGame();
+                        }
+                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in zoom-in-95 duration-200 cursor-pointer"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-5 sm:p-6 shadow-2xl text-center flex flex-col items-center cursor-default"
+                    >
+                        {isNewRecord ? (
+                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-500/20 border border-yellow-500/40 text-yellow-500 text-xs font-black uppercase tracking-wider mb-3 animate-pulse">
+                                <Crown className="w-3.5 h-3.5" />
+                                <span>NEW HIGH SCORE</span>
+                            </div>
+                        ) : (
+                            <div className="text-[11px] font-bold text-secondary uppercase tracking-widest mb-2">
+                                SESSION FINISHED
+                            </div>
+                        )}
+
+                        <h2 className="text-3xl sm:text-4xl font-black italic tracking-tight font-mono text-primary mb-3">
+                            {gameOverStats.score.toLocaleString()} <span className="text-base text-ps-blue font-sans">PTS</span>
+                        </h2>
+
+                        {/* 세부 통계 그리드 */}
+                        <div className="grid grid-cols-3 gap-2 w-full mb-4">
+                            <div className="p-2.5 rounded-2xl bg-base border border-divider flex flex-col items-center">
+                                <span className="text-[10px] text-secondary font-bold">완주 거리</span>
+                                <span className="text-sm sm:text-base font-black font-mono text-cyan-500">
+                                    {gameOverStats.distance.toLocaleString()}m
+                                </span>
+                            </div>
+                            <div className="p-2.5 rounded-2xl bg-base border border-divider flex flex-col items-center">
+                                <span className="text-[10px] text-secondary font-bold">트로피</span>
+                                <span className="text-sm sm:text-base font-black font-mono text-yellow-500 flex items-center gap-1">
+                                    <Trophy className="w-3 h-3" />
+                                    <span>{gameOverStats.trophies}</span>
+                                </span>
+                            </div>
+                            <div className="p-2.5 rounded-2xl bg-base border border-divider flex flex-col items-center">
+                                <span className="text-[10px] text-secondary font-bold">생존 시간</span>
+                                <span className="text-sm sm:text-base font-black font-mono text-primary">
+                                    {gameOverStats.clearTimeSec}s
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* 리더보드 순위 알림 */}
+                        {isAuthenticated ? (
+                            <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5">
+                                <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
+                                <span>{myRank ? `글로벌 리더보드 현재 ${myRank}위 등극!` : '서버에 점수가 안전하게 동기화되었습니다.'}</span>
+                            </div>
+                        ) : (
+                            <div className="mb-4 w-full">
+                                <button
+                                    onClick={openLoginModal}
+                                    className="w-full py-2 px-3 rounded-xl bg-ps-blue/15 border border-ps-blue/30 text-ps-blue text-xs font-bold hover:bg-ps-blue/25 transition-all"
+                                >
+                                    로그인하고 명예의 전당에 점수 등록하기
+                                </button>
+                            </div>
+                        )}
+
+                        {/* 재도전 및 랭킹 버튼 */}
+                        <div className="flex items-center gap-2.5 w-full">
+                            <button
+                                onClick={resetGame}
+                                className="flex-1 py-3 px-4 rounded-xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,112,209,0.4)] active:scale-95 transition-all"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                <span>다시 달리기</span>
+                            </button>
+                            <button
+                                onClick={() => onOpenLeaderboard('neon_run')}
+                                className="py-3 px-4 rounded-xl bg-surface-hover hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-primary flex items-center justify-center gap-1.5 transition-all"
+                            >
+                                <Trophy className="w-4 h-4 text-yellow-500" />
+                                <span>랭킹</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 일시정지 (PAUSED) 화면 (전체 화면 오버레이) */}
+            {gameState === 'PAUSED' && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+                    <div className="w-full max-w-sm bg-surface border border-divider rounded-3xl p-6 shadow-2xl text-center flex flex-col items-center">
+                        <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/40 text-amber-500 mb-3 shadow-[0_0_20px_rgba(245,158,11,0.3)]">
+                            <Pause className="w-7 h-7" />
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black italic tracking-tight text-primary mb-1">
+                            GAME PAUSED
+                        </h2>
+                        <p className="text-xs text-secondary mb-5">
+                            달리기가 일시 정지되었습니다.
+                        </p>
+                        <div className="flex items-center gap-2.5 w-full">
+                            <button
+                                onClick={() => setGameState('PLAYING')}
+                                className="flex-1 py-3 px-4 rounded-xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,112,209,0.4)] active:scale-95 transition-all"
+                            >
+                                <Play className="w-4 h-4 fill-current" />
+                                <span>계속 달리기</span>
+                            </button>
+                            <button
+                                onClick={resetGame}
+                                className="py-3 px-4 rounded-xl bg-surface-hover hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-secondary hover:text-primary flex items-center justify-center gap-1.5 transition-all"
+                            >
+                                <RotateCcw className="w-4 h-4" />
+                                <span>재시작</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
