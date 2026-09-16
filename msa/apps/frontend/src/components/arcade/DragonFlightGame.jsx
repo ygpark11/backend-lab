@@ -1497,7 +1497,7 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 {/* 게임 시작 브리핑 & 카운트다운 오버레이 */}
                 {gameState === 'IDLE' && (
                     <GameStartOverlay
-                        title="PS 드래곤 플라이트"
+                        title="PS 플라이트"
                         subtitle="무한 우주를 질주하며 적을 격추하고 최고 거리에 도달하세요!"
                         badgeText="ARCADE FLIGHT"
                         badgeColor="bg-ps-blue"

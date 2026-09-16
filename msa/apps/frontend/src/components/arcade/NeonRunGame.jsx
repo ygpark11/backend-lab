@@ -12,7 +12,9 @@ import {
     Shield,
     Flame,
     Zap,
-    Crown
+    Crown,
+    Home,
+    HelpCircle
 } from 'lucide-react';
 import GameStartOverlay from './GameStartOverlay';
 import { gameSound } from '../../utils/gameSound';
@@ -1496,42 +1498,80 @@ const NeonRunGame = ({
 
     const currentStageInfo = EVOLUTION_STAGES[hudData.stageIndex];
 
+    // 1. 시작 전 브리핑 및 카운트다운 뷰 (PS 플라이트와 100% 동일한 독립 캐비닛 규격)
+    if (showOverlay) {
+        return (
+            <div className="relative w-full min-h-[calc(100vh-4rem)] mt-16 flex flex-col items-center justify-center bg-base p-2 sm:p-4 select-none overflow-hidden touch-manipulation">
+                {/* 상단 네비게이션 & 빠른 컨트롤 바 (PS 플라이트와 완벽 통일) */}
+                <div className="w-full max-w-[450px] flex items-center justify-between mb-2 px-2 shrink-0">
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface border border-divider hover:border-primary text-secondary hover:text-primary text-xs font-bold transition-all"
+                    >
+                        <Home className="w-3.5 h-3.5" />
+                        <span>아케이드 허브</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => onOpenLeaderboard('neon_run')}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-surface border border-divider hover:border-yellow-500/50 text-yellow-500 text-xs font-bold transition-all"
+                            title="순위표"
+                        >
+                            <Trophy className="w-3.5 h-3.5" />
+                            <span>TOP 10</span>
+                        </button>
+
+                        <button
+                            onClick={handleToggleMute}
+                            className="p-1.5 rounded-xl bg-surface border border-divider text-secondary hover:text-primary transition-all"
+                            title={isMuted ? '음소거 해제' : '음소거'}
+                        >
+                            {isMuted ? <VolumeX className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4 text-ps-blue" />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* 메인 게임 캐비닛 컨테이너 (PS 플라이트와 100% 동일 규격: max-w-[450px] h-[650px] sm:h-[720px]) */}
+                <div className="relative w-full max-w-[450px] h-[650px] sm:h-[720px] bg-black rounded-3xl border-2 border-divider shadow-2xl overflow-hidden flex flex-col">
+                    <GameStartOverlay
+                        title="PS 네온 런"
+                        subtitle="PlayStation 4대 심볼과 함께 질주하는 원버튼 비트 점프 러너!"
+                        badgeText="BEAT JUMP"
+                        badgeColor="bg-ps-blue"
+                        instructions={[
+                            'PC는 스페이스바/방향키, 모바일은 화면 터치로 점프합니다.',
+                            '짧게 누르면 소점프, 길게 누르면 대점프로 도약 높이를 조절합니다.',
+                            '500m마다 스퀘어 ➔ 서클 ➔ 트라이앵글(2단점프) ➔ 크로스(피버)로 진화합니다.',
+                            '공중 에메랄드 젬을 획득하면 점프 횟수가 즉시 충전되어 추가 도약이 가능합니다.'
+                        ]}
+                        highScore={bestScore}
+                        infoLabel="생명력"
+                        infoValue="3 라이프"
+                        onStart={handleStartAfterCountdown}
+                        onBack={onBack}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+    // 2. 인게임 질주 화면 (16:9 반응형 캔버스 + 실시간 HUD + 하단 슬림 진화 칩 바)
     return (
         <div className="relative w-full h-[calc(100dvh-4rem)] max-h-[calc(100dvh-4rem)] mt-16 bg-base text-primary px-2 py-1.5 sm:py-2 flex flex-col items-center justify-between select-none overflow-hidden touch-manipulation">
-            {/* 시작 전 READY... GO! 브리핑 & 카운트다운 오버레이 (사천성, 플라이트와 통일) */}
-            {showOverlay && (
-                <GameStartOverlay
-                    title="PS 네온 런 (Beat Jump)"
-                    subtitle="PlayStation 4대 심볼과 함께 질주하는 원버튼 비트 점프 러너"
-                    badgeText="BEAT JUMP"
-                    badgeColor="bg-ps-blue"
-                    highScore={bestScore}
-                    infoLabel="생명력"
-                    infoValue="3 라이프 (낙하 구출)"
-                    instructions={[
-                        "스페이스바(PC) 또는 화면 터치(모바일)로 장애물을 뛰어넘으세요.",
-                        "길게 누르면 대점프, 살짝 누르면 소점프로 도약 높이를 조절합니다.",
-                        "500m마다 스퀘어 ➔ 서클 ➔ 트라이앵글(2단점프) ➔ 크로스(피버)로 진화합니다.",
-                        "공중 에메랄드 젬을 획득하면 점프 횟수가 즉시 충전되어 추가 도약이 가능합니다."
-                    ]}
-                    onStart={handleStartAfterCountdown}
-                    onBack={onBack}
-                />
-            )}
-
             {/* 상단 네비게이션 & 사운드 컨트롤 바 */}
             <header className="w-full max-w-4xl shrink-0 flex items-center justify-between px-1 mb-1 sm:mb-2 z-10">
                 <div className="flex items-center gap-1.5">
                     <button
                         onClick={onBack}
                         className="flex items-center gap-1 text-xs font-bold text-secondary hover:text-primary transition-colors p-1.5 rounded-xl hover:bg-surface-hover"
-                        title="라운지 복귀"
+                        title="아케이드 허브 복귀"
                     >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">라운지</span>
+                        <Home className="w-4 h-4" />
+                        <span className="hidden sm:inline">아케이드 허브</span>
                     </button>
 
-                    <span className="p-1.5 rounded-lg bg-ps-blue text-white shadow-sm">
+                    <span className="p-1.5 rounded-lg bg-ps-blue text-white shadow-sm ml-1">
                         <Zap className="w-4 h-4" />
                     </span>
                     <h1 className="text-sm sm:text-base font-black italic tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-ps-blue">
@@ -1804,17 +1844,28 @@ const NeonRunGame = ({
                         )}
 
                         {/* 재도전 및 랭킹 버튼 */}
-                        <div className="flex items-center gap-2.5 w-full">
+                        <div className="flex items-center gap-2 w-full">
                             <button
                                 onClick={resetGame}
-                                className="flex-1 py-3 px-4 rounded-xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,112,209,0.4)] active:scale-95 transition-all"
+                                className="flex-1 py-3 px-3 rounded-xl bg-ps-blue hover:bg-blue-600 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_0_20px_rgba(0,112,209,0.4)] active:scale-95 transition-all"
                             >
                                 <RotateCcw className="w-4 h-4" />
                                 <span>다시 달리기</span>
                             </button>
                             <button
+                                onClick={() => {
+                                    setShowOverlay(true);
+                                    setGameState('READY');
+                                }}
+                                className="py-3 px-3 rounded-xl bg-surface-hover hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-secondary hover:text-primary flex items-center justify-center gap-1 transition-all"
+                                title="게임 시작 브리핑으로 돌아가기"
+                            >
+                                <Home className="w-4 h-4" />
+                                <span>안내</span>
+                            </button>
+                            <button
                                 onClick={() => onOpenLeaderboard('neon_run')}
-                                className="py-3 px-4 rounded-xl bg-surface-hover hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-primary flex items-center justify-center gap-1.5 transition-all"
+                                className="py-3 px-3 rounded-xl bg-surface-hover hover:bg-surface border border-divider text-xs sm:text-sm font-bold text-primary flex items-center justify-center gap-1 transition-all"
                             >
                                 <Trophy className="w-4 h-4 text-yellow-500" />
                                 <span>랭킹</span>
