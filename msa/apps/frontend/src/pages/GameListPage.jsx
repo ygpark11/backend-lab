@@ -707,13 +707,10 @@ const GameListPage = () => {
         );
 
         try {
-            if (originalLiked) {
-                await client.delete(`/api/v1/wishlist/${gameId}`);
-                toast.success('위시리스트에서 삭제되었습니다.');
-            } else {
-                await client.post(`/api/v1/wishlist/${gameId}`);
-                toast.success('위시리스트에 추가되었습니다! (할인 알림 활성화)');
-            }
+            await client.post(`/api/v1/wishlists/${gameId}`);
+            toast.success(
+                originalLiked ? '위시리스트에서 삭제되었습니다.' : '위시리스트에 추가되었습니다! (할인 알림 활성화)'
+            );
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
                 detail: { gameId, liked: newLiked }
             }));
@@ -723,7 +720,9 @@ const GameListPage = () => {
                     game.id === gameId ? { ...game, liked: originalLiked } : game
                 )
             );
-            toast.error(error.response?.data?.message || '처리 중 오류가 발생했습니다.');
+            toast.error(error.response?.data?.message || '처리 중 오류가 발생했습니다.', {
+                id: `wishlist-error-${gameId}`,
+            });
         }
     };
 

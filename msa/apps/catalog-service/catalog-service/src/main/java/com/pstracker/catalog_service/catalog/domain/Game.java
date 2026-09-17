@@ -20,12 +20,16 @@ import static org.springframework.util.StringUtils.hasText;
 
 @Entity
 @Table(name = "games", indexes = {
-        @Index(name = "idx_game_name", columnList = "name"),
+        @Index(name = "idx_games_updated_discount", columnList = "last_updated_at, discount_rate"),
         @Index(name = "idx_game_price", columnList = "current_price"),
         @Index(name = "idx_game_discount", columnList = "discount_rate"),
+        @Index(name = "idx_game_family", columnList = "family_id"),
+        @Index(name = "idx_game_best_seller", columnList = "best_seller_rank"),
+        @Index(name = "idx_game_most_downloaded", columnList = "most_downloaded_rank"),
         @Index(name = "idx_game_mc_meta", columnList = "mc_meta_score"),
-        @Index(name = "idx_game_updated", columnList = "last_updated_at"),
-        @Index(name = "idx_game_family", columnList = "family_id")
+        @Index(name = "idx_game_hltb_main", columnList = "hltb_main_story"),
+        @Index(name = "idx_game_sale_end", columnList = "sale_end_date"),
+        @Index(name = "idx_game_release", columnList = "release_date")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

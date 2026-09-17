@@ -12,7 +12,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "game_price_history", indexes = {
-        @Index(name = "idx_price_history_game_date", columnList = "game_id, created_at")
+        @Index(name = "idx_price_history_game_date", columnList = "game_id, created_at"),
+        @Index(name = "idx_price_history_created_discount", columnList = "created_at, discount_rate, game_id")
 })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
