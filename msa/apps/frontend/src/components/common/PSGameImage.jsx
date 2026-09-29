@@ -16,49 +16,34 @@ const getOptimizedSrc = (src, width) => {
     return src;
 };
 
-const PSGameImage = ({ src, alt, className, priority = false, width }) => {
+const PSGameImage = ({ src, alt, className = '', priority = false, width }) => {
     const optimizedSrc = getOptimizedSrc(src, width);
 
-    const [hasError, setHasError] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [shouldLoad, setShouldLoad] = useState(priority); // priority 이미지는 즉시 로드
     const [currentSrc, setCurrentSrc] = useState(optimizedSrc);
+    const [prevSrc, setPrevSrc] = useState(null);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [hasError, setHasError] = useState(false);
     const imgRef = useRef(null);
 
-    // src 변경 시 렌더 중에 바로 초기화 (cascading render 없음)
-    if (currentSrc !== optimizedSrc) {
-        setCurrentSrc(optimizedSrc);
-        setHasError(false);
-        setIsLoaded(false);
-        if (!priority) setShouldLoad(false);
-    }
-
-    // 뷰포트 500px 전부터 src 주입 → 미리 다운로드 시작
-    // IntersectionObserver 콜백 내 setState는 외부 시스템 구독 패턴 → ESLint OK
+    // src 변경 시: 이전 이미지를 유지하고 새 이미지를 즉시 로드 시작 (크로스페이드)
     useEffect(() => {
-        if (shouldLoad || !optimizedSrc) return;
-        const node = imgRef.current;
-        if (!node) return;
+        if (!optimizedSrc) return;
+        if (optimizedSrc !== currentSrc) {
+            setPrevSrc(currentSrc);
+            setCurrentSrc(optimizedSrc);
+            setIsLoaded(false);
+            setHasError(false);
+        }
+    }, [optimizedSrc, currentSrc]);
 
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) setShouldLoad(true);
-            },
-            { rootMargin: '500px 0px' }
-        );
-
-        observer.observe(node);
-        return () => observer.disconnect();
-    }, [optimizedSrc, shouldLoad]);
-
-    // 캐시된 이미지: useEffect(paint 후) + rAF(다음 프레임) → fade-in 정상 동작
+    // 브라우저 캐시 이미지 처리: 이미 complete 상태면 즉시 표시
     useEffect(() => {
-        if (!shouldLoad) return;
         const node = imgRef.current;
-        if (!node?.complete || node.naturalWidth === 0) return;
-        const id = requestAnimationFrame(() => setIsLoaded(true));
-        return () => cancelAnimationFrame(id);
-    }, [shouldLoad, optimizedSrc]);
+        if (node?.complete && node.naturalWidth > 0) {
+            setIsLoaded(true);
+            setPrevSrc(null);
+        }
+    }, [currentSrc]);
 
     if (!optimizedSrc || hasError) {
         return (
@@ -67,7 +52,7 @@ const PSGameImage = ({ src, alt, className, priority = false, width }) => {
                 aria-label={alt || "Game image placeholder"}
                 role="img"
             >
-                <div className="grid grid-cols-2 gap-3 opacity-30 animate-pulse-slow">
+                <div className="grid grid-cols-2 gap-3 opacity-30">
                     <Triangle size={24} className="text-muted" />
                     <Circle size={24} className="text-muted" />
                     <X size={24} className="text-muted" />
@@ -79,18 +64,42 @@ const PSGameImage = ({ src, alt, className, priority = false, width }) => {
 
     return (
         <>
-            {!isLoaded && (
-                <div className="absolute inset-0 bg-surface overflow-hidden pointer-events-none">
-                    <div className="absolute inset-0 animate-shimmer bg-gradient-to-r from-transparent via-divider-strong to-transparent" />
+            {/* 1. 로딩 대기 플레이스홀더 (시커먼 빈 화면 방지: 은은한 PS 4대 심볼 모노톤 워터마크) */}
+            {!isLoaded && !prevSrc && (
+                <div className={`absolute inset-0 flex items-center justify-center bg-surface/80 border border-divider/40 pointer-events-none ${className}`}>
+                    <div className="grid grid-cols-2 gap-2 sm:gap-2.5 opacity-15">
+                        <Triangle size={18} className="text-muted" />
+                        <Circle size={18} className="text-muted" />
+                        <X size={18} className="text-muted" />
+                        <Square size={18} className="text-muted" />
+                    </div>
                 </div>
             )}
+
+            {/* 2. 이전 이미지: 새 이미지가 로드될 때까지 100% 그대로 화면을 지켜줌 */}
+            {prevSrc && !isLoaded && (
+                <img
+                    src={prevSrc}
+                    alt=""
+                    className={`absolute inset-0 w-full h-full object-cover pointer-events-none ${className}`}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* 3. 새 이미지: 준비되는 순간 부드럽게 300ms 페이드인으로 위를 덮음 */}
             <img
                 ref={imgRef}
-                src={shouldLoad ? optimizedSrc : undefined}
+                src={currentSrc}
                 alt={alt}
                 className={className}
-                style={{ opacity: isLoaded ? undefined : 0, transition: 'opacity 600ms ease' }}
-                onLoad={() => setIsLoaded(true)}
+                style={{
+                    opacity: isLoaded ? undefined : 0,
+                    transition: 'opacity 300ms ease-out',
+                }}
+                onLoad={() => {
+                    setIsLoaded(true);
+                    setPrevSrc(null);
+                }}
                 onError={() => setHasError(true)}
                 loading={priority ? 'eager' : 'lazy'}
                 fetchPriority={priority ? 'high' : 'auto'}

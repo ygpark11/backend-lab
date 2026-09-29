@@ -44,7 +44,7 @@ import {
 import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
-import TrendingGamesWidget from '../components/TrendingGamesWidget';
+import TrendingHeroCarousel from '../components/TrendingHeroCarousel';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
@@ -193,6 +193,10 @@ const GameListPage = () => {
         filter.isMostDownloaded || filter.isClosingSoon || filter.isNewDiscount ||
         (filter.vibeTags && filter.vibeTags.length > 0) || filter.curation
     );
+
+    // 필터 전환 시 Layout Fade 모션 & 최초/외부 진입 스켈레톤 분기
+    const isInitialLoading = loading && games.length === 0;
+    const isFilterTransitioning = loading && games.length > 0 && page === 0;
 
     const fetchGames = async (pageNumber, overrideFilter = null) => {
         const currentFilter = overrideFilter || filter;
@@ -1049,6 +1053,9 @@ const GameListPage = () => {
                 {/* 다이내믹 액션 배너 */}
                 {renderActionBanner()}
 
+                {/* 티빙 감성 [최다 찜 TOP 10] 몰입형 오토 캐러셀 */}
+                {!isFilterActive && <TrendingHeroCarousel />}
+
                 {/* 통합 글래스 검색 & 필터 바 */}
                 <div ref={filterBoxRef} className="relative z-30 bg-glass backdrop-blur-xl rounded-2xl border border-divider shadow-xl mb-8 transition-all">
                     {/* 검색 행 */}
@@ -1485,22 +1492,31 @@ const GameListPage = () => {
                     )}
                 </div>
 
-                {/* 트렌딩 핫딜 위젯 */}
-                {!isFilterActive && <TrendingGamesWidget />}
 
-                {/* 게임 개수 카운트 */}
-                {!loading && (
-                    <div className="flex items-center justify-between mb-4 px-1">
-                        <span className="text-xs font-bold text-secondary">게임 목록</span>
+
+                {/* 게임 개수 카운트 & 필터 전환 상태 (높이 고정 min-h-[32px]으로 Layout Shift 원천 차단) */}
+                {!isInitialLoading && (
+                    <div className="flex items-center justify-between min-h-[32px] mb-4 px-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-secondary">게임 목록</span>
+                            {isFilterTransitioning && (
+                                <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-ps-blue bg-ps-blue/10 border border-ps-blue/20 px-2.5 py-0.5 rounded-full animate-in fade-in duration-150">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-ps-blue animate-pulse" />
+                                    <span>필터 적용 중...</span>
+                                </div>
+                            )}
+                        </div>
                         <p className="text-xs text-muted text-right">
                             총 <span className="text-primary font-black">{totalElements.toLocaleString()}</span>개의 게임
                         </p>
                     </div>
                 )}
 
-                {/* 3:4 그리드 카드 레이아웃 */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6">
-                    {loading && page === 0 ? (
+                {/* 3:4 그리드 카드 레이아웃 (순수 Opacity 페이드: 물리적 덜컹거림 0% 보장) */}
+                <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3.5 sm:gap-6 transition-opacity duration-200 ease-out ${
+                    isFilterTransitioning ? 'opacity-70 pointer-events-none' : 'opacity-100'
+                }`}>
+                    {isInitialLoading ? (
                         Array.from({ length: 15 }).map((_, idx) => <SkeletonCard key={idx} />)
                     ) : (
                         games.length > 0 ? games.map((game, index) => {
