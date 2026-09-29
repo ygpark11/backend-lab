@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Trophy,
     Zap,
@@ -44,36 +44,40 @@ const ArcadePage = () => {
         neon_run: 0
     });
 
-    const fetchUserBestScores = useCallback(async () => {
-        if (!isAuthenticated || !user) {
-            setUserBestScores({ flight: 0, sichuan: 0, reflex: 0, neon_run: 0 });
-            return;
-        }
-
-        try {
-            const [flightData, sichuanData, reflexData, neonRunData] = await Promise.all([
-                arcadeApi.getLeaderboard('flight', user).catch(() => null),
-                arcadeApi.getLeaderboard('sichuan', user).catch(() => null),
-                arcadeApi.getLeaderboard('reflex', user).catch(() => null),
-                arcadeApi.getLeaderboard('neon_run', user).catch(() => null)
-            ]);
-
-            setUserBestScores({
-                flight: flightData?.myRank?.score || 0,
-                sichuan: sichuanData?.myRank?.score || 0,
-                reflex: reflexData?.myRank?.score || 0,
-                neon_run: neonRunData?.myRank?.score || 0
-            });
-        } catch (e) {
-            console.error('[ArcadePage] 내 최고 기록 조회 실패:', e);
-        }
-    }, [isAuthenticated, user]);
-
+    // 서버 DB 기반 내 최고 기록 로드 (HUB 진입 및 로그인 시 비동기 동기화)
     useEffect(() => {
-        if (activeView === 'HUB') {
-            fetchUserBestScores();
+        let isMounted = true;
+
+        if (activeView === 'HUB' && isAuthenticated && user) {
+            const fetchScores = async () => {
+                try {
+                    const [flightData, sichuanData, reflexData, neonRunData] = await Promise.all([
+                        arcadeApi.getLeaderboard('flight', user).catch(() => null),
+                        arcadeApi.getLeaderboard('sichuan', user).catch(() => null),
+                        arcadeApi.getLeaderboard('reflex', user).catch(() => null),
+                        arcadeApi.getLeaderboard('neon_run', user).catch(() => null)
+                    ]);
+
+                    if (isMounted) {
+                        setUserBestScores({
+                            flight: flightData?.myRank?.score || 0,
+                            sichuan: sichuanData?.myRank?.score || 0,
+                            reflex: reflexData?.myRank?.score || 0,
+                            neon_run: neonRunData?.myRank?.score || 0
+                        });
+                    }
+                } catch (e) {
+                    console.error('[ArcadePage] 내 최고 기록 조회 실패:', e);
+                }
+            };
+
+            fetchScores();
         }
-    }, [activeView, fetchUserBestScores]);
+
+        return () => {
+            isMounted = false;
+        };
+    }, [activeView, isAuthenticated, user]);
 
     const handleOpenLeaderboard = (gameType = 'flight') => {
         setLeaderboardGameType(gameType);

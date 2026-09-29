@@ -25,23 +25,23 @@ const PSGameImage = ({ src, alt, className = '', priority = false, width }) => {
     const [hasError, setHasError] = useState(false);
     const imgRef = useRef(null);
 
-    // src 변경 시: 이전 이미지를 유지하고 새 이미지를 즉시 로드 시작 (크로스페이드)
-    useEffect(() => {
-        if (!optimizedSrc) return;
-        if (optimizedSrc !== currentSrc) {
-            setPrevSrc(currentSrc);
-            setCurrentSrc(optimizedSrc);
-            setIsLoaded(false);
-            setHasError(false);
-        }
-    }, [optimizedSrc, currentSrc]);
+    // src 변경 시 렌더 중에 바로 초기화 (React 공식: adjusting state during rendering, cascading render 방지)
+    if (optimizedSrc && optimizedSrc !== currentSrc) {
+        setPrevSrc(currentSrc);
+        setCurrentSrc(optimizedSrc);
+        setIsLoaded(false);
+        setHasError(false);
+    }
 
-    // 브라우저 캐시 이미지 처리: 이미 complete 상태면 즉시 표시
+    // 브라우저 캐시 이미지 처리: 이미 complete 상태면 다음 프레임에서 즉시 표시
     useEffect(() => {
         const node = imgRef.current;
         if (node?.complete && node.naturalWidth > 0) {
-            setIsLoaded(true);
-            setPrevSrc(null);
+            const id = requestAnimationFrame(() => {
+                setIsLoaded(true);
+                setPrevSrc(null);
+            });
+            return () => cancelAnimationFrame(id);
         }
     }, [currentSrc]);
 
