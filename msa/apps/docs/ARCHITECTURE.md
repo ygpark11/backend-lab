@@ -40,17 +40,7 @@
 
 ---
 
-### 1-4. JDK 21 가상 스레드 기반 외부 API 병렬화 (Virtual Thread Parallelism)
-
-* **Problem:** 게임 데이터 수집(Upsert) 시 IGDB 외부 API 호출(네트워크 I/O)이 DB 작업을 순차적으로 블로킹하여 불필요한 대기 시간 발생.
-* **Solution:** `CompletableFuture.supplyAsync(() -> fetchIgdbSafely(searchTitle), igdbExecutor)`로 IGDB 호출을 선제 시작하고, 메인 스레드에서 장르 조회·게임 조회·메타데이터 갱신 등 DB 작업을 병렬로 진행한 뒤 `.join()`으로 결과를 합류. `igdbExecutor`는 `Executors.newVirtualThreadPerTaskExecutor()`로 구성.
-
-**1GB RAM 환경에서 가상 스레드를 선택한 이유:**
-플랫폼 스레드는 스레드당 수백 KB~1MB의 스택 메모리를 점유하지만, 가상 스레드는 수십 KB 단위로 생성되어 메모리 부담이 낮음. I/O 대기 중 캐리어 스레드를 반납하는 구조로, 외부 API 대기 시간과 DB 처리 시간을 중첩할 수 있음.
-
----
-
-### 1-5. 리소스 제약을 고려한 5-Cache 하이브리드 전략 (Local Cache & Eviction)
+### 1-4. 리소스 제약을 고려한 5-Cache 하이브리드 전략 (Local Cache & Eviction)
 
 * **Problem:** B2C 카탈로그 서비스 특성상 게임 상세·통계·큐레이션·구독 가격·트렌딩 조회에 읽기 요청이 집중되지만, 1GB RAM 환경에서 별도 Redis 서버를 운영하는 것은 OOM 위험이 있음. 또한 게임 기본 정보(일 단위 변경), 유저 찜/투표 상태(실시간 변경), 찜 TOP 10(시간 단위 변경)을 동일한 방식으로 캐싱할 수 없음.
 * **Solution:** 데이터 생명주기에 맞춘 5-Cache 하이브리드 전략.
@@ -74,7 +64,7 @@
 
 ---
 
-### 1-6. 전역 예외 처리 표준화 + AOP 기반 성능 가시성 확보
+### 1-5. 전역 예외 처리 표준화 + AOP 기반 성능 가시성 확보
 
 * **Problem:** 예외 응답이 컨트롤러마다 `String`으로 개별 처리되어 프론트엔드가 `typeof === 'string'` 분기를 해야 하는 API 불일치 발생. 또한 서비스 레이어의 실행 시간을 관측할 단일 지점이 없어, 어느 메서드가 느린지 배포 이후에야 인지하는 구조였음.
 * **Solution:**
