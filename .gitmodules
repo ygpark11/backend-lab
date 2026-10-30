@@ -1,0 +1,3 @@
+[submodule "msa/apps/shorts-automation"]
+	path = msa/apps/shorts-automation
+	url = https://github.com/ygpark11/ps-shorts-automation.git
