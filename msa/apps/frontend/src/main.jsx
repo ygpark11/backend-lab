@@ -21,6 +21,8 @@ Sentry.init({
         /googlesyndication/,
         /doubleclick\.net/,
         /googleadservices/,
+        // Cloudflare JS Detections 인라인 스크립트(Rocket Loader 경유)의 iframe 접근 에러
+        /Blocked a frame with origin/,
     ],
     denyUrls: [
         /pagead2\.googlesyndication\.com/,

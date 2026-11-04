@@ -30,7 +30,6 @@ import {
 import toast from 'react-hot-toast';
 import client from '../api/client';
 import GuideModal from './GuideModal';
-import LegalModal from './LegalModal';
 import NoticeModal from './NoticeModal';
 import {useAuth} from '../contexts/AuthContext';
 
@@ -43,7 +42,6 @@ const Navbar = () => {
     const isAdmin = isAuthenticated && user?.role === 'ROLE_ADMIN';
 
     const [isGuideOpen, setIsGuideOpen] = useState(false);
-    const [isLegalOpen, setIsLegalOpen] = useState(false);
     const [isNoticeOpen, setIsNoticeOpen] = useState(false);
     const [isNotiOpen, setIsNotiOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -398,7 +396,7 @@ const Navbar = () => {
                         {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                     </button>
 
-                    <button onClick={() => setIsLegalOpen(true)} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><Shield className="w-5 h-5" /></button>
+                    <button onClick={() => navigateAndScroll('/terms')} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="이용약관 및 개인정보처리방침" aria-label="이용약관 및 개인정보처리방침"><Shield className="w-5 h-5" /></button>
                     <button onClick={() => setIsGuideOpen(true)} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><HelpCircle className="w-5 h-5" /></button>
 
                     <button onClick={() => { setIsNoticeOpen(true); setHasNewNotice(false); }} className="relative p-2 text-secondary transition-colors group md:hover:text-blue-600 active:text-blue-600 dark:md:hover:text-blue-500 dark:active:text-blue-500 hover:bg-surface-hover rounded-full">
@@ -624,7 +622,7 @@ const Navbar = () => {
                                     <button onClick={() => { setIsGuideOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface transition-colors">
                                         <HelpCircle className="w-4 h-4 opacity-70" /> 초보자 가이드
                                     </button>
-                                    <button onClick={() => { setIsLegalOpen(true); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface transition-colors">
+                                    <button onClick={() => { navigateAndScroll('/terms'); setIsMobileMenuOpen(false); }} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-secondary hover:text-primary hover:bg-surface-hover active:bg-surface transition-colors">
                                         <Shield className="w-4 h-4 opacity-70" /> 법적 고지
                                     </button>
 
@@ -643,7 +641,6 @@ const Navbar = () => {
         </nav>
 
             <GuideModal isOpen={isGuideOpen} onClose={() => setIsGuideOpen(false)} />
-            {isLegalOpen && <LegalModal onClose={() => setIsLegalOpen(false)} />}
             <NoticeModal isOpen={isNoticeOpen} onClose={() => setIsNoticeOpen(false)} />
         </>
     );
