@@ -1099,7 +1099,7 @@ const GameListPage = () => {
                                         <button
                                             key={s.id}
                                             onMouseDown={(e) => e.preventDefault()}
-                                            onClick={() => { setIsDesktopSearchActive(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location } }); }}
+                                            onClick={() => { setIsDesktopSearchActive(false); setSuggestions([]); setSearchInput(''); navigate(`/games/${s.id}`, { state: { background: location, preview: buildDetailPreview(s) } }); }}
                                             className="flex items-center gap-3 w-full px-4 py-3 hover:bg-surface-hover transition-colors text-left border-b border-divider last:border-0"
                                         >
                                             <div className="relative w-8 h-8 rounded-lg overflow-hidden shrink-0">
@@ -1882,11 +1882,11 @@ const GameListPage = () => {
                                         {recentGames.map((g) => (
                                             <button
                                                 key={g.id}
-                                                onClick={() => { if (dragStateRef.current.hasDragged) return; setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location } }); }}
+                                                onClick={() => { if (dragStateRef.current.hasDragged) return; setIsQuickSearchOpen(false); navigate(`/games/${g.id}`, { state: { background: location, preview: buildDetailPreview({ id: g.id, title: g.title, imageUrl: g.thumbnail }) } }); }}
                                                 className="shrink-0 w-20 flex flex-col items-center gap-1 p-2 rounded-xl bg-surface border border-divider text-left"
                                             >
                                                 <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden">
-                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={120} />
+                                                    <PSGameImage src={g.thumbnail} className="w-full h-full object-cover" width={640} />
                                                 </div>
                                                 <p className="text-[10px] font-bold text-primary line-clamp-1 w-full text-center">{cleanTitle(g.title)}</p>
                                             </button>

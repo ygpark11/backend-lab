@@ -228,8 +228,9 @@ const BackgroundHero = ({ imageUrl }) => (
     </div>
 );
 
-// 모달 틀: 로딩 중·로딩 후 같은 컴포넌트를 써서 데이터가 도착해도 다시 그려지지(재애니메이션) 않게 함
-const DetailModalFrame = ({ onClose, children }) => (
+// 모달 틀: 로딩 중·로딩 후 같은 컴포넌트를 써서 데이터가 도착해도 다시 그려지지(재애니메이션) 않게 함.
+// 배경 히어로도 틀에 두어, 목록에서 받아둔 같은 이미지로 클릭 즉시 그리고 데이터 도착 후에도 그대로 유지
+const DetailModalFrame = ({ onClose, heroImageUrl, children }) => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md animate-fadeIn p-0 md:p-6" onClick={onClose}>
         <div
             className="w-full h-full md:h-auto md:max-h-[92vh] max-w-6xl overflow-y-auto bg-base md:rounded-3xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong animate-in fade-in zoom-in-[98%] duration-200 ease-out"
@@ -242,56 +243,564 @@ const DetailModalFrame = ({ onClose, children }) => (
             >
                 <X className="w-5 h-5" />
             </button>
+            {heroImageUrl && <BackgroundHero imageUrl={heroImageUrl} />}
             {children}
         </div>
     </div>
 );
 
-// 상세 데이터 도착 전, 목록 카드에서 넘겨받은 제목·포스터·가격으로 상단을 먼저 그림 (실제 화면과 같은 배치)
-const DetailPreview = ({ preview }) => (
-    // md 이상에서 모달은 내용 높이를 따르므로(최대 92vh), 미리보기도 최대 높이로 고정해 데이터 도착 시 창 크기가 변하지 않게 함
-    <div className="relative z-10 md:min-h-[92vh]" aria-busy="true">
-        <div className="p-4 sm:p-6 md:p-8 pb-28 md:pb-20 max-w-[1400px] mx-auto">
-            <div className="mb-5 h-[34px] w-[150px] rounded-xl bg-surface/95 border border-divider" />
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
-                <aside className="lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3.5">
-                    <div className="w-full rounded-2xl overflow-hidden shadow-xl border border-divider-strong bg-surface">
-                        <div className={`w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base ${preview?.imageUrl ? '' : 'animate-pulse'}`}>
-                            {preview?.imageUrl && (
-                                <PSGameImage src={preview.imageUrl} alt={preview.title} priority width={640} className="w-full h-full object-cover object-center" />
+// ── 상세 상단 공용 컴포넌트 ─────────────────────────────────────────
+// 미리보기(목록 카드 데이터)와 상세 데이터 도착 후가 같은 컴포넌트를 써서 배치가 바뀌지 않게 함.
+// pending: 미리보기 단계. 상세 응답에만 있는 값은 같은 크기의 자리로 비워 둠
+
+// 가격 신호등 테마별 글로우 & 보더 스타일
+const VERDICT_THEME = {
+    'BUY_NOW': {
+        badge: 'BUY NOW',
+        badgeBg: 'bg-green-500/15 border-green-500/40 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]',
+        dot: 'bg-green-400 shadow-[0_0_10px_rgba(34,197,94,1)]',
+        glowBg: 'bg-green-500',
+        border: 'border-green-500/40 shadow-[0_0_25px_rgba(34,197,94,0.12)]',
+        buttonBg: 'bg-green-500 hover:bg-green-600 text-black font-black shadow-[0_0_25px_rgba(34,197,94,0.3)]',
+        accentText: 'text-green-400',
+    },
+    'GOOD_OFFER': {
+        badge: 'GOOD OFFER',
+        badgeBg: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.2)]',
+        dot: 'bg-yellow-400 shadow-[0_0_10px_rgba(234,179,8,1)]',
+        glowBg: 'bg-yellow-500',
+        border: 'border-yellow-500/40 shadow-[0_0_25px_rgba(234,179,8,0.12)]',
+        buttonBg: 'bg-yellow-500 hover:bg-yellow-600 text-black font-black shadow-[0_0_25px_rgba(234,179,8,0.3)]',
+        accentText: 'text-yellow-400',
+    },
+    'WAIT': {
+        badge: 'WAIT',
+        badgeBg: 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
+        dot: 'bg-red-400 shadow-[0_0_10px_rgba(239,68,68,1)]',
+        glowBg: 'bg-red-500',
+        border: 'border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.12)]',
+        buttonBg: 'bg-ps-blue hover:bg-blue-600 text-white font-bold',
+        accentText: 'text-red-400',
+    },
+    'TRACKING': {
+        badge: 'TRACKING',
+        badgeBg: 'bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
+        dot: 'bg-ps-blue shadow-[0_0_10px_rgba(59,130,246,1)]',
+        glowBg: 'bg-ps-blue',
+        border: 'border-blue-500/40 shadow-[0_0_25px_rgba(59,130,246,0.12)]',
+        buttonBg: 'bg-ps-blue hover:bg-blue-600 text-white font-bold',
+        accentText: 'text-blue-400',
+    }
+};
+const getVerdictTheme = (verdict) => VERDICT_THEME[verdict] || VERDICT_THEME.TRACKING;
+
+// 장르 순서가 응답마다 달라(목록·상세 API 실측) 미리보기와 상세의 칩 순서를 맞추기 위해 정렬
+const sortGenres = (genres) => [...genres].sort((a, b) => a.localeCompare(b, 'ko'));
+
+// 가치 트래커 (Value Tracker) 게이지 퍼센트 계산
+const getPricePosition = (game) => (game.currentPrice != null && game.lowestPrice > 0 && game.originalPrice > game.lowestPrice)
+    ? Math.min(100, Math.max(0, Math.round((game.originalPrice - game.currentPrice) / (game.originalPrice - game.lowestPrice) * 100)))
+    : null;
+
+const Placeholder = ({ className }) => <div aria-hidden="true" className={`animate-pulse ${className}`} />;
+
+const DetailBackButton = ({ onClose }) => (
+    <button
+        onClick={onClose}
+        className="mb-5 flex items-center text-secondary hover:text-primary transition-colors text-sm font-bold gap-2 w-fit px-3.5 py-1.5 rounded-xl bg-surface/95 border border-divider shadow-sm backdrop-blur-md active:scale-95"
+    >
+        <ArrowLeft className="w-4 h-4" /> 목록으로 돌아가기
+    </button>
+);
+
+// 반응형 포스터 (모바일: 시원한 와이드 배너 / PC: 콤팩트 세로형으로 First Fold 최적화)
+const DetailPoster = ({ game }) => {
+    const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
+    const { isLastCall, isClosingSoon } = getSaleDeadline(game.saleEndDate);
+    // 목록·연관 게임 카드의 displayScore와 같은 기준 (메타스코어 우선, 없으면 IGDB 평론가 점수). 미리보기는 목록의 displayScore 사용
+    const platinumScore = game.mcMetaScore || game.igdbCriticScore || game.displayScore;
+    const isPlatinum = platinumScore >= 85 && game.discountRate >= 50;
+
+    return (
+        <div className={`w-full rounded-2xl overflow-hidden shadow-xl border relative group bg-surface ${
+            isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider-strong'
+        }`}>
+            <div className={`w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base ${game.imageUrl ? '' : 'animate-pulse'}`}>
+                {game.imageUrl && (
+                    <PSGameImage
+                        src={game.imageUrl}
+                        alt={game.title}
+                        priority
+                        width={640}
+                        className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+                    />
+                )}
+            </div>
+            {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse" />}
+            {isNew && <span className="absolute top-2.5 left-2.5 bg-green-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-md z-10">NEW</span>}
+            {isLastCall && (
+                <span className="absolute top-2.5 right-2.5 bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md animate-pulse z-10 flex items-center gap-1">
+                    <Timer className="w-3 h-3" /> 막차!
+                </span>
+            )}
+            {isClosingSoon && (
+                <span className="absolute top-2.5 right-2.5 bg-red-600/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md z-10 flex items-center gap-1">
+                    <Timer className="w-3 h-3" /> 마감 임박
+                </span>
+            )}
+        </div>
+    );
+};
+
+// 스토어 링크는 상세 응답의 psStoreId가 필요해 미리보기 단계에서는 같은 모양의 비활성 버튼으로 표시
+const StoreLink = ({ game, pending, className, children }) => (
+    pending ? (
+        <span aria-disabled="true" className={`${className} cursor-wait`}>{children}</span>
+    ) : (
+        <a
+            href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={className}
+        >
+            {children}
+        </a>
+    )
+);
+
+// PC 메인 액션 버튼 그룹
+const DetailActionButtons = ({ game, pending = false, onWishlistClick, onTargetClick, onShare }) => {
+    const storeBg = game.priceVerdict ? getVerdictTheme(game.priceVerdict).buttonBg : 'bg-surface border border-divider text-secondary font-bold';
+    // 찜 여부를 모르는 진입 경로(자동완성 등)는 문구가 뒤바뀌지 않도록 버튼 자리만 표시
+    const likeKnown = game.liked != null;
+
+    return (
+        <div className="hidden lg:flex flex-col gap-2">
+            <StoreLink
+                game={game}
+                pending={pending}
+                className={`w-full py-3 rounded-xl text-center flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-md text-sm ${storeBg}`}
+            >
+                <Gamepad2 className="w-4 h-4" />
+                <span>PS Store로 이동</span>
+                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </StoreLink>
+
+            <div className="flex gap-2">
+                <button
+                    onClick={onWishlistClick}
+                    disabled={pending}
+                    className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 disabled:cursor-wait ${
+                        game.liked
+                            ? 'bg-red-500/15 border-red-500/40 text-red-400 hover:bg-red-500/25'
+                            : 'bg-surface border-divider text-primary hover:bg-surface-hover hover:border-divider-strong'
+                    }`}
+                >
+                    <span className={`flex items-center gap-1.5 ${likeKnown ? '' : 'invisible'}`}>
+                        <Heart className={`w-3.5 h-3.5 ${game.liked ? 'fill-current text-red-500' : ''}`} />
+                        <span>{game.liked ? '찜 취소' : '위시리스트 추가'}</span>
+                    </span>
+                </button>
+
+                {game.liked && (
+                    <button
+                        onClick={onTargetClick}
+                        disabled={pending}
+                        className="px-3 py-2.5 rounded-xl border border-ps-blue/40 bg-ps-blue/15 text-ps-blue hover:bg-ps-blue/25 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 disabled:cursor-wait"
+                        title="목표가 설정"
+                    >
+                        <Crosshair className="w-3.5 h-3.5" />
+                        <span>
+                            {game.myTargetPrice ? `${game.myTargetPrice.toLocaleString()}원` : '목표가'}
+                        </span>
+                    </button>
+                )}
+
+                <button
+                    onClick={onShare}
+                    disabled={pending}
+                    className="p-2.5 rounded-xl border border-divider bg-surface text-secondary hover:text-primary hover:bg-surface-hover transition-all active:scale-95 disabled:cursor-wait"
+                    title="공유하기"
+                >
+                    <Share2 className="w-3.5 h-3.5" />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+// 타이틀 & 장르 헤더 (장르와 타이틀에 집중)
+const DetailTitleCard = ({ game, pending = false, isAdmin, onRefresh, onDelete, onGenreClick }) => (
+    <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-3xl p-6 md:p-7 backdrop-blur-xl relative overflow-hidden shadow-sm">
+        {/* 상단 장르 태그 */}
+        <div className="flex flex-wrap gap-2 mb-3.5 items-center">
+            {game.genres && game.genres.length > 0 ? (
+                sortGenres(game.genres).map(g => (
+                    <button
+                        key={g}
+                        onClick={() => onGenreClick(g)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold border shadow-sm transition-all hover:opacity-80 ${getGenreBadgeStyle(g)}`}
+                    >
+                        {g}
+                    </button>
+                ))
+            ) : pending ? (
+                <Placeholder className="h-[26px] w-24 rounded-lg bg-base" />
+            ) : (
+                <span className="px-3 py-1 rounded-lg text-xs font-bold border border-divider bg-surface text-secondary">
+                    미분류
+                </span>
+            )}
+        </div>
+
+        {/* 게임 제목 & 관리자 도구 */}
+        <div className="flex justify-between items-start gap-4 mb-3">
+            {game.title ? (
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary break-keep drop-shadow-sm">
+                    {cleanTitleForDesc(game.title)}
+                </h1>
+            ) : (
+                <Placeholder className="h-10 w-3/4 rounded-lg bg-base" />
+            )}
+            {isAdmin && (
+                <div className="flex gap-2 shrink-0 pt-1">
+                    <button
+                        onClick={onRefresh}
+                        disabled={pending}
+                        className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-ps-blue/20 text-secondary hover:text-ps-blue transition-all disabled:cursor-wait"
+                        title="정보 수집 요청 (관리자)"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={onDelete}
+                        disabled={pending}
+                        className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-red-500/20 text-secondary hover:text-red-400 transition-all disabled:cursor-wait"
+                        title="게임 삭제 (관리자)"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            )}
+        </div>
+
+        {/* 메타 정보 (퍼블리셔·출시일은 상세 응답에만 있어 미리보기는 자리만 표시, 발굴 배지는 목록에도 있어 그대로 표시) */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-secondary dark:text-zinc-300">
+            {pending ? (
+                <Placeholder className="h-4 w-48 rounded bg-base" />
+            ) : (
+                <>
+                {game.publisher && (
+                    <span className="flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4 text-muted" /> {game.publisher}
+                    </span>
+                )}
+                {game.releaseDate && (
+                    <span className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-muted" /> 출시 {game.releaseDate.replace(/-/g, '. ')}
+                    </span>
+                )}
+                </>
+            )}
+            {game.pioneerName && (
+                <span className="flex items-center gap-1.5 text-ps-blue bg-ps-blue/10 border border-ps-blue/20 px-2 py-0.5 rounded-md">
+                    <Pickaxe className="w-3.5 h-3.5" /> {game.pioneerName} 발굴
+                </span>
+            )}
+        </div>
+
+        {/* Vibe Tags (미리보기: 목록의 대표 태그로 태그가 있는 게임만 한 줄 자리 확보) */}
+        {pending && game.topVibeTag && (
+            <div aria-hidden="true" className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-divider/60">
+                <Placeholder className="h-[26px] w-24 rounded-lg bg-base" />
+                <Placeholder className="h-[26px] w-20 rounded-lg bg-base" />
+                <Placeholder className="h-[26px] w-24 rounded-lg bg-base" />
+            </div>
+        )}
+        {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-divider/60">
+                {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 6).map((tag, idx) => (
+                    <span
+                        key={idx}
+                        style={{ '--tag-color': tag.color }}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-base/80 border border-divider shadow-sm transition-all hover:border-[color:var(--tag-color)] cursor-default group"
+                    >
+                        <span className="w-2 h-2 rounded-full bg-[color:var(--tag-color)] shadow-[0_0_6px_var(--tag-color)]" />
+                        <span className="text-secondary dark:text-zinc-300 group-hover:text-primary transition-colors">
+                            {tag.name}
+                        </span>
+                    </span>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+// 대형 가격 신호등 판정 히어로 패널 (Price Hero & Value Tracker)
+const VerdictHeroCard = ({ game, pending = false }) => {
+    const verdictKnown = Boolean(game.priceVerdict);
+    const theme = getVerdictTheme(game.priceVerdict);
+    const traffic = getTrafficLight(game.priceVerdict, game);
+    const { daysLeft } = getSaleDeadline(game.saleEndDate);
+    const pricePosition = getPricePosition(game);
+
+    // 미리보기 단계에서는 목록 데이터만으로 정확히 같은 문구가 나오는 경우만 표시
+    // (판정 문구 일부는 가격 기록 수·할인 방어력 등 상세 응답 값이 있어야 확정됨)
+    const isBuyNowSettled = game.priceVerdict === 'BUY_NOW' && game.isAllTimeLowNew != null;
+    const showVerdictText = !pending || isBuyNowSettled || game.priceVerdict === 'GOOD_OFFER' || game.priceVerdict === 'TRACKING';
+    const showVerdictDesc = !pending || isBuyNowSettled;
+
+    return (
+        <div className={`p-6 md:p-8 rounded-3xl border-2 backdrop-blur-xl relative overflow-hidden transition-all duration-300 bg-surface/95 dark:bg-surface/90 shadow-md transform-gpu ${verdictKnown ? theme.border : 'border-divider-strong'}`}>
+            {verdictKnown && <div className={`absolute -top-20 -right-20 w-48 h-48 ${theme.glowBg} blur-[90px] opacity-15 rounded-full pointer-events-none`} />}
+
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                {/* 좌측: 신호등 판정 & 가이드 */}
+                <div className="flex items-center gap-4 bg-base/80 p-4 rounded-2xl border border-divider flex-1 min-w-0">
+                    <div className="shrink-0">
+                        {verdictKnown ? renderVerdictIcon(game.priceVerdict) : <Placeholder className="w-12 h-12 rounded-2xl bg-surface" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                            {showVerdictText ? (
+                                <h2 className="text-lg md:text-xl font-black text-primary break-keep">{traffic.text}</h2>
+                            ) : (
+                                <Placeholder className="h-7 w-28 rounded-lg bg-surface" />
+                            )}
+                            {verdictKnown && (
+                                <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${theme.badgeBg}`}>
+                                    {theme.badge}
+                                </span>
+                            )}
+                        </div>
+                        {showVerdictDesc ? (
+                            <p className="text-xs sm:text-sm text-secondary dark:text-zinc-300 font-medium leading-snug break-keep">{traffic.desc}</p>
+                        ) : (
+                            // 판정 설명은 모바일에서 보통 2~3줄, md 이상에서 1~2줄
+                            <div className="flex flex-col gap-1.5 py-0.5">
+                                <Placeholder className="h-4 w-full rounded bg-surface" />
+                                <Placeholder className="h-4 w-2/3 rounded bg-surface md:hidden" />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* 우측: 가격 정보 */}
+                <div className="shrink-0 flex flex-col md:items-end">
+                    {game.isPlusExclusive && (
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                            <span className="bg-yellow-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded">PLUS</span>
+                            <span className="text-yellow-400 text-xs font-bold">특별 할인</span>
+                        </div>
+                    )}
+
+                    {game.currentPrice != null ? (
+                        <div className="flex items-baseline gap-2.5 flex-wrap md:justify-end">
+                            <span className={`text-4xl sm:text-5xl font-black tracking-tight ${
+                                game.isPlusExclusive ? 'text-yellow-400' : 'text-primary'
+                            }`}>
+                                ₩{game.currentPrice.toLocaleString()}
+                            </span>
+                            {game.discountRate > 0 && (
+                                <span className={`text-sm font-black px-2.5 py-1 rounded-lg shadow-sm ${
+                                    game.isPlusExclusive ? 'bg-yellow-500 text-black' : 'bg-green-500/20 border border-green-500/40 text-green-400'
+                                }`}>
+                                    -{game.discountRate}%
+                                </span>
+                            )}
+                        </div>
+                    ) : (
+                        <Placeholder className="h-10 sm:h-12 w-44 rounded-lg bg-base" />
+                    )}
+
+                    {game.discountRate > 0 && (
+                        <div className="flex items-center gap-2 mt-1.5 md:justify-end">
+                            {game.originalPrice != null ? (
+                                <span className="text-xs text-muted line-through font-medium">
+                                    정가 ₩{game.originalPrice.toLocaleString()}
+                                </span>
+                            ) : (
+                                <Placeholder className="h-4 w-24 rounded bg-base" />
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* 가치 트래커 게이지 바 */}
+            {pricePosition !== null && (
+                <div className="mt-6 pt-5 border-t border-divider/60">
+                    <div className="flex items-center justify-between text-xs font-bold mb-2">
+                        <span className={`flex items-center gap-1.5 ${theme.accentText}`}>
+                            {pricePosition >= 100 ? (
+                                <>
+                                    <Flame className="w-4 h-4" />
+                                    <span>{game.isAllTimeLowNew ? '역대 최저가 갱신!' : '역대 최저가 달성!'}</span>
+                                </>
+                            ) : pricePosition >= 90 ? (
+                                <>
+                                    <TrendingDown className="w-4 h-4" />
+                                    <span>역대 최저 근접!</span>
+                                </>
+                            ) : (
+                                <span>{pricePosition}% 할인 포지션</span>
+                            )}
+                        </span>
+
+                        {game.saleEndDate && game.discountRate > 0 && (
+                            <div className="flex items-center gap-1.5 text-secondary dark:text-zinc-300 text-xs font-bold">
+                                <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
+                                <span>할인 종료 {game.saleEndDate.replace(/-/g, '.')}</span>
+                                {daysLeft !== null && daysLeft >= 0 && (
+                                    <span className={`px-1.5 py-0.5 rounded font-black text-[10px] ${
+                                        daysLeft <= 3 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-base text-secondary'
+                                    }`}>
+                                        {daysLeft}일 남음
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="relative w-full h-2.5 bg-base rounded-full overflow-hidden border border-divider">
+                        <div
+                            className="h-full rounded-full transition-all duration-700 ease-out"
+                            style={{
+                                width: `${Math.max(pricePosition, 4)}%`,
+                                background: pricePosition >= 90
+                                    ? 'linear-gradient(to right, #3b82f6, #22c55e)'
+                                    : 'linear-gradient(to right, #3b82f6, #eab308)'
+                            }}
+                        />
+                    </div>
+
+                    <div className="flex justify-between mt-2 text-[11px] font-bold text-secondary dark:text-zinc-400">
+                        <span>정가: ₩{game.originalPrice.toLocaleString()}</span>
+                        <span className="text-green-400 font-extrabold">역대최저: ₩{game.lowestPrice.toLocaleString()}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* 미리보기에 역대 최저가가 없는 진입 경로(연관 게임 등): 할인 중이면 최저가 ≤ 현재가 < 정가라 게이지가 반드시 표시되므로 자리 확보 */}
+            {pending && pricePosition === null && game.discountRate > 0 && (
+                <div aria-hidden="true" className="mt-6 pt-5 border-t border-divider/60">
+                    <div className="flex items-center justify-between mb-2">
+                        <Placeholder className="h-4 w-28 rounded bg-base" />
+                        <Placeholder className="h-4 w-36 rounded bg-base" />
+                    </div>
+                    <Placeholder className="w-full h-2.5 rounded-full bg-base" />
+                    <div className="flex justify-between mt-2">
+                        <Placeholder className="h-4 w-20 rounded bg-base" />
+                        <Placeholder className="h-4 w-24 rounded bg-base" />
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// 모바일 전용 Sticky Floating 액션 바
+const MobileActionBar = ({ game, pending = false, isModal, onWishlistClick, onTargetClick }) => {
+    const storeBg = game.priceVerdict ? getVerdictTheme(game.priceVerdict).buttonBg : 'bg-surface border border-divider text-secondary';
+    const likeKnown = game.liked != null;
+
+    return (
+        <div className={`lg:hidden w-full p-3.5 bg-base/95 backdrop-blur-xl border-t border-divider z-40 ${
+            isModal ? 'sticky bottom-0' : 'fixed bottom-0 left-0'
+        }`}>
+            <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
+                {/* 미니 신호등 & 가격 */}
+                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <div className="shrink-0">
+                        {game.priceVerdict ? renderMiniVerdictIcon(game.priceVerdict) : <Placeholder className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-surface" />}
+                    </div>
+                    <div className="min-w-0">
+                        {game.title ? (
+                            <p className="text-xs text-secondary font-bold truncate">{cleanTitleForDesc(game.title)}</p>
+                        ) : (
+                            <Placeholder className="h-4 w-32 rounded bg-surface" />
+                        )}
+                        <div className="flex items-baseline gap-1.5 mt-0.5">
+                            {game.currentPrice != null ? (
+                                <p className="text-base font-black text-primary">
+                                    ₩{game.currentPrice.toLocaleString()}
+                                </p>
+                            ) : (
+                                <Placeholder className="h-6 w-20 rounded bg-surface" />
+                            )}
+                            {game.discountRate > 0 && (
+                                <span className="text-[10px] font-black text-green-400 bg-green-500/15 border border-green-500/30 px-1.5 py-0.5 rounded">
+                                    -{game.discountRate}%
+                                </span>
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* 액션 버튼 */}
+                <div className="flex gap-2 shrink-0">
+                    {game.liked && (
+                        <button
+                            onClick={onTargetClick}
+                            disabled={pending}
+                            className="p-2.5 rounded-xl border border-ps-blue/40 bg-ps-blue/15 text-ps-blue active:scale-95 disabled:cursor-wait"
+                            aria-label="목표가 설정"
+                        >
+                            <Crosshair className="w-4 h-4" />
+                        </button>
+                    )}
+
+                    <button
+                        onClick={onWishlistClick}
+                        disabled={pending}
+                        className={`p-2.5 rounded-xl border font-bold active:scale-95 transition-all disabled:cursor-wait ${
+                            game.liked
+                                ? 'bg-red-500/15 border-red-500/40 text-red-400'
+                                : 'bg-surface border-divider text-primary'
+                        }`}
+                        aria-label={game.liked ? '찜 취소' : '위시리스트 추가'}
+                    >
+                        <Heart className={`w-4 h-4 ${game.liked ? 'fill-current text-red-500' : ''} ${likeKnown ? '' : 'invisible'}`} />
+                    </button>
+
+                    <StoreLink
+                        game={game}
+                        pending={pending}
+                        className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 ${storeBg}`}
+                    >
+                        <Gamepad2 className="w-3.5 h-3.5" />
+                        <span>스토어</span>
+                    </StoreLink>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// 상세 데이터 도착 전, 진입한 화면의 카드 데이터로 상단을 먼저 그림 (실제 화면과 같은 컴포넌트·배치)
+const DetailPreview = ({ game, isAdmin, onClose, onRefresh, onDelete, onGenreClick }) => (
+    // 모바일: 하단 액션 바가 화면 아래에 붙도록 모달 높이를 채움
+    // md 이상: 모달은 내용 높이를 따르므로(최대 92vh) 최대 높이로 고정해 데이터 도착 시 창 크기가 변하지 않게 함
+    <div className="relative z-10 flex flex-col min-h-full md:min-h-[92vh]" aria-busy="true">
+        <div className="flex-1 w-full p-4 sm:p-6 md:p-8 pb-28 md:pb-20 max-w-[1400px] mx-auto">
+            <DetailBackButton onClose={onClose} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
+                <aside className="lg:col-span-4 xl:col-span-3.5 lg:sticky lg:top-20 flex flex-col gap-3.5 z-20">
+                    <DetailPoster game={game} />
+                    <DetailActionButtons game={game} pending />
+                    <Placeholder className="hidden lg:block h-[320px] rounded-2xl bg-surface border border-divider" />
                 </aside>
                 <div className="lg:col-span-8 xl:col-span-8.5 flex flex-col gap-5 min-w-0">
-                    <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-3xl p-6 md:p-7 shadow-sm">
-                        <div className="mb-3.5 h-[26px] w-24 rounded-lg bg-base animate-pulse" />
-                        {preview?.title ? (
-                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary break-keep mb-3">
-                                {cleanTitleForDesc(preview.title)}
-                            </h1>
-                        ) : (
-                            <div className="h-10 w-3/4 rounded-lg bg-base animate-pulse mb-3" />
-                        )}
-                        <div className="h-5 w-1/2 rounded bg-base animate-pulse" />
-                    </div>
-                    <div className="rounded-3xl border border-divider-strong bg-surface/95 p-5 md:p-6 min-h-[180px]">
-                        {preview?.price != null ? (
-                            <div className="flex items-baseline gap-3">
-                                <span className="text-4xl font-black tracking-tighter text-primary">₩{preview.price.toLocaleString()}</span>
-                                {preview.discountRate > 0 && <span className="text-sm font-black text-green-500">-{preview.discountRate}%</span>}
-                            </div>
-                        ) : (
-                            <div className="h-10 w-40 rounded-lg bg-base animate-pulse" />
-                        )}
-                        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-muted">
-                            <span className="w-3 h-3 rounded-full border-2 border-ps-blue border-t-transparent animate-spin" aria-hidden="true" />
-                            가격 기록을 불러오는 중
-                        </div>
+                    <DetailTitleCard game={game} pending isAdmin={isAdmin} onRefresh={onRefresh} onDelete={onDelete} onGenreClick={onGenreClick} />
+                    <VerdictHeroCard game={game} pending />
+                    <div className="flex items-center justify-center gap-2 py-6 text-xs font-bold text-muted">
+                        <span className="w-3 h-3 rounded-full border-2 border-ps-blue border-t-transparent animate-spin" aria-hidden="true" />
+                        가격 기록·평점·할인 방어력을 불러오는 중
                     </div>
                 </div>
             </div>
         </div>
+        <MobileActionBar game={game} pending isModal />
     </div>
 );
 
@@ -337,9 +846,12 @@ export default function GameDetailPage() {
     };
 
     useEffect(() => {
+        // 모달 안에서 게임을 연달아 바꿀 때, 늦게 도착한 이전 게임 응답이 현재 게임을 덮어쓰지 않도록 무시
+        let ignore = false;
         const fetchDetail = async () => {
             try {
                 const res = await client.get(`/api/v1/games/${id}`);
+                if (ignore) return;
                 setGame(res.data);
                 if (res.data.liked !== undefined) setIsLiked(res.data.liked);
                 pushRecentGame({
@@ -358,14 +870,16 @@ export default function GameDetailPage() {
                 setUserVote(res.data.userVote || null);
 
             } catch (err) {
+                if (ignore) return;
                 console.error(err);
                 toast.error("정보 로딩 실패");
                 navigate('/games');
             } finally {
-                setLoading(false);
+                if (!ignore) setLoading(false);
             }
         };
         fetchDetail();
+        return () => { ignore = true; };
     }, [id]);
 
     const handleDeleteGame = () => {
@@ -530,13 +1044,24 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`, { state: null });
     };
 
-    if (loading) {
+    // 다른 게임 미리보기가 섞이지 않도록 현재 id와 일치할 때만 사용 (에디션 전환 시 state가 그대로 넘어옴)
+    const preview = String(location.state?.preview?.id) === String(id) ? location.state.preview : null;
+    // 연관 게임 등으로 모달 안에서 다른 게임으로 이동하면 페이지가 다시 마운트되지 않아 loading이 false로 남음.
+    // 이전 게임이 계속 보이지 않도록, 새 게임 데이터 도착 전까지 미리보기를 표시
+    const isShowingOtherGame = game && String(game.id) !== String(id);
+
+    if (loading || (isModal && isShowingOtherGame && preview)) {
         if (isModal) {
-            // 다른 게임 미리보기가 섞이지 않도록 현재 id와 일치할 때만 사용 (에디션 전환 시 state가 그대로 넘어옴)
-            const preview = String(location.state?.preview?.id) === String(id) ? location.state.preview : null;
             return (
-                <DetailModalFrame onClose={handleClose}>
-                    <DetailPreview preview={preview} />
+                <DetailModalFrame onClose={handleClose} heroImageUrl={preview?.imageUrl}>
+                    <DetailPreview
+                        game={preview || {}}
+                        isAdmin={isAdmin}
+                        onClose={handleClose}
+                        onRefresh={handleRefresh}
+                        onDelete={handleDeleteGame}
+                        onGenreClick={handleGenreClick}
+                    />
                 </DetailModalFrame>
             );
         }
@@ -564,12 +1089,6 @@ export default function GameDetailPage() {
         );
     }
 
-    const traffic = getTrafficLight(game.priceVerdict, game);
-    const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
-    const { daysLeft, isLastCall, isClosingSoon } = getSaleDeadline(game.saleEndDate);
-    // 목록·연관 게임 카드의 displayScore와 같은 기준 (메타스코어 우선, 없으면 IGDB 평론가 점수)
-    const platinumScore = game.mcMetaScore || game.igdbCriticScore;
-    const isPlatinum = platinumScore >= 85 && game.discountRate >= 50;
     const hasDescription = game.description && game.description !== "Full Data Crawler";
 
     const mcDiff = (game.mcMetaScore && game.mcUserScore) ? Math.abs(game.mcMetaScore - (game.mcUserScore * 10)) : 0;
@@ -590,53 +1109,6 @@ export default function GameDetailPage() {
     const hasPlayTime = [game.hltbMainStory, game.hltbMainExtra, game.hltbCompletionist].some(v => v > 0);
     const voteTotal = voteCounts.likes + voteCounts.dislikes;
     const likePercent = voteTotal > 0 ? Math.round((voteCounts.likes / voteTotal) * 100) : 0;
-
-    // 가치 트래커 (Value Tracker) 게이지 퍼센트 계산
-    const pricePosition = (game.lowestPrice > 0 && game.originalPrice > game.lowestPrice)
-        ? Math.min(100, Math.max(0, Math.round((game.originalPrice - game.currentPrice) / (game.originalPrice - game.lowestPrice) * 100)))
-        : null;
-
-    // 가격 신호등 테마별 글로우 & 보더 스타일
-    const verdictThemeMap = {
-        'BUY_NOW': {
-            badge: 'BUY NOW',
-            badgeBg: 'bg-green-500/15 border-green-500/40 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]',
-            dot: 'bg-green-400 shadow-[0_0_10px_rgba(34,197,94,1)]',
-            glowBg: 'bg-green-500',
-            border: 'border-green-500/40 shadow-[0_0_25px_rgba(34,197,94,0.12)]',
-            buttonBg: 'bg-green-500 hover:bg-green-600 text-black font-black shadow-[0_0_25px_rgba(34,197,94,0.3)]',
-            accentText: 'text-green-400',
-        },
-        'GOOD_OFFER': {
-            badge: 'GOOD OFFER',
-            badgeBg: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.2)]',
-            dot: 'bg-yellow-400 shadow-[0_0_10px_rgba(234,179,8,1)]',
-            glowBg: 'bg-yellow-500',
-            border: 'border-yellow-500/40 shadow-[0_0_25px_rgba(234,179,8,0.12)]',
-            buttonBg: 'bg-yellow-500 hover:bg-yellow-600 text-black font-black shadow-[0_0_25px_rgba(234,179,8,0.3)]',
-            accentText: 'text-yellow-400',
-        },
-        'WAIT': {
-            badge: 'WAIT',
-            badgeBg: 'bg-red-500/15 border-red-500/40 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]',
-            dot: 'bg-red-400 shadow-[0_0_10px_rgba(239,68,68,1)]',
-            glowBg: 'bg-red-500',
-            border: 'border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.12)]',
-            buttonBg: 'bg-ps-blue hover:bg-blue-600 text-white font-bold',
-            accentText: 'text-red-400',
-        },
-        'TRACKING': {
-            badge: 'TRACKING',
-            badgeBg: 'bg-blue-500/15 border-blue-500/40 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]',
-            dot: 'bg-ps-blue shadow-[0_0_10px_rgba(59,130,246,1)]',
-            glowBg: 'bg-ps-blue',
-            border: 'border-blue-500/40 shadow-[0_0_25px_rgba(59,130,246,0.12)]',
-            buttonBg: 'bg-ps-blue hover:bg-blue-600 text-white font-bold',
-            accentText: 'text-blue-400',
-        }
-    };
-
-    const currentTheme = verdictThemeMap[game.priceVerdict] || verdictThemeMap['TRACKING'];
 
     // 평점 우선순위 로직: 메타크리틱 우선 -> 없으면 IGDB 대체 -> 둘 다 없으면 null
     const hasMetacritic = Boolean(game.mcMetaScore || game.mcUserScore);
@@ -671,12 +1143,7 @@ export default function GameDetailPage() {
             <div className="p-4 sm:p-6 md:p-8 pb-28 md:pb-20 max-w-[1400px] mx-auto">
 
                 {/* 상단 네비게이션 */}
-                <button
-                    onClick={handleClose}
-                    className="mb-5 flex items-center text-secondary hover:text-primary transition-colors text-sm font-bold gap-2 w-fit px-3.5 py-1.5 rounded-xl bg-surface/95 border border-divider shadow-sm backdrop-blur-md active:scale-95"
-                >
-                    <ArrowLeft className="w-4 h-4" /> 목록으로 돌아가기
-                </button>
+                <DetailBackButton onClose={handleClose} />
 
                 {/* 12-컬럼 몰입형 커맨드 센터 그리드 */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
@@ -686,81 +1153,11 @@ export default function GameDetailPage() {
                     {/* ========================================================================= */}
                     <aside className="lg:col-span-4 xl:col-span-3.5 lg:sticky lg:top-20 flex flex-col gap-3.5 z-20">
 
-                        {/* 1. 반응형 포스터 (모바일: 시원한 와이드 배너 / PC: 콤팩트 세로형으로 First Fold 최적화) */}
-                        <div className={`w-full rounded-2xl overflow-hidden shadow-xl border relative group bg-surface ${
-                            isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider-strong'
-                        }`}>
-                            <div className="w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base">
-                                <PSGameImage
-                                    src={game.imageUrl}
-                                    alt={game.title}
-                                    priority
-                                    width={640}
-                                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-                                />
-                            </div>
-                            {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse" />}
-                            {isNew && <span className="absolute top-2.5 left-2.5 bg-green-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-md z-10">NEW</span>}
-                            {isLastCall && (
-                                <span className="absolute top-2.5 right-2.5 bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md animate-pulse z-10 flex items-center gap-1">
-                                    <Timer className="w-3 h-3" /> 막차!
-                                </span>
-                            )}
-                            {isClosingSoon && (
-                                <span className="absolute top-2.5 right-2.5 bg-red-600/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md z-10 flex items-center gap-1">
-                                    <Timer className="w-3 h-3" /> 마감 임박
-                                </span>
-                            )}
-                        </div>
+                        {/* 1. 반응형 포스터 */}
+                        <DetailPoster game={game} />
 
                         {/* 2. PC 메인 액션 버튼 그룹 */}
-                        <div className="hidden lg:flex flex-col gap-2">
-                            <a
-                                href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`w-full py-3 rounded-xl text-center flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 shadow-md text-sm ${currentTheme.buttonBg}`}
-                            >
-                                <Gamepad2 className="w-4 h-4" />
-                                <span>PS Store로 이동</span>
-                                <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                            </a>
-
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={onWishlistClick}
-                                    className={`flex-1 py-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
-                                        game.liked
-                                            ? 'bg-red-500/15 border-red-500/40 text-red-400 hover:bg-red-500/25'
-                                            : 'bg-surface border-divider text-primary hover:bg-surface-hover hover:border-divider-strong'
-                                    }`}
-                                >
-                                    <Heart className={`w-3.5 h-3.5 ${game.liked ? 'fill-current text-red-500' : ''}`} />
-                                    <span>{game.liked ? '찜 취소' : '위시리스트 추가'}</span>
-                                </button>
-
-                                {game.liked && (
-                                    <button
-                                        onClick={() => setIsTargetModalOpen(true)}
-                                        className="px-3 py-2.5 rounded-xl border border-ps-blue/40 bg-ps-blue/15 text-ps-blue hover:bg-ps-blue/25 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95"
-                                        title="목표가 설정"
-                                    >
-                                        <Crosshair className="w-3.5 h-3.5" />
-                                        <span>
-                                            {game.myTargetPrice ? `${game.myTargetPrice.toLocaleString()}원` : '목표가'}
-                                        </span>
-                                    </button>
-                                )}
-
-                                <button
-                                    onClick={handleShare}
-                                    className="p-2.5 rounded-xl border border-divider bg-surface text-secondary hover:text-primary hover:bg-surface-hover transition-all active:scale-95"
-                                    title="공유하기"
-                                >
-                                    <Share2 className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
+                        <DetailActionButtons game={game} onWishlistClick={onWishlistClick} onTargetClick={() => setIsTargetModalOpen(true)} onShare={handleShare} />
 
                         {/* 3. 할인 방어력 & 플래티넘 트로피 정보 (위치 상향 조정 완료) */}
                         <div className="hidden lg:block">
@@ -774,196 +1171,10 @@ export default function GameDetailPage() {
                     <div className="lg:col-span-8 xl:col-span-8.5 flex flex-col gap-5 min-w-0">
 
                         {/* 1. 타이틀 & 장르 헤더 (장르와 타이틀에 집중) */}
-                        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-3xl p-6 md:p-7 backdrop-blur-xl relative overflow-hidden shadow-sm">
-                            {/* 상단 장르 태그 */}
-                            <div className="flex flex-wrap gap-2 mb-3.5 items-center">
-                                {game.genres && game.genres.length > 0 ? (
-                                    game.genres.map(g => (
-                                        <button
-                                            key={g}
-                                            onClick={() => handleGenreClick(g)}
-                                            className={`px-3 py-1 rounded-lg text-xs font-bold border shadow-sm transition-all hover:opacity-80 ${getGenreBadgeStyle(g)}`}
-                                        >
-                                            {g}
-                                        </button>
-                                    ))
-                                ) : (
-                                    <span className="px-3 py-1 rounded-lg text-xs font-bold border border-divider bg-surface text-secondary">
-                                        미분류
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* 게임 제목 & 관리자 도구 */}
-                            <div className="flex justify-between items-start gap-4 mb-3">
-                                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary break-keep drop-shadow-sm">
-                                    {cleanTitleForDesc(game.title)}
-                                </h1>
-                                {isAdmin && (
-                                    <div className="flex gap-2 shrink-0 pt-1">
-                                        <button
-                                            onClick={handleRefresh}
-                                            className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-ps-blue/20 text-secondary hover:text-ps-blue transition-all"
-                                            title="정보 수집 요청 (관리자)"
-                                        >
-                                            <RefreshCw className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={handleDeleteGame}
-                                            className="p-2.5 rounded-xl bg-surface border border-divider hover:bg-red-500/20 text-secondary hover:text-red-400 transition-all"
-                                            title="게임 삭제 (관리자)"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* 메타 정보 */}
-                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs font-bold text-secondary dark:text-zinc-300">
-                                {game.publisher && (
-                                    <span className="flex items-center gap-1.5">
-                                        <Building2 className="w-4 h-4 text-muted" /> {game.publisher}
-                                    </span>
-                                )}
-                                {game.releaseDate && (
-                                    <span className="flex items-center gap-1.5">
-                                        <Calendar className="w-4 h-4 text-muted" /> 출시 {game.releaseDate.replace(/-/g, '. ')}
-                                    </span>
-                                )}
-                                {game.pioneerName && (
-                                    <span className="flex items-center gap-1.5 text-ps-blue bg-ps-blue/10 border border-ps-blue/20 px-2 py-0.5 rounded-md">
-                                        <Pickaxe className="w-3.5 h-3.5" /> {game.pioneerName} 발굴
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Vibe Tags */}
-                            {game.vibeTags && game.vibeTags.filter(tag => tag && tag.name && tag.color).length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-divider/60">
-                                    {game.vibeTags.filter(tag => tag && tag.name && tag.color).slice(0, 6).map((tag, idx) => (
-                                        <span
-                                            key={idx}
-                                            style={{ '--tag-color': tag.color }}
-                                            className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-base/80 border border-divider shadow-sm transition-all hover:border-[color:var(--tag-color)] cursor-default group"
-                                        >
-                                            <span className="w-2 h-2 rounded-full bg-[color:var(--tag-color)] shadow-[0_0_6px_var(--tag-color)]" />
-                                            <span className="text-secondary dark:text-zinc-300 group-hover:text-primary transition-colors">
-                                                {tag.name}
-                                            </span>
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        <DetailTitleCard game={game} isAdmin={isAdmin} onRefresh={handleRefresh} onDelete={handleDeleteGame} onGenreClick={handleGenreClick} />
 
                         {/* 2. 대형 가격 신호등 판정 히어로 패널 (Price Hero & Value Tracker) */}
-                        <div className={`p-6 md:p-8 rounded-3xl border-2 backdrop-blur-xl relative overflow-hidden transition-all duration-300 bg-surface/95 dark:bg-surface/90 shadow-md transform-gpu ${currentTheme.border}`}>
-                            <div className={`absolute -top-20 -right-20 w-48 h-48 ${currentTheme.glowBg} blur-[90px] opacity-15 rounded-full pointer-events-none`} />
-
-                            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                {/* 좌측: 신호등 판정 & 가이드 */}
-                                <div className="flex items-center gap-4 bg-base/80 p-4 rounded-2xl border border-divider flex-1 min-w-0">
-                                    <div className="shrink-0">{renderVerdictIcon(game.priceVerdict)}</div>
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
-                                            <h2 className="text-lg md:text-xl font-black text-primary break-keep">{traffic.text}</h2>
-                                            <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${currentTheme.badgeBg}`}>
-                                                {currentTheme.badge}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs sm:text-sm text-secondary dark:text-zinc-300 font-medium leading-snug break-keep">{traffic.desc}</p>
-                                    </div>
-                                </div>
-
-                                {/* 우측: 가격 정보 */}
-                                <div className="shrink-0 flex flex-col md:items-end">
-                                    {game.isPlusExclusive && (
-                                        <div className="flex items-center gap-1.5 mb-1.5">
-                                            <span className="bg-yellow-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded">PLUS</span>
-                                            <span className="text-yellow-400 text-xs font-bold">특별 할인</span>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-baseline gap-2.5 flex-wrap md:justify-end">
-                                        <span className={`text-4xl sm:text-5xl font-black tracking-tight ${
-                                            game.isPlusExclusive ? 'text-yellow-400' : 'text-primary'
-                                        }`}>
-                                            ₩{game.currentPrice.toLocaleString()}
-                                        </span>
-                                        {game.discountRate > 0 && (
-                                            <span className={`text-sm font-black px-2.5 py-1 rounded-lg shadow-sm ${
-                                                game.isPlusExclusive ? 'bg-yellow-500 text-black' : 'bg-green-500/20 border border-green-500/40 text-green-400'
-                                            }`}>
-                                                -{game.discountRate}%
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {game.discountRate > 0 && (
-                                        <div className="flex items-center gap-2 mt-1.5 md:justify-end">
-                                            <span className="text-xs text-muted line-through font-medium">
-                                                정가 ₩{game.originalPrice.toLocaleString()}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 가치 트래커 게이지 바 */}
-                            {pricePosition !== null && (
-                                <div className="mt-6 pt-5 border-t border-divider/60">
-                                    <div className="flex items-center justify-between text-xs font-bold mb-2">
-                                        <span className={`flex items-center gap-1.5 ${currentTheme.accentText}`}>
-                                            {pricePosition >= 100 ? (
-                                                <>
-                                                    <Flame className="w-4 h-4" />
-                                                    <span>{game.isAllTimeLowNew ? '역대 최저가 갱신!' : '역대 최저가 달성!'}</span>
-                                                </>
-                                            ) : pricePosition >= 90 ? (
-                                                <>
-                                                    <TrendingDown className="w-4 h-4" />
-                                                    <span>역대 최저 근접!</span>
-                                                </>
-                                            ) : (
-                                                <span>{pricePosition}% 할인 포지션</span>
-                                            )}
-                                        </span>
-
-                                        {game.saleEndDate && game.discountRate > 0 && (
-                                            <div className="flex items-center gap-1.5 text-secondary dark:text-zinc-300 text-xs font-bold">
-                                                <CalendarDays className="w-3.5 h-3.5 text-amber-400" />
-                                                <span>할인 종료 {game.saleEndDate.replace(/-/g, '.')}</span>
-                                                {daysLeft !== null && daysLeft >= 0 && (
-                                                    <span className={`px-1.5 py-0.5 rounded font-black text-[10px] ${
-                                                        daysLeft <= 3 ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-base text-secondary'
-                                                    }`}>
-                                                        {daysLeft}일 남음
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="relative w-full h-2.5 bg-base rounded-full overflow-hidden border border-divider">
-                                        <div
-                                            className="h-full rounded-full transition-all duration-700 ease-out"
-                                            style={{
-                                                width: `${Math.max(pricePosition, 4)}%`,
-                                                background: pricePosition >= 90
-                                                    ? 'linear-gradient(to right, #3b82f6, #22c55e)'
-                                                    : 'linear-gradient(to right, #3b82f6, #eab308)'
-                                            }}
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-between mt-2 text-[11px] font-bold text-secondary dark:text-zinc-400">
-                                        <span>정가: ₩{game.originalPrice.toLocaleString()}</span>
-                                        <span className="text-green-400 font-extrabold">역대최저: ₩{game.lowestPrice.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <VerdictHeroCard game={game} />
 
                         {/* 모바일 전용 트로피 방어 난이도 카드 */}
                         <div className="lg:hidden">
@@ -1494,64 +1705,7 @@ export default function GameDetailPage() {
             </div>
 
             {/* 📱 모바일 전용 Sticky Floating 액션 바 */}
-            <div className={`lg:hidden w-full p-3.5 bg-base/95 backdrop-blur-xl border-t border-divider z-40 ${
-                isModal ? 'sticky bottom-0' : 'fixed bottom-0 left-0'
-            }`}>
-                <div className="flex items-center justify-between gap-3 max-w-7xl mx-auto">
-                    {/* 미니 신호등 & 가격 */}
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                        <div className="shrink-0">{renderMiniVerdictIcon(game.priceVerdict)}</div>
-                        <div className="min-w-0">
-                            <p className="text-xs text-secondary font-bold truncate">{cleanTitleForDesc(game.title)}</p>
-                            <div className="flex items-baseline gap-1.5 mt-0.5">
-                                <p className="text-base font-black text-primary">
-                                    ₩{game.currentPrice.toLocaleString()}
-                                </p>
-                                {game.discountRate > 0 && (
-                                    <span className="text-[10px] font-black text-green-400 bg-green-500/15 border border-green-500/30 px-1.5 py-0.5 rounded">
-                                        -{game.discountRate}%
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 액션 버튼 */}
-                    <div className="flex gap-2 shrink-0">
-                        {game.liked && (
-                            <button
-                                onClick={() => setIsTargetModalOpen(true)}
-                                className="p-2.5 rounded-xl border border-ps-blue/40 bg-ps-blue/15 text-ps-blue active:scale-95"
-                                aria-label="목표가 설정"
-                            >
-                                <Crosshair className="w-4 h-4" />
-                            </button>
-                        )}
-
-                        <button
-                            onClick={onWishlistClick}
-                            className={`p-2.5 rounded-xl border font-bold active:scale-95 transition-all ${
-                                game.liked
-                                    ? 'bg-red-500/15 border-red-500/40 text-red-400'
-                                    : 'bg-surface border-divider text-primary'
-                            }`}
-                            aria-label={game.liked ? '찜 취소' : '위시리스트 추가'}
-                        >
-                            <Heart className={`w-4 h-4 ${game.liked ? 'fill-current text-red-500' : ''}`} />
-                        </button>
-
-                        <a
-                            href={`https://store.playstation.com/ko-kr/product/${game.psStoreId || ''}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black shadow-md active:scale-95 ${currentTheme.buttonBg}`}
-                        >
-                            <Gamepad2 className="w-3.5 h-3.5" />
-                            <span>스토어</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <MobileActionBar game={game} isModal={isModal} onWishlistClick={onWishlistClick} onTargetClick={() => setIsTargetModalOpen(true)} />
 
             {/* Modals */}
             <DonationModal isOpen={isDonationOpen} onClose={() => setIsDonationOpen(false)} />
@@ -1569,9 +1723,8 @@ export default function GameDetailPage() {
 
     if (isModal) {
         return (
-            <DetailModalFrame onClose={handleClose}>
+            <DetailModalFrame onClose={handleClose} heroImageUrl={game.imageUrl}>
                 <SEO title={game.title} description={buildSeoDescription(game)} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
-                <BackgroundHero imageUrl={game.imageUrl} />
                 {pageContent}
             </DetailModalFrame>
         );
