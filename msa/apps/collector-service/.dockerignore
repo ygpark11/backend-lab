@@ -1,0 +1,23 @@
+# 런타임에 필요한 파일만 이미지에 포함 (Dockerfile의 COPY . . 대상 축소)
+
+# 로컬 환경
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+
+# 런타임 생성물 (컨테이너에서 새로 생성/볼륨 마운트)
+logs/
+data/
+concept_map.json
+
+# 개발용 스크립트·문서
+poc/
+test_local.py
+test_sender.py
+CLAUDE.md
+.claude/
+.claudeignore
+.idea/
+.vscode/

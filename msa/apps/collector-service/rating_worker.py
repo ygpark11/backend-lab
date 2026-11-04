@@ -3,21 +3,15 @@ import time
 import re
 import random
 import logging
-import threading
-import subprocess
 import requests
 import gc
 import urllib.parse
 
+import browser_common
+
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 logger = logging.getLogger("Metadata-Worker")
-
-USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/120.0.0.0"
-]
 
 def generate_slug(title):
     slug = title.lower()
@@ -30,23 +24,11 @@ def generate_slug(title):
 def human_sleep(min_sec=2.0, max_sec=5.0):
     time.sleep(random.uniform(min_sec, max_sec))
 
+# 텍스트(점수·플레이타임)만 필요하므로 렌더링 자원 전면 차단
+BLOCKED_RESOURCE_TYPES = {"image", "media", "font", "stylesheet"}
+
 def setup_stealth_page(context):
-    page = context.new_page()
-    page.set_default_timeout(30000)
-
-    # Webdriver 탐지 우회 (기본 스텔스)
-    page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
-
-    def route_intercept(route):
-        r_type = route.request.resource_type
-        # 텍스트(점수)만 필요하므로 쓸데없는 자원 전면 차단
-        if r_type in ["image", "media", "font", "stylesheet"]:
-            route.abort()
-            return
-        route.continue_()
-
-    page.route("**/*", route_intercept)
-    return page
+    return browser_common.setup_page(context, 30000, BLOCKED_RESOURCE_TYPES)
 
 def crawl_metacritic_single(game_title):
     slug = generate_slug(game_title)
@@ -56,12 +38,9 @@ def crawl_metacritic_single(game_title):
     result = {"status": "FAIL", "metaScore": None, "metaCount": None, "userScore": None, "userCount": None}
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-blink-features=AutomationControlled", "--js-flags=--max-old-space-size=128"]
-        )
+        browser = p.chromium.launch(headless=True, args=browser_common.chromium_args(128))
 
-        context = browser.new_context(user_agent=random.choice(USER_AGENTS), viewport={"width": 1920, "height": 1080}, locale="en-US")
+        context = browser.new_context(user_agent=browser_common.random_user_agent(), viewport={"width": 1920, "height": 1080}, locale="en-US")
         page = setup_stealth_page(context)
 
         try:
@@ -125,16 +104,7 @@ def crawl_metacritic_single(game_title):
             logger.error(f"파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-            for _obj in (page, context, browser):
-                if _obj is None: continue
-                try: _obj.close()
-                except Exception: pass
-            _close_done.set()
+            browser_common.close_with_kill_guard((page, context, browser), logger, "Metadata-Worker")
             gc.collect()
 
     return result
@@ -165,11 +135,8 @@ def crawl_hltb_single(game_title):
     result = {"status": "FAIL", "mainStory": None, "mainExtra": None, "completionist": None}
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--disable-blink-features=AutomationControlled", "--js-flags=--max-old-space-size=128"]
-        )
-        context = browser.new_context(user_agent=random.choice(USER_AGENTS), viewport={"width": 1920, "height": 1080}, locale="en-US")
+        browser = p.chromium.launch(headless=True, args=browser_common.chromium_args(128))
+        context = browser.new_context(user_agent=browser_common.random_user_agent(), viewport={"width": 1920, "height": 1080}, locale="en-US")
         page = setup_stealth_page(context)
 
         try:
@@ -221,16 +188,7 @@ def crawl_hltb_single(game_title):
             logger.error(f"[HLTB] 파싱 중 에러 발생: {e}")
             result["status"] = "ERROR"
         finally:
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-            for _obj in (page, context, browser):
-                if _obj is None: continue
-                try: _obj.close()
-                except Exception: pass
-            _close_done.set()
+            browser_common.close_with_kill_guard((page, context, browser), logger, "Metadata-Worker")
             gc.collect()
 
     return result

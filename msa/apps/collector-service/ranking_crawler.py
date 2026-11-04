@@ -6,10 +6,9 @@ import time
 import random
 import logging
 import json
-import gc
-import threading
-import subprocess
 import requests
+
+import browser_common
 
 from playwright.sync_api import sync_playwright
 
@@ -44,82 +43,20 @@ def save_cache(cache_data):
     with open(CACHE_FILE, 'w', encoding='utf-8') as f:
         json.dump(cache_data, f, ensure_ascii=False, indent=4)
 
-class BrowserManager:
+# 랭킹 목록은 CSS 허용(기존 동작 유지): 그리드 타일 visible 대기에 의존하므로 차단 범위를 넓히지 않음
+BLOCKED_RESOURCE_TYPES = {"image", "media", "font"}
+
+class BrowserManager(browser_common.BrowserManager):
     def __init__(self, p):
-        self.p = p
-        self.browser, self.context = self._create_browser()
-        self.request_count = 0
-
-    def _create_browser(self):
-        logger.info("크롬 브라우저 시작 (메모리 최적화 + 랜덤 에이전트 적용)")
-        DESKTOP_USER_AGENTS = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        ]
-        user_agent = random.choice(DESKTOP_USER_AGENTS)
-
-        browser = self.p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled",
-                "--js-flags=--max-old-space-size=256"
-            ]
+        super().__init__(
+            p,
+            restart_interval=RESTART_INTERVAL,
+            launch_args=browser_common.chromium_args(256),
+            logger=logger,
         )
-        context = browser.new_context(user_agent=user_agent, viewport={"width": 1920, "height": 1080})
-        return browser, context
-
-    def get_context(self):
-        if self.request_count >= RESTART_INTERVAL:
-            logger.info("[메모리 관리] 브라우저 강제 환생! 🧹")
-            # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
-            # 같은 스레드에서 close()를 호출하되, 5초 초과 시 Chromium SIGKILL로 강제 unblock.
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    logger.warning("[BrowserManager] close() 교착 → Chromium SIGKILL")
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-
-            try: self.context.close()
-            except Exception: pass
-            try: self.browser.close()
-            except Exception: pass
-            _close_done.set()
-
-            self.context = None
-            self.browser = None
-            gc.collect()
-
-            logger.info("OS 메모리 반환 대기 중... (10초 숨고르기)")
-            time.sleep(10)
-
-            try: self.browser, self.context = self._create_browser()
-            except:
-                time.sleep(5)
-                self.browser, self.context = self._create_browser()
-            self.request_count = 0
-        return self.context
-
-    def increment(self):
-        self.request_count += 1
 
 def setup_page(context):
-    page = context.new_page()
-    page.set_default_timeout(30000)
-    page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
-
-    def route_intercept(route):
-        r_type = route.request.resource_type
-        if r_type in ["image", "media", "font"]:
-            route.abort()
-            return
-        route.continue_()
-
-    page.route("**/*", route_intercept)
-    return page
+    return browser_common.setup_page(context, 30000, BLOCKED_RESOURCE_TYPES)
 
 def human_like_delay(min_sec=1.5, max_sec=3.5):
     time.sleep(random.uniform(min_sec, max_sec))

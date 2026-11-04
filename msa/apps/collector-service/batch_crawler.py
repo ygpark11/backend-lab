@@ -8,7 +8,6 @@ import logging
 import traceback
 import gc
 import json
-import subprocess
 import zlib
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
@@ -19,6 +18,7 @@ from flask import Flask, jsonify, request
 import requests
 import ranking_crawler
 import rating_worker
+import browser_common
 
 # --- [1. 설정 및 로깅 초기화] ---
 if not os.path.exists('logs'):
@@ -102,106 +102,22 @@ is_ranking_running = False
 is_rating_running = False
 
 # --- [2. 브라우저 매니저 (1코어 1기가 메모리 최적화)] ---
-class BrowserManager:
+# 이미지·미디어·CSS는 항상 차단, LOW 모드에서는 폰트까지 차단
+# (CSS 차단 시 DOM 셀렉터 기반 추출에는 영향 없음 → 메모리·로딩 시간 절감)
+BLOCKED_RESOURCE_TYPES = {"image", "media", "stylesheet"} | ({"font"} if CONF.get("block_fonts") else set())
+
+class BrowserManager(browser_common.BrowserManager):
     def __init__(self, p):
-        self.p = p
-        self.browser, self.context = self._create_browser()
-        self.request_count = 0
-
-    def _create_browser(self):
-        logger.info("크롬 브라우저 시작 (메모리 최적화 + 스텔스 옵션)")
-        DESKTOP_USER_AGENTS = [
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36 Edg/145.0.0.0",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
-        ]
-        user_agent = random.choice(DESKTOP_USER_AGENTS)
-
-        browser = self.p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-extensions",
-                "--disable-blink-features=AutomationControlled",
-                "--js-flags=--max-old-space-size=256"
-            ]
+        super().__init__(
+            p,
+            restart_interval=CONF["restart_interval"],
+            launch_args=browser_common.chromium_args(256, extra=("--disable-setuid-sandbox", "--disable-extensions")),
+            logger=logger,
+            context_options={"locale": "ko-KR", "timezone_id": "Asia/Seoul"},
         )
-        context = browser.new_context(
-            user_agent=user_agent,
-            viewport={"width": 1920, "height": 1080},
-            locale="ko-KR",
-            timezone_id="Asia/Seoul"
-        )
-        return browser, context
-
-    def get_context(self):
-        if self.request_count >= CONF["restart_interval"]:
-            # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
-            # 같은 스레드에서 close()를 호출하되, 5초 초과 시 Chromium SIGKILL로 강제 unblock.
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    logger.warning("[BrowserManager] close() 교착 → Chromium SIGKILL")
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-
-            try: self.context.close()
-            except Exception: pass
-            try: self.browser.close()
-            except Exception: pass
-            _close_done.set()
-
-            self.context = None
-            self.browser = None
-            gc.collect()
-
-            logger.info("OS 메모리 반환 대기 중... (10초 숨고르기)")
-            time.sleep(10)
-
-            try:
-                self.browser, self.context = self._create_browser()
-            except Exception as e:
-                logger.error(f"브라우저 환생 중 감자 서버 헐떡임 발생! 5초 대기 후 재시도... : {e}")
-                time.sleep(5)
-                self.browser, self.context = self._create_browser()
-
-            self.request_count = 0
-
-        return self.context
-
-    def increment(self):
-        self.request_count += 1
 
 def setup_page(context):
-    if context is None:
-        raise RuntimeError("브라우저 컨텍스트가 존재하지 않습니다. (메모리 부족 의심)")
-
-    page = context.new_page()
-    page.set_default_timeout(CONF['timeout'])
-
-    page.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => undefined });")
-
-    def route_intercept(route):
-        r_type = route.request.resource_type
-        if r_type in ["image", "media"]:
-            route.abort()
-            return
-        if CONF.get("block_fonts", False) and r_type == "font":
-            route.abort()
-            return
-        # CSS는 DOM 셀렉터 기반 추출에 불필요 → 차단으로 메모리·로딩 시간 절감
-        if r_type == "stylesheet":
-            route.abort()
-            return
-        route.continue_()
-
-    page.route("**/*", route_intercept)
-    return page
+    return browser_common.setup_page(context, CONF['timeout'], BLOCKED_RESOURCE_TYPES)
 
 # --- [3. 공통 유틸리티 및 검증] ---
 def human_like_delay(min_sec=None, max_sec=None):
@@ -247,7 +163,7 @@ def run_with_watchdog(bm, url):
             # Playwright sync API는 greenlet 바인딩으로 다른 스레드에서 close() 호출 불가.
             # SIGKILL로 Chromium을 종료하면 main thread의 blocking Playwright call이
             # exception으로 unblock되어 자연스럽게 finally → bm 재시작 경로로 진입.
-            subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            browser_common.kill_chromium(logger)
 
             if not done.wait(timeout=10):
                 logger.error("[Watchdog] SIGKILL 후 10초 경과, main thread 여전히 blocking")
@@ -353,10 +269,7 @@ def run_vip_only_logic():
             bm = BrowserManager(p)
             check_and_run_vip(bm)
             time.sleep(1)
-            try: bm.context.close()
-            except Exception: pass
-            try: bm.browser.close()
-            except Exception: pass
+            bm.close()
         completed = True
     except Exception as e:
         logger.error(f"[VIP Worker] 전담 엔진 오류: {e}")
@@ -1185,7 +1098,7 @@ def run_batch_crawler_logic():
             )
             with crawler_lock:
                 is_batch_running = False
-            subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
+            browser_common.kill_chromium(logger)
     threading.Thread(target=_batch_watchdog, daemon=True).start()
 
     collected_deals = []
@@ -1210,17 +1123,7 @@ def run_batch_crawler_logic():
             try: crawl_phase0_new_releases(bm)
             except Exception as e: logger.error(f"Phase 0 Error: {e}")
 
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    logger.warning("[Sync 구간] close() 교착 → Chromium SIGKILL")
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-            try: bm.context.close()
-            except Exception: pass
-            try: bm.browser.close()
-            except Exception: pass
-            _close_done.set()
+            bm.close()
 
         gc.collect()
         logger.info("[Sync 구간 종료] Pre-Phase + Phase 0 완료. Phase 1/2 순차 수집 시작.")
@@ -1309,17 +1212,7 @@ def run_batch_crawler_logic():
                                     collected_deals.append(res)
                         visited_urls.add(url)
 
-            _close_done = threading.Event()
-            def _kill_if_stuck():
-                if not _close_done.wait(timeout=5):
-                    logger.warning("[Phase 1/2] close() 교착 → Chromium SIGKILL")
-                    subprocess.run(["pkill", "-9", "-f", "chromium"], capture_output=True)
-            threading.Thread(target=_kill_if_stuck, daemon=True).start()
-            try: bm.context.close()
-            except Exception: pass
-            try: bm.browser.close()
-            except Exception: pass
-            _close_done.set()
+            bm.close()
 
         logger.info("[System] Marathon finished. Sending reports...")
         send_discord_summary(total_processed_count, collected_deals, delisted_games)
@@ -1362,12 +1255,7 @@ def crawl_single_url():
             try:
                 result = crawl_detail_and_send(page, target_url, verbose=True)
             finally:
-                try: page.close()
-                except: pass
-                try: bm.context.close()
-                except: pass
-                try: bm.browser.close()
-                except: pass
+                browser_common.close_with_kill_guard((page, bm.context, bm.browser), logger, "Single Crawl")
                 gc.collect()
 
         if result:
