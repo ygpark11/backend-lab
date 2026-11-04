@@ -1,14 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import client from '../api/client';
 import toast from 'react-hot-toast';
-import PriceChart from '../components/PriceChart';
+// 차트 라이브러리(recharts)는 용량이 커서 상세 본문 렌더링을 막지 않도록 별도 지연 로드
+const PriceChart = lazyWithReload(() => import('../components/PriceChart'));
+
+// 차트 로딩 중 자리 확보: 실측한 PriceChart 렌더 높이(모바일 317px / md 이상 335px)와 동일하게 맞춰 레이아웃 이동 방지
+const PriceChartSkeleton = () => (
+    <div aria-hidden="true" className="h-[317px] md:h-[335px] pt-[54px] md:pt-[35px]">
+        <div className="w-full h-full rounded-xl bg-surface animate-pulse" />
+    </div>
+);
 import RelatedGameCard from '../components/RelatedGameCard';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
 import { getTrafficLight } from '../utils/priceUtils';
 import { VERDICT_GUIDE } from '../constants/priceGuide';
 import { getSaleDeadline } from '../utils/saleDeadline';
+import { lazyWithReload } from '../utils/lazyWithReload';
 import TargetPriceModal from '../components/TargetPriceModal';
 import DefenseTrophyCard from '../components/DefenseTrophyCard';
 import StealthPanel from '../components/StealthPanel';
@@ -225,6 +234,9 @@ export default function GameDetailPage() {
     const location = useLocation();
 
     const isModal = Boolean(location.state?.background);
+
+    // 차트 청크를 게임 데이터 조회와 병렬로 미리 받아, 데이터 도착 직후 차트가 바로 그려지게 함
+    useEffect(() => { import('../components/PriceChart').catch(() => {}); }, []);
 
     const [game, setGame] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -1125,8 +1137,11 @@ export default function GameDetailPage() {
                                     <span>가격 변동 추이</span>
                                 </h3>
                             </div>
-                            <div className="relative">
-                                <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                            {/* 기간 탭 행은 게임별 라벨 길이에 따라 줄바꿈 여부가 달라 최소 높이로 자리 고정 */}
+                            <div className="relative min-h-[317px] md:min-h-[335px]">
+                                <Suspense fallback={<PriceChartSkeleton />}>
+                                    <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                                </Suspense>
                             </div>
                         </div>
 

@@ -9,6 +9,7 @@ import LoginModal from './components/LoginModal';
 import BootingScreen from './components/BootingScreen';
 import GameListPage from './pages/GameListPage';
 import { lazyWithReload } from './utils/lazyWithReload';
+import { prefetchMainRoutes } from './utils/routePrefetch';
 
 // 첫 진입 화면(게임 목록)만 기본 번들에 포함하고, 나머지 페이지는 이동 시점에 내려받음
 const WishlistPage = lazyWithReload(() => import('./pages/WishlistPage'));
@@ -43,6 +44,9 @@ const ProtectedRoute = ({ children }) => {
 function AppRoutes() {
     const location = useLocation();
     const background = location.state && location.state.background;
+
+    // 첫 화면 이후 유휴 시간에 주요 메뉴 화면 코드 미리 받기
+    useEffect(() => prefetchMainRoutes(), []);
 
     return (
         <Suspense fallback={<PageFallback />}>
