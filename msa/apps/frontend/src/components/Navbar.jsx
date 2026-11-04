@@ -344,7 +344,7 @@ const Navbar = () => {
                     </div>
 
                     {/* 데스크톱 메뉴 */}
-                    <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
+                    <div className="hidden xl:flex items-center gap-1.5 xl:gap-2">
                         <button onClick={() => navigateAndScroll('/games')} className={`px-2.5 xl:px-3 py-1.5 rounded-lg font-bold text-sm transition-colors flex items-center gap-1.5 ${location.pathname === '/games' ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <Gamepad2 className="w-4 h-4" /> 게임 목록
                         </button>
@@ -368,7 +368,7 @@ const Navbar = () => {
 
                     <button
                         onClick={() => navigateAndScroll('/ps-plus')}
-                        className={`hidden lg:flex relative p-2 rounded-full transition-colors group ${
+                        className={`hidden xl:flex relative p-2 rounded-full transition-colors group ${
                             location.pathname.includes('/ps-plus')
                                 ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
                                 : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
@@ -380,7 +380,7 @@ const Navbar = () => {
 
                     <button
                         onClick={() => navigateAndScroll('/monthly-games')}
-                        className={`hidden lg:flex relative p-2 rounded-full transition-colors group ${
+                        className={`hidden xl:flex relative p-2 rounded-full transition-colors group ${
                             location.pathname.includes('/monthly-games')
                                 ? 'text-yellow-600 dark:text-yellow-500 bg-yellow-500/10'
                                 : 'text-secondary hover:text-yellow-600 dark:hover:text-yellow-500 hover:bg-yellow-500/10'
@@ -390,7 +390,7 @@ const Navbar = () => {
                         <CalendarDays className="w-5 h-5 sm:w-5 sm:h-5 transition-transform group-active:scale-95" />
                     </button>
 
-                    <div className="hidden lg:block w-[1px] h-4 bg-divider mx-1"></div>
+                    <div className="hidden xl:block w-[1px] h-4 bg-divider mx-1"></div>
 
                     <button onClick={() => setIsLightMode(!isLightMode)} className="text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="테마 변경">
                         {isLightMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
@@ -529,7 +529,7 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        <button onClick={() => navigateAndScroll('/profile')} className={`hidden lg:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
+                        <button onClick={() => navigateAndScroll('/profile')} className={`hidden xl:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/profile') ? 'text-primary bg-surface-hover border border-divider shadow-sm' : 'text-secondary hover:text-primary hover:bg-surface-hover'}`}>
                             <UserCircle className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
@@ -537,19 +537,19 @@ const Navbar = () => {
                             <button
                                 onClick={() => navigateAndScroll('/admin')}
                                 title="관리자 콘솔"
-                                className={`hidden lg:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/admin') ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20' : 'text-secondary hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10'}`}
+                                className={`hidden xl:flex items-center gap-2 text-sm font-bold p-2 rounded-lg transition-colors active:scale-95 ${location.pathname.includes('/admin') ? 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20' : 'text-secondary hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-500/10'}`}
                             >
                                 <Settings className="w-5 h-5" />
                             </button>
                         )}
 
-                        <button onClick={handleLogout} className="hidden lg:flex items-center gap-2 text-sm font-bold text-secondary p-2 rounded-lg transition-colors hover:text-red-500 hover:bg-surface-hover active:text-red-500">
+                        <button onClick={handleLogout} className="hidden xl:flex items-center gap-2 text-sm font-bold text-secondary p-2 rounded-lg transition-colors hover:text-red-500 hover:bg-surface-hover active:text-red-500">
                             <LogOut className="w-5 h-5 sm:w-6 sm:h-6" />
                         </button>
 
-                        <button onClick={() => navigate('/wishlist')} className="relative group bg-[var(--bento-pink-from)] border border-[color:var(--bento-pink-border)] hover:border-[color:var(--bento-pink-border-hover)] hover:[box-shadow:var(--bento-pink-shadow)] text-pink-600 dark:text-pink-500 p-1.5 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center active:scale-95 ml-0.5 sm:ml-1">
+                        <button onClick={() => navigate('/wishlist')} aria-label="Wishlist" title="Wishlist" className="relative group bg-[var(--bento-pink-from)] border border-[color:var(--bento-pink-border)] hover:border-[color:var(--bento-pink-border-hover)] hover:[box-shadow:var(--bento-pink-shadow)] text-pink-600 dark:text-pink-500 p-1.5 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center active:scale-95 ml-0.5 sm:ml-1">
                             <Heart className="w-5 h-5 sm:w-4 sm:h-4 md:w-5 md:h-5 group-hover:fill-pink-500 transition-colors" />
-                            <span className="hidden sm:inline font-bold sm:text-sm ml-2">Wishlist</span>
+                            <span className="hidden sm:inline xl:hidden 2xl:inline font-bold sm:text-sm ml-2">Wishlist</span>
                         </button>
                         </>
                     ) : (
@@ -559,7 +559,7 @@ const Navbar = () => {
                         </button>
                     )}
 
-                    <div className="relative lg:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
+                    <div className="relative xl:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
                         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-surface-hover text-primary' : 'text-secondary hover:bg-surface-hover'}`}>
                             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>

@@ -477,7 +477,9 @@ export default function GameDetailPage() {
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
     const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
     const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
-    const isPlatinum = game.metaScore >= 85 && game.discountRate >= 50;
+    // 목록·연관 게임 카드의 displayScore와 같은 기준 (메타스코어 우선, 없으면 IGDB 평론가 점수)
+    const platinumScore = game.mcMetaScore || game.igdbCriticScore;
+    const isPlatinum = platinumScore >= 85 && game.discountRate >= 50;
     const hasDescription = game.description && game.description !== "Full Data Crawler";
 
     const mcDiff = (game.mcMetaScore && game.mcUserScore) ? Math.abs(game.mcMetaScore - (game.mcUserScore * 10)) : 0;
