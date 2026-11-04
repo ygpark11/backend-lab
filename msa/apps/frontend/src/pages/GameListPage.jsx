@@ -46,6 +46,7 @@ import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import TrendingHeroCarousel from '../components/TrendingHeroCarousel';
 import ServiceIntro from '../components/ServiceIntro';
+import { getSaleDeadline } from '../utils/saleDeadline';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
@@ -1525,8 +1526,7 @@ const GameListPage = () => {
                         games.length > 0 ? games.map((game, index) => {
                             const isLastElement = games.length === index + 1;
                             const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
-                            const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
-                            const isLastCall = daysLeft >= 0 && daysLeft <= 1;
+                            const { isLastCall, isClosingSoon } = getSaleDeadline(game.saleEndDate);
 
                             const rankToDisplay = filter.isBestSeller ? game.bestSellerRank
                                 : filter.isMostDownloaded ? game.mostDownloadedRank
@@ -1572,6 +1572,10 @@ const GameListPage = () => {
                                             ) : isLastCall ? (
                                                 <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg animate-pulse flex items-center gap-1 border border-red-400/40">
                                                     <Timer className="w-3 h-3" /> 막차!
+                                                </span>
+                                            ) : isClosingSoon ? (
+                                                <span className="bg-red-600/90 backdrop-blur-sm text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1 border border-red-400/30">
+                                                    <Timer className="w-3 h-3" /> 마감 임박
                                                 </span>
                                             ) : isNew ? (
                                                 <span className="bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg border border-emerald-400/30">

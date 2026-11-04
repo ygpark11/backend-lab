@@ -5,6 +5,7 @@ import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import {differenceInCalendarDays, parseISO} from 'date-fns';
+import { getSaleDeadline } from '../utils/saleDeadline';
 import {
     AlertTriangle,
     CheckSquare,
@@ -419,9 +420,7 @@ const WishlistPage = () => {
                         const realGameId = game.gameId || game.id;
                         const isLastElement = !activeFilter && displayedGames.length === index + 1;
                         const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
-                        const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
-                        const isLastCall = daysLeft >= 0 && daysLeft <= 1;
-                        const isClosing = !isLastCall && daysLeft <= 3;
+                        const { isLastCall, isClosingSoon: isClosing } = getSaleDeadline(game.saleEndDate);
                         const isSelectedForCompare = compareList.some(item => (item.gameId || item.id) === realGameId);
                         return (
                             <div
@@ -442,7 +441,7 @@ const WishlistPage = () => {
                                     {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
 
                                     {isLastCall && <span className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
-                                    {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감임박</span>}
+                                    {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감 임박</span>}
 
                                     <button onClick={(e) => handleRemove(e, realGameId, game.name)} className="absolute top-2 right-2 p-2 rounded-full bg-black/60 hover:bg-red-600 text-gray-300 hover:text-white transition-all transform hover:scale-110 shadow-lg z-20"><Trash2 className="w-4 h-4" /></button>
 

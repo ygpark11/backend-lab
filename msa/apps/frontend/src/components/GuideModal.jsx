@@ -130,7 +130,7 @@ const GuideModal = ({ isOpen, onClose }) => {
                                 </li>
                                 <li className="flex items-center gap-2.5">
                                     <Timer className="w-4 h-4 text-red-600 dark:text-red-500 shrink-0" />
-                                    <span><strong className="text-red-600 dark:text-red-500">마감 임박:</strong> 할인 종료가 3일 이내로 남았습니다.</span>
+                                    <span><strong className="text-red-600 dark:text-red-500">막차 · 마감 임박:</strong> 할인이 오늘·내일 끝나면 막차!, 2~3일 남으면 마감 임박으로 표시해요.</span>
                                 </li>
                             </ul>
                         </div>

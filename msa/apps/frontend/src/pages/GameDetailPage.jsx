@@ -8,6 +8,7 @@ import RelatedGameCard from '../components/RelatedGameCard';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
 import { getTrafficLight } from '../utils/priceUtils';
 import { VERDICT_GUIDE } from '../constants/priceGuide';
+import { getSaleDeadline } from '../utils/saleDeadline';
 import TargetPriceModal from '../components/TargetPriceModal';
 import DefenseTrophyCard from '../components/DefenseTrophyCard';
 import StealthPanel from '../components/StealthPanel';
@@ -475,8 +476,7 @@ export default function GameDetailPage() {
 
     const traffic = getTrafficLight(game.priceVerdict, game);
     const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
-    const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : null;
-    const isClosingSoon = daysLeft !== null && daysLeft >= 0 && daysLeft <= 3;
+    const { daysLeft, isLastCall, isClosingSoon } = getSaleDeadline(game.saleEndDate);
     // 목록·연관 게임 카드의 displayScore와 같은 기준 (메타스코어 우선, 없으면 IGDB 평론가 점수)
     const platinumScore = game.mcMetaScore || game.igdbCriticScore;
     const isPlatinum = platinumScore >= 85 && game.discountRate >= 50;
@@ -627,9 +627,14 @@ export default function GameDetailPage() {
                             </div>
                             {isPlatinum && <div className="absolute inset-0 border-4 border-yellow-400/30 rounded-2xl pointer-events-none animate-pulse" />}
                             {isNew && <span className="absolute top-2.5 left-2.5 bg-green-500 text-white text-[11px] font-black px-2 py-0.5 rounded-md shadow-md z-10">NEW</span>}
-                            {isClosingSoon && (
+                            {isLastCall && (
                                 <span className="absolute top-2.5 right-2.5 bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md animate-pulse z-10 flex items-center gap-1">
                                     <Timer className="w-3 h-3" /> 막차!
+                                </span>
+                            )}
+                            {isClosingSoon && (
+                                <span className="absolute top-2.5 right-2.5 bg-red-600/90 text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-md z-10 flex items-center gap-1">
+                                    <Timer className="w-3 h-3" /> 마감 임박
                                 </span>
                             )}
                         </div>

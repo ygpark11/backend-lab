@@ -81,8 +81,8 @@ const HELP_CONTENT = {
         title: "마켓 레이더 (Market Radar)",
         content: (
             <ul className="text-sm text-secondary space-y-3">
-                <li><strong className="text-red-500">역대 최저가:</strong> 출시 이후 가장 저렴한 가격으로 할인 중인 게임들입니다.</li>
-                <li><strong className="text-orange-500">마감 임박:</strong> 할인 종료가 3일 이내로 남은 게임들입니다. 서두르세요!</li>
+                <li><strong className="text-red-500">역대 최저가:</strong> PS Tracker가 추적을 시작한 이후 가장 저렴한 가격으로 할인 중인 게임들입니다.</li>
+                <li><strong className="text-orange-500">마감 임박:</strong> 오늘 또는 내일 할인이 끝나는 게임들입니다. 서두르세요!</li>
                 <li><strong className="text-blue-500">신규 할인:</strong> 오늘 새롭게 할인을 시작한 따끈한 게임들입니다.</li>
             </ul>
         ),

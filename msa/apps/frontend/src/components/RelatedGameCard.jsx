@@ -2,7 +2,7 @@ import React from 'react';
 import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {Circle, Sparkles, Square, Timer, Triangle, X} from 'lucide-react';
-import {differenceInCalendarDays, parseISO} from 'date-fns';
+import { getSaleDeadline } from '../utils/saleDeadline';
 import PSGameImage from "./common/PSGameImage.jsx";
 
 export default function RelatedGameCard({ game }) {
@@ -10,8 +10,8 @@ export default function RelatedGameCard({ game }) {
     const location = useLocation();
 
     const isPlatinum = game.displayScore >= 85 && game.discountRate >= 50;
-    const daysLeft = game.saleEndDate ? differenceInCalendarDays(parseISO(game.saleEndDate), new Date()) : 99;
-    const isClosing = daysLeft >= 0 && daysLeft <= 3;
+    const { isLastCall, isClosingSoon } = getSaleDeadline(game.saleEndDate);
+    const isClosing = isLastCall || isClosingSoon;
 
     const renderSignalIcon = () => {
         switch (game.priceVerdict) {
