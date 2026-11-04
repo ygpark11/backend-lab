@@ -1182,6 +1182,9 @@ def run_batch_crawler_logic():
 
         # ── Phase 1 + Phase 2: sync 순차 수집 ─────────────────────────────
         targets = fetch_update_targets()
+        # Phase 2 제외 집합은 샤드 필터 전 전체 타겟으로 구성:
+        # 다른 샤드가 Phase 1에서 갱신할 게임을 이 샤드의 Phase 2에서 중복 수집하지 않도록 함
+        visited_urls.update(t['url'] for t in targets)
         if SHARD_TOTAL > 1:
             targets = [t for t in targets if zlib.crc32(t['url'].split('/')[-1].encode()) % SHARD_TOTAL == SHARD_ID]
             logger.info(f"[Shard {SHARD_ID}/{SHARD_TOTAL}] Phase 1 타겟 필터 완료: {len(targets)}개")
