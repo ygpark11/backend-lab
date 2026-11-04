@@ -8,6 +8,7 @@ Allow: /curation
 Allow: /insights
 Allow: /privacy
 Allow: /terms
+Allow: /guide
 
 # 프론트엔드 비공개 라우트 차단
 Disallow: /wishlist

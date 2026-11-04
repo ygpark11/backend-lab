@@ -1,5 +1,6 @@
 import React from 'react';
 import { Shield, Calendar, AlertCircle, TrendingDown, Clock, Sparkles, Flame } from 'lucide-react';
+import { DEFENSE_DESC_BY_KEY } from '../constants/priceGuide';
 
 // 트로피 메탈 계열 HEX 및 그라데이션 스타일
 const TIER_STYLE = {
@@ -10,7 +11,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-slate-100 to-slate-300 dark:from-slate-700 dark:to-slate-900 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-500',
         pill:        'bg-slate-200/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600',
         trophyLabel: 'Platinum',
-        desc:        '철벽 방어 (할인 빈도 극히 낮음)',
+        desc:        DEFENSE_DESC_BY_KEY['S'],
     },
     A: {
         color:       'text-amber-700 dark:text-[#FBBF24]',
@@ -19,7 +20,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-amber-100 to-amber-300 dark:from-amber-700 dark:to-amber-950 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-600',
         pill:        'bg-amber-100/80 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700',
         trophyLabel: 'Gold',
-        desc:        '강력 방어 (할인폭이 좁고 드묾)',
+        desc:        DEFENSE_DESC_BY_KEY['A'],
     },
     B: {
         color:       'text-slate-600 dark:text-[#94A3B8]',
@@ -28,7 +29,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600',
         pill:        'bg-slate-100/80 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700',
         trophyLabel: 'Silver',
-        desc:        '평균 방어 (정기 할인 주기 준수)',
+        desc:        DEFENSE_DESC_BY_KEY['B'],
     },
     C: {
         color:       'text-amber-800 dark:text-[#F97316]',
@@ -37,7 +38,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-800 dark:to-stone-900 text-orange-900 dark:text-orange-200 border-orange-300 dark:border-orange-700',
         pill:        'bg-orange-100/80 dark:bg-orange-950/40 text-orange-800 dark:text-orange-300 border-orange-300 dark:border-orange-800',
         trophyLabel: 'Bronze',
-        desc:        '방어 취약 (자주 깊게 할인됨)',
+        desc:        DEFENSE_DESC_BY_KEY['C'],
     },
     D: {
         color:       'text-red-700 dark:text-[#EF4444]',
@@ -46,7 +47,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900 dark:to-zinc-950 text-red-900 dark:text-red-200 border-red-300 dark:border-red-700',
         pill:        'bg-red-100/80 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-300 dark:border-red-800',
         trophyLabel: 'Iron',
-        desc:        '상시 세일 (정가 구매 비추천)',
+        desc:        DEFENSE_DESC_BY_KEY['D'],
     },
     N: {
         color:       'text-teal-700 dark:text-teal-400',
@@ -55,7 +56,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-teal-100 to-teal-200 dark:from-teal-800 dark:to-slate-900 text-teal-900 dark:text-teal-200 border-teal-300 dark:border-teal-600',
         pill:        'bg-teal-100/80 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300 border-teal-300 dark:border-teal-800',
         trophyLabel: '신작',
-        desc:        '출시 초기 (할인 방어력 관측 중)',
+        desc:        DEFENSE_DESC_BY_KEY['N'],
     },
     관측: {
         color:       'text-indigo-700 dark:text-indigo-400',
@@ -64,7 +65,7 @@ const TIER_STYLE = {
         badge:       'bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-800 dark:to-slate-900 text-indigo-900 dark:text-indigo-200 border-indigo-300 dark:border-indigo-600',
         pill:        'bg-indigo-100/80 dark:bg-indigo-950/40 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800',
         trophyLabel: '관측 중',
-        desc:        '할인 패턴 데이터 수집 중',
+        desc:        DEFENSE_DESC_BY_KEY['관측'],
     },
     default: {
         color:       'text-secondary',

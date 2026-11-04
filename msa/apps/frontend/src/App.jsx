@@ -21,6 +21,7 @@ import AdminPage from './pages/AdminPage';
 import ArcadePage from './pages/ArcadePage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import GuidePage from './pages/GuidePage';
 
 function AppRoutes() {
     const { isAuthenticated } = useAuth();
@@ -53,6 +54,7 @@ function AppRoutes() {
                     <Route path="/monthly-games" element={<MonthlyGamesArchivePage />} />
                     <Route path="/privacy" element={<PrivacyPage />} />
                     <Route path="/terms" element={<TermsPage />} />
+                    <Route path="/guide" element={<GuidePage />} />
                     <Route
                         path="/wishlist"
                         element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}

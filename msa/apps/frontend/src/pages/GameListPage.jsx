@@ -45,6 +45,7 @@ import PSLoader from '../components/PSLoader';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
 import TrendingHeroCarousel from '../components/TrendingHeroCarousel';
+import ServiceIntro from '../components/ServiceIntro';
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
@@ -979,7 +980,7 @@ const GameListPage = () => {
     
     return (
         <div className="min-h-screen text-primary relative">
-            <SEO title="게임 목록" description="플레이스테이션 게임 실시간 최저가 확인 및 할인 정보" url="https://ps-signal.com/games" />
+            <SEO title="게임 목록" description="PS Store 게임 가격을 매일 추적해 역대 최저가와 비교하고, 지금 사도 되는지 가격 신호등으로 알려드립니다." url="https://ps-signal.com/games" />
 
             {/* 오로라 배경 앰비언트 */}
             <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-base">
@@ -999,6 +1000,8 @@ const GameListPage = () => {
 
             {/* 메인 컨텐츠 */}
             <main className="pt-24 md:pt-28 px-4 sm:px-6 md:px-10 pb-28 max-w-7xl mx-auto relative z-10">
+
+                {!isFilterActive && <ServiceIntro />}
 
                 {/* 장르 서핑 배너 */}
                 {filter.genre && (

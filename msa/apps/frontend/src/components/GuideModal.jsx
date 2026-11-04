@@ -1,19 +1,19 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
+    ArrowRight,
     Bell,
-    Circle,
     Gamepad2,
     Info,
     Pickaxe,
     Rocket,
     Siren,
     Sparkles,
-    Square,
     Tag,
     Timer,
-    Triangle,
     X
 } from 'lucide-react';
+import { VERDICT_GUIDE } from '../constants/priceGuide';
 
 const GuideModal = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
@@ -84,23 +84,16 @@ const GuideModal = ({ isOpen, onClose }) => {
                             </h3>
                             <p className="text-xs text-muted mb-3">PS 컨트롤러 버튼 모양으로 현재 가격 상태를 알려드려요.</p>
                             <ul className="text-sm text-secondary space-y-2.5">
-                                <li className="flex items-center gap-2">
-                                    <Circle className="w-4 h-4 text-green-600 dark:text-green-500 fill-current" />
-                                    <span><strong className="text-green-600 dark:text-green-500">BUY NOW:</strong> 역대 최저가 근접! (강력 추천)</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Triangle className="w-4 h-4 text-yellow-600 dark:text-yellow-500 fill-current" />
-                                    <span><strong className="text-yellow-600 dark:text-yellow-500">GOOD OFFER:</strong> 꽤 괜찮은 타협점입니다.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <X className="w-4 h-4 text-red-600 dark:text-red-500 stroke-[3px]" />
-                                    <span><strong className="text-red-600 dark:text-red-500">WAIT:</strong> 아직 비싸요. 방어선이 무너지길 기다리세요.</span>
-                                </li>
-                                <li className="flex items-center gap-2">
-                                    <Square className="w-4 h-4 text-blue-700 dark:text-ps-blue fill-current" />
-                                    <span><strong className="text-blue-700 dark:text-ps-blue">TRACKING:</strong> 아직 할인 데이터를 스캔 중입니다.</span>
-                                </li>
+                                {VERDICT_GUIDE.map(({ key, Icon, label, short, color, iconClass }) => (
+                                    <li key={key} className="flex items-center gap-2">
+                                        <Icon className={`w-4 h-4 shrink-0 ${color} ${iconClass}`} />
+                                        <span><strong className={color}>{label}:</strong> {short}</span>
+                                    </li>
+                                ))}
                             </ul>
+                            <Link to="/guide" onClick={onClose} className="inline-flex items-center gap-1 mt-3 text-xs font-bold text-ps-blue underline underline-offset-2">
+                                판단 기준 자세히 보기 <ArrowRight className="w-3 h-3" />
+                            </Link>
                         </div>
                     </div>
 
@@ -156,7 +149,7 @@ const GuideModal = ({ isOpen, onClose }) => {
                             </h3>
                             <ul className="text-sm text-secondary space-y-3 list-disc list-inside ml-1 marker:text-primary">
                                 <li><strong>타겟 프라이스 락온:</strong> 게임을 찜할 때 <span className="text-primary">원하는 목표가</span>를 설정하면 똑똑하게 알림을 보내드려요.</li>
-                                <li><strong>방어력 스카우터:</strong> 할인 방어력 등급(S급 철벽 ~ C급 솜방패)을 보고 존버할지 말지 결정하세요!</li>
+                                <li><strong>방어력 스카우터:</strong> 할인 방어력 등급(S급 철벽 ~ D급 낙하산)으로 이 게임이 얼마나 깊게 할인되는지 보고 존버할지 결정하세요!</li>
                                 <li><strong>AI 감성 태그:</strong> 뻔한 장르 분류 대신 <span className="text-primary">"타격감 좋은", "힐링되는"</span> 같은 AI 분석 태그로 내 취향을 저격해 보세요.</li>
                                 <li>상세 화면 곳곳에 있는 <Info className="w-4 h-4 inline-block text-muted mx-0.5" /> <strong className="text-primary">도움말 아이콘</strong>을 누르면 자세한 설명이 나와요!</li>
                             </ul>

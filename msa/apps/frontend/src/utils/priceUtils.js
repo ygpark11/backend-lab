@@ -20,8 +20,21 @@ export const calculateCombatPower = (metaScore, currentPrice) => {
 };
 
 /**
+ * 할인 방어력의 다음 예상 할인 시기를 한 문장으로 변환 (기다릴지 판단하는 근거).
+ * 예상일이 지났으면 할인 주기 임박 문구, 예상 불가면 빈 문자열.
+ */
+const getNextSaleSentence = (defenseInfo) => {
+    const estimate = defenseInfo?.nextSaleEstimate;
+    if (!estimate) return '';
+    const today = new Date().toISOString().slice(0, 10);
+    if (estimate < today) return ' 할인 주기상 곧 할인될 수 있어요.';
+    const [year, month] = estimate.split('-');
+    return ` 다음 할인은 ${year}년 ${parseInt(month, 10)}월쯤으로 예상돼요.`;
+};
+
+/**
  * 🚦 가격 신호등 판정 (Traffic Light)
-ㅛ * verdict 타입과 game 데이터를 함께 받아 케이스별 세분화된 메시지를 반환합니다.
+ * verdict 타입과 game 데이터를 함께 받아 케이스별 세분화된 메시지를 반환합니다.
  *
  * @param {string} verdict - PriceVerdict enum 값 (BUY_NOW | GOOD_OFFER | WAIT | TRACKING)
  * @param {object} game    - GameDetailResponse 데이터 (currentPrice, originalPrice, lowestPrice, priceHistory)
@@ -33,8 +46,10 @@ export const getTrafficLight = (verdict, game = {}) => {
         lowestPrice = 0,
         priceHistory = [],
         isAllTimeLowNew = false,
+        defenseInfo = null,
     } = game;
     const historyCount = priceHistory.length;
+    const nextSale = getNextSaleSentence(defenseInfo);
 
     switch (verdict) {
         case 'BUY_NOW':
@@ -56,7 +71,7 @@ export const getTrafficLight = (verdict, game = {}) => {
             return {
                 color: 'bg-yellow-400',
                 text: '나쁘지 않아요 (평균 이하)',
-                desc: `역대 최저가보다 ${diffPercent}% 높지만 괜찮은 가격이에요!`
+                desc: `역대 최저가보다 ${diffPercent}% 높지만 괜찮은 가격이에요.${nextSale}`
             };
         }
 
@@ -74,14 +89,14 @@ export const getTrafficLight = (verdict, game = {}) => {
                 return {
                     color: 'bg-red-500',
                     text: '잠깐! 비싸요 (평균 이상)',
-                    desc: `아쉬운 할인율! 최저가(${safeLowest.toLocaleString()}원) 대비 비싸요.`
+                    desc: `아쉬운 할인율! 최저가(${safeLowest.toLocaleString()}원) 대비 비싸요.${nextSale}`
                 };
             }
             // 정가이고 이력 2건 이상 → 할인 이력은 있지만 지금은 정가
             return {
                 color: 'bg-red-500',
                 text: '잠깐! 비싸요 (평균 이상)',
-                desc: '지금 사면 나중에 배가 아플 수 있습니다.'
+                desc: `지금 사면 나중에 배가 아플 수 있습니다.${nextSale}`
             };
         }
 

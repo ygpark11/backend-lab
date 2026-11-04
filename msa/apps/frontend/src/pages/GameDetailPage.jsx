@@ -7,6 +7,7 @@ import PriceChart from '../components/PriceChart';
 import RelatedGameCard from '../components/RelatedGameCard';
 import { getGenreBadgeStyle } from '../utils/uiUtils';
 import { getTrafficLight } from '../utils/priceUtils';
+import { VERDICT_GUIDE } from '../constants/priceGuide';
 import TargetPriceModal from '../components/TargetPriceModal';
 import DefenseTrophyCard from '../components/DefenseTrophyCard';
 import StealthPanel from '../components/StealthPanel';
@@ -64,6 +65,23 @@ import { useAuth } from '../contexts/AuthContext';
 import { pushRecentGame } from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
 import GameLongformCard from '../components/GameLongformCard';
+
+// ── 검색 결과용 meta description (가격 판단 근거 요약) ─────────────────
+const UNRATED_DEFENSE_TIERS = ['등급 외', '분석 불가'];
+
+function buildSeoDescription(game) {
+    const parts = [];
+    const price = game.currentPrice > 0 ? `현재가 ${game.currentPrice.toLocaleString()}원` : '가격 정보 수집 중';
+    parts.push(`${cleanTitleForDesc(game.title)} ${price}${game.discountRate > 0 ? ` (${game.discountRate}% 할인)` : ''}`);
+    const verdict = VERDICT_GUIDE.find(v => v.key === game.priceVerdict);
+    if (verdict) parts.push(`가격 신호등 ${verdict.label}: ${verdict.name}`);
+    if (game.lowestPrice > 0) parts.push(`역대 최저가 ${game.lowestPrice.toLocaleString()}원`);
+    const tier = game.defenseInfo?.tier;
+    if (tier && !UNRATED_DEFENSE_TIERS.includes(tier)) parts.push(`할인 방어력 ${tier}`);
+    const score = game.mcMetaScore || game.igdbCriticScore;
+    if (score) parts.push(`메타스코어 ${score}점`);
+    return parts.join(' · ');
+}
 
 // ── Shorts 유튜브 설명 자동생성 ──────────────────────────────────────────
 function cleanTitleForDesc(title) {
@@ -1472,7 +1490,7 @@ export default function GameDetailPage() {
                     className="w-full h-full md:h-auto md:max-h-[92vh] max-w-6xl overflow-y-auto bg-base md:rounded-3xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong animate-in fade-in zoom-in-[98%] duration-200 ease-out"
                     onClick={e => e.stopPropagation()}
                 >
-                    <SEO title={game.title} description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원`} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
+                    <SEO title={game.title} description={buildSeoDescription(game)} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
                     <button
                         onClick={handleClose}
                         className="absolute top-4 right-4 z-[60] p-2 bg-surface hover:bg-red-500/20 rounded-full text-secondary hover:text-red-400 transition-colors border border-divider backdrop-blur-md"
@@ -1488,7 +1506,7 @@ export default function GameDetailPage() {
 
     return (
         <div className="min-h-screen bg-base text-primary relative overflow-hidden">
-            <SEO title={game.title} description={`${game.title} 현재 가격: ${game.currentPrice.toLocaleString()}원`} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
+            <SEO title={game.title} description={buildSeoDescription(game)} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
             <BackgroundHero imageUrl={game.imageUrl} />
             {pageContent}
         </div>
