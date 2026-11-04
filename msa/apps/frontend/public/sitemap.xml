@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <!-- 고정 페이지 (프론트엔드 정적 파일) -->
+    <sitemap>
+        <loc>https://ps-signal.com/sitemap-pages.xml</loc>
+    </sitemap>
+    <!-- 게임 상세 페이지 (catalog-service가 DB 기준으로 생성) -->
+    <sitemap>
+        <loc>https://ps-signal.com/sitemap-games.xml</loc>
+    </sitemap>
+</sitemapindex>
