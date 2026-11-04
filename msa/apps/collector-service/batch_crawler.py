@@ -799,45 +799,90 @@ def extract_gamehub_image_url(json_text: str) -> str:
         )
     return m.group(1).split("?")[0] if m else ""
 
-def mine_english_title(html_content):
+_INVARIANT_NAME_KEY = re.compile(r'"invariantName"\s*:\s*')
+_INVARIANT_NAME_KEY_ESCAPED = re.compile(r'\\"invariantName\\"\s*:\s*')
+_JSON_DECODER = json.JSONDecoder()
+
+def _find_double_serialized_value_end(text: str, start: int) -> int:
+    """이중 직렬화 문자열 값(\\"...\\")의 닫는 \\" 위치를 반환. 못 찾으면 -1.
+
+    바깥 레벨 이스케이프 토큰을 한 겹 해석하면서, 안쪽 문자열 기준으로
+    이스케이프되지 않은 따옴표가 나오는 지점을 끝으로 판단한다.
+    """
+    i, n = start, len(text)
+    inner_escape = False
+    while i < n:
+        token_start = i
+        if text[i] == '\\' and i + 1 < n:
+            nxt = text[i + 1]
+            if nxt == 'u':
+                decoded = text[i:i + 6]  # \uXXXX는 따옴표/백슬래시가 아니므로 내용 무관
+                i += 6
+            else:
+                decoded = nxt
+                i += 2
+        else:
+            decoded = text[i]
+            i += 1
+
+        if inner_escape:
+            inner_escape = False
+        elif decoded == '\\':
+            inner_escape = True
+        elif decoded == '"':
+            return token_start
+    return -1
+
+def _decode_invariant_name(text: str) -> str | None:
+    # 1) 일반 JSON: "invariantName": "..." → JSON 문자열 규칙 그대로 디코딩
+    m = _INVARIANT_NAME_KEY.search(text)
+    if m:
+        try:
+            value, _ = _JSON_DECODER.raw_decode(text, m.end())
+            if isinstance(value, str):
+                return value
+        except ValueError as e:
+            logger.warning(f"[englishTitle] 일반 JSON 디코딩 실패: {e}")
+
+    # 2) 이중 직렬화(__NEXT_DATA__ 내부 JSON 문자열): \"invariantName\": \"...\"
+    #    바깥 레벨을 한 번, 안쪽 레벨을 한 번 디코딩
+    m = _INVARIANT_NAME_KEY_ESCAPED.search(text)
+    if m and text.startswith('\\"', m.end()):
+        value_start = m.end() + 2
+        value_end = _find_double_serialized_value_end(text, value_start)
+        if value_end != -1:
+            try:
+                inner_literal = json.loads('"' + text[value_start:value_end] + '"')
+                return json.loads('"' + inner_literal + '"')
+            except ValueError as e:
+                logger.warning(f"[englishTitle] 이중 직렬화 디코딩 실패: {e}")
+    return None
+
+def mine_english_title(html_content: str) -> str | None:
+    """__NEXT_DATA__ 텍스트에서 invariantName(영문 제목)을 추출해 정제한다.
+
+    문자열은 json 모듈로 디코딩한다. 과거의 encode('utf-8').decode('unicode_escape') 방식은
+    비ASCII 문자를 latin-1로 재해석해 é→Ã©, –→â\\x80\\x93 같은 깨짐을 만들었음.
+    """
     try:
-        # 1. 정규식 매칭 실패 시 즉시 종료
-        # __NEXT_DATA__ 기반 추출 시 invariantName이 이중 직렬화된 JSON 안에 있어 \"로 이스케이프됨
-        # → 일반 따옴표로 먼저 시도, 실패 시 이스케이프 따옴표로 재시도
-        match = re.search(r'"invariantName"\s*:\s*"([^"]+)"', html_content)
-        if not match:
-            match = re.search(r'\\"invariantName\\"\s*:\s*\\"([^\\"]+)\\"', html_content)
-        if not match:
+        raw_title = _decode_invariant_name(html_content)
+        if not raw_title:
             return None
 
-        raw_title = match.group(1)
-
-        # 2. 유니코드 이스케이프 복구 (예: \u0026 -> &)
-        try:
-            raw_title = raw_title.encode('utf-8').decode('unicode_escape')
-        except Exception:
-            pass # 디코딩 실패 시 원본 유지
-
-        # 3. 악성 인코딩(Mojibake) 및 스마트 따옴표 치환
-        raw_title = raw_title.replace("\u0080\u0099", "'").replace("â\u0080\u0099", "'")
+        # 스마트 따옴표 → ASCII 따옴표 (Metacritic/HLTB 검색 일관성)
         raw_title = raw_title.replace("’", "'").replace("‘", "'")
+        raw_title = raw_title.replace("“", '"').replace("”", '"')
 
-        # 특정 게임(YEAH! YOU WANT...) 백슬래시 찌꺼기 및 제어 문자 제거
-        raw_title = raw_title.replace("\u0084", " ")
-        raw_title = raw_title.replace("YEAH! YOU WANT \\", "")
-        raw_title = re.sub(r'[Â„€“”]', ' ', raw_title)
-
-        # 4. 검색에 방해되는 상표권 기호(™®©) 제거 및 숨은 탭(\t) 치환
-        raw_title = re.sub(r'[™®©â¢]', '', raw_title)
+        # 검색에 방해되는 상표권 기호(™®©) 제거, 전각 &·탭 치환
+        raw_title = re.sub(r'[™®©]', '', raw_title)
         raw_title = raw_title.replace("＆", "&").replace("\t", " ")
 
-        # 5. 다중 공백을 단일 공백으로 압축 후 양끝 공백 제거
-        cleaned_title = re.sub(r'\s+', ' ', raw_title).strip()
+        # 다중 공백을 단일 공백으로 압축 후 양끝 공백 제거
+        return re.sub(r'\s+', ' ', raw_title).strip() or None
 
-        return cleaned_title
-
-    except Exception:
+    except Exception as e:
         # 예상치 못한 에러 발생 시 크롤러가 죽지 않도록 방어
+        logger.warning(f"[englishTitle] 추출 실패: {e}")
         return None
 
 def crawl_detail_and_send(page, target_url, verbose=False):
