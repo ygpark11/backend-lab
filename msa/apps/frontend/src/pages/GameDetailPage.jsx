@@ -1160,7 +1160,7 @@ export default function GameDetailPage() {
                         <DetailActionButtons game={game} onWishlistClick={onWishlistClick} onTargetClick={() => setIsTargetModalOpen(true)} onShare={handleShare} />
 
                         {/* 3. 할인 방어력 & 플래티넘 트로피 정보 (위치 상향 조정 완료) */}
-                        <div className="hidden lg:block">
+                        <div className="hidden lg:block motion-safe:animate-fadeIn">
                             <DefenseTrophyCard defenseInfo={game.defenseInfo} />
                         </div>
                     </aside>
@@ -1176,530 +1176,533 @@ export default function GameDetailPage() {
                         {/* 2. 대형 가격 신호등 판정 히어로 패널 (Price Hero & Value Tracker) */}
                         <VerdictHeroCard game={game} />
 
-                        {/* 모바일 전용 트로피 방어 난이도 카드 */}
-                        <div className="lg:hidden">
-                            <DefenseTrophyCard defenseInfo={game.defenseInfo} compact />
-                        </div>
+                        {/* 상세 응답으로 채워지는 영역: 미리보기에서 넘어올 때 툭 나타나지 않도록 짧게 서서히 표시 (움직임 줄이기 설정 시 생략) */}
+                        <div className="flex flex-col gap-5 min-w-0 motion-safe:animate-fadeIn">
+                            {/* 모바일 전용 트로피 방어 난이도 카드 */}
+                            <div className="lg:hidden">
+                                <DefenseTrophyCard defenseInfo={game.defenseInfo} compact />
+                            </div>
 
-                        {/* 3. 3-구역 Bento Grid (모바일: 평점+플레이타임 2열 나란히 + 하단 스펙 / PC: 3열 나란히) */}
-                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                            {/* 3. 3-구역 Bento Grid (모바일: 평점+플레이타임 2열 나란히 + 하단 스펙 / PC: 3열 나란히) */}
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
 
-                            {/* Bento 1: 평점 카드 (메타크리틱 시그니처 듀얼 뱃지 스타일) */}
-                            <div className="col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md relative overflow-hidden">
-                                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
-                                    <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1">
-                                        <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-                                        <span>{reviewSource ? (reviewSource === 'METACRITIC' ? '메타크리틱 평점' : 'IGDB 평점') : '평가 지표'}</span>
-                                    </span>
-                                    {reviewSource && (
-                                        <span className="bg-black text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded border border-white/20">
-                                            {reviewSource}
+                                {/* Bento 1: 평점 카드 (메타크리틱 시그니처 듀얼 뱃지 스타일) */}
+                                <div className="col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md relative overflow-hidden">
+                                    <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+                                        <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1">
+                                            <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
+                                            <span>{reviewSource ? (reviewSource === 'METACRITIC' ? '메타크리틱 평점' : 'IGDB 평점') : '평가 지표'}</span>
                                         </span>
+                                        {reviewSource && (
+                                            <span className="bg-black text-white font-black text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded border border-white/20">
+                                                {reviewSource}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {hasAnyReview ? (
+                                        <div className="flex flex-col gap-2 sm:gap-2.5 my-auto">
+                                            {/* 1. 메타스코어 (전문가 - 사각 뱃지) */}
+                                            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
+                                                <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(mainScore, 100)}`}>
+                                                    {mainScore ?? '-'}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
+                                                        {reviewSource === 'METACRITIC' ? '메타스코어' : '전문가 평점'}
+                                                    </span>
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        {(() => {
+                                                            const verdict = getMetacriticVerdict(mainScore, 100);
+                                                            return (
+                                                                <>
+                                                                    {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
+                                                                    {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
+                                                                    {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                                                                    <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
+                                                                        {verdict.label}
+                                                                    </span>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* 2. 유저 스코어 (원형 뱃지) */}
+                                            <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
+                                                <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(userScore, 10)}`}>
+                                                    {userScore !== null ? Number(userScore).toFixed(1) : '-'}
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
+                                                        유저 스코어
+                                                    </span>
+                                                    <div className="flex items-center gap-1 mt-0.5">
+                                                        {(() => {
+                                                            const verdict = getMetacriticVerdict(userScore, 10);
+                                                            return (
+                                                                <>
+                                                                    {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
+                                                                    {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
+                                                                    {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                                                                    <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
+                                                                        {verdict.label}
+                                                                    </span>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="my-auto text-center py-4">
+                                            <p className="text-xs text-secondary font-bold">등록된 공식 평점이 없습니다.</p>
+                                        </div>
                                     )}
                                 </div>
 
-                                {hasAnyReview ? (
-                                    <div className="flex flex-col gap-2 sm:gap-2.5 my-auto">
-                                        {/* 1. 메타스코어 (전문가 - 사각 뱃지) */}
-                                        <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
-                                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(mainScore, 100)}`}>
-                                                {mainScore ?? '-'}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
-                                                    {reviewSource === 'METACRITIC' ? '메타스코어' : '전문가 평점'}
-                                                </span>
-                                                <div className="flex items-center gap-1 mt-0.5">
-                                                    {(() => {
-                                                        const verdict = getMetacriticVerdict(mainScore, 100);
-                                                        return (
-                                                            <>
-                                                                {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
-                                                                {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
-                                                                {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                                                                <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
-                                                                    {verdict.label}
-                                                                </span>
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 2. 유저 스코어 (원형 뱃지) */}
-                                        <div className="flex items-center gap-2.5 p-2 sm:p-2.5 rounded-xl bg-base/80 border border-divider hover:border-divider-strong transition-colors">
-                                            <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-sm sm:text-lg font-black shrink-0 ${getMetacriticBadgeColor(userScore, 10)}`}>
-                                                {userScore !== null ? Number(userScore).toFixed(1) : '-'}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <span className="block text-[11px] font-extrabold text-secondary dark:text-zinc-400">
-                                                    유저 스코어
-                                                </span>
-                                                <div className="flex items-center gap-1 mt-0.5">
-                                                    {(() => {
-                                                        const verdict = getMetacriticVerdict(userScore, 10);
-                                                        return (
-                                                            <>
-                                                                {verdict.icon === 'flame' && <Flame className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-amber-400" />}
-                                                                {verdict.icon === 'check' && <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />}
-                                                                {verdict.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                                                                <span className={`text-xs font-bold whitespace-nowrap ${verdict.color}`}>
-                                                                    {verdict.label}
-                                                                </span>
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="my-auto text-center py-4">
-                                        <p className="text-xs text-secondary font-bold">등록된 공식 평점이 없습니다.</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Bento 2: 플레이타임 Radar 카드 (모바일: 우측 1열 / PC: 1열) */}
-                            <div className="col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md relative overflow-hidden">
-                                <div className="flex items-center justify-between mb-2 sm:mb-3">
-                                    <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1">
-                                        <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue" /> 플레이타임
-                                    </span>
-                                    <span className="text-[9px] sm:text-[10px] font-black text-secondary dark:text-zinc-300 bg-base px-1.5 py-0.5 rounded border border-divider">
-                                        HLTB
-                                    </span>
-                                </div>
-
-                                {hasPlayTime ? (
-                                    <div className="space-y-2 sm:space-y-3 my-auto">
-                                        <div>
-                                            <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
-                                                <span className="text-secondary dark:text-zinc-300 truncate">메인 스토리</span>
-                                                <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbMainStory)}</span>
-                                            </div>
-                                            <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500"
-                                                    style={{ width: `${Math.round(((game.hltbMainStory || 0) / maxPlayTime) * 100)}%` }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
-                                                <span className="text-secondary dark:text-zinc-300 truncate">메인 + 엑스트라</span>
-                                                <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbMainExtra)}</span>
-                                            </div>
-                                            <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 rounded-full transition-all duration-500"
-                                                    style={{ width: `${Math.round(((game.hltbMainExtra || 0) / maxPlayTime) * 100)}%` }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
-                                                <span className="text-secondary dark:text-zinc-300 truncate">완전 정복 (100%)</span>
-                                                <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbCompletionist)}</span>
-                                            </div>
-                                            <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
-                                                <div
-                                                    className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
-                                                    style={{ width: `${Math.round(((game.hltbCompletionist || 0) / maxPlayTime) * 100)}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="my-auto text-center py-4">
-                                        <p className="text-xs text-secondary font-bold">플레이타임 집계 중</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Bento 3: 플랫폼 & 하드웨어 스펙 (모바일: 2열 전체 차지(col-span-2) / PC: 1열) */}
-                            <div className="col-span-2 lg:col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md">
-                                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
-                                    <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1.5">
-                                        <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue" /> 플랫폼 & 스펙
-                                    </span>
-                                </div>
-
-                                <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-2.5 my-auto">
-                                    {/* 1. 지원 기종 */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
-                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
-                                            <Tv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue shrink-0" />
-                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">지원 기종</span>
-                                        </div>
-                                        <span className="text-xs sm:text-xs font-black text-primary px-1.5 py-0.5 rounded bg-surface/80 border border-divider truncate max-w-full">
-                                            {game.platforms && game.platforms.length > 0 ? game.platforms.join(' / ') : 'PS5 / PS4'}
+                                {/* Bento 2: 플레이타임 Radar 카드 (모바일: 우측 1열 / PC: 1열) */}
+                                <div className="col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md relative overflow-hidden">
+                                    <div className="flex items-center justify-between mb-2 sm:mb-3">
+                                        <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1">
+                                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue" /> 플레이타임
+                                        </span>
+                                        <span className="text-[9px] sm:text-[10px] font-black text-secondary dark:text-zinc-300 bg-base px-1.5 py-0.5 rounded border border-divider">
+                                            HLTB
                                         </span>
                                     </div>
 
-                                    {/* 2. PS5 Pro 지원/미지원 */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
-                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
-                                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 dark:text-zinc-200 shrink-0" />
-                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">PS5 Pro</span>
-                                        </div>
-                                        {game.isPs5ProEnhanced ? (
-                                            <span className="text-[11px] sm:text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-200/90 dark:bg-zinc-700/90 px-1.5 sm:px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-500 shadow-sm whitespace-nowrap flex items-center gap-1">
-                                                <Sparkles className="w-3 h-3 text-zinc-600 dark:text-zinc-300" /> Pro 향상
-                                            </span>
-                                        ) : (
-                                            <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
-                                                기본 구동
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* 3. 한국어 지원 (원본 제목 기반 판정) */}
-                                    <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
-                                        <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
-                                            <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
-                                            <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">한국어</span>
-                                        </div>
-                                        {isKorean ? (
-                                            <span className="text-[11px] sm:text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded shadow-sm whitespace-nowrap flex items-center gap-1">
-                                                <Check className="w-3 h-3" /> 공식 지원
-                                            </span>
-                                        ) : (
-                                            <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
-                                                미지원 (외국어)
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 4. 스카우터 주시자 패널 (StealthPanel 레이더 애니메이션) */}
-                        {game.scouterTotalWatchers > 0 && (
-                            <StealthPanel
-                                watchersCount={game.scouterTotalWatchers}
-                                averagePrice={game.scouterAverageTargetPrice}
-                                isLiked={isLiked}
-                            />
-                        )}
-
-                        {/* 5. 평가 엇갈림 주의 경고 (Discrepancy Warning) */}
-                        {isDiscrepancyWarning && (
-                            <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 px-5 py-4 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-fadeIn">
-                                <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 animate-pulse" />
-                                <div>
-                                    <span className="block text-red-400 font-black text-sm leading-tight mb-1">
-                                        요주의 게임! (평가 엇갈림 주의)
-                                    </span>
-                                    <span className="block text-red-300 text-xs font-medium leading-relaxed">
-                                        전문가(Critic) 점수와 실플레이 유저(User) 평점이 크게 차이나고 있습니다. 구매 전 상세 플레이 리뷰를 꼭 확인하세요.
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 6. PS Plus 카탈로그 포함 골든 배너 */}
-                        {game.inCatalog && (
-                            <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border border-yellow-500/30 flex items-center gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)]">
-                                <div className="bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30 shrink-0">
-                                    <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
-                                </div>
-                                <div>
-                                    <h4 className="text-yellow-400 font-black text-sm sm:text-base mb-0.5">
-                                        PS Plus 스페셜 / 디럭스 게임 카탈로그 포함
-                                    </h4>
-                                    <p className="text-secondary dark:text-zinc-300 text-xs font-medium">
-                                        PS Plus 구독 회원은 추가 결제 없이 지금 바로 무료로 다운로드 및 플레이할 수 있습니다.
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 7. 가격 변동 추이 차트 */}
-                        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden">
-                            <div className="flex items-center justify-between mb-3.5 sm:mb-4">
-                                <h3 className="text-base font-black text-primary flex items-center gap-2">
-                                    <TrendingUp className="w-5 h-5 text-ps-blue" />
-                                    <span>가격 변동 추이</span>
-                                </h3>
-                            </div>
-                            {/* 기간 탭 행은 게임별 라벨 길이에 따라 줄바꿈 여부가 달라 최소 높이로 자리 고정 */}
-                            <div className="relative min-h-[317px] md:min-h-[335px]">
-                                <Suspense fallback={<PriceChartSkeleton />}>
-                                    <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
-                                </Suspense>
-                            </div>
-                        </div>
-
-                        {/* 8. 현재 에디션 구성품 & 에디션 비교 선택 */}
-                        {myEditionContents.length > 0 && (
-                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md">
-                                <h3 className="text-sm font-black text-primary mb-3 flex items-center gap-1.5">
-                                    <Gem className="w-4 h-4 text-ps-blue" /> 이 에디션에 포함된 항목
-                                </h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    {myEditionContents.map((item, idx) => (
-                                        <div key={idx} className="flex items-center gap-2.5 bg-base/80 border border-divider rounded-xl px-3.5 py-2.5">
-                                            <Gem className="w-3.5 h-3.5 text-ps-blue shrink-0" />
-                                            <span className="text-xs font-bold text-secondary dark:text-zinc-200 break-keep leading-tight">{item}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* 에디션 비교 패널 (상위판/하위판 가격 역전 탐지 100% 보존) */}
-                        {game.familyGames && game.familyGames.length > 1 && (
-                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-6 shadow-md">
-                                <h3 className="text-base font-black text-primary mb-4 flex items-center gap-2">
-                                    <Layers className="w-4 h-4 text-ps-blue" /> 에디션 비교 및 선택
-                                </h3>
-                                <div className="space-y-3">
-                                    {game.familyGames.map((edition) => {
-                                        const isCurrent = edition.id === game.id;
-                                        const priceGap = edition.currentPrice - game.currentPrice;
-                                        const isHigherTier = edition.originalPrice > game.originalPrice;
-                                        const isLowerTier = edition.originalPrice < game.originalPrice;
-                                        const hasContents = edition.editionContents?.length > 0;
-
-                                        return (
-                                            <button
-                                                key={edition.id}
-                                                onClick={() => navigate(`/games/${edition.id}`, { replace: true, state: location.state })}
-                                                className={`w-full flex flex-col p-4 rounded-xl border transition-all text-left ${
-                                                    isCurrent
-                                                        ? 'bg-ps-blue/15 border-ps-blue ring-2 ring-ps-blue/40 shadow-sm cursor-default'
-                                                        : 'bg-base/80 border-divider hover:border-divider-strong hover:bg-surface-hover active:scale-[0.99] cursor-pointer'
-                                                }`}
-                                                disabled={isCurrent}
-                                            >
-                                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 w-full">
-                                                    <div className="flex-1 min-w-0">
-                                                        {isCurrent && (
-                                                            <span className="inline-block text-[9px] font-black text-white bg-ps-blue px-2 py-0.5 rounded mb-1 shadow-sm">
-                                                                CURRENT EDITION
-                                                            </span>
-                                                        )}
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
-                                                            <p className={`text-sm font-bold truncate flex-1 min-w-0 ${isCurrent ? 'text-primary' : 'text-secondary dark:text-zinc-200'}`}>
-                                                                {edition.name}
-                                                            </p>
-                                                            {!isCurrent && isHigherTier && hasContents && (
-                                                                <span className="shrink-0 text-[10px] font-black text-ps-blue bg-ps-blue/15 border border-ps-blue/30 px-2 py-0.5 rounded-full">
-                                                                    +{edition.editionContents.length}개 추가
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-2 flex-wrap justify-end sm:shrink-0">
-                                                        {/* 상위판인데 더 저렴한 가격 역전 알림 */}
-                                                        {!isCurrent && isHigherTier && priceGap < 0 && (
-                                                            <span className="flex items-center gap-1 text-[11px] font-black text-green-400 bg-green-500/15 border border-green-500/40 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                                                                <Sparkles className="w-3.5 h-3.5 text-green-400" /> 상위판이 더 저렴!
-                                                            </span>
-                                                        )}
-                                                        {/* 하위판인데 더 비싼 경우 */}
-                                                        {!isCurrent && isLowerTier && priceGap > 0 && (
-                                                            <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-lg">
-                                                                <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> 하위판인데 더 비쌈
-                                                            </span>
-                                                        )}
-                                                        {/* 일반 업그레이드 차액 */}
-                                                        {!isCurrent && isHigherTier && priceGap >= 0 && (
-                                                            <span className="text-[11px] font-bold text-secondary dark:text-zinc-300 bg-base border border-divider px-2 py-0.5 rounded-lg">
-                                                                +{priceGap.toLocaleString()}원 업그레이드
-                                                            </span>
-                                                        )}
-                                                        {/* 하위판 절약 차액 */}
-                                                        {!isCurrent && isLowerTier && priceGap < 0 && (
-                                                            <span className="flex items-center gap-1 text-[11px] font-bold text-blue-400 bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 rounded-lg">
-                                                                <TrendingDown className="w-3.5 h-3.5 text-blue-400" /> {Math.abs(priceGap).toLocaleString()}원 절약
-                                                            </span>
-                                                        )}
-                                                        {edition.discountRate > 0 && (
-                                                            <span className="text-xs font-black text-green-400 bg-green-500/15 border border-green-500/30 px-2 py-0.5 rounded-md">
-                                                                -{edition.discountRate}%
-                                                            </span>
-                                                        )}
-                                                        <div className="text-right">
-                                                            {edition.discountRate > 0 && (
-                                                                <div className="text-[10px] text-muted line-through">
-                                                                    ₩{edition.originalPrice.toLocaleString()}
-                                                                </div>
-                                                            )}
-                                                            <div className={`text-sm font-black ${isCurrent ? 'text-primary' : 'text-secondary dark:text-zinc-200'}`}>
-                                                                ₩{edition.currentPrice.toLocaleString()}
-                                                            </div>
-                                                        </div>
-                                                    </div>
+                                    {hasPlayTime ? (
+                                        <div className="space-y-2 sm:space-y-3 my-auto">
+                                            <div>
+                                                <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
+                                                    <span className="text-secondary dark:text-zinc-300 truncate">메인 스토리</span>
+                                                    <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbMainStory)}</span>
                                                 </div>
+                                                <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500"
+                                                        style={{ width: `${Math.round(((game.hltbMainStory || 0) / maxPlayTime) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
 
-                                                {hasContents && (
-                                                    <div className="w-full mt-3 pt-3 border-t border-divider/50 flex flex-wrap gap-1.5">
-                                                        {edition.editionContents.map((item, idx) => (
-                                                            <span key={idx} className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                                                isCurrent ? 'bg-ps-blue/10 border-ps-blue/30 text-ps-blue' : 'bg-surface border-divider text-muted'
-                                                            }`}>
-                                                                <Check className="w-2.5 h-2.5" />
-                                                                {item}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </button>
-                                        );
-                                    })}
+                                            <div>
+                                                <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
+                                                    <span className="text-secondary dark:text-zinc-300 truncate">메인 + 엑스트라</span>
+                                                    <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbMainExtra)}</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-400 rounded-full transition-all duration-500"
+                                                        style={{ width: `${Math.round(((game.hltbMainExtra || 0) / maxPlayTime) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="flex justify-between text-[11px] sm:text-xs font-bold mb-0.5 sm:mb-1">
+                                                    <span className="text-secondary dark:text-zinc-300 truncate">완전 정복 (100%)</span>
+                                                    <span className="text-primary font-black ml-1">{formatPlayTime(game.hltbCompletionist)}</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
+                                                    <div
+                                                        className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full transition-all duration-500"
+                                                        style={{ width: `${Math.round(((game.hltbCompletionist || 0) / maxPlayTime) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="my-auto text-center py-4">
+                                            <p className="text-xs text-secondary font-bold">플레이타임 집계 중</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Bento 3: 플랫폼 & 하드웨어 스펙 (모바일: 2열 전체 차지(col-span-2) / PC: 1열) */}
+                                <div className="col-span-2 lg:col-span-1 bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 flex flex-col justify-between shadow-md">
+                                    <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+                                        <span className="text-[10px] sm:text-[11px] font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1.5">
+                                            <Gauge className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue" /> 플랫폼 & 스펙
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-2.5 my-auto">
+                                        {/* 1. 지원 기종 */}
+                                        <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                            <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                                <Tv className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-ps-blue shrink-0" />
+                                                <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">지원 기종</span>
+                                            </div>
+                                            <span className="text-xs sm:text-xs font-black text-primary px-1.5 py-0.5 rounded bg-surface/80 border border-divider truncate max-w-full">
+                                                {game.platforms && game.platforms.length > 0 ? game.platforms.join(' / ') : 'PS5 / PS4'}
+                                            </span>
+                                        </div>
+
+                                        {/* 2. PS5 Pro 지원/미지원 */}
+                                        <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                            <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                                <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-400 dark:text-zinc-200 shrink-0" />
+                                                <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">PS5 Pro</span>
+                                            </div>
+                                            {game.isPs5ProEnhanced ? (
+                                                <span className="text-[11px] sm:text-xs font-black text-zinc-800 dark:text-zinc-100 bg-zinc-200/90 dark:bg-zinc-700/90 px-1.5 sm:px-2 py-0.5 rounded border border-zinc-300 dark:border-zinc-500 shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                    <Sparkles className="w-3 h-3 text-zinc-600 dark:text-zinc-300" /> Pro 향상
+                                                </span>
+                                            ) : (
+                                                <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
+                                                    기본 구동
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* 3. 한국어 지원 (원본 제목 기반 판정) */}
+                                        <div className="p-2 sm:p-2.5 bg-base/80 rounded-xl border border-divider flex flex-col items-center justify-center text-center lg:flex-row lg:items-center lg:justify-between lg:text-left hover:border-divider-strong transition-colors">
+                                            <div className="flex flex-col items-center lg:flex-row lg:items-center gap-1 lg:gap-2 mb-1 lg:mb-0">
+                                                <Languages className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500 shrink-0" />
+                                                <span className="text-[10px] sm:text-[11px] text-secondary dark:text-zinc-400 font-extrabold whitespace-nowrap">한국어</span>
+                                            </div>
+                                            {isKorean ? (
+                                                <span className="text-[11px] sm:text-xs font-black text-emerald-700 dark:text-emerald-300 bg-emerald-500/15 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded shadow-sm whitespace-nowrap flex items-center gap-1">
+                                                    <Check className="w-3 h-3" /> 공식 지원
+                                                </span>
+                                            ) : (
+                                                <span className="text-[11px] sm:text-xs font-bold text-muted dark:text-zinc-500 whitespace-nowrap">
+                                                    미지원 (외국어)
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        )}
 
-                        {/* 9. 게임 상세 설명 (더보기/접기) */}
-                        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-6 shadow-md">
-                            <h3 className="text-base font-black text-primary mb-4">게임 상세 설명</h3>
+                            {/* 4. 스카우터 주시자 패널 (StealthPanel 레이더 애니메이션) */}
+                            {game.scouterTotalWatchers > 0 && (
+                                <StealthPanel
+                                    watchersCount={game.scouterTotalWatchers}
+                                    averagePrice={game.scouterAverageTargetPrice}
+                                    isLiked={isLiked}
+                                />
+                            )}
 
-                            {hasDescription ? (
-                                <div>
-                                    <p className={`text-sm text-secondary dark:text-zinc-300 leading-relaxed whitespace-pre-line ${
-                                        isDescExpanded ? '' : 'line-clamp-4'
-                                    }`}>
-                                        {game.description}
-                                    </p>
-                                    <button
-                                        onClick={() => setIsDescExpanded(!isDescExpanded)}
-                                        className="mt-3 text-xs font-bold text-ps-blue hover:underline flex items-center gap-1"
-                                    >
-                                        {isDescExpanded ? (
-                                            <>간략히 보기 <ChevronUp className="w-3.5 h-3.5" /></>
-                                        ) : (
-                                            <>전체 설명 더 보기 <ChevronDown className="w-3.5 h-3.5" /></>
-                                        )}
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3">
-                                    <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                            {/* 5. 평가 엇갈림 주의 경고 (Discrepancy Warning) */}
+                            {isDiscrepancyWarning && (
+                                <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 px-5 py-4 rounded-2xl shadow-[0_0_20px_rgba(239,68,68,0.15)] animate-fadeIn">
+                                    <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 animate-pulse" />
                                     <div>
-                                        <p className="text-yellow-400 text-sm font-bold mb-0.5">상세 텍스트 설명이 등록되지 않은 게임입니다.</p>
-                                        <p className="text-secondary dark:text-zinc-300 text-xs">아래 바로가기 버튼을 통해 실제 플레이 영상이나 리뷰를 바로 탐색해보세요!</p>
+                                        <span className="block text-red-400 font-black text-sm leading-tight mb-1">
+                                            요주의 게임! (평가 엇갈림 주의)
+                                        </span>
+                                        <span className="block text-red-300 text-xs font-medium leading-relaxed">
+                                            전문가(Critic) 점수와 실플레이 유저(User) 평점이 크게 차이나고 있습니다. 구매 전 상세 플레이 리뷰를 꼭 확인하세요.
+                                        </span>
                                     </div>
                                 </div>
                             )}
 
-                            {/* 외부 탐색 버튼 */}
-                            <div className="flex flex-col sm:flex-row gap-3 border-t border-divider pt-5 mt-5">
-                                <a
-                                    href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-bold py-3 rounded-xl text-center transition-all flex items-center justify-center gap-2 active:scale-95"
-                                >
-                                    <Youtube className="w-4 h-4 text-red-400" /> 유튜브에서 게임플레이 영상 보기
-                                </a>
-                                <a
-                                    href={`https://www.google.com/search?q=${encodeURIComponent(game.title + ' 리뷰')}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 text-xs font-bold py-3 rounded-xl text-center transition-all flex items-center justify-center gap-2 active:scale-95"
-                                >
-                                    <Search className="w-4 h-4 text-blue-400" /> 구글에서 게임 리뷰 검색하기
-                                </a>
+                            {/* 6. PS Plus 카탈로그 포함 골든 배너 */}
+                            {game.inCatalog && (
+                                <div className="p-5 rounded-2xl bg-gradient-to-r from-yellow-500/15 via-yellow-500/5 to-transparent border border-yellow-500/30 flex items-center gap-4 shadow-[0_0_20px_rgba(234,179,8,0.1)]">
+                                    <div className="bg-yellow-500/20 p-3 rounded-xl border border-yellow-500/30 shrink-0">
+                                        <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-yellow-400 font-black text-sm sm:text-base mb-0.5">
+                                            PS Plus 스페셜 / 디럭스 게임 카탈로그 포함
+                                        </h4>
+                                        <p className="text-secondary dark:text-zinc-300 text-xs font-medium">
+                                            PS Plus 구독 회원은 추가 결제 없이 지금 바로 무료로 다운로드 및 플레이할 수 있습니다.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 7. 가격 변동 추이 차트 */}
+                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden">
+                                <div className="flex items-center justify-between mb-3.5 sm:mb-4">
+                                    <h3 className="text-base font-black text-primary flex items-center gap-2">
+                                        <TrendingUp className="w-5 h-5 text-ps-blue" />
+                                        <span>가격 변동 추이</span>
+                                    </h3>
+                                </div>
+                                {/* 기간 탭 행은 게임별 라벨 길이에 따라 줄바꿈 여부가 달라 최소 높이로 자리 고정 */}
+                                <div className="relative min-h-[317px] md:min-h-[335px]">
+                                    <Suspense fallback={<PriceChartSkeleton />}>
+                                        <PriceChart historyData={game.priceHistory} lowestPrice={game.lowestPrice} />
+                                    </Suspense>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 10. 커뮤니티 투표 & 감자 서버 후원 */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {/* 추천 / 비추천 투표 */}
-                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md flex flex-col justify-between">
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="text-xs font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1.5">
-                                        <Users className="w-3.5 h-3.5" /> 유저 평가 투표
-                                    </span>
-                                    <span className="text-[11px] font-bold text-muted bg-base px-2 py-0.5 rounded border border-divider">
-                                        {voteTotal}명 참여
-                                    </span>
+                            {/* 8. 현재 에디션 구성품 & 에디션 비교 선택 */}
+                            {myEditionContents.length > 0 && (
+                                <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md">
+                                    <h3 className="text-sm font-black text-primary mb-3 flex items-center gap-1.5">
+                                        <Gem className="w-4 h-4 text-ps-blue" /> 이 에디션에 포함된 항목
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {myEditionContents.map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-2.5 bg-base/80 border border-divider rounded-xl px-3.5 py-2.5">
+                                                <Gem className="w-3.5 h-3.5 text-ps-blue shrink-0" />
+                                                <span className="text-xs font-bold text-secondary dark:text-zinc-200 break-keep leading-tight">{item}</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                            )}
 
-                                <div className="flex gap-2.5 my-2">
-                                    <button
-                                        onClick={() => handleVote('LIKE')}
-                                        className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 font-black text-sm transition-all active:scale-95 ${
-                                            userVote === 'LIKE'
-                                                ? 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
-                                                : 'bg-base border-divider text-secondary hover:border-green-400/40 hover:text-primary'
-                                        }`}
-                                    >
-                                        <Circle className="w-4 h-4 text-green-400 fill-green-400/20" />
-                                        <span>추천 {voteCounts.likes}</span>
-                                    </button>
+                            {/* 에디션 비교 패널 (상위판/하위판 가격 역전 탐지 100% 보존) */}
+                            {game.familyGames && game.familyGames.length > 1 && (
+                                <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-6 shadow-md">
+                                    <h3 className="text-base font-black text-primary mb-4 flex items-center gap-2">
+                                        <Layers className="w-4 h-4 text-ps-blue" /> 에디션 비교 및 선택
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {game.familyGames.map((edition) => {
+                                            const isCurrent = edition.id === game.id;
+                                            const priceGap = edition.currentPrice - game.currentPrice;
+                                            const isHigherTier = edition.originalPrice > game.originalPrice;
+                                            const isLowerTier = edition.originalPrice < game.originalPrice;
+                                            const hasContents = edition.editionContents?.length > 0;
 
-                                    <button
-                                        onClick={() => handleVote('DISLIKE')}
-                                        className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 font-black text-sm transition-all active:scale-95 ${
-                                            userVote === 'DISLIKE'
-                                                ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
-                                                : 'bg-base border-divider text-secondary hover:border-red-400/40 hover:text-primary'
-                                        }`}
-                                    >
-                                        <X className="w-4 h-4 text-red-400" />
-                                        <span>비추천 {voteCounts.dislikes}</span>
-                                    </button>
+                                            return (
+                                                <button
+                                                    key={edition.id}
+                                                    onClick={() => navigate(`/games/${edition.id}`, { replace: true, state: location.state })}
+                                                    className={`w-full flex flex-col p-4 rounded-xl border transition-all text-left ${
+                                                        isCurrent
+                                                            ? 'bg-ps-blue/15 border-ps-blue ring-2 ring-ps-blue/40 shadow-sm cursor-default'
+                                                            : 'bg-base/80 border-divider hover:border-divider-strong hover:bg-surface-hover active:scale-[0.99] cursor-pointer'
+                                                    }`}
+                                                    disabled={isCurrent}
+                                                >
+                                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 w-full">
+                                                        <div className="flex-1 min-w-0">
+                                                            {isCurrent && (
+                                                                <span className="inline-block text-[9px] font-black text-white bg-ps-blue px-2 py-0.5 rounded mb-1 shadow-sm">
+                                                                    CURRENT EDITION
+                                                                </span>
+                                                            )}
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <div className="shrink-0">{renderMiniVerdictIcon(edition.priceVerdict)}</div>
+                                                                <p className={`text-sm font-bold truncate flex-1 min-w-0 ${isCurrent ? 'text-primary' : 'text-secondary dark:text-zinc-200'}`}>
+                                                                    {edition.name}
+                                                                </p>
+                                                                {!isCurrent && isHigherTier && hasContents && (
+                                                                    <span className="shrink-0 text-[10px] font-black text-ps-blue bg-ps-blue/15 border border-ps-blue/30 px-2 py-0.5 rounded-full">
+                                                                        +{edition.editionContents.length}개 추가
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 flex-wrap justify-end sm:shrink-0">
+                                                            {/* 상위판인데 더 저렴한 가격 역전 알림 */}
+                                                            {!isCurrent && isHigherTier && priceGap < 0 && (
+                                                                <span className="flex items-center gap-1 text-[11px] font-black text-green-400 bg-green-500/15 border border-green-500/40 px-2 py-0.5 rounded-lg shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                                                                    <Sparkles className="w-3.5 h-3.5 text-green-400" /> 상위판이 더 저렴!
+                                                                </span>
+                                                            )}
+                                                            {/* 하위판인데 더 비싼 경우 */}
+                                                            {!isCurrent && isLowerTier && priceGap > 0 && (
+                                                                <span className="flex items-center gap-1 text-[11px] font-bold text-red-400 bg-red-500/15 border border-red-500/30 px-2 py-0.5 rounded-lg">
+                                                                    <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> 하위판인데 더 비쌈
+                                                                </span>
+                                                            )}
+                                                            {/* 일반 업그레이드 차액 */}
+                                                            {!isCurrent && isHigherTier && priceGap >= 0 && (
+                                                                <span className="text-[11px] font-bold text-secondary dark:text-zinc-300 bg-base border border-divider px-2 py-0.5 rounded-lg">
+                                                                    +{priceGap.toLocaleString()}원 업그레이드
+                                                                </span>
+                                                            )}
+                                                            {/* 하위판 절약 차액 */}
+                                                            {!isCurrent && isLowerTier && priceGap < 0 && (
+                                                                <span className="flex items-center gap-1 text-[11px] font-bold text-blue-400 bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 rounded-lg">
+                                                                    <TrendingDown className="w-3.5 h-3.5 text-blue-400" /> {Math.abs(priceGap).toLocaleString()}원 절약
+                                                                </span>
+                                                            )}
+                                                            {edition.discountRate > 0 && (
+                                                                <span className="text-xs font-black text-green-400 bg-green-500/15 border border-green-500/30 px-2 py-0.5 rounded-md">
+                                                                    -{edition.discountRate}%
+                                                                </span>
+                                                            )}
+                                                            <div className="text-right">
+                                                                {edition.discountRate > 0 && (
+                                                                    <div className="text-[10px] text-muted line-through">
+                                                                        ₩{edition.originalPrice.toLocaleString()}
+                                                                    </div>
+                                                                )}
+                                                                <div className={`text-sm font-black ${isCurrent ? 'text-primary' : 'text-secondary dark:text-zinc-200'}`}>
+                                                                    ₩{edition.currentPrice.toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {hasContents && (
+                                                        <div className="w-full mt-3 pt-3 border-t border-divider/50 flex flex-wrap gap-1.5">
+                                                            {edition.editionContents.map((item, idx) => (
+                                                                <span key={idx} className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border ${
+                                                                    isCurrent ? 'bg-ps-blue/10 border-ps-blue/30 text-ps-blue' : 'bg-surface border-divider text-muted'
+                                                                }`}>
+                                                                    <Check className="w-2.5 h-2.5" />
+                                                                    {item}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+                            )}
 
-                                {voteTotal > 0 && (
-                                    <div className="mt-2">
-                                        <div className="flex justify-between text-[11px] font-black mb-1">
-                                            <span className="text-green-400">○ 추천 {likePercent}%</span>
-                                            <span className="text-red-400">{100 - likePercent}% ×</span>
-                                        </div>
-                                        <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
-                                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${likePercent}%` }} />
+                            {/* 9. 게임 상세 설명 (더보기/접기) */}
+                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-6 shadow-md">
+                                <h3 className="text-base font-black text-primary mb-4">게임 상세 설명</h3>
+
+                                {hasDescription ? (
+                                    <div>
+                                        <p className={`text-sm text-secondary dark:text-zinc-300 leading-relaxed whitespace-pre-line ${
+                                            isDescExpanded ? '' : 'line-clamp-4'
+                                        }`}>
+                                            {game.description}
+                                        </p>
+                                        <button
+                                            onClick={() => setIsDescExpanded(!isDescExpanded)}
+                                            className="mt-3 text-xs font-bold text-ps-blue hover:underline flex items-center gap-1"
+                                        >
+                                            {isDescExpanded ? (
+                                                <>간략히 보기 <ChevronUp className="w-3.5 h-3.5" /></>
+                                            ) : (
+                                                <>전체 설명 더 보기 <ChevronDown className="w-3.5 h-3.5" /></>
+                                            )}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-yellow-400 text-sm font-bold mb-0.5">상세 텍스트 설명이 등록되지 않은 게임입니다.</p>
+                                            <p className="text-secondary dark:text-zinc-300 text-xs">아래 바로가기 버튼을 통해 실제 플레이 영상이나 리뷰를 바로 탐색해보세요!</p>
                                         </div>
                                     </div>
                                 )}
-                            </div>
 
-                            {/* 감자 서버 후원 카드 */}
-                            <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md flex flex-col items-center justify-center text-center relative overflow-hidden group">
-                                <Server className="w-8 h-8 text-yellow-400 mb-1.5 group-hover:scale-110 transition-transform" />
-                                <h4 className="font-black text-sm text-primary mb-1">감자 서버 밥 주기</h4>
-                                <p className="text-xs text-secondary dark:text-zinc-300 mb-3">
-                                    지속적인 PS 할인 추적과 서버 유지를 응원해 주세요!
-                                </p>
-                                <button
-                                    onClick={() => setIsDonationOpen(true)}
-                                    className="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
-                                >
-                                    <span>후원하기</span>
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 11. 관련 게임 추천 (Related Games) */}
-                        {game.relatedGames && game.relatedGames.length > 0 && (
-                            <div className="pt-6 border-t border-divider">
-                                <h3 className="text-lg font-black text-primary mb-4 flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-yellow-400" /> 이 게임을 좋아한다면
-                                </h3>
-                                <div className="hidden lg:grid grid-cols-5 gap-3.5">
-                                    {game.relatedGames.map(related => (
-                                        <RelatedGameCard key={related.id} game={related} />
-                                    ))}
+                                {/* 외부 탐색 버튼 */}
+                                <div className="flex flex-col sm:flex-row gap-3 border-t border-divider pt-5 mt-5">
+                                    <a
+                                        href={`https://www.youtube.com/results?search_query=${encodeURIComponent(game.title + ' gameplay')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 text-xs font-bold py-3 rounded-xl text-center transition-all flex items-center justify-center gap-2 active:scale-95"
+                                    >
+                                        <Youtube className="w-4 h-4 text-red-400" /> 유튜브에서 게임플레이 영상 보기
+                                    </a>
+                                    <a
+                                        href={`https://www.google.com/search?q=${encodeURIComponent(game.title + ' 리뷰')}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex-1 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-400 text-xs font-bold py-3 rounded-xl text-center transition-all flex items-center justify-center gap-2 active:scale-95"
+                                    >
+                                        <Search className="w-4 h-4 text-blue-400" /> 구글에서 게임 리뷰 검색하기
+                                    </a>
                                 </div>
-                                <div className="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden">
-                                    {game.relatedGames.map(related => (
-                                        <div key={related.id} className="shrink-0 snap-center w-[42vw] sm:w-[30vw]">
-                                            <RelatedGameCard game={related} />
+                            </div>
+
+                            {/* 10. 커뮤니티 투표 & 감자 서버 후원 */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {/* 추천 / 비추천 투표 */}
+                                <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md flex flex-col justify-between">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <span className="text-xs font-black text-secondary dark:text-zinc-300 tracking-wider uppercase flex items-center gap-1.5">
+                                            <Users className="w-3.5 h-3.5" /> 유저 평가 투표
+                                        </span>
+                                        <span className="text-[11px] font-bold text-muted bg-base px-2 py-0.5 rounded border border-divider">
+                                            {voteTotal}명 참여
+                                        </span>
+                                    </div>
+
+                                    <div className="flex gap-2.5 my-2">
+                                        <button
+                                            onClick={() => handleVote('LIKE')}
+                                            className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 font-black text-sm transition-all active:scale-95 ${
+                                                userVote === 'LIKE'
+                                                    ? 'bg-green-500/20 border-green-500/50 text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]'
+                                                    : 'bg-base border-divider text-secondary hover:border-green-400/40 hover:text-primary'
+                                            }`}
+                                        >
+                                            <Circle className="w-4 h-4 text-green-400 fill-green-400/20" />
+                                            <span>추천 {voteCounts.likes}</span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => handleVote('DISLIKE')}
+                                            className={`flex-1 py-3 rounded-xl border flex items-center justify-center gap-2 font-black text-sm transition-all active:scale-95 ${
+                                                userVote === 'DISLIKE'
+                                                    ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)]'
+                                                    : 'bg-base border-divider text-secondary hover:border-red-400/40 hover:text-primary'
+                                            }`}
+                                        >
+                                            <X className="w-4 h-4 text-red-400" />
+                                            <span>비추천 {voteCounts.dislikes}</span>
+                                        </button>
+                                    </div>
+
+                                    {voteTotal > 0 && (
+                                        <div className="mt-2">
+                                            <div className="flex justify-between text-[11px] font-black mb-1">
+                                                <span className="text-green-400">○ 추천 {likePercent}%</span>
+                                                <span className="text-red-400">{100 - likePercent}% ×</span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-base rounded-full overflow-hidden border border-divider">
+                                                <div className="h-full bg-green-500 rounded-full" style={{ width: `${likePercent}%` }} />
+                                            </div>
                                         </div>
-                                    ))}
+                                    )}
+                                </div>
+
+                                {/* 감자 서버 후원 카드 */}
+                                <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 shadow-md flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                                    <Server className="w-8 h-8 text-yellow-400 mb-1.5 group-hover:scale-110 transition-transform" />
+                                    <h4 className="font-black text-sm text-primary mb-1">감자 서버 밥 주기</h4>
+                                    <p className="text-xs text-secondary dark:text-zinc-300 mb-3">
+                                        지속적인 PS 할인 추적과 서버 유지를 응원해 주세요!
+                                    </p>
+                                    <button
+                                        onClick={() => setIsDonationOpen(true)}
+                                        className="w-full py-2.5 bg-yellow-400 hover:bg-yellow-500 text-black font-black rounded-xl text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                                    >
+                                        <span>후원하기</span>
+                                        <ExternalLink className="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
                             </div>
-                        )}
+
+                            {/* 11. 관련 게임 추천 (Related Games) */}
+                            {game.relatedGames && game.relatedGames.length > 0 && (
+                                <div className="pt-6 border-t border-divider">
+                                    <h3 className="text-lg font-black text-primary mb-4 flex items-center gap-2">
+                                        <Sparkles className="w-4 h-4 text-yellow-400" /> 이 게임을 좋아한다면
+                                    </h3>
+                                    <div className="hidden lg:grid grid-cols-5 gap-3.5">
+                                        {game.relatedGames.map(related => (
+                                            <RelatedGameCard key={related.id} game={related} />
+                                        ))}
+                                    </div>
+                                    <div className="flex lg:hidden overflow-x-auto snap-x snap-mandatory gap-3 pb-2 [&::-webkit-scrollbar]:hidden">
+                                        {game.relatedGames.map(related => (
+                                            <div key={related.id} className="shrink-0 snap-center w-[42vw] sm:w-[30vw]">
+                                                <RelatedGameCard game={related} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
