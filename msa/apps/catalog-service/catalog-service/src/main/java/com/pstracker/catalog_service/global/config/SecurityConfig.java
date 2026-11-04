@@ -82,6 +82,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/scraping/request/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/arcade/**").authenticated()
 
+                        // 로그인 여부 확인용: 비로그인이면 컨트롤러가 204(재발급 토큰 없음) 또는 401(토큰 만료)로 직접 응답
+                        .requestMatchers(HttpMethod.GET, "/api/v1/members/me").permitAll()
                         .requestMatchers("/api/v1/members/me/**").authenticated()
 
                         // 인증 없이 접근 허용
