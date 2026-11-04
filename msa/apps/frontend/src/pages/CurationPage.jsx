@@ -335,7 +335,7 @@ async function fetchThemeGames(params) {
 // ─────────────────────────────────────────────
 // 스크롤 지연 로딩 훅
 // ─────────────────────────────────────────────
-function useScrollReveal(threshold = 0) {
+function useScrollReveal(threshold = 0, rootMargin = '0px') {
     const [visible, setVisible] = useState(false);
     const observerRef = useRef(null);
 
@@ -352,11 +352,11 @@ function useScrollReveal(threshold = 0) {
                     observer.disconnect();
                 }
             },
-            { threshold }
+            { threshold, rootMargin }
         );
         observer.observe(el);
         observerRef.current = observer;
-    }, [threshold]);
+    }, [threshold, rootMargin]);
 
     return [ref, visible];
 }
@@ -495,7 +495,8 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
     const [games, setGames] = useState([]);
     const [total, setTotal] = useState(0);
     const [loaded, setLoaded] = useState(false);
-    const [ref, visible] = useScrollReveal(0);
+    // 화면 아래 약 1화면 거리에 오면 미리 조회 → 스크롤로 닿았을 때 이미 데이터가 도착해 있도록 (테마별 지연 로딩 구조는 유지)
+    const [ref, visible] = useScrollReveal(0, '0px 0px 900px 0px');
     const { Icon } = theme;
 
     useEffect(() => {

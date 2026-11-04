@@ -47,6 +47,7 @@ import SEO from '../components/common/SEO';
 import TrendingHeroCarousel from '../components/TrendingHeroCarousel';
 import ServiceIntro from '../components/ServiceIntro';
 import { getSaleDeadline } from '../utils/saleDeadline';
+import { buildDetailPreview } from '../utils/detailPreview';
 
 // URL ↔ filter 동기화 시 값 비교 (배열은 순서 포함 비교)
 const isSameFilter = (a, b) => {
@@ -595,7 +596,7 @@ const GameListPage = () => {
             if (entries[0].isIntersecting && page < totalPages - 1) {
                 setPage(prevPage => prevPage + 1);
             }
-        }, { threshold: 0.1 });
+        }, { rootMargin: '0px 0px 1500px 0px' }); // 마지막 카드가 화면 아래 약 1.5~2화면 거리에 오면 미리 다음 페이지 요청
         if (node) observer.current.observe(node);
     }, [loading, page, totalPages]);
 
@@ -1552,7 +1553,7 @@ const GameListPage = () => {
                                 <div
                                     key={game.id}
                                     ref={isLastElement ? lastGameElementRef : null}
-                                    onClick={() => navigate(`/games/${game.id}`, { state: { background: location } })}
+                                    onClick={() => navigate(`/games/${game.id}`, { state: { background: location, preview: buildDetailPreview(game) } })}
                                     className={`group relative flex flex-col rounded-2xl overflow-hidden bg-glass backdrop-blur-xl border transition-all duration-300 ease-out cursor-pointer hover:-translate-y-1.5 hover:shadow-2xl transform-gpu ${
                                         game.priceVerdict === 'BUY_NOW'
                                             ? 'border-green-500/40 hover:shadow-[0_12px_30px_rgba(34,197,94,0.2)]'

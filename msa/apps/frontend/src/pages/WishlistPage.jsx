@@ -6,6 +6,7 @@ import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import { getSaleDeadline } from '../utils/saleDeadline';
+import { buildDetailPreview } from '../utils/detailPreview';
 import {
     AlertTriangle,
     CheckSquare,
@@ -426,7 +427,7 @@ const WishlistPage = () => {
                             <div
                                 key={realGameId}
                                 ref={isLastElement ? lastGameElementRef : null}
-                                onClick={() => navigate(`/games/${realGameId}`, { state: { background: location } })}
+                                onClick={() => navigate(`/games/${realGameId}`, { state: { background: location, preview: buildDetailPreview(game) } })}
                                 className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full
                                     ${isSelectedForCompare ? 'ring-2 ring-ps-blue shadow-[0_0_20px_rgba(0,67,156,0.6)] border-ps-blue' :
                                     game.priceVerdict === 'BUY_NOW' ? 'border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]' :

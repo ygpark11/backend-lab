@@ -32,7 +32,8 @@ const BootingScreen = ({ onResolved }) => {
 
             clearTimeout(timeoutId);
 
-            if ([200, 401, 403].includes(response.status)) {
+            // 204: 비로그인 사용자에 대한 /members/me 정상 응답 (서버 기동 완료로 판단)
+            if ([200, 204, 401, 403].includes(response.status)) {
                 setIsSuccess(true);
                 setTimeout(() => {
                     onResolved();

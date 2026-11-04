@@ -16,6 +16,7 @@ import { useLocation } from 'react-router-dom';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import PSGameImage from './common/PSGameImage';
 import { getOptimizedSrc } from '../utils/imageUtils';
+import { buildDetailPreview } from '../utils/detailPreview';
 import client from '../api/client';
 
 // 언어 태그 괄호 및 PS4/PS5 suffix 정제 함수
@@ -152,10 +153,10 @@ const TrendingHeroCarousel = () => {
         }
     };
 
-    const handleCardClick = (gameId) => {
+    const handleCardClick = (game) => {
         // 드래그 중 실수로 클릭되는 현상 방지
         if (Math.abs(dragDistanceRef.current) > 8) return;
-        navigate(`/games/${gameId}`, { state: { background: location } });
+        navigate(`/games/${game.id}`, { state: { background: location, preview: buildDetailPreview(game) } });
     };
 
     if (loading) {
@@ -255,7 +256,7 @@ const TrendingHeroCarousel = () => {
                         return (
                             <div
                                 key={game.id}
-                                onClick={() => isActive ? handleCardClick(game.id) : goToSlide(idx)}
+                                onClick={() => isActive ? handleCardClick(game) : goToSlide(idx)}
                                 onMouseEnter={() => { if (isActive) setIsCardHovered(true); }}
                                 onMouseLeave={() => { 
                                     if (isActive) {

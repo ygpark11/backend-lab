@@ -228,6 +228,73 @@ const BackgroundHero = ({ imageUrl }) => (
     </div>
 );
 
+// 모달 틀: 로딩 중·로딩 후 같은 컴포넌트를 써서 데이터가 도착해도 다시 그려지지(재애니메이션) 않게 함
+const DetailModalFrame = ({ onClose, children }) => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md animate-fadeIn p-0 md:p-6" onClick={onClose}>
+        <div
+            className="w-full h-full md:h-auto md:max-h-[92vh] max-w-6xl overflow-y-auto bg-base md:rounded-3xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong animate-in fade-in zoom-in-[98%] duration-200 ease-out"
+            onClick={e => e.stopPropagation()}
+        >
+            <button
+                onClick={onClose}
+                aria-label="닫기"
+                className="absolute top-4 right-4 z-[60] p-2 bg-surface hover:bg-red-500/20 rounded-full text-secondary hover:text-red-400 transition-colors border border-divider backdrop-blur-md"
+            >
+                <X className="w-5 h-5" />
+            </button>
+            {children}
+        </div>
+    </div>
+);
+
+// 상세 데이터 도착 전, 목록 카드에서 넘겨받은 제목·포스터·가격으로 상단을 먼저 그림 (실제 화면과 같은 배치)
+const DetailPreview = ({ preview }) => (
+    // md 이상에서 모달은 내용 높이를 따르므로(최대 92vh), 미리보기도 최대 높이로 고정해 데이터 도착 시 창 크기가 변하지 않게 함
+    <div className="relative z-10 md:min-h-[92vh]" aria-busy="true">
+        <div className="p-4 sm:p-6 md:p-8 pb-28 md:pb-20 max-w-[1400px] mx-auto">
+            <div className="mb-5 h-[34px] w-[150px] rounded-xl bg-surface/95 border border-divider" />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
+                <aside className="lg:col-span-4 xl:col-span-3.5 flex flex-col gap-3.5">
+                    <div className="w-full rounded-2xl overflow-hidden shadow-xl border border-divider-strong bg-surface">
+                        <div className={`w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base ${preview?.imageUrl ? '' : 'animate-pulse'}`}>
+                            {preview?.imageUrl && (
+                                <PSGameImage src={preview.imageUrl} alt={preview.title} priority width={640} className="w-full h-full object-cover object-center" />
+                            )}
+                        </div>
+                    </div>
+                </aside>
+                <div className="lg:col-span-8 xl:col-span-8.5 flex flex-col gap-5 min-w-0">
+                    <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-3xl p-6 md:p-7 shadow-sm">
+                        <div className="mb-3.5 h-[26px] w-24 rounded-lg bg-base animate-pulse" />
+                        {preview?.title ? (
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black leading-tight text-primary break-keep mb-3">
+                                {cleanTitleForDesc(preview.title)}
+                            </h1>
+                        ) : (
+                            <div className="h-10 w-3/4 rounded-lg bg-base animate-pulse mb-3" />
+                        )}
+                        <div className="h-5 w-1/2 rounded bg-base animate-pulse" />
+                    </div>
+                    <div className="rounded-3xl border border-divider-strong bg-surface/95 p-5 md:p-6 min-h-[180px]">
+                        {preview?.price != null ? (
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-4xl font-black tracking-tighter text-primary">₩{preview.price.toLocaleString()}</span>
+                                {preview.discountRate > 0 && <span className="text-sm font-black text-green-500">-{preview.discountRate}%</span>}
+                            </div>
+                        ) : (
+                            <div className="h-10 w-40 rounded-lg bg-base animate-pulse" />
+                        )}
+                        <div className="mt-4 flex items-center gap-2 text-xs font-bold text-muted">
+                            <span className="w-3 h-3 rounded-full border-2 border-ps-blue border-t-transparent animate-spin" aria-hidden="true" />
+                            가격 기록을 불러오는 중
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 export default function GameDetailPage() {
     const { id } = useParams();
     const navigate = useTransitionNavigate();
@@ -463,7 +530,18 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`, { state: null });
     };
 
-    if (loading) return <div className="pt-20 min-h-screen"><PSLoader /></div>;
+    if (loading) {
+        if (isModal) {
+            // 다른 게임 미리보기가 섞이지 않도록 현재 id와 일치할 때만 사용 (에디션 전환 시 state가 그대로 넘어옴)
+            const preview = String(location.state?.preview?.id) === String(id) ? location.state.preview : null;
+            return (
+                <DetailModalFrame onClose={handleClose}>
+                    <DetailPreview preview={preview} />
+                </DetailModalFrame>
+            );
+        }
+        return <div className="pt-20 min-h-screen"><PSLoader /></div>;
+    }
     if (!game) return null;
 
     // 🎬 Shorts 촬영용 전체화면 카드 — /games/:id?view=shorts
@@ -1491,22 +1569,11 @@ export default function GameDetailPage() {
 
     if (isModal) {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-md animate-fadeIn p-0 md:p-6" onClick={handleClose}>
-                <div
-                    className="w-full h-full md:h-auto md:max-h-[92vh] max-w-6xl overflow-y-auto bg-base md:rounded-3xl shadow-2xl relative border border-divider [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-divider-strong animate-in fade-in zoom-in-[98%] duration-200 ease-out"
-                    onClick={e => e.stopPropagation()}
-                >
-                    <SEO title={game.title} description={buildSeoDescription(game)} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
-                    <button
-                        onClick={handleClose}
-                        className="absolute top-4 right-4 z-[60] p-2 bg-surface hover:bg-red-500/20 rounded-full text-secondary hover:text-red-400 transition-colors border border-divider backdrop-blur-md"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                    <BackgroundHero imageUrl={game.imageUrl} />
-                    {pageContent}
-                </div>
-            </div>
+            <DetailModalFrame onClose={handleClose}>
+                <SEO title={game.title} description={buildSeoDescription(game)} image={game.imageUrl} url={`https://ps-signal.com/games/${id}`} />
+                <BackgroundHero imageUrl={game.imageUrl} />
+                {pageContent}
+            </DetailModalFrame>
         );
     }
 

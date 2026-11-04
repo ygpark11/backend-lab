@@ -1,5 +1,6 @@
 import React from 'react';
 import {useLocation} from 'react-router-dom';
+import { buildDetailPreview } from '../utils/detailPreview';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
 import {Circle, Sparkles, Square, Timer, Triangle, X} from 'lucide-react';
 import { getSaleDeadline } from '../utils/saleDeadline';
@@ -31,7 +32,7 @@ export default function RelatedGameCard({ game }) {
     const handleClick = () => {
         navigate(`/games/${game.id}`, {
             replace: true,
-            state: location.state || { background: location }
+            state: { ...(location.state || { background: location }), preview: buildDetailPreview(game) }
         });
         const modalContent = document.querySelector('.overflow-y-auto');
         if (modalContent) {

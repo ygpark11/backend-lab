@@ -21,12 +21,18 @@ const client = axios.create({
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-function subscribeTokenRefresh(callback) {
-    refreshSubscribers.push(callback);
+function subscribeTokenRefresh(onSuccess, onFailure) {
+    refreshSubscribers.push({ onSuccess, onFailure });
 }
 
 function onRefreshed() {
-    refreshSubscribers.forEach((callback) => callback());
+    refreshSubscribers.forEach(({ onSuccess }) => onSuccess());
+    refreshSubscribers = [];
+}
+
+// 재발급 실패 시 대기 중이던 요청에도 실패를 전달해야 영원히 대기(pending) 상태로 남지 않음
+function onRefreshFailed() {
+    refreshSubscribers.forEach(({ onFailure }) => onFailure());
     refreshSubscribers = [];
 }
 
@@ -73,11 +79,13 @@ client.interceptors.response.use(
             // 이미 다른 요청이 토큰 재발급을 진행 중일 때
             if (isRefreshing) {
                 // 새로운 Promise를 만들어 대기열에 넣고 기다림
-                return new Promise((resolve) => {
-                    subscribeTokenRefresh(() => {
+                return new Promise((resolve, reject) => {
+                    subscribeTokenRefresh(
                         // 재발급이 성공하면 원래 요청을 다시 수행
-                        resolve(client(originalRequest));
-                    });
+                        () => resolve(client(originalRequest)),
+                        // 재발급이 실패하면 원래 401 에러로 종료 (호출부 catch에서 처리)
+                        () => reject(error),
+                    );
                 });
             }
 
@@ -97,8 +105,8 @@ client.interceptors.response.use(
             } catch (reissueError) {
                 console.error("토큰 재발급 실패");
 
-                // 재발급 실패 시 대기열 비우기 (메모리 누수 방지)
-                refreshSubscribers = [];
+                // 재발급 실패 시 대기 중인 요청에 실패를 알리고 대기열 비우기
+                onRefreshFailed();
 
                 // 비로그인 개방형으로 변경하기 위해 주석
                 /*if (window.location.pathname !== '/') {

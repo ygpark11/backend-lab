@@ -13,6 +13,12 @@ export const AuthProvider = ({ children }) => {
         const initAuth = async () => {
             try {
                 const response = await client.get('/api/v1/members/me');
+                // 204: 로그인 쿠키가 전혀 없는 비로그인 사용자 (백엔드가 재발급 시도 없이 바로 판별)
+                if (response.status === 204 || !response.data) {
+                    setUser(null);
+                    setIsAuthenticated(false);
+                    return;
+                }
                 setUser(response.data);
                 setIsAuthenticated(true);
 

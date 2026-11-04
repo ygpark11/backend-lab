@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Circle, Triangle, X, Square, Trophy, Flame } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
+import { buildDetailPreview } from '../utils/detailPreview';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import PSGameImage from './common/PSGameImage';
 import client from '../api/client';
@@ -126,7 +127,7 @@ const TrendingGamesWidget = () => {
                                 key={game.id}
                                 onClick={() => {
                                     if (dragRef.current.moved) return;
-                                    navigate(`/games/${game.id}`, { state: { background: location } });
+                                    navigate(`/games/${game.id}`, { state: { background: location, preview: buildDetailPreview(game) } });
                                 }}
                                 className="group relative shrink-0 snap-start w-[280px] sm:w-[340px] md:w-[380px] aspect-[16/9] rounded-2xl overflow-hidden border border-divider bg-surface hover:border-ps-blue/60 shadow-lg hover:shadow-[0_8px_30px_rgba(0,112,209,0.15)] transition-all duration-300 active:scale-[0.98] text-left"
                             >
