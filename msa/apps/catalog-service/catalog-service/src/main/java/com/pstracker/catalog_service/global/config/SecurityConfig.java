@@ -88,6 +88,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/games/**",
                                 "/api/og/**",
+                                "/api/seo/**",
                                 "/api/internal/**",
                                 "/api/v1/subscriptions/**",
                                 "/api/v1/members/signup",
