@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import queue
 import time
 import random
 import logging
@@ -213,8 +214,12 @@ def collect_rankings(ranking_type, url_template, bm, concept_cache, vip_helpers=
 
     for page_num in range(1, MAX_PAGES + 1):
 
-        while vip_helpers and not vip_helpers['queue'].empty():
-            item = vip_helpers['queue'].get()
+        while vip_helpers:
+            # empty() 확인 후 get()은 다른 소비자와 경합 시 무한 대기 → get_nowait()로 원자적 소비
+            try:
+                item = vip_helpers['queue'].get_nowait()
+            except queue.Empty:
+                break
             req_id, ps_store_id = item['request_id'], item['ps_store_id']
 
             logger.info(f"[VIP 새치기 발동-랭킹 수집 중!] 유저 요청 {ps_store_id} 즉시 수집 중...")

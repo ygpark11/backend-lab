@@ -286,8 +286,12 @@ def run_with_watchdog(bm, url):
 # --- [5. VIP 새치기 로직 (안전한 콜백 처리)] ---
 def check_and_run_vip(bm):
     global active_requests
-    while not urgent_queue.empty():
-        item = urgent_queue.get()
+    while True:
+        # empty() 확인 후 get()은 다른 소비자가 먼저 꺼내 가면 무한 대기 → get_nowait()로 원자적 소비
+        try:
+            item = urgent_queue.get_nowait()
+        except queue.Empty:
+            break
         req_id, ps_store_id = item['request_id'], item['ps_store_id']
 
         logger.info(f"[VIP 새치기 발동!] 유저 요청 {ps_store_id} 즉시 수집 중...")
@@ -321,26 +325,50 @@ def check_and_run_vip(bm):
         try: active_requests.remove(req_id)
         except: pass
 
+def try_start_vip_worker() -> bool:
+    """대기 중인 VIP 요청이 있고 브라우저를 쓰는 작업이 없을 때만 VIP 전담 워커를 기동한다.
+
+    배치·랭킹 실행 중에는 각 루프가 check_and_run_vip로 큐를 직접 소비하므로 워커를 띄우지 않는다.
+    (브라우저 2개 동시 기동 및 큐 경합 방지)
+    crawler_lock은 재진입 불가이므로 락을 잡은 상태에서 호출하면 안 된다.
+    """
+    global is_vip_running
+    with crawler_lock:
+        if urgent_queue.empty():
+            return False
+        if is_vip_running or is_batch_running or is_ranking_running or is_rating_running:
+            return False
+        is_vip_running = True  # 락 안에서 선점 → 워커 중복 기동 방지
+
+    threading.Thread(target=run_vip_only_logic, daemon=True).start()
+    return True
+
 def run_vip_only_logic():
+    """try_start_vip_worker()가 is_vip_running을 선점한 뒤에만 호출된다."""
     global is_vip_running
 
-    with crawler_lock:
-        if is_vip_running: return
-        is_vip_running = True
-
+    completed = False
     try:
         with sync_playwright() as p:
             bm = BrowserManager(p)
             check_and_run_vip(bm)
             time.sleep(1)
             try: bm.context.close()
-            except: pass
+            except Exception: pass
             try: bm.browser.close()
-            except: pass
+            except Exception: pass
+        completed = True
+    except Exception as e:
+        logger.error(f"[VIP Worker] 전담 엔진 오류: {e}")
     finally:
         with crawler_lock:
             is_vip_running = False
         logger.info("[VIP Worker] 모든 새치기 처리 완료. 전담 엔진 종료.")
+
+    # 종료 처리(브라우저 close 등) 중 도착한 요청 회수.
+    # 엔진 자체가 실패한 경우엔 즉시 재기동 루프를 피하고 다음 트리거 시점에 처리한다.
+    if completed and try_start_vip_worker():
+        logger.info("[VIP Worker] 종료 중 도착한 요청 처리를 위해 재기동")
 
 def crawl_ps_plus_prices_no_click(bm):
     logger.info("[Pre-Phase] PS-Plus 구독권 가격 수집 시작")
@@ -1092,14 +1120,13 @@ def refresh_java_server_cache():
 # --- [8. 메인 배치 로직] ---
 def run_batch_crawler_logic():
     """
-    배치 수집 메인 로직.
-    - Pre-Phase / Phase 0: sync (단일 페이지, 병렬화 불필요)
-    - Phase 1 / Phase 2: async 2탭 병렬 (run_phase1_and_2_async)
-    두 구간이 완전히 분리되어 브라우저 메모리가 겹치지 않음.
+    배치 수집 메인 로직 (전 구간 sync 순차).
+    - Pre-Phase / Phase 0 구간과 Phase 1 / Phase 2 구간은 브라우저를 분리해 메모리가 겹치지 않음.
+    - VIP 요청은 Phase 0/1/2 루프에서 check_and_run_vip로 선점 처리.
     """
     global is_batch_running
 
-    logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Async Parallel Tab)")
+    logger.info(f"[Crawler] Started. Mode: {CURRENT_MODE} (Shard {SHARD_ID}/{SHARD_TOTAL})")
 
     # 배치 전체 타임아웃 워치독: get_context() 내부 교착 등으로 is_batch_running이
     # 영구 고착되는 것을 방지. MAX_BATCH_SEC 초과 시 강제 초기화.
@@ -1259,6 +1286,10 @@ def run_batch_crawler_logic():
             is_batch_running = False
         logger.info("Crawler finished.")
 
+    # 마지막 check_and_run_vip 이후(리포트 전송 등) 도착한 요청 회수
+    if try_start_vip_worker():
+        logger.info("[VIP Worker] 배치 종료 후 밀린 VIP 요청 처리 시작")
+
 
 # --- [9. Flask API 라우팅] ---
 # 단건 수집 API
@@ -1308,7 +1339,7 @@ def trigger_queue_crawl():
     request_id, ps_store_id = data.get('requestId'), data.get('psStoreId')
     if not request_id or not ps_store_id: return jsonify({"error": "Bad Request"}), 400
 
-    global is_vip_running, is_batch_running, is_ranking_running, active_requests
+    global active_requests
 
     with crawler_lock:
         if request_id in active_requests:
@@ -1317,15 +1348,13 @@ def trigger_queue_crawl():
         active_requests.add(request_id)
         urgent_queue.put({"request_id": request_id, "ps_store_id": ps_store_id})
 
-    # 배치가 async 병렬탭으로 전환되면서 배치 브라우저와 VIP 브라우저가 분리됨
-    # → is_batch_running 중에도 VIP 전담 스레드(자체 sync 브라우저) 즉시 시작 가능
-    if not is_vip_running and not is_ranking_running and not is_rating_running:
-        threading.Thread(target=run_vip_only_logic, daemon=True).start()
-        logger.info(f"[VIP Worker] 새치기 전담 스레드 즉시 출발! (배치 실행 중 병렬 허용)")
+    # 다른 작업 실행 중이면 큐에만 적재:
+    # 배치·랭킹은 루프 내 check_and_run_vip로, VIP·평점·배치·랭킹 종료 시에는 try_start_vip_worker로 회수됨
+    if try_start_vip_worker():
+        logger.info("[VIP Worker] 새치기 전담 스레드 즉시 출발!")
         return jsonify({"status": "accepted", "message": "VIP task started"}), 202
-    else:
-        logger.info(f"[VIP Queue] 대기열 등록 (다른 VIP/랭킹/평점 작업 중)")
-        return jsonify({"status": "accepted", "message": "Added to VIP queue"}), 202
+    logger.info("[VIP Queue] 대기열 등록 (실행 중인 작업이 처리 예정)")
+    return jsonify({"status": "accepted", "message": "Added to VIP queue"}), 202
 
 @app.route('/run', methods=['POST'])
 def trigger_crawl():
@@ -1360,6 +1389,10 @@ def run_ranking_wrapper(ranking_types=None):
             is_ranking_running = False
         logger.info("[Ranking] 랭킹 수집 종료. 시스템 상태 초기화.")
 
+    # 마지막 페이지 이후 도착한 요청 회수
+    if try_start_vip_worker():
+        logger.info("[VIP Worker] 랭킹 종료 후 밀린 VIP 요청 처리 시작")
+
 @app.route('/run-ranking', methods=['POST'])
 def trigger_ranking_crawl():
     data = request.json or {}
@@ -1388,11 +1421,8 @@ def set_rating_running(state):
     global is_rating_running
     is_rating_running = state
     # rating 완료 후 대기 중인 VIP 요청이 있으면 즉시 처리
-    if not state and not urgent_queue.empty():
-        with crawler_lock:
-            if is_vip_running or is_batch_running or is_ranking_running:
-                return
-        threading.Thread(target=run_vip_only_logic, daemon=True).start()
+    # (state=True 호출은 rating_worker가 crawler_lock을 잡은 상태이므로 False일 때만 락 진입)
+    if not state and try_start_vip_worker():
         logger.info("[VIP Worker] rating 완료 후 밀린 VIP 요청 처리 시작")
 
 if __name__ == '__main__':
