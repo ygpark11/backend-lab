@@ -47,6 +47,19 @@ import SEO from '../components/common/SEO';
 import TrendingHeroCarousel from '../components/TrendingHeroCarousel';
 import ServiceIntro from '../components/ServiceIntro';
 import { getSaleDeadline } from '../utils/saleDeadline';
+
+// URL ↔ filter 동기화 시 값 비교 (배열은 순서 포함 비교)
+const isSameFilter = (a, b) => {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const k of keys) {
+        const x = a[k], y = b[k];
+        if (Array.isArray(x) || Array.isArray(y)) {
+            const xs = x || [], ys = y || [];
+            if (xs.length !== ys.length || xs.some((v, i) => v !== ys[i])) return false;
+        } else if (x !== y) return false;
+    }
+    return true;
+};
 import {useAuth} from '../contexts/AuthContext';
 import DonationModal from '../components/DonationModal';
 import {getRecentGames, clearRecentGames} from '../utils/recentGames';
@@ -472,7 +485,7 @@ const GameListPage = () => {
 
     useEffect(() => {
         const syncFilterFromUrl = () => {
-            setFilter({
+            const next = {
                 keyword: searchParams.get('keyword') || '',
                 genre: searchParams.get('genre') || '',
                 minDiscountRate: searchParams.get('minDiscountRate') || '',
@@ -495,7 +508,9 @@ const GameListPage = () => {
                 minUserScore: searchParams.get('minUserScore') || '',
                 curation: searchParams.get('curation') === 'true',
                 curationTheme: searchParams.get('curationTheme') || '',
-            });
+            };
+            // 값이 같으면 기존 객체 유지 → filter 의존 effect(게임 목록 조회)가 중복 실행되지 않음
+            setFilter(prev => (isSameFilter(prev, next) ? prev : next));
             setSearchInput(searchParams.get('keyword') || '');
             setPriceRange({
                 min: searchParams.get('minPrice') || '',
@@ -1783,7 +1798,7 @@ const GameListPage = () => {
                                 <Search className="w-4 h-4 text-ps-blue" />
                                 <h3 className="text-base font-black text-primary">퀵 필터 & 탐색</h3>
                             </div>
-                            <button onClick={() => setIsQuickSearchOpen(false)} className="p-1.5 bg-surface hover:bg-surface-hover rounded-full transition-colors">
+                            <button onClick={() => setIsQuickSearchOpen(false)} aria-label="퀵서치 닫기" className="p-1.5 bg-surface hover:bg-surface-hover rounded-full transition-colors">
                                 <X className="w-4 h-4 text-secondary" />
                             </button>
                         </div>

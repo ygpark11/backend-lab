@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import client from '../api/client';
-import { requestFcmToken, onForegroundMessage } from '../utils/fcm';
 
 const AuthContext = createContext(null);
 
@@ -17,8 +16,9 @@ export const AuthProvider = ({ children }) => {
                 setUser(response.data);
                 setIsAuthenticated(true);
 
-                requestFcmToken();
-                //onForegroundMessage();
+                import('../utils/fcm')
+                    .then(({ requestFcmToken }) => requestFcmToken())
+                    .catch(() => { /* 알림 토큰 갱신 실패는 로그인 흐름에 영향 없음 */ });
             } catch (error) {
                 setUser(null);
                 setIsAuthenticated(false);

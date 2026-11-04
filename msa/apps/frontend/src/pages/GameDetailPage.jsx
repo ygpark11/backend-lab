@@ -451,7 +451,7 @@ export default function GameDetailPage() {
         navigate(`/games?genre=${encodeURIComponent(cleanGenre)}`, { state: null });
     };
 
-    if (loading) return <div className="pt-20"><PSLoader /></div>;
+    if (loading) return <div className="pt-20 min-h-screen"><PSLoader /></div>;
     if (!game) return null;
 
     // 🎬 Shorts 촬영용 전체화면 카드 — /games/:id?view=shorts
@@ -574,22 +574,6 @@ export default function GameDetailPage() {
         if (normalized >= 75) return { label: '호평', icon: 'check', color: 'text-green-600 dark:text-green-400 font-bold' };
         if (normalized >= 50) return { label: '보통', icon: null, color: 'text-secondary dark:text-zinc-400 font-bold' };
         return { label: '혹평', icon: 'alert', color: 'text-red-500 dark:text-red-400 font-bold' };
-    };
-
-    const getScoreColor = (score, scale = 100) => {
-        if (!score) return 'text-secondary';
-        const percentage = scale === 10 ? score * 10 : score;
-        if (percentage >= 75) return 'text-green-400';
-        if (percentage >= 50) return 'text-yellow-400';
-        return 'text-red-400';
-    };
-
-    const getScoreBarBg = (score, scale = 100) => {
-        if (!score) return 'bg-divider';
-        const pct = scale === 10 ? score * 10 : score;
-        if (pct >= 75) return 'bg-green-400';
-        if (pct >= 50) return 'bg-yellow-400';
-        return 'bg-red-400';
     };
 
     const pageContent = (
@@ -792,9 +776,9 @@ export default function GameDetailPage() {
                                 <div className="flex items-center gap-4 bg-base/80 p-4 rounded-2xl border border-divider flex-1 min-w-0">
                                     <div className="shrink-0">{renderVerdictIcon(game.priceVerdict)}</div>
                                     <div className="min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <h3 className="text-lg md:text-xl font-black text-primary truncate">{traffic.text}</h3>
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${currentTheme.badgeBg}`}>
+                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mb-1">
+                                            <h2 className="text-lg md:text-xl font-black text-primary break-keep">{traffic.text}</h2>
+                                            <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full border ${currentTheme.badgeBg}`}>
                                                 {currentTheme.badge}
                                             </span>
                                         </div>

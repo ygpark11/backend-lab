@@ -15,6 +15,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import PSGameImage from './common/PSGameImage';
+import { getOptimizedSrc } from '../utils/imageUtils';
 import client from '../api/client';
 
 // 언어 태그 괄호 및 PS4/PS5 suffix 정제 함수
@@ -178,7 +179,7 @@ const TrendingHeroCarousel = () => {
             <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden rounded-3xl">
                 <div 
                     className="absolute -inset-10 bg-cover bg-center transition-all duration-700 ease-out opacity-25 dark:opacity-35 blur-3xl scale-125"
-                    style={{ backgroundImage: `url(${activeGame.imageUrl})` }}
+                    style={{ backgroundImage: `url(${getOptimizedSrc(activeGame.imageUrl, 240)})` }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-base via-base/60 to-transparent dark:from-base dark:via-base/50 dark:to-transparent" />
             </div>

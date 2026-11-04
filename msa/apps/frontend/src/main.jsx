@@ -13,7 +13,8 @@ Sentry.init({
         Sentry.browserTracingIntegration(),
         Sentry.replayIntegration(),
     ],
-    tracesSampleRate: 1.0,
+    // 전량 수집 시 할당량 초과(429)로 이벤트가 버려짐 → 운영 권장 비율로 샘플링
+    tracesSampleRate: 0.1,
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
     // 광고 차단기로 인한 서드파티 에러 필터링

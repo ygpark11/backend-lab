@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import RouteChangeTracker from "./components/common/RouteChangeTracker";
 import { Toaster } from 'react-hot-toast';
 import PSLoader from './components/PSLoader';
@@ -7,38 +7,45 @@ import Layout from './components/Layout';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import LoginModal from './components/LoginModal';
 import BootingScreen from './components/BootingScreen';
-import { onForegroundMessage } from './utils/fcm';
 import GameListPage from './pages/GameListPage';
-import WishlistPage from './pages/WishlistPage';
-import GameDetailPage from './pages/GameDetailPage';
-import InsightsPage from './pages/InsightsPage';
-import PioneerCandidatesPage from './pages/PioneerCandidatesPage';
-import MyPage from './pages/MyPage';
-import PsPlusPricingPage from './pages/PsPlusPricingPage';
-import MonthlyGamesArchivePage from './pages/MonthlyGamesArchivePage';
-import CurationPage from './pages/CurationPage';
-import AdminPage from './pages/AdminPage';
-import ArcadePage from './pages/ArcadePage';
-import PrivacyPage from './pages/PrivacyPage';
-import TermsPage from './pages/TermsPage';
-import GuidePage from './pages/GuidePage';
+import { lazyWithReload } from './utils/lazyWithReload';
+
+// 첫 진입 화면(게임 목록)만 기본 번들에 포함하고, 나머지 페이지는 이동 시점에 내려받음
+const WishlistPage = lazyWithReload(() => import('./pages/WishlistPage'));
+const GameDetailPage = lazyWithReload(() => import('./pages/GameDetailPage'));
+const InsightsPage = lazyWithReload(() => import('./pages/InsightsPage'));
+const PioneerCandidatesPage = lazyWithReload(() => import('./pages/PioneerCandidatesPage'));
+const MyPage = lazyWithReload(() => import('./pages/MyPage'));
+const PsPlusPricingPage = lazyWithReload(() => import('./pages/PsPlusPricingPage'));
+const MonthlyGamesArchivePage = lazyWithReload(() => import('./pages/MonthlyGamesArchivePage'));
+const CurationPage = lazyWithReload(() => import('./pages/CurationPage'));
+const AdminPage = lazyWithReload(() => import('./pages/AdminPage'));
+const ArcadePage = lazyWithReload(() => import('./pages/ArcadePage'));
+const PrivacyPage = lazyWithReload(() => import('./pages/PrivacyPage'));
+const TermsPage = lazyWithReload(() => import('./pages/TermsPage'));
+const GuidePage = lazyWithReload(() => import('./pages/GuidePage'));
+
+// 페이지 청크 로딩 중 화면 높이를 확보해 푸터가 밀리는 레이아웃 이동 방지
+const PageFallback = () => (
+    <div className="pt-20 min-h-screen">
+        <PSLoader />
+    </div>
+);
+
+// 로그인 필요 페이지: 인증 확인 중(null)에는 로더, 비로그인이면 목록으로 이동
+// 공개 페이지는 인증 확인을 기다리지 않고 바로 렌더링 (첫 화면 지연 방지)
+const ProtectedRoute = ({ children }) => {
+    const { isAuthenticated } = useAuth();
+    if (isAuthenticated === null) return <PageFallback />;
+    return isAuthenticated ? children : <Navigate to="/games" replace />;
+};
 
 function AppRoutes() {
-    const { isAuthenticated } = useAuth();
     const location = useLocation();
     const background = location.state && location.state.background;
 
-    // 인증 상태 확인 중 (null = 로딩)
-    if (isAuthenticated === null) {
-        return (
-            <div className="min-h-screen bg-ps-black text-white flex items-center justify-center">
-                <PSLoader />
-            </div>
-        );
-    }
-
     return (
-        <>
+        <Suspense fallback={<PageFallback />}>
             <Routes location={background || location}>
                 <Route path="/" element={<Navigate to="/games" replace />} />
                 <Route path="/login" element={<Navigate to="/games" replace />} />
@@ -57,26 +64,28 @@ function AppRoutes() {
                     <Route path="/guide" element={<GuidePage />} />
                     <Route
                         path="/wishlist"
-                        element={isAuthenticated ? <WishlistPage /> : <Navigate to="/games" replace />}
+                        element={<ProtectedRoute><WishlistPage /></ProtectedRoute>}
                     />
                     <Route
                         path="/profile"
-                        element={isAuthenticated ? <MyPage /> : <Navigate to="/games" replace />}
+                        element={<ProtectedRoute><MyPage /></ProtectedRoute>}
                     />
                     <Route
                         path="/admin"
-                        element={isAuthenticated ? <AdminPage /> : <Navigate to="/games" replace />}
+                        element={<ProtectedRoute><AdminPage /></ProtectedRoute>}
                     />
                 </Route>
             </Routes>
 
             {/* background location 패턴: 게임 상세를 모달처럼 오버레이 */}
             {background && (
-                <Routes>
-                    <Route path="/games/:id" element={<GameDetailPage />} />
-                </Routes>
+                <Suspense fallback={null}>
+                    <Routes>
+                        <Route path="/games/:id" element={<GameDetailPage />} />
+                    </Routes>
+                </Suspense>
             )}
-        </>
+        </Suspense>
     );
 }
 
@@ -93,12 +102,19 @@ function App() {
         window.addEventListener('backend-booting', handleBooting);
 
         let unsubscribeFCM = null;
+        let cancelled = false;
 
-        onForegroundMessage().then((unsub) => {
-            unsubscribeFCM = unsub;
-        });
+        // Firebase(FCM)는 첫 화면 렌더링에 필요 없으므로 별도 청크로 지연 로드
+        import('./utils/fcm')
+            .then(({ onForegroundMessage }) => onForegroundMessage())
+            .then((unsub) => {
+                if (cancelled) unsub?.();
+                else unsubscribeFCM = unsub;
+            })
+            .catch(() => { /* 미지원 브라우저·청크 로드 실패 시 포그라운드 알림만 생략 */ });
 
         return () => {
+            cancelled = true;
             window.removeEventListener('backend-booting', handleBooting);
             if (unsubscribeFCM) {
                 unsubscribeFCM();

@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
-import {isSupported, requestFcmToken} from '../utils/fcm';
 
 import {
     Activity,
@@ -66,6 +65,7 @@ const Navbar = () => {
 
         const initNotificationToast = async () => {
             // FCM 지원 여부 체크
+            const { isSupported } = await import('../utils/fcm');
             const supported = await isSupported();
 
             if (!supported || !('Notification' in window)) return;
@@ -82,6 +82,7 @@ const Navbar = () => {
                         <div className="flex gap-2">
                             <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => {
                                 toast.dismiss(t.id);
+                                const { requestFcmToken } = await import('../utils/fcm');
                                 await requestFcmToken();
                                 if ('Notification' in window && Notification.permission === 'granted') {
                                     toast.success('알림 설정 완료!');
@@ -397,9 +398,9 @@ const Navbar = () => {
                     </button>
 
                     <button onClick={() => navigateAndScroll('/terms')} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover" title="이용약관 및 개인정보처리방침" aria-label="이용약관 및 개인정보처리방침"><Shield className="w-5 h-5" /></button>
-                    <button onClick={() => setIsGuideOpen(true)} className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><HelpCircle className="w-5 h-5" /></button>
+                    <button onClick={() => setIsGuideOpen(true)} aria-label="초보자 가이드" title="초보자 가이드" className="hidden xl:block text-secondary hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-hover"><HelpCircle className="w-5 h-5" /></button>
 
-                    <button onClick={() => { setIsNoticeOpen(true); setHasNewNotice(false); }} className="relative p-2 text-secondary transition-colors group md:hover:text-blue-600 active:text-blue-600 dark:md:hover:text-blue-500 dark:active:text-blue-500 hover:bg-surface-hover rounded-full">
+                    <button onClick={() => { setIsNoticeOpen(true); setHasNewNotice(false); }} aria-label="공지사항" title="공지사항" className="relative p-2 text-secondary transition-colors group md:hover:text-blue-600 active:text-blue-600 dark:md:hover:text-blue-500 dark:active:text-blue-500 hover:bg-surface-hover rounded-full">
                         <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 transition-transform md:group-hover:scale-110 active:scale-95" />
                         {hasNewNotice && (
                             <>
@@ -553,14 +554,19 @@ const Navbar = () => {
                         </button>
                         </>
                     ) : (
-                        <button onClick={openLoginModal} className="relative group bg-[var(--bento-blue-from)] border border-[color:var(--bento-blue-border)] hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)] text-ps-blue p-2 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center gap-0 sm:gap-2 active:scale-95 ml-1 md:ml-2">
+                        <button
+                            onClick={openLoginModal}
+                            aria-label="로그인"
+                            aria-hidden={isAuthenticated === null}
+                            disabled={isAuthenticated === null}
+                            className={`${isAuthenticated === null ? 'invisible' : ''} relative group bg-[var(--bento-blue-from)] border border-[color:var(--bento-blue-border)] hover:border-[color:var(--bento-blue-border-hover)] hover:[box-shadow:var(--bento-blue-shadow)] text-ps-blue p-2 sm:px-4 sm:py-2 md:px-5 rounded-full transition-all duration-300 flex items-center justify-center gap-0 sm:gap-2 active:scale-95 ml-1 md:ml-2`}>
                             <UserCircle className="w-5 h-5 transition-transform md:group-hover:scale-110" />
                             <span className="hidden sm:inline font-bold sm:text-sm tracking-wide">로그인</span>
                         </button>
                     )}
 
                     <div className="relative xl:hidden flex items-center ml-0.5 sm:ml-1" ref={mobileMenuRef}>
-                        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-surface-hover text-primary' : 'text-secondary hover:bg-surface-hover'}`}>
+                        <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label={isMobileMenuOpen ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={isMobileMenuOpen} className={`p-2 rounded-xl transition-colors ${isMobileMenuOpen ? 'bg-surface-hover text-primary' : 'text-secondary hover:bg-surface-hover'}`}>
                             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                         </button>
 
