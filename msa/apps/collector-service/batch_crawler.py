@@ -11,6 +11,7 @@ import json
 import zlib
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from urllib.parse import parse_qs, urlparse
 
 # [Playwright Imports]
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -798,13 +799,60 @@ def mine_english_title(html_content: str) -> str | None:
         logger.warning(f"[englishTitle] 추출 실패: {e}")
         return None
 
+DELISTED_CONFIRM_DELAY_SEC = 2
+_REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+
+def _store_error_reason(error_url: str) -> str:
+    """PS Store 오류 페이지 URL의 사유 파라미터 추출 (예: emptyRequiredBatarang/204)."""
+    qs = parse_qs(urlparse(error_url).query)
+    return f"{qs.get('widgetErrorType', ['?'])[0]}/{qs.get('widgetStatusCode', ['?'])[0]}"
+
+def _confirm_delisted(target_url: str) -> bool | None:
+    """브라우저 없이 HTTP 1회로 단종 여부 재확인.
+
+    단종 상품은 스토어 서버가 즉시 /error로 302 리다이렉트하므로 렌더링 없이 판별 가능.
+    Returns: True=재확인도 /error (단종 확정), False=정상 응답 (일시 오류), None=확인 불가
+    """
+    time.sleep(DELISTED_CONFIRM_DELAY_SEC)
+    try:
+        res = requests.get(
+            target_url,
+            headers={"User-Agent": browser_common.random_user_agent(), "Accept-Language": "ko-KR"},
+            allow_redirects=False, timeout=10, stream=True,  # 본문(HTML) 다운로드 생략
+        )
+        res.close()
+    except Exception as e:
+        logger.warning(f"[단종 재확인] 요청 실패: {target_url} -> {e}")
+        return None
+
+    if res.status_code in _REDIRECT_STATUS_CODES:
+        return "/error" in res.headers.get("Location", "")
+    if res.status_code == 200:
+        return False
+    logger.warning(f"[단종 재확인] 예상 밖 응답 {res.status_code}: {target_url}")
+    return None
+
 def crawl_detail_and_send(page, target_url, verbose=False):
     try:
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
 
         if "/error" in page.url:
-            logger.warning(f"단종 의심 (URL 리다이렉트): {target_url}")
-            return {"is_delisted": True, "ps_store_id": target_url.split("/")[-1].split("?")[0]}
+            # 리다이렉트 1회만으로 단종 확정하면 스토어 일시 오류까지 오탐됨 → HTTP로 재확인
+            reason = _store_error_reason(page.url)
+            confirmed = _confirm_delisted(target_url)
+            if confirmed:
+                logger.warning(f"단종 의심 (URL 리다이렉트, 재확인 일치, 사유 {reason}): {target_url}")
+                return {"is_delisted": True, "ps_store_id": target_url.split("/")[-1].split("?")[0]}
+            if confirmed is None:
+                # 확인 불가 시 오탐 방지를 우선: 오늘은 판정 보류 (미갱신 상태로 남아 다음 배치에서 재시도)
+                logger.warning(f"[단종 판정 보류] 재확인 불가 (사유 {reason}): {target_url}")
+                return None
+
+            logger.warning(f"[단종 오탐] 일시 오류로 판단 (사유 {reason}) → 재수집: {target_url}")
+            page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
+            if "/error" in page.url:
+                logger.warning(f"[단종 판정 보류] 재수집도 /error (사유 {_store_error_reason(page.url)}): {target_url}")
+                return None
 
         try:
             page.wait_for_selector("[data-qa='mfe-game-title#name']", state="attached", timeout=30000)
