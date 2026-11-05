@@ -30,6 +30,9 @@
         /* 글자용: 배경 #121212 6.2:1, 파란 틴트 배경 5.2:1 */
         --color-brand-blue-text-rgb: 79 148 247;
 
+        /* 로딩 자리 반짝임 */
+        --color-shimmer: rgba(255, 255, 255, 0.06);
+
         --color-score-green-bg: #064e3b;
         --color-score-green-text: #86efac;
         --color-score-yellow-bg: #713f12;
@@ -106,6 +109,8 @@
         --color-brand-blue-rgb: 37 99 235;
         /* 글자용: 밝은 파란 틴트 배경에서도 4.5:1 이상 */
         --color-brand-blue-text-rgb: 29 78 216;
+
+        --color-shimmer: rgba(15, 23, 42, 0.05);
 
         --color-score-green-bg: #dcfce7;
         --color-score-green-text: #15803d;

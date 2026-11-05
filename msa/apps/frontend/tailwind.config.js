@@ -86,7 +86,12 @@ export default {
                 shimmer: {
                     '0%': { transform: 'translateX(-100%)' },
                     '100%': { transform: 'translateX(100%)' },
-                }
+                },
+                // 상세 미리보기 카드가 제자리로 맞춰지는 조립 연출 (transform·opacity만 사용해 레이아웃 이동 없음)
+                assemble: {
+                    '0%': { opacity: '0', transform: 'translateY(10px) scale(0.985)' },
+                    '100%': { opacity: '1', transform: 'none' },
+                },
             },
             animation: {
                 'spin-slow': 'spin 10s linear infinite',
@@ -96,6 +101,7 @@ export default {
                 'fadeOut': 'fadeOut 0.3s ease-in forwards',
                 'slideDown': 'slideDown 0.4s ease-out forwards',
                 'shimmer': 'shimmer 1.6s ease-in-out infinite',
+                'assemble': 'assemble 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both',
             }
         },
     },

@@ -9,7 +9,7 @@ const PriceChart = lazyWithReload(() => import('../components/PriceChart'));
 // 차트 로딩 중 자리 확보: 실측한 PriceChart 렌더 높이(모바일 317px / md 이상 335px)와 동일하게 맞춰 레이아웃 이동 방지
 const PriceChartSkeleton = () => (
     <div aria-hidden="true" className="h-[317px] md:h-[335px] pt-[54px] md:pt-[35px]">
-        <div className="w-full h-full rounded-xl bg-surface animate-pulse" />
+        <Placeholder className="w-full h-full rounded-xl bg-surface" />
     </div>
 );
 import RelatedGameCard from '../components/RelatedGameCard';
@@ -216,7 +216,8 @@ const renderMiniVerdictIcon = (verdict) => {
 
 // 은은하면서도 게임 고유 아트워크 비주얼을 살리는 앰비언트 Hero 배경
 const BackgroundHero = ({ imageUrl }) => (
-    <div className="absolute top-0 left-0 w-full h-[650px] z-0 pointer-events-none select-none overflow-hidden">
+    // 아래 끝을 마스크로 서서히 투명하게 해, 내용이 적을 때(미리보기 등) 보이던 가로 경계선 제거
+    <div className="absolute top-0 left-0 w-full h-[650px] z-0 pointer-events-none select-none overflow-hidden [mask-image:linear-gradient(to_bottom,#000_45%,transparent)] [-webkit-mask-image:linear-gradient(to_bottom,#000_45%,transparent)]">
         <PSGameImage
             src={imageUrl}
             priority
@@ -302,7 +303,12 @@ const getPricePosition = (game) => (game.currentPrice != null && game.lowestPric
     ? Math.min(100, Math.max(0, Math.round((game.originalPrice - game.currentPrice) / (game.originalPrice - game.lowestPrice) * 100)))
     : null;
 
-const Placeholder = ({ className }) => <div aria-hidden="true" className={`animate-pulse ${className}`} />;
+// 로딩 자리: 빛이 한 번씩 지나가는 반짝임으로 '불러오는 중'임을 표시 (움직임 줄이기 설정 시 정지)
+const Placeholder = ({ className = '' }) => (
+    <div aria-hidden="true" className={`relative overflow-hidden ${className}`}>
+        <span className="absolute inset-0 -translate-x-full motion-safe:animate-shimmer bg-[linear-gradient(90deg,transparent,var(--color-shimmer),transparent)]" />
+    </div>
+);
 
 const DetailBackButton = ({ onClose }) => (
     <button
@@ -325,7 +331,8 @@ const DetailPoster = ({ game }) => {
         <div className={`w-full rounded-2xl overflow-hidden shadow-xl border relative group bg-surface ${
             isPlatinum ? 'border-yellow-400/50 shadow-yellow-500/20' : 'border-divider-strong'
         }`}>
-            <div className={`w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base ${game.imageUrl ? '' : 'animate-pulse'}`}>
+            <div className="w-full relative h-[50vw] max-h-[260px] sm:max-h-[300px] lg:h-[260px] xl:h-[280px] overflow-hidden bg-base">
+                {!game.imageUrl && <Placeholder className="absolute inset-0" />}
                 {game.imageUrl && (
                     <PSGameImage
                         src={game.imageUrl}
@@ -396,10 +403,14 @@ const DetailActionButtons = ({ game, pending = false, onWishlistClick, onTargetC
                             : 'bg-surface border-divider text-primary hover:bg-surface-hover hover:border-divider-strong'
                     }`}
                 >
-                    <span className={`flex items-center gap-1.5 ${likeKnown ? '' : 'invisible'}`}>
-                        <Heart className={`w-3.5 h-3.5 ${game.liked ? 'fill-current text-red-500' : ''}`} />
-                        <span>{game.liked ? '찜 취소' : '위시리스트 추가'}</span>
-                    </span>
+                    {likeKnown ? (
+                        <span className="flex items-center gap-1.5">
+                            <Heart className={`w-3.5 h-3.5 ${game.liked ? 'fill-current text-red-500' : ''}`} />
+                            <span>{game.liked ? '찜 취소' : '위시리스트 추가'}</span>
+                        </span>
+                    ) : (
+                        <span className="flex items-center h-4"><Heart className="w-3.5 h-3.5 text-muted" /></span>
+                    )}
                 </button>
 
                 {game.liked && (
@@ -760,7 +771,7 @@ const MobileActionBar = ({ game, pending = false, isModal, onWishlistClick, onTa
                         }`}
                         aria-label={game.liked ? '찜 취소' : '위시리스트 추가'}
                     >
-                        <Heart className={`w-4 h-4 ${game.liked ? 'fill-current text-red-500' : ''} ${likeKnown ? '' : 'invisible'}`} />
+                        <Heart className={`w-4 h-4 ${game.liked ? 'fill-current text-red-500' : ''} ${likeKnown ? '' : 'text-muted'}`} />
                     </button>
 
                     <StoreLink
@@ -777,6 +788,62 @@ const MobileActionBar = ({ game, pending = false, isModal, onWishlistClick, onTa
     );
 };
 
+// 아래 영역 로딩 자리: 완성 화면의 실측 높이에 맞춤
+// 할인 방어력 PC 258~283px·모바일 116px / 평점·플레이타임 카드 PC 217~229px·모바일 186px / 스펙 모바일 133px
+const SkeletonCardShell = ({ className = '', children }) => (
+    <div className={`bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-3.5 sm:p-5 shadow-md overflow-hidden flex flex-col gap-3 ${className}`}>
+        {children}
+    </div>
+);
+
+const DefenseCardSkeleton = () => (
+    <SkeletonCardShell className="h-[283px]">
+        <div className="flex items-center justify-between">
+            <Placeholder className="h-4 w-24 rounded bg-surface-hover" />
+            <Placeholder className="h-5 w-16 rounded-md bg-surface-hover" />
+        </div>
+        <Placeholder className="h-[66px] w-full rounded-xl bg-surface-hover" />
+        <div className="grid grid-cols-3 gap-2">
+            <Placeholder className="h-[60px] rounded-xl bg-surface-hover" />
+            <Placeholder className="h-[60px] rounded-xl bg-surface-hover" />
+            <Placeholder className="h-[60px] rounded-xl bg-surface-hover" />
+        </div>
+        <Placeholder className="h-[44px] w-full rounded-xl bg-surface-hover" />
+    </SkeletonCardShell>
+);
+
+const BentoCardSkeleton = ({ className = '' }) => (
+    <SkeletonCardShell className={className}>
+        <Placeholder className="h-4 w-20 rounded bg-surface-hover" />
+        <Placeholder className="flex-1 w-full rounded-xl bg-surface-hover" />
+        <Placeholder className="h-3.5 w-2/3 rounded bg-surface-hover" />
+    </SkeletonCardShell>
+);
+
+const DetailBodySkeleton = () => (
+    <>
+        {/* 모바일: 신호등 아래 할인 방어력(간략형) 자리 */}
+        <SkeletonCardShell className="lg:hidden h-[116px]">
+            <Placeholder className="h-4 w-28 rounded bg-surface-hover" />
+            <Placeholder className="flex-1 w-full rounded-xl bg-surface-hover" />
+        </SkeletonCardShell>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <BentoCardSkeleton className="col-span-1 h-[186px] lg:h-[217px]" />
+            <BentoCardSkeleton className="col-span-1 h-[186px] lg:h-[217px]" />
+            <BentoCardSkeleton className="col-span-2 lg:col-span-1 h-[133px] lg:h-[217px]" />
+        </div>
+        <div className="bg-surface/95 dark:bg-surface/90 border border-divider-strong rounded-2xl p-5 sm:p-6 shadow-md overflow-hidden">
+            <div className="flex items-center gap-2 mb-3.5 sm:mb-4 text-base font-black text-secondary">
+                <TrendingUp className="w-5 h-5 text-ps-blue" />
+                <span>가격 변동 추이</span>
+            </div>
+            <div className="relative min-h-[317px] md:min-h-[335px]">
+                <PriceChartSkeleton />
+            </div>
+        </div>
+    </>
+);
+
 // 상세 데이터 도착 전, 진입한 화면의 카드 데이터로 상단을 먼저 그림 (실제 화면과 같은 컴포넌트·배치)
 const DetailPreview = ({ game, isAdmin, onClose, onRefresh, onDelete, onGenreClick }) => (
     // 모바일: 하단 액션 바가 화면 아래에 붙도록 모달 높이를 채움
@@ -784,18 +851,22 @@ const DetailPreview = ({ game, isAdmin, onClose, onRefresh, onDelete, onGenreCli
     <div className="relative z-10 flex flex-col min-h-full md:min-h-[92vh]" aria-busy="true">
         <div className="flex-1 w-full p-4 sm:p-6 md:p-8 pb-28 md:pb-20 max-w-[1400px] mx-auto">
             <DetailBackButton onClose={onClose} />
+            <p className="sr-only">가격 기록·평점·할인 방어력을 불러오는 중</p>
+            {/* 조립 연출: 카드가 0.24초 동안 차례로 제자리에 맞춰짐 (데이터 도착은 기다리지 않음) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-7 items-start">
                 <aside className="lg:col-span-4 xl:col-span-3.5 lg:sticky lg:top-20 flex flex-col gap-3.5 z-20">
-                    <DetailPoster game={game} />
-                    <DetailActionButtons game={game} pending />
-                    <Placeholder className="hidden lg:block h-[320px] rounded-2xl bg-surface border border-divider" />
+                    <div className="motion-safe:animate-assemble"><DetailPoster game={game} /></div>
+                    {/* 버튼 그룹은 PC 전용이라 래퍼도 PC에서만 차지 (모바일에서 빈 칸이 간격을 하나 더 만들지 않게) */}
+                    <div className="hidden lg:block motion-safe:animate-assemble [animation-delay:60ms]"><DetailActionButtons game={game} pending /></div>
+                    <div className="hidden lg:block motion-safe:animate-assemble [animation-delay:120ms]"><DefenseCardSkeleton /></div>
                 </aside>
                 <div className="lg:col-span-8 xl:col-span-8.5 flex flex-col gap-5 min-w-0">
-                    <DetailTitleCard game={game} pending isAdmin={isAdmin} onRefresh={onRefresh} onDelete={onDelete} onGenreClick={onGenreClick} />
-                    <VerdictHeroCard game={game} pending />
-                    <div className="flex items-center justify-center gap-2 py-6 text-xs font-bold text-muted">
-                        <span className="w-3 h-3 rounded-full border-2 border-ps-blue border-t-transparent animate-spin" aria-hidden="true" />
-                        가격 기록·평점·할인 방어력을 불러오는 중
+                    <div className="motion-safe:animate-assemble [animation-delay:30ms]">
+                        <DetailTitleCard game={game} pending isAdmin={isAdmin} onRefresh={onRefresh} onDelete={onDelete} onGenreClick={onGenreClick} />
+                    </div>
+                    <div className="motion-safe:animate-assemble [animation-delay:70ms]"><VerdictHeroCard game={game} pending /></div>
+                    <div className="flex flex-col gap-5 motion-safe:animate-assemble [animation-delay:110ms]">
+                        <DetailBodySkeleton />
                     </div>
                 </div>
             </div>
