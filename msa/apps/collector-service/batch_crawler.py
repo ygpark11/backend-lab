@@ -1064,7 +1064,10 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
             if total_deals > 5: message += f"외 **{total_deals - 5}**개의 할인이 더 있습니다!\n"
 
         message += "\n[🔗 실시간 최저가 확인하기](https://ps-signal.com)"
-        requests.post(DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10)
+        res = requests.post(DISCORD_WEBHOOK_URL, json={"content": message}, timeout=10)
+        # 디스코드는 거절 시에도 예외 없이 4xx를 반환 (예: content 2000자 초과 → 400) → 응답 코드로 실패 기록
+        if not res.ok:
+            logger.error(f"Discord 전송 실패 ({res.status_code}, 메시지 {len(message)}자): {res.text[:300]}")
     except Exception as e: logger.error(f"Failed to send Discord summary: {e}")
 
 def refresh_java_server_cache():
