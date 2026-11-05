@@ -12,6 +12,13 @@ export default {
                 '600': '600ms',
                 '800': '800ms',
             },
+            // 브랜드 파랑을 배경(흰 글자)과 글자 색에 함께 쓰면 한 값으로 대비 기준(4.5:1)을 둘 다 넘길 수 없어,
+            // text-ps-blue만 테마별 글자용 토큰을 사용 (bg·border 등은 그대로 --color-brand-blue)
+            textColor: {
+                ps: {
+                    blue: 'rgb(var(--color-brand-blue-text-rgb) / <alpha-value>)',
+                },
+            },
             transitionTimingFunction: {
                 'pioneer': 'cubic-bezier(0.25, 1, 0.5, 1)',
             },
