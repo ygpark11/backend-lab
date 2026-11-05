@@ -20,6 +20,7 @@ import requests
 import ranking_crawler
 import rating_worker
 import browser_common
+import ssr_product
 
 # --- [1. 설정 및 로깅 초기화] ---
 if not os.path.exists('logs'):
@@ -779,20 +780,8 @@ def mine_english_title(html_content: str) -> str | None:
     비ASCII 문자를 latin-1로 재해석해 é→Ã©, –→â\\x80\\x93 같은 깨짐을 만들었음.
     """
     try:
-        raw_title = _decode_invariant_name(html_content)
-        if not raw_title:
-            return None
-
-        # 스마트 따옴표 → ASCII 따옴표 (Metacritic/HLTB 검색 일관성)
-        raw_title = raw_title.replace("’", "'").replace("‘", "'")
-        raw_title = raw_title.replace("“", '"').replace("”", '"')
-
-        # 검색에 방해되는 상표권 기호(™®©) 제거, 전각 &·탭 치환
-        raw_title = re.sub(r'[™®©]', '', raw_title)
-        raw_title = raw_title.replace("＆", "&").replace("\t", " ")
-
-        # 다중 공백을 단일 공백으로 압축 후 양끝 공백 제거
-        return re.sub(r'\s+', ' ', raw_title).strip() or None
+        # 정제 규칙(스마트 따옴표·™®©·전각&·공백)은 SSR 파서와 공유
+        return ssr_product.clean_english_title(_decode_invariant_name(html_content))
 
     except Exception as e:
         # 예상치 못한 에러 발생 시 크롤러가 죽지 않도록 방어
@@ -1068,6 +1057,46 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         return None
 
 
+# --- [6-1. SSR 그림자 모드: 브라우저 결과와 비교 로그만 남기고 전송·저장하지 않음] ---
+# 전환 전 검증용. 0이면 비활성. 로그 키워드: [SSR-SHADOW] 일치 / 불일치 / 실패 / 오류
+SSR_SHADOW_RATIO = float(os.getenv("SSR_SHADOW_RATIO", "0.1"))
+_SHADOW_FIELDS = (
+    "title", "englishTitle", "publisher", "imageUrl", "genreIds", "releaseDate", "originalPrice", "currentPrice",
+    "discountRate", "saleEndDate", "isPlusExclusive", "inCatalog", "platforms", "isPs5ProEnhanced", "editionContents",
+)
+
+def _shadow_norm(value):
+    if isinstance(value, str):
+        return " ".join(value.split())
+    if isinstance(value, list) and all(isinstance(v, str) and len(v) <= 6 for v in value):
+        return sorted(value)  # platforms: set 기반이라 순서 무의미
+    return value
+
+def run_ssr_shadow(url: str, dom_res: dict, dom_sec: float) -> None:
+    pid = url.split("/")[-1][:34]
+    try:
+        fetched = ssr_product.fetch_product_html(url)
+        cpu_started, started = time.process_time(), time.perf_counter()
+        ssr_res, reason = (None, f"리다이렉트 {fetched.final_url[-40:]}") if "/error" in fetched.final_url \
+            else ssr_product.parse_product_html(fetched.text, url)
+        parse_sec, parse_cpu = time.perf_counter() - started, time.process_time() - cpu_started
+        fetched.text = ""  # 대용량 HTML 즉시 해제
+    except Exception as e:
+        logger.warning(f"[SSR-SHADOW] 오류 | {pid} | {e}")
+        return
+
+    timing = f"dom {dom_sec:.1f}s | ssr fetch {fetched.elapsed:.2f}s parse {parse_sec:.2f}s (cpu {parse_cpu:.2f}s)"
+    if ssr_res is None:
+        logger.warning(f"[SSR-SHADOW] 실패 | {timing} | {pid} | {reason}")
+        return
+    diffs = [f for f in _SHADOW_FIELDS if _shadow_norm(dom_res.get(f)) != _shadow_norm(ssr_res.get(f))]
+    if diffs:
+        detail = json.dumps({f: [dom_res.get(f), ssr_res.get(f)] for f in diffs}, ensure_ascii=False)
+        logger.warning(f"[SSR-SHADOW] 불일치 | {timing} | {pid} | {detail[:600]}")
+    else:
+        logger.info(f"[SSR-SHADOW] 일치 | {timing} | {pid}")
+
+
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
 def fetch_update_targets():
     try:
@@ -1199,7 +1228,9 @@ def run_batch_crawler_logic():
                     url, game_id = target['url'], target['id']
                     check_and_run_vip(bm)
                     logger.info(f"[Phase 1] ({i}/{total_targets}) 처리 중: {url.split('/')[-1][:25]}")
+                    dom_started = time.perf_counter()
                     res = run_with_watchdog(bm, url)
+                    dom_sec = time.perf_counter() - dom_started
                     if res:
                         if res.get("is_delisted"):
                             res['game_id'] = game_id
@@ -1208,6 +1239,8 @@ def run_batch_crawler_logic():
                             total_processed_count += 1
                             if res.get("discountRate", 0) > 0:
                                 collected_deals.append(res)
+                            if random.random() < SSR_SHADOW_RATIO:
+                                run_ssr_shadow(url, res, dom_sec)
                     visited_urls.add(url)
                 logger.info(f"[Phase 1] 완료. 처리: {total_processed_count}개")
 
