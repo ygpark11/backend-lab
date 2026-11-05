@@ -1124,7 +1124,7 @@ export default function GameDetailPage() {
     const getMetacriticBadgeColor = (score, scale = 100) => {
         if (score === null || score === undefined) return 'bg-base border border-divider text-muted';
         const normalized = scale === 10 ? score * 10 : score;
-        if (normalized >= 75) return 'bg-green-600 text-white font-black shadow-[0_2px_10px_rgba(22,163,74,0.3)]';
+        if (normalized >= 75) return 'bg-green-700 text-white font-black shadow-[0_2px_10px_rgba(22,163,74,0.3)]';
         if (normalized >= 50) return 'bg-yellow-500 text-black font-black shadow-[0_2px_10px_rgba(234,179,8,0.3)]';
         return 'bg-red-600 text-white font-black shadow-[0_2px_10px_rgba(220,38,38,0.3)]';
     };

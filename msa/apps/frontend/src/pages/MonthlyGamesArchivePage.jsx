@@ -256,7 +256,7 @@ const MonthlyGamesArchivePage = () => {
                     fetchArchive(pageNumberRef.current + 1, activeTab);
                 }
             },
-            { threshold: 0.1, rootMargin: "300px" }
+            { threshold: 0.1, rootMargin: "0px 0px 1500px 0px" }
         );
 
         if (observerTarget.current) observer.observe(observerTarget.current);

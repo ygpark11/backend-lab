@@ -12,7 +12,7 @@ const Layout = () => {
                 <Outlet />
             </main>
 
-            <footer className="w-full border-t border-divider text-center px-4 py-8 mt-10 opacity-60 hover:opacity-100 transition-opacity">
+            <footer className="w-full border-t border-divider text-center px-4 py-8 mt-10 opacity-80 hover:opacity-100 transition-opacity">
                 <nav aria-label="사이트 안내" className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-3 text-xs font-bold text-secondary">
                     <Link to="/guide" className="hover:text-primary transition-colors">가격 판단 기준</Link>
                     <Link to="/terms" className="hover:text-primary transition-colors">이용약관</Link>

@@ -18,7 +18,8 @@
 
         --color-text-primary: #ffffff;
         --color-text-secondary: #9ca3af;
-        --color-text-muted: #6b7280;
+        /* 배경 #121212 대비 5.1:1 (이전 #6b7280은 3.9:1로 작은 글자 기준 4.5:1 미달) */
+        --color-text-muted: #808693;
 
         --color-border-default: rgba(255, 255, 255, 0.05);
         --color-border-strong: rgba(255, 255, 255, 0.1);
@@ -91,8 +92,9 @@
         --color-bg-glass: rgba(255, 255, 255, 0.85);
 
         --color-text-primary: #111827;
-        --color-text-secondary: #6b7280;
-        --color-text-muted: #9ca3af;
+        /* 배경 #f8f9fb 대비 보조 7.3:1 / 흐린 글자 4.6:1 (이전 흐린 글자 #9ca3af는 2.4:1) — 한 단계씩 진하게 해 위계 유지 */
+        --color-text-secondary: #4b5563;
+        --color-text-muted: #6b7280;
 
         --color-border-default: #e5e7eb;
         --color-border-strong: #d1d5db;
@@ -420,4 +422,14 @@ html { scrollbar-gutter: stable; }
 .animate-cosmic-vortex {
     animation: cosmicVortex 4s linear infinite;
     transform-origin: 120px 120px;
+}
+
+/* iOS Safari는 글자가 16px 미만인 입력창에 포커스하면 화면을 자동 확대함 (화면 확대를 허용한 뒤 생기는 부작용).
+   iOS에서만, 작은 글자 입력창을 16px로 맞춰 입력할 때 화면이 확대되지 않게 함 (큰 글자 입력창은 그대로) */
+@supports (-webkit-touch-callout: none) {
+    input[class*="text-xs"], input[class*="text-sm"], input:not([class*="text-"]),
+    textarea[class*="text-xs"], textarea[class*="text-sm"], textarea:not([class*="text-"]),
+    select[class*="text-xs"], select[class*="text-sm"], select:not([class*="text-"]) {
+        font-size: 16px !important;
+    }
 }
