@@ -11,7 +11,7 @@ import {
     getScrapingRequests, retryScrapingRequest, refreshSingleGame
 } from '../api/admin';
 import { useCurrentUser } from '../hooks/useCurrentUser';
-import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
+import { Navigate } from 'react-router-dom';
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 
@@ -99,8 +99,8 @@ function EditModal({ game, onClose, onSaved }) {
                 hltbMainExtra: num(form.hltbMainExtra),
                 hltbCompletionist: num(form.hltbCompletionist),
             };
-            const filledKeywords = form.keywords.map(k => k.trim()).filter(Boolean);
-            if (filledKeywords.length > 0) payload.searchKeywords = filledKeywords;
+            // 빈 배열도 그대로 전송 — 백엔드는 null이면 유지, 빈 배열이면 전체 삭제로 처리
+            payload.searchKeywords = form.keywords.map(k => k.trim()).filter(Boolean);
 
             await updateGame(game.id, payload);
             toast.success('게임 정보가 수정되었습니다.');
@@ -214,6 +214,8 @@ function RegisterModal({ onClose, onRegistered }) {
     const [loading, setLoading] = useState(false);
 
     const handleRegister = async () => {
+        // 요청 진행 중 Enter 연타로 인한 중복 등록 방지
+        if (loading) return;
         const trimmed = psStoreId.trim();
         if (!trimmed) { toast.error('psStoreId를 입력하세요.'); return; }
         setLoading(true);
@@ -276,7 +278,9 @@ function RegisterModal({ onClose, onRegistered }) {
 // ─── 탭: 게임 관리 ────────────────────────────────────────────────────────────
 
 function GameManagementTab() {
+    // 입력 중인 검색어와 실제 조회에 적용된 검색어를 분리 (페이지 이동은 마지막 제출 검색어 기준)
     const [keyword, setKeyword] = useState('');
+    const [appliedKeyword, setAppliedKeyword] = useState('');
     const [games, setGames] = useState([]);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
@@ -287,25 +291,38 @@ function GameManagementTab() {
     const [showRegister, setShowRegister] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
-    const search = useCallback(async (p = 0) => {
+    const requestIdRef = useRef(0);
+
+    const fetchGames = useCallback(async (kw, p = 0) => {
+        // 늦게 도착한 이전 요청 응답이 최신 결과를 덮어쓰지 않도록 요청 id로 구분
+        const requestId = ++requestIdRef.current;
         setLoading(true);
         setSelected(new Set());
         try {
             const res = await client.get('/api/v1/games/search', {
-                params: { keyword: keyword.trim() || undefined, page: p, size: 20 }
+                params: { keyword: kw || undefined, page: p, size: 20 }
             });
+            if (requestId !== requestIdRef.current) return;
             setGames(res.data.content ?? []);
             setTotalPages(res.data.totalPages ?? 0);
             setPage(p);
+            setAppliedKeyword(kw);
         } catch {
+            if (requestId !== requestIdRef.current) return;
             toast.error('게임 목록을 불러오지 못했습니다.');
         } finally {
-            setLoading(false);
+            if (requestId === requestIdRef.current) setLoading(false);
         }
-    }, [keyword]);
+    }, []);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    useEffect(() => { search(0); }, []);
+    // 새 검색: 입력창 값을 적용 / 페이지 이동·갱신: 마지막으로 적용된 검색어 유지
+    const submitSearch = () => {
+        if (loading) return;
+        fetchGames(keyword.trim(), 0);
+    };
+    const search = (p = 0) => fetchGames(appliedKeyword, p);
+
+    useEffect(() => { fetchGames('', 0); }, [fetchGames]);
 
     const toggleSelect = (id) => setSelected(prev => {
         const next = new Set(prev);
@@ -369,13 +386,13 @@ function GameManagementTab() {
                             type="text"
                             value={keyword}
                             onChange={e => setKeyword(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && search(0)}
+                            onKeyDown={e => e.key === 'Enter' && submitSearch()}
                             placeholder="게임 검색..."
                             className="w-full bg-surface border border-divider rounded-xl pl-9 pr-4 py-2.5 text-sm text-primary placeholder:text-muted focus:outline-none focus:border-ps-blue transition-colors"
                         />
                     </div>
                     <button
-                        onClick={() => search(0)}
+                        onClick={submitSearch}
                         disabled={loading}
                         className="px-5 py-2.5 bg-ps-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 disabled:opacity-50 transition-colors"
                     >
@@ -651,14 +668,11 @@ const TABS = [
 
 export default function AdminPage() {
     const { isAdmin, loading } = useCurrentUser();
-    const navigate = useTransitionNavigate();
     const [activeTab, setActiveTab] = useState('games');
 
+    // 인증 확인 중에는 대기, 관리자가 아니면 탭을 마운트하지 않고 선언적으로 리다이렉트
     if (loading) return null;
-    if (!isAdmin) {
-        navigate('/games');
-        return null;
-    }
+    if (!isAdmin) return <Navigate to="/games" replace />;
 
     return (
         <>
@@ -675,7 +689,7 @@ export default function AdminPage() {
                     <Square className="w-40 h-40 stroke-[2px]" />
                 </div>
 
-                <div className="max-w-4xl mx-auto px-4 pt-8">
+                <div className="max-w-4xl mx-auto px-4 pt-24 md:pt-32">
                     {/* 헤더 */}
                     <div className="mb-8">
                         <h1 className="text-2xl font-black text-primary tracking-tighter">관리자 콘솔</h1>

@@ -7,6 +7,7 @@ import {getGenreBadgeStyle} from "../utils/uiUtils.js";
 import {differenceInCalendarDays, parseISO} from 'date-fns';
 import { getSaleDeadline } from '../utils/saleDeadline';
 import { buildDetailPreview } from '../utils/detailPreview';
+import LoadError from '../components/common/LoadError';
 import {
     AlertTriangle,
     CheckSquare,
@@ -20,6 +21,7 @@ import {
     Mail,
     Pickaxe,
     PiggyBank,
+    RefreshCw,
     Scale,
     Server,
     Square,
@@ -49,6 +51,9 @@ function cleanTitle(title) {
     return title.replace(/\s+PS[45][™]?\s*(?:[&]\s*PS[45][™]?)?$/, '').trim();
 }
 
+// 백엔드 찜 목록 한 페이지 크기
+const WISHLIST_PAGE_SIZE = 30;
+
 const WishlistPage = () => {
     const navigate = useTransitionNavigate();
     const location = useLocation();
@@ -57,9 +62,11 @@ const WishlistPage = () => {
 
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
     const [totalElements, setTotalElements] = useState(0);
+    // 첫 페이지 실패(빈 목록으로 오인 방지) / 추가 로딩 실패(자동 재시도 반복 방지)
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+    const gamesRef = useRef([]);
 
     const [activeFilter, setActiveFilter] = useState(null); // null | 'onSale' | 'buyNow' | 'goodOffer'
 
@@ -107,26 +114,37 @@ const WishlistPage = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    useEffect(() => { gamesRef.current = games; }, [games]);
+
+    const hasMore = games.length < totalElements;
+    // 첫 로딩만 '로딩 중'으로 취급 (추가 페이지를 불러오는 동안 찜 개수·절약액이 0으로 깜빡이지 않게)
+    const isInitialLoading = loading && games.length === 0;
+
     const observer = useRef();
-    const lastGameElementRef = useCallback(node => {
-        if (loading) return;
+    // 필터 사용 중에도 목록 끝 sentinel이 보이면 다음 페이지를 이어서 불러옴 (필터는 불러온 목록 기준이라 멈추면 결과가 빠짐)
+    const loadMoreRef = useCallback(node => {
         if (observer.current) observer.current.disconnect();
+        if (loading || !node) return;
         observer.current = new IntersectionObserver(entries => {
-            if (entries[0].isIntersecting && page < totalPages - 1) {
-                setPage(prevPage => prevPage + 1);
+            if (entries[0].isIntersecting) {
+                // 서버는 30개 단위 오프셋 페이징이라, 삭제로 당겨진 항목을 놓치지 않도록 남은 개수로 다음 페이지 계산
+                fetchMyWishlist(Math.floor(gamesRef.current.length / WISHLIST_PAGE_SIZE));
             }
         });
-        if (node) observer.current.observe(node);
-    }, [loading, page, totalPages]);
+        observer.current.observe(node);
+    }, [loading]);
 
-    useEffect(() => { fetchMyWishlist(page); }, [page]);
+    useEffect(() => { fetchMyWishlist(0); }, []);
 
     useEffect(() => {
         const handleWishlistUpdate = (e) => {
             const { gameId, liked } = e.detail;
 
             // 찜 상태가 해제(false)되었다면 내 찜 목록 화면에서 날려버림
+            // (목록에 있던 항목일 때만 개수를 줄여, 같은 해제가 두 번 반영되지 않게 함)
             if (!liked) {
+                const isListed = gamesRef.current.some(game => Number(game.gameId || game.id) === Number(gameId));
+                if (!isListed) return;
                 setGames(prev => prev.filter(game => Number(game.gameId || game.id) !== Number(gameId)));
                 setTotalElements(prev => Math.max(0, prev - 1)); // 음수 방지
             }
@@ -137,12 +155,15 @@ const WishlistPage = () => {
     }, []);
 
     const fetchMyWishlist = async (pageNumber) => {
+        const isFirst = gamesRef.current.length === 0;
         setLoading(true);
         try {
             const response = await client.get('/api/v1/wishlists', {
-                params: { page: pageNumber, size: 30, sort: 'createdAt,desc' }
+                params: { page: pageNumber, size: WISHLIST_PAGE_SIZE, sort: 'createdAt,desc' }
             });
-            if (pageNumber === 0) {
+            setLoadFailed(false);
+            setLoadMoreFailed(false);
+            if (isFirst) {
                 setGames(response.data.content);
             } else {
                 setGames(prev => {
@@ -151,9 +172,12 @@ const WishlistPage = () => {
                     return [...prev, ...newGames];
                 });
             }
-            setTotalPages(response.data.totalPages);
             setTotalElements(response.data.totalElements);
-        } catch (error) { console.error(error); } finally { setLoading(false); }
+        } catch (error) {
+            console.error(error);
+            if (isFirst) setLoadFailed(true);
+            else setLoadMoreFailed(true);
+        } finally { setLoading(false); }
     };
 
     const handleRemove = (e, gameId, gameName) => {
@@ -178,12 +202,10 @@ const WishlistPage = () => {
         try {
             await client.post(`/api/v1/wishlists/${gameId}`);
 
-            setGames(prev => prev.filter(game => Number(game.gameId || game.id) !== Number(gameId)));
-            setTotalElements(prev => Math.max(0, prev - 1));
-
             toast.dismiss(toastId);
             toast.success("삭제되었습니다", { duration: 3000 });
 
+            // 목록·개수 반영은 아래 이벤트 리스너가 처리 (상세 모달에서 해제한 경우와 같은 경로)
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
                 detail: { gameId: Number(gameId), liked: false }
             }));
@@ -232,7 +254,7 @@ const WishlistPage = () => {
         return acc + game.hltbMainStory;
     }, 0);
 
-    if (loading && page === 0) return <div className="min-h-screen pt-20 flex justify-center bg-base"><PSLoader /></div>;
+    if (loading && games.length === 0 && !loadFailed) return <div className="min-h-screen pt-20 flex justify-center bg-base"><PSLoader /></div>;
 
     return (
         <div className="min-h-screen bg-base text-primary relative transition-colors duration-500">
@@ -270,7 +292,7 @@ const WishlistPage = () => {
                                     </span>
                                 <div className="flex items-baseline gap-1.5">
                                         <span className="text-primary font-black text-4xl tracking-tight leading-none drop-shadow-md">
-                                            {!loading ? totalElements : 0}
+                                            {!isInitialLoading ? totalElements : 0}
                                         </span>
                                     <span className="text-secondary font-bold text-sm ml-1">게임 찜함</span>
                                 </div>
@@ -278,7 +300,7 @@ const WishlistPage = () => {
                         </div>
                     </div>
 
-                    {!loading && totalSavings > 0 && (
+                    {!isInitialLoading && totalSavings > 0 && (
                         <div className="relative flex-1 md:flex-none group overflow-hidden bg-surface border border-divider p-5 pr-8 rounded-2xl shadow-sm transition-all hover:border-[color:var(--bento-green-border-hover)] hover:[box-shadow:var(--bento-green-shadow)] md:min-w-[280px]">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--bento-green-from)] rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 transition-colors"></div>
                             <div className="flex items-center gap-5 relative z-10">
@@ -301,7 +323,7 @@ const WishlistPage = () => {
                         </div>
                     )}
 
-                    {!loading && totalPlayTime > 0 && (
+                    {!isInitialLoading && totalPlayTime > 0 && (
                         <div className="relative flex-1 md:flex-none group overflow-hidden bg-surface border border-divider p-5 pr-8 rounded-2xl shadow-sm transition-all hover:border-[color:var(--bento-purple-border-hover)] hover:[box-shadow:var(--bento-purple-shadow)] md:min-w-[280px]">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--bento-purple-from)] rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none group-hover:opacity-100 transition-colors"></div>
 
@@ -417,16 +439,14 @@ const WishlistPage = () => {
 
                 {/* 🎮 찜한 게임 카드 리스트 */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-                    {displayedGames.length > 0 ? displayedGames.map((game, index) => {
+                    {displayedGames.length > 0 ? displayedGames.map((game) => {
                         const realGameId = game.gameId || game.id;
-                        const isLastElement = !activeFilter && displayedGames.length === index + 1;
                         const isNew = game.createdAt && differenceInCalendarDays(new Date(), parseISO(game.createdAt)) <= 3;
                         const { isLastCall, isClosingSoon: isClosing } = getSaleDeadline(game.saleEndDate);
                         const isSelectedForCompare = compareList.some(item => (item.gameId || item.id) === realGameId);
                         return (
                             <div
                                 key={realGameId}
-                                ref={isLastElement ? lastGameElementRef : null}
                                 onClick={() => navigate(`/games/${realGameId}`, { state: { background: location, preview: buildDetailPreview({ ...game, liked: true }) } })}
                                 className={`group bg-surface rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 shadow-lg cursor-pointer border relative flex flex-col h-full
                                     ${isSelectedForCompare ? 'ring-2 ring-ps-blue shadow-[0_0_20px_rgba(0,67,156,0.6)] border-ps-blue' :
@@ -439,10 +459,14 @@ const WishlistPage = () => {
                                     <PSGameImage src={game.imageUrl} alt={game.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" width={640} />
                                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/20 backdrop-blur-[2px]"><ExternalLink className="w-8 h-8 text-white drop-shadow-lg" /></div>
 
-                                    {isNew && <span className="absolute top-2 left-2 bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg z-10">NEW</span>}
-
-                                    {isLastCall && <span className="absolute top-2 right-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse z-10 flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
-                                    {isClosing && <span className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg z-10">마감 임박</span>}
+                                    {/* 오른쪽 위는 삭제 버튼 자리라, 마감 배지는 NEW와 함께 왼쪽 위에 세로로 쌓아 가려지지 않게 함 */}
+                                    {(isNew || isLastCall || isClosing) && (
+                                        <div className="absolute top-2 left-2 z-10 flex flex-col items-start gap-1">
+                                            {isNew && <span className="bg-green-500 text-black text-[10px] font-black px-1.5 py-0.5 rounded shadow-lg">NEW</span>}
+                                            {isLastCall && <span className="bg-gradient-to-r from-red-600 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded shadow-lg animate-pulse flex items-center gap-1"><Timer className="w-3 h-3" /> 막차!</span>}
+                                            {isClosing && <span className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-lg">마감 임박</span>}
+                                        </div>
+                                    )}
 
                                     <button onClick={(e) => handleRemove(e, realGameId, game.name)} className="absolute top-2 right-2 p-2 rounded-full bg-black/60 hover:bg-red-600 text-gray-300 hover:text-white transition-all transform hover:scale-110 shadow-lg z-20"><Trash2 className="w-4 h-4" /></button>
 
@@ -540,7 +564,9 @@ const WishlistPage = () => {
                             </div>
                         );
                     }) : (
-                        !loading && (
+                        loadFailed ? (
+                            <LoadError message="찜 목록을 불러오지 못했어요." onRetry={() => fetchMyWishlist(0)} className="col-span-full border border-divider rounded-2xl bg-surface" />
+                        ) : !loading && !(activeFilter && hasMore) && (
                             activeFilter ? (
                                 <div className="col-span-full text-center py-20 flex flex-col items-center gap-4">
                                     {activeFilter === 'onSale' && <TrendingDown className="w-12 h-12 text-muted" />}
@@ -573,15 +599,30 @@ const WishlistPage = () => {
                     )}
                 </div>
 
-                {!loading && games.length > 0 && page >= totalPages - 1 && (
+                {!loading && games.length > 0 && !hasMore && (
                     <div className="py-16 text-center flex flex-col items-center gap-3 border-t border-divider mt-10">
                         <Heart className="w-8 h-8 text-secondary opacity-50" />
-                        <p className="text-secondary font-bold text-sm opacity-70">모든 찜 목록을 다 보셨습니다 ❤️</p>
+                        <p className="text-secondary font-bold text-sm opacity-70">모든 찜 목록을 다 보셨습니다</p>
                     </div>
                 )}
 
-                {loading && page > 0 && (
-                    <div className="py-8 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ps-blue"></div></div>
+                {games.length > 0 && hasMore && (
+                    loadMoreFailed ? (
+                        <div className="py-8 flex justify-center items-center gap-3 text-sm font-bold">
+                            <span className="text-secondary">다음 찜 목록을 불러오지 못했어요.</span>
+                            <button
+                                type="button"
+                                onClick={() => fetchMyWishlist(Math.floor(games.length / WISHLIST_PAGE_SIZE))}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-divider text-primary hover:bg-surface-hover transition-all active:scale-95"
+                            >
+                                <RefreshCw className="w-4 h-4" /> 다시 시도
+                            </button>
+                        </div>
+                    ) : (
+                        <div ref={loadMoreRef} className="py-8 flex justify-center">
+                            {loading && <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ps-blue"></div>}
+                        </div>
+                    )
                 )}
 
                 {/* 하단 플로팅 버튼 영역 */}

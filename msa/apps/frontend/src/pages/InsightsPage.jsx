@@ -42,6 +42,7 @@ import { adminApi } from '../api/adminApi';
 import DonationModal from '../components/DonationModal';
 import HelpModal from '../components/common/HelpModal';
 import SEO from '../components/common/SEO';
+import LoadError from '../components/common/LoadError';
 
 const formatCurrency = (amount) => {
     if (!amount) return '0';
@@ -121,20 +122,35 @@ const InsightsPage = () => {
         ), { duration: 5000, style: { background: 'transparent', boxShadow: 'none', padding: 0 } });
     };
 
+    // 실패 시 무한 로딩 대신 재시도 안내를 보여주기 위한 상태
+    const [loadFailed, setLoadFailed] = useState(false);
+
+    const fetchInsights = async () => {
+        setLoading(true);
+        setLoadFailed(false);
+        try {
+            const response = await client.get('/api/v1/insights/summary');
+            if (!response.data) throw new Error('empty insights summary');
+            setStats(response.data);
+        } catch (error) {
+            console.error('인사이트 데이터 로딩 실패:', error);
+            setLoadFailed(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchInsights = async () => {
-            try {
-                const response = await client.get('/api/v1/insights/summary');
-                setStats(response.data);
-            } catch (error) {
-                console.error('인사이트 데이터 로딩 실패:', error);
-                toast.error('통계 데이터를 불러오지 못했습니다.');
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchInsights();
     }, []);
+
+    if (!loading && loadFailed && !stats) {
+        return (
+            <div className="min-h-screen bg-base pt-24 flex justify-center transition-colors duration-500">
+                <LoadError message="통계 데이터를 불러오지 못했어요." onRetry={fetchInsights} />
+            </div>
+        );
+    }
 
     if (loading || !stats) {
         return (

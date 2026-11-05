@@ -84,10 +84,10 @@ const TargetPriceModal = ({ onClose, game, defenseTier, onSubmit }) => {
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-backdrop backdrop-blur-sm animate-fadeIn" onClick={handleBackgroundClick}>
             <div className="absolute inset-0 opacity-[0.02] pointer-events-none overflow-hidden text-primary flex justify-center items-center">
-                <TriangleShape className="absolute top-[15%] left-[10%] w-32 h-32 rotate-12 animate-[pulse_6s_ease-in-out_infinite]" />
-                <CircleShape className="absolute top-[25%] right-[15%] w-40 h-40 -rotate-12 animate-[pulse_8s_ease-in-out_infinite]" />
-                <XShape className="absolute bottom-[20%] left-[20%] w-36 h-36 rotate-45 animate-[pulse_7s_ease-in-out_infinite]" />
-                <SquareShape className="absolute bottom-[10%] right-[10%] w-28 h-28 -rotate-6 animate-[pulse_9s_ease-in-out_infinite]" />
+                <TriangleShape className="absolute top-[15%] left-[10%] w-32 h-32 rotate-12 md:animate-[pulse_6s_ease-in-out_infinite]" />
+                <CircleShape className="absolute top-[25%] right-[15%] w-40 h-40 -rotate-12 md:animate-[pulse_8s_ease-in-out_infinite]" />
+                <XShape className="absolute bottom-[20%] left-[20%] w-36 h-36 rotate-45 md:animate-[pulse_7s_ease-in-out_infinite]" />
+                <SquareShape className="absolute bottom-[10%] right-[10%] w-28 h-28 -rotate-6 md:animate-[pulse_9s_ease-in-out_infinite]" />
             </div>
 
             <div className="bg-base border border-divider rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative shadow-glow animate-in zoom-in-95 duration-200">

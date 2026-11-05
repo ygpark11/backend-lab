@@ -10,15 +10,16 @@ import {
     Triangle,
     X as XIcon,
     Layers,
-    Sparkles
+    Sparkles,
+    RefreshCw
 } from 'lucide-react';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import { useLocation } from 'react-router-dom';
 import client from '../api/client';
-import toast from 'react-hot-toast';
 import HelpModal from '../components/common/HelpModal';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
+import LoadError from '../components/common/LoadError';
 
 // --- 유틸리티 함수 ---
 const formatTargetMonth = (targetMonth) => {
@@ -162,7 +163,7 @@ const GameCard = ({ game, isLatestMonth, benefitType }) => {
 
 // --- 서브 컴포넌트 2: 스켈레톤 UI ---
 const SkeletonMonth = () => (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 relative animate-pulse mb-12 pl-12 lg:pl-16">
+    <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-10 relative animate-pulse mb-12">
         <div className="lg:w-[170px] flex-shrink-0">
             <div className="w-32 h-10 rounded-2xl bg-surface border border-divider"></div>
         </div>
@@ -187,15 +188,25 @@ const MonthlyGamesArchivePage = () => {
     const [hasNext, setHasNext] = useState(true);
     const [pageNumber, setPageNumber] = useState(0);
     const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
+    // 첫 페이지 실패 / 추가 로딩 실패: 실패 시 자동 재요청을 멈추고 버튼으로 재시도 (오류가 계속될 때 요청·토스트 무한 반복 방지)
+    const [loadFailed, setLoadFailed] = useState(false);
+    const [loadMoreFailed, setLoadMoreFailed] = useState(false);
 
     const observerTarget = useRef(null);
+    // 탭 전환 시 이전 탭의 늦은 응답이 현재 탭 목록을 덮어쓰지 않도록 요청 세대 구분
+    const requestGenRef = useRef(0);
+    const pageNumberRef = useRef(0);
 
     const fetchArchive = useCallback(async (pageIdx, tab) => {
+        const gen = requestGenRef.current;
         try {
             if (pageIdx === 0) setLoading(true);
             else setLoadingMore(true);
 
             const response = await client.get(`/api/v1/subscriptions/benefits?benefitType=${tab}&page=${pageIdx}&size=5`);
+            if (gen !== requestGenRef.current) return;
+            pageNumberRef.current = pageIdx;
+            setPageNumber(pageIdx);
 
             if (!response.data || response.status === 204) {
                 setHasNext(false);
@@ -213,30 +224,36 @@ const MonthlyGamesArchivePage = () => {
 
             setHasNext(!last);
         } catch (error) {
+            if (gen !== requestGenRef.current) return;
             console.error('아카이브 로딩 실패:', error);
-            toast.error('데이터를 불러오는 중 문제가 발생했습니다.');
+            if (pageIdx === 0) setLoadFailed(true);
+            else setLoadMoreFailed(true);
         } finally {
-            setLoading(false);
-            setLoadingMore(false);
+            if (gen === requestGenRef.current) {
+                setLoading(false);
+                setLoadingMore(false);
+            }
         }
     }, []);
 
     useEffect(() => {
+        requestGenRef.current += 1;
+        pageNumberRef.current = 0;
         setPages([]);
         setPageNumber(0);
         setHasNext(true);
+        setLoadFailed(false);
+        setLoadMoreFailed(false);
+        setLoadingMore(false);
         fetchArchive(0, activeTab);
     }, [activeTab, fetchArchive]);
 
     useEffect(() => {
+        if (loadFailed || loadMoreFailed) return;
         const observer = new IntersectionObserver(
             entries => {
                 if (entries[0].isIntersecting && hasNext && !loading && !loadingMore) {
-                    setPageNumber(prev => {
-                        const next = prev + 1;
-                        fetchArchive(next, activeTab);
-                        return next;
-                    });
+                    fetchArchive(pageNumberRef.current + 1, activeTab);
                 }
             },
             { threshold: 0.1, rootMargin: "300px" }
@@ -244,7 +261,7 @@ const MonthlyGamesArchivePage = () => {
 
         if (observerTarget.current) observer.observe(observerTarget.current);
         return () => observer.disconnect();
-    }, [hasNext, loading, loadingMore, fetchArchive, activeTab]);
+    }, [hasNext, loading, loadingMore, loadFailed, loadMoreFailed, fetchArchive, activeTab]);
 
     const isEssential = activeTab === 'ESSENTIAL';
 
@@ -256,10 +273,12 @@ const MonthlyGamesArchivePage = () => {
                 url="https://ps-signal.com/monthly-games"
             />
 
-            {/* 배경 앰비언트 글로우 오브 */}
-            <div className="hidden md:block absolute top-[5%] left-[5%] w-[35%] h-[40%] rounded-full blur-[140px] pointer-events-none bg-emerald-500/10 transition-colors duration-500"></div>
-            <div className="hidden md:block absolute top-[35%] right-[5%] w-[30%] h-[35%] rounded-full blur-[140px] pointer-events-none bg-ps-blue/15 transition-colors duration-500"></div>
-            <div className="hidden md:block absolute bottom-[15%] left-[10%] w-[25%] h-[30%] rounded-full blur-[120px] pointer-events-none bg-yellow-500/10 transition-colors duration-500"></div>
+            {/* 배경 앰비언트 글로우 오브 (화면 고정: 페이지 높이 기준이면 목록이 늘 때마다 커져 레이아웃 이동으로 집계됨) */}
+            <div className="hidden md:block fixed inset-0 pointer-events-none overflow-hidden z-0">
+                <div className="absolute top-[5%] left-[5%] w-[35%] h-[40%] rounded-full blur-[140px] bg-emerald-500/10 transition-colors duration-500"></div>
+                <div className="absolute top-[35%] right-[5%] w-[30%] h-[35%] rounded-full blur-[140px] bg-ps-blue/15 transition-colors duration-500"></div>
+                <div className="absolute bottom-[15%] left-[10%] w-[25%] h-[30%] rounded-full blur-[120px] bg-yellow-500/10 transition-colors duration-500"></div>
+            </div>
 
             {/* PlayStation 상징 기하학 심볼 워터마크 */}
             <div className="absolute top-32 right-10 md:right-20 pointer-events-none flex gap-8 rotate-12 scale-150 opacity-[0.02] dark:opacity-[0.03] text-primary">
@@ -352,6 +371,8 @@ const MonthlyGamesArchivePage = () => {
                             <SkeletonMonth />
                             <SkeletonMonth />
                         </div>
+                    ) : !loading && loadFailed ? (
+                        <LoadError message="아카이브를 불러오지 못했어요." onRetry={() => { requestGenRef.current += 1; setLoadFailed(false); fetchArchive(0, activeTab); }} />
                     ) : !loading && pages.length === 0 ? (
                         /* Empty State */
                         <div className="flex flex-col items-center justify-center py-24 sm:py-32 px-4 text-center animate-fadeIn">
@@ -441,6 +462,18 @@ const MonthlyGamesArchivePage = () => {
                     {/* 무한 스크롤 옵저버 타겟 & 완료 메시지 */}
                     <div ref={observerTarget} className="pt-6 sm:pt-8 pb-10">
                         {loadingMore && <SkeletonMonth />}
+                        {loadMoreFailed && (
+                            <div className="flex justify-center items-center gap-3 text-sm font-bold">
+                                <span className="text-secondary">다음 아카이브를 불러오지 못했어요.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setLoadMoreFailed(false)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-divider text-primary hover:bg-surface-hover transition-all active:scale-95"
+                                >
+                                    <RefreshCw className="w-4 h-4" /> 다시 시도
+                                </button>
+                            </div>
+                        )}
 
                         {!hasNext && pages.length > 0 && (
                             <div className="text-center text-secondary text-xs sm:text-sm font-bold mt-8 sm:mt-10 p-5 sm:p-6 bg-surface/60 backdrop-blur-md border border-divider rounded-3xl animate-fadeIn max-w-md mx-auto flex flex-col items-center gap-2 shadow-sm">

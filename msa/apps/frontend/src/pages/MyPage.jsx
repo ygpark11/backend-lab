@@ -9,6 +9,7 @@ import client from '../api/client';
 import toast from 'react-hot-toast';
 import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
+import { clearStorageOnLogout } from '../utils/logoutStorage';
 
 export default function MyPage() {
     const navigate = useTransitionNavigate();
@@ -117,7 +118,7 @@ export default function MyPage() {
                             toast.dismiss(t.id);
                             try { await client.post('/api/v1/auth/logout'); }
                             catch (e) { console.error('로그아웃 실패:', e); }
-                            finally { localStorage.clear(); window.location.href = '/'; }
+                            finally { clearStorageOnLogout(); window.location.href = '/'; }
                         }}
                         className="flex-1 px-3 py-1.5 text-xs font-bold rounded-lg border border-[#FF3E3E]/30 bg-[#FF3E3E]/10 text-[#FF3E3E] hover:bg-[#FF3E3E]/20 transition-colors"
                     >
@@ -242,7 +243,7 @@ export default function MyPage() {
                     <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 relative z-10">
                         {/* 아바타 링 */}
                         <div className={`w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-full p-1 border flex items-center justify-center relative transition-all duration-500 bg-surface ${avatarStyle.borderClass} ${avatarStyle.glowClass}`}>
-                            <div className="absolute inset-1 rounded-full border border-dashed animate-spin-slow pointer-events-none border-primary/10"></div>
+                            <div className="absolute inset-1 rounded-full border border-dashed md:animate-spin-slow pointer-events-none border-primary/10"></div>
                             <AvatarIcon className={`w-10 h-10 sm:w-12 sm:h-12 drop-shadow-md ${avatarStyle.color}`} />
                             <div className="absolute -bottom-1 -right-1 bg-primary text-[color:var(--color-bg-base)] text-[10px] font-black px-2.5 py-0.5 rounded-md shadow-md">
                                 Lv.{profile.level}
@@ -339,7 +340,7 @@ export default function MyPage() {
                 <div className="min-h-[400px]">
                     {activeTab === 'trophies' && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 animate-fadeIn">
-                            {profile.trophies.map((trophy, idx) => {
+                            {(profile.trophies || []).map((trophy, idx) => {
                                 const style = getTrophyStyle(trophy.tier);
                                 const meta = getTrophyTitle(trophy.type, trophy.currentValue);
                                 const Icon = style.icon;

@@ -31,6 +31,7 @@ import client from '../api/client';
 import GuideModal from './GuideModal';
 import NoticeModal from './NoticeModal';
 import {useAuth} from '../contexts/AuthContext';
+import { clearStorageOnLogout } from '../utils/logoutStorage';
 
 const Navbar = () => {
     const navigate = useTransitionNavigate();
@@ -318,7 +319,7 @@ const Navbar = () => {
                     <div className="flex flex-col"><span className="font-bold text-sm text-primary">로그아웃 하시겠습니까?</span><span className="text-[11px] text-secondary">안전하게 종료합니다.</span></div>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={async () => { toast.dismiss(t.id); try { await client.post('/api/v1/auth/logout'); } finally { localStorage.clear(); window.location.href = '/'; } }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg">네, 로그아웃</button>
+                    <button onClick={async () => { toast.dismiss(t.id); try { await client.post('/api/v1/auth/logout'); } finally { clearStorageOnLogout(); window.location.href = '/'; } }} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg">네, 로그아웃</button>
                     <button onClick={() => toast.dismiss(t.id)} className="flex-1 bg-base hover:bg-surface-hover text-secondary hover:text-primary py-2.5 rounded-xl text-xs font-bold transition-colors border border-divider">취소</button>
                 </div>
             </div>

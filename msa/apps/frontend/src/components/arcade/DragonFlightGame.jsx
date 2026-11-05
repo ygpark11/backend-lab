@@ -13,7 +13,8 @@ import {
     Flame,
     Crown,
     LogIn,
-    CheckCircle2
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react';
 import GameStartOverlay from './GameStartOverlay';
 import { gameSound } from '../../utils/gameSound';
@@ -1369,7 +1370,8 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
             gems: engine.gemsCollected,
             isNewRecord: isNew,
             isSubmitting: isAuthenticated,
-            submitSuccess: false
+            submitSuccess: false,
+            submitFailed: false
         });
 
         // 로그인된 경우 백엔드 리더보드 등록
@@ -1383,11 +1385,12 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                 setGameOverStats(prev => ({
                     ...prev,
                     isSubmitting: false,
-                    submitSuccess: res.success !== false
+                    submitSuccess: res.success !== false,
+                    submitFailed: res.success === false
                 }));
             } catch (err) {
                 console.error('[DragonFlight] 점수 등록 실패:', err);
-                setGameOverStats(prev => ({ ...prev, isSubmitting: false }));
+                setGameOverStats(prev => ({ ...prev, isSubmitting: false, submitFailed: true }));
             }
         }
     };
@@ -1593,6 +1596,11 @@ const DragonFlightGame = ({ onBack, onOpenLeaderboard }) => {
                                         <span className="text-emerald-500 flex items-center justify-center gap-1.5 whitespace-nowrap">
                                             <CheckCircle2 className="w-4 h-4 shrink-0" />
                                             <span>리더보드에 점수가 안전하게 등록되었습니다!</span>
+                                        </span>
+                                    ) : gameOverStats.submitFailed ? (
+                                        <span className="text-red-500 flex items-center justify-center gap-1.5 break-keep">
+                                            <AlertCircle className="w-4 h-4 shrink-0" />
+                                            <span>기록 등록에 실패했어요. 잠시 후 다시 시도해주세요.</span>
                                         </span>
                                     ) : null}
                                 </div>

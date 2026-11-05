@@ -9,6 +9,7 @@ import PSLoader from '../components/PSLoader';
 import HelpModal from '../components/common/HelpModal';
 import PSGameImage from '../components/common/PSGameImage';
 import SEO from '../components/common/SEO';
+import LoadError from '../components/common/LoadError';
 import {useAuth} from '../contexts/AuthContext';
 import {useCurrentUser} from '../hooks/useCurrentUser';
 import PSFactoryLoader from '../components/PSFactoryLoader';
@@ -45,7 +46,11 @@ const CandidateCard = memo(({ game, onExtract, onDelete, isAuthenticated, isAdmi
         holdTimer.current = setTimeout(() => {
             setIsHolding(false);
             setIsUnlocked(true);
-            setTimeout(() => { onExtract(game); }, 1000);
+            // 추출 요청이 실패하면 카드를 원래 상태로 되돌려 다시 시도할 수 있게 함
+            setTimeout(async () => {
+                const ok = await onExtract(game);
+                if (ok === false) setIsUnlocked(false);
+            }, 1000);
         }, 1500);
     };
 
@@ -89,7 +94,7 @@ const CandidateCard = memo(({ game, onExtract, onDelete, isAuthenticated, isAdmi
                 </div>
 
                 <div className={`absolute inset-0 z-30 flex items-center justify-center pointer-events-none overflow-hidden transition-opacity duration-300 ${isHolding && !isUnlocked ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className="absolute w-20 h-20 bg-white rounded-full blur-xl animate-pulse shadow-[0_0_50px_#3b82f6,0_0_100px_#3b82f6]"></div>
+                    <div className={`absolute w-20 h-20 bg-white rounded-full blur-xl shadow-[0_0_50px_#3b82f6,0_0_100px_#3b82f6] ${isHolding && !isUnlocked ? 'animate-pulse' : ''}`}></div>
                     {particles.map((p) => (
                         <div
                             key={p.id}
@@ -157,6 +162,9 @@ const CandidateCard = memo(({ game, onExtract, onDelete, isAuthenticated, isAdmi
     );
 });
 
+// 백엔드 후보 목록 한 페이지 크기 (ScrapingQueueService.getCandidates)
+const CANDIDATE_PAGE_SIZE = 20;
+
 const PioneerCandidatesPage = () => {
     const navigate = useTransitionNavigate();
     const { isAuthenticated, openLoginModal } = useAuth();
@@ -166,62 +174,73 @@ const PioneerCandidatesPage = () => {
     const [isFetchingMore, setIsFetchingMore] = useState(false);
     const [hasNext, setHasNext] = useState(false);
     const [error, setError] = useState(null);
+    // 추가 로딩 실패 시 자동 재시도를 멈추고 버튼으로 재시도 (실패가 계속될 때 요청이 끝없이 반복되지 않게)
+    const [loadMoreFailed, setLoadMoreFailed] = useState(false);
     const [isFactoryModalOpen, setIsFactoryModalOpen] = useState(false);
     const [extractingGame, setExtractingGame] = useState(null);
     const sentinelRef = useRef(null);
-    const pageRef = useRef(0);
     const isFetchingMoreRef = useRef(false);
+    // 화면에 남아 있는 후보 수 (삭제·추출로 서버 목록이 당겨져도 다음 페이지 위치를 정확히 계산하기 위함)
+    const candidatesCountRef = useRef(0);
+    // 재스캔 시 진행 중이던 이전 요청 응답이 새 목록에 섞이지 않도록 구분
+    const requestGenRef = useRef(0);
 
     const [helpInfo, setHelpInfo] = useState({ isOpen: false, type: null });
 
-    const fetchPage = async (pageNum, replace = false) => {
+    useEffect(() => { candidatesCountRef.current = candidates.length; }, [candidates]);
+
+    const fetchPage = useCallback(async (pageNum, replace = false) => {
+        const gen = requestGenRef.current;
         try {
             const response = await client.get(`/api/v1/scraping/candidates?page=${pageNum}`);
+            if (gen !== requestGenRef.current) return;
             const { content, hasNext } = response.data;
-            pageRef.current = pageNum;
             setHasNext(hasNext);
+            setLoadMoreFailed(false);
             if (replace) setCandidates(content);
-            else setCandidates(prev => [...prev, ...content]);
+            // 오프셋 보정으로 같은 후보가 다시 올 수 있어 중복 제거
+            else setCandidates(prev => {
+                const seen = new Set(prev.map(c => c.psStoreId));
+                return [...prev, ...content.filter(c => !seen.has(c.psStoreId))];
+            });
         } catch {
+            if (gen !== requestGenRef.current) return;
             if (replace) setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
-            toast.error("데이터 로딩 실패");
+            else setLoadMoreFailed(true);
         }
-    };
+    }, []);
 
-    const handleRefresh = async () => {
-        setLoading(true); setError(null);
+    const loadInitial = async () => {
+        requestGenRef.current += 1;
+        isFetchingMoreRef.current = false;
+        setIsFetchingMore(false);
+        setLoading(true); setError(null); setLoadMoreFailed(false);
         await fetchPage(0, true);
         setLoading(false);
     };
 
     useEffect(() => {
+        // 첫 진입: 초기 상태가 이미 로딩 중이라 조회만 수행
         const init = async () => {
-            try {
-                const response = await client.get('/api/v1/scraping/candidates?page=0');
-                const { content, last } = response.data;
-                pageRef.current = 0;
-                setHasNext(!last);
-                setCandidates(content);
-            } catch {
-                setError("신작 데이터를 불러오지 못했습니다. 통신 방해가 있습니다.");
-                toast.error("데이터 로딩 실패");
-            } finally {
-                setLoading(false);
-            }
+            await fetchPage(0, true);
+            setLoading(false);
         };
         init();
-    }, []);
+    }, [fetchPage]);
 
     useEffect(() => {
         const sentinel = sentinelRef.current;
-        if (!sentinel || !hasNext) return;
+        // loading을 deps에 포함: 재스캔으로 목록이 다시 그려지면 새 sentinel에 다시 연결
+        if (!sentinel || !hasNext || loading || loadMoreFailed) return;
 
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting && !isFetchingMoreRef.current) {
                     isFetchingMoreRef.current = true;
                     setIsFetchingMore(true);
-                    fetchPage(pageRef.current + 1).finally(() => {
+                    // 서버는 페이지(20개) 단위 오프셋이라, 남은 후보 수로 다음 페이지를 계산해 삭제·추출로 당겨진 후보를 놓치지 않음
+                    const nextPage = Math.floor(candidatesCountRef.current / CANDIDATE_PAGE_SIZE);
+                    fetchPage(nextPage).finally(() => {
                         isFetchingMoreRef.current = false;
                         setIsFetchingMore(false);
                     });
@@ -230,8 +249,9 @@ const PioneerCandidatesPage = () => {
             { rootMargin: '200px' }
         );
         observer.observe(sentinel);
+        // isFetchingMore 포함: 추가 로딩이 끝난 뒤 sentinel이 계속 화면 안이면 다시 관찰을 시작해 이어서 불러오거나 실패 후 재시도
         return () => observer.disconnect();
-    }, [hasNext]);
+    }, [hasNext, loading, isFetchingMore, loadMoreFailed, fetchPage]);
 
     const handleDeleteCandidate = useCallback(async (game) => {
         toast((t) => (
@@ -266,20 +286,19 @@ const PioneerCandidatesPage = () => {
         try {
             await client.post(`/api/v1/scraping/request/${game.psStoreId}`);
             setCandidates(prev => prev.filter(c => c.psStoreId !== game.psStoreId));
+            return true;
         } catch (err) {
             let errorMessage = "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
 
-            if (err.response) {
-                if (err.response.status === 400) {
-                    errorMessage = err.response.data?.message || "잘못된 요청입니다.";
-                }
-                else if (err.response.status === 500) {
-                    errorMessage = "수집 한도(1시간 3회)를 초과했거나 이미 처리 중인 게임입니다.";
-                }
+            // 400(존재하지 않는 후보)·409(수집 한도 초과, 이미 등록·처리 중)는 서버 안내 문구를 그대로 표시
+            const status = err.response?.status;
+            if ((status === 400 || status === 409) && err.response.data?.message) {
+                errorMessage = err.response.data.message;
             }
 
             toast.error(errorMessage);
             setIsFactoryModalOpen(false);
+            return false;
         }
     }, []);
 
@@ -330,10 +349,14 @@ const PioneerCandidatesPage = () => {
                             </h3>
                         </div>
                     </div>
-                    <button onClick={handleRefresh} className="mt-5 sm:mt-0 relative z-10 flex items-center gap-2 bg-surface hover:bg-[var(--bento-blue-from)] hover:text-ps-blue border border-divider hover:border-[color:var(--bento-blue-border-hover)] px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary w-full sm:w-auto justify-center shadow-sm">
+                    <button onClick={loadInitial} className="mt-5 sm:mt-0 relative z-10 flex items-center gap-2 bg-surface hover:bg-[var(--bento-blue-from)] hover:text-ps-blue border border-divider hover:border-[color:var(--bento-blue-border-hover)] px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg transition-all text-xs sm:text-sm font-bold text-secondary w-full sm:w-auto justify-center shadow-sm">
                         <RefreshCw className={`w-4 h-4 transition-transform duration-700 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} /> 레이더 재스캔
                     </button>
                 </div>
+
+                {error && candidates.length === 0 && (
+                    <LoadError message={error} onRetry={loadInitial} className="mt-4 bg-glass rounded-2xl sm:rounded-[3rem] border border-divider" />
+                )}
 
                 {!error && (
                     candidates.length > 0 ? (
@@ -346,7 +369,18 @@ const PioneerCandidatesPage = () => {
                                     <CandidateCard key={game.psStoreId} game={game} onExtract={handleExtractStart} onDelete={handleDeleteCandidate} isAuthenticated={isAuthenticated} isAdmin={isAdmin} openLoginModal={openLoginModal} />
                                 ))}
                             </div>
-                            {hasNext ? (
+                            {hasNext && loadMoreFailed ? (
+                                <div className="flex justify-center items-center py-8 gap-3 text-xs font-bold">
+                                    <span className="text-secondary">다음 캡슐을 불러오지 못했어요.</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setLoadMoreFailed(false)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface border border-divider text-primary hover:bg-surface-hover transition-all active:scale-95"
+                                    >
+                                        <RefreshCw className="w-3.5 h-3.5" /> 다시 시도
+                                    </button>
+                                </div>
+                            ) : hasNext ? (
                                 <div ref={sentinelRef} className="flex justify-center items-center py-8 gap-2 text-secondary text-xs font-bold">
                                     <RefreshCw className={`w-4 h-4 text-ps-blue ${isFetchingMore ? 'animate-spin' : ''}`} />
                                     <span className="text-ps-blue">캡슐 탐색 중...</span>
@@ -361,8 +395,8 @@ const PioneerCandidatesPage = () => {
                     ) : (
                         <div className="flex flex-col items-center justify-center py-24 sm:py-32 bg-glass backdrop-blur-md rounded-2xl sm:rounded-[3rem] border border-dashed border-divider mt-4 relative overflow-hidden shadow-sm animate-fadeIn">
                             <div className="absolute inset-0 flex items-center justify-center opacity-30 pointer-events-none">
-                                <div className="absolute w-48 h-48 sm:w-64 sm:h-64 border border-ps-blue/30 rounded-full animate-[ping_3s_ease-in-out_infinite]"></div>
-                                <div className="absolute w-32 h-32 sm:w-48 sm:h-48 border border-cyan-500/20 rounded-full animate-[ping_3s_ease-in-out_infinite_0.5s]"></div>
+                                <div className="absolute w-48 h-48 sm:w-64 sm:h-64 border border-ps-blue/30 rounded-full md:animate-[ping_3s_ease-in-out_infinite]"></div>
+                                <div className="absolute w-32 h-32 sm:w-48 sm:h-48 border border-cyan-500/20 rounded-full md:animate-[ping_3s_ease-in-out_infinite_0.5s]"></div>
                             </div>
 
                             <div className="py-20 sm:py-32 flex flex-col items-center justify-center text-center px-4 animate-fadeIn relative z-10">

@@ -11,7 +11,8 @@ import {
     Zap,
     Award,
     Lightbulb,
-    CheckCircle2
+    CheckCircle2,
+    AlertCircle
 } from 'lucide-react';
 import {
     REFLEX_SYMBOLS,
@@ -76,6 +77,18 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
     const missCountRef = useRef(0);
     const judgmentTimeoutRef = useRef(null);
 
+    // 타이머 effect가 최고 기록/유저 변경(늦게 도착한 리더보드 응답 등)으로 재시작되지 않도록 최신값은 Ref로 참조
+    const highScoreRef = useRef(highScore);
+    const userRef = useRef(user);
+    useEffect(() => {
+        highScoreRef.current = highScore;
+        userRef.current = user;
+    }, [highScore, user]);
+
+    // 리더보드 등록 결과 ('idle' | 'submitting' | 'success' | 'failed')
+    const [submitStatus, setSubmitStatus] = useState('idle');
+    const submitSeqRef = useRef(0);
+
     // 큐 초기화 (3개 큐잉)
     const initQueue = useCallback(() => {
         const s1 = generateNextSymbol(null);
@@ -93,6 +106,8 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
         setGameState('PLAYING');
         setIsResultOpen(false);
         setLastJudgment(null);
+        submitSeqRef.current += 1;
+        setSubmitStatus('idle');
 
         scoreRef.current = 0;
         maxComboRef.current = 0;
@@ -144,30 +159,41 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
                 gameSound.playTrophy();
 
                 // 로그인 회원인 경우에만 최고 점수 갱신 및 리더보드 점수 등록
-                if (user) {
-                    const isNewScore = finalScore > highScore.score;
+                const currentUser = userRef.current;
+                const prevBest = highScoreRef.current.score;
+                if (currentUser) {
+                    const isNewScore = finalScore > prevBest;
                     if (isNewScore) {
                         setHighScore(prev => ({
                             ...prev,
                             score: finalScore,
                             maxCombo: Math.max(prev.maxCombo, finalMaxCombo)
                         }));
-                        if (highScore.score > 0) {
+                        if (prevBest > 0) {
                             toast.success('최고 기록을 경신했습니다!');
                         }
                     }
 
+                    const seq = ++submitSeqRef.current;
+                    setSubmitStatus('submitting');
                     arcadeApi.submitScore('reflex', {
                         score: finalScore,
                         clearTimeSec: 45,
-                        user
-                    }).catch(err => console.error('[QuickReflexGame] 점수 등록 실패:', err));
+                        user: currentUser
+                    })
+                        .then(res => {
+                            if (seq === submitSeqRef.current) setSubmitStatus(res?.success === false ? 'failed' : 'success');
+                        })
+                        .catch(err => {
+                            console.error('[QuickReflexGame] 점수 등록 실패:', err);
+                            if (seq === submitSeqRef.current) setSubmitStatus('failed');
+                        });
                 }
             }
         }, 500);
 
         return () => clearInterval(interval);
-    }, [gameState, gameSessionId, highScore, user]);
+    }, [gameState, gameSessionId]);
 
     // 입력 처리 (키보드 또는 터치 버튼)
     const handleInput = useCallback((symbolId) => {
@@ -504,10 +530,21 @@ const QuickReflexGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack,
 
                         {/* 로그인 상태별 리더보드 안내 배너 */}
                         {user ? (
-                            <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
-                                <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
-                                <span>명예의 전당에 점수가 자동 등록되었습니다!</span>
-                            </div>
+                            submitStatus === 'failed' ? (
+                                <div className="w-full py-2 px-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/25 text-[11px] text-red-500 font-bold flex items-center justify-center gap-1.5 break-keep">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>기록 등록에 실패했어요. 잠시 후 다시 시도해주세요.</span>
+                                </div>
+                            ) : (
+                                <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                    <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
+                                    <span>
+                                        {submitStatus === 'success'
+                                            ? '명예의 전당에 점수가 자동 등록되었습니다!'
+                                            : '명예의 전당에 점수를 등록하는 중...'}
+                                    </span>
+                                </div>
+                            )
                         ) : (
                             <div className="w-full p-3 mb-4 rounded-2xl bg-surface-hover/80 border border-divider text-left flex flex-col gap-2">
                                 <div className="flex items-start gap-1.5">

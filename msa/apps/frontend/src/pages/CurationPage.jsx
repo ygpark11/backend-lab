@@ -323,13 +323,34 @@ function buildSearchParams(params) {
     return sp;
 }
 
-async function fetchThemeGames(params) {
-    const sp = buildSearchParams({ ...params, size: 3, page: 0, curation: true });
-    const res = await client.get('/api/v1/games/search?' + sp.toString());
-    return {
-        games: res.data.content || [],
-        total: res.data.totalElements ?? 0,
-    };
+// 스포트라이트와 테마 패널이 같은 테마를 각각 요청하지 않도록 쿼리 단위로 결과 공유
+// (테마별 지연 로딩 구조는 그대로, 같은 쿼리만 한 번 요청. 실패는 저장하지 않아 다시 시도 가능)
+const THEME_CACHE_TTL_MS = 5 * 60 * 1000;
+const themeResultCache = new Map();
+const themeInflight = new Map();
+
+const themeQueryKey = (params) => buildSearchParams({ ...params, size: 3, page: 0, curation: true }).toString();
+
+function getCachedThemeGames(params) {
+    const hit = themeResultCache.get(themeQueryKey(params));
+    return hit && Date.now() - hit.at < THEME_CACHE_TTL_MS ? hit.data : null;
+}
+
+function fetchThemeGames(params) {
+    const key = themeQueryKey(params);
+    const cached = getCachedThemeGames(params);
+    if (cached) return Promise.resolve(cached);
+    if (themeInflight.has(key)) return themeInflight.get(key);
+
+    const request = client.get('/api/v1/games/search?' + key)
+        .then(res => {
+            const data = { games: res.data.content || [], total: res.data.totalElements ?? 0 };
+            themeResultCache.set(key, { data, at: Date.now() });
+            return data;
+        })
+        .finally(() => themeInflight.delete(key));
+    themeInflight.set(key, request);
+    return request;
 }
 
 // ─────────────────────────────────────────────
@@ -364,45 +385,46 @@ function useScrollReveal(threshold = 0, rootMargin = '0px') {
 // ─────────────────────────────────────────────
 // 🌟 Curator's Spotlight Banner (카테고리 연동 에디토리얼 쇼케이스)
 // ─────────────────────────────────────────────
-const spotlightCache = {};
+// 실측한 배너 높이(모바일 356 / sm 456 / lg 261px)로 로딩·빈 상태 자리를 맞춰 레이아웃 이동 방지
+const SPOTLIGHT_MIN_H = 'min-h-[356px] sm:min-h-[456px] lg:min-h-[261px]';
 
 function CuratorSpotlight({ theme, onViewAll }) {
-    const cached = spotlightCache[theme?.id];
-    const [fetchedData, setFetchedData] = useState({ games: [], total: 0, themeId: null });
+    const [fetched, setFetched] = useState({ themeId: null, data: null, failed: false });
 
-    const currentData = cached || (fetchedData.themeId === theme?.id ? fetchedData : null);
+    const cached = theme ? getCachedThemeGames(theme.params) : null;
+    const currentData = cached || (fetched.themeId === theme?.id ? fetched.data : null);
+    const failed = !currentData && fetched.themeId === theme?.id && fetched.failed;
 
     useEffect(() => {
-        if (!theme || spotlightCache[theme.id]) return;
+        if (!theme || getCachedThemeGames(theme.params)) return;
 
         let isMounted = true;
-        fetchThemeGames({ ...theme.params, size: 3 })
-            .then(({ games: themeGames, total: count }) => {
-                const res = { games: themeGames, total: count, themeId: theme.id };
-                spotlightCache[theme.id] = res;
-                if (isMounted) {
-                    setFetchedData(res);
-                }
-            })
-            .catch(() => {
-                const res = { games: [], total: 0, themeId: theme.id };
-                spotlightCache[theme.id] = res;
-                if (isMounted) {
-                    setFetchedData(res);
-                }
-            });
+        fetchThemeGames(theme.params)
+            .then(data => { if (isMounted) setFetched({ themeId: theme.id, data, failed: false }); })
+            .catch(() => { if (isMounted) setFetched({ themeId: theme.id, data: null, failed: true }); });
         return () => { isMounted = false; };
     }, [theme]);
 
-    if (!currentData) {
+    if (!currentData && !failed) {
         return (
-            <div className="w-full h-64 rounded-3xl bg-surface/80 animate-pulse border border-divider mb-8 sm:mb-10" />
+            <div className={`w-full ${SPOTLIGHT_MIN_H} rounded-3xl bg-surface/80 animate-pulse border border-divider mb-8 sm:mb-10`} />
+        );
+    }
+
+    // 결과 0건·조회 실패: 배너를 없애면 아래 전체가 당겨지므로 같은 높이의 안내 카드로 유지
+    if (failed || currentData.games.length === 0) {
+        return (
+            <div className={`w-full ${SPOTLIGHT_MIN_H} rounded-3xl border border-dashed border-divider bg-surface/60 mb-8 sm:mb-10 flex flex-col items-center justify-center gap-2 p-6 text-center`}>
+                <Sparkles className="w-6 h-6 text-muted" />
+                <p className="text-base sm:text-lg font-black text-primary break-keep">{theme.copy}</p>
+                <p className="text-xs sm:text-sm font-bold text-secondary break-keep">
+                    {failed ? '추천 게임을 불러오지 못했어요. 잠시 후 다시 확인해주세요.' : '지금은 조건에 맞는 게임이 없어요. 가격 정보가 갱신되면 다시 채워져요.'}
+                </p>
+            </div>
         );
     }
 
     const { games, total } = currentData;
-
-    if (games.length === 0) return null;
 
     const leadGame = games[0];
     const themeColor = theme.color || { text: '#f59e0b', glow: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.4)', bg: 'rgba(245,158,11,0.1)' };
@@ -410,7 +432,7 @@ function CuratorSpotlight({ theme, onViewAll }) {
     return (
         <div
             onClick={() => onViewAll(theme.params, theme.copy)}
-            className="relative overflow-hidden rounded-3xl cursor-pointer group bg-surface/95 dark:bg-surface/90 backdrop-blur-xl transition-all duration-500 transform-gpu shadow-xl mb-8 sm:mb-10 p-5 sm:p-8 lg:p-10 border hover:shadow-2xl"
+            className={`${SPOTLIGHT_MIN_H} relative overflow-hidden rounded-3xl cursor-pointer group bg-surface/95 dark:bg-surface/90 backdrop-blur-xl transition-all duration-500 transform-gpu shadow-xl mb-8 sm:mb-10 p-5 sm:p-8 lg:p-10 border hover:shadow-2xl`}
             style={{ borderColor: themeColor.border }}
         >
             {/* 시네마틱 배경 */}
@@ -491,10 +513,11 @@ function CuratorSpotlight({ theme, onViewAll }) {
 // ─────────────────────────────────────────────
 // ThemePanel — 벤토 위젯 스타일 편집 카드
 // ─────────────────────────────────────────────
-function ThemePanel({ theme, onViewAll, onEmpty }) {
+function ThemePanel({ theme, onViewAll }) {
     const [games, setGames] = useState([]);
     const [total, setTotal] = useState(0);
     const [loaded, setLoaded] = useState(false);
+    const [failed, setFailed] = useState(false);
     // 화면 아래 약 1화면 거리에 오면 미리 조회 → 스크롤로 닿았을 때 이미 데이터가 도착해 있도록 (테마별 지연 로딩 구조는 유지)
     const [ref, visible] = useScrollReveal(0, '0px 0px 900px 0px');
     const { Icon } = theme;
@@ -506,18 +529,32 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
                 setGames(data);
                 setTotal(count);
                 setLoaded(true);
-                if (data.length === 0) onEmpty?.();
             })
-            .catch(() => { setLoaded(true); onEmpty?.(); });
+            .catch(() => { setFailed(true); setLoaded(true); });
     }, [theme, visible, loaded]);
-
-    if (loaded && games.length === 0) return null;
 
     const isHero = theme.panel === 'xl';
     const colSpan = isHero ? 'col-span-2' : 'col-span-1';
+    // 모바일 md 카드는 실측 212~252px라 로딩 자리(이전 185px)를 맞춤
     const minHeight = isHero
         ? 'min-h-[240px] sm:min-h-[270px]'
-        : 'min-h-[185px] sm:min-h-[220px]';
+        : 'min-h-[232px] sm:min-h-[220px]';
+
+    // 결과 0건·조회 실패: 칸을 없애면 격자가 다시 배치되며 아래가 당겨지므로 같은 크기의 안내 카드로 유지
+    if (loaded && games.length === 0) {
+        return (
+            <div
+                ref={ref}
+                className={`${colSpan} ${minHeight} rounded-2xl border border-dashed border-divider bg-surface/60 flex flex-col items-center justify-center gap-2 p-4 text-center`}
+            >
+                {Icon && <Icon className="w-5 h-5 text-muted" />}
+                <p className="text-xs sm:text-sm font-black text-secondary break-keep">{theme.copy}</p>
+                <p className="text-[11px] font-bold text-muted break-keep">
+                    {failed ? '불러오지 못했어요. 잠시 후 다시 확인해주세요.' : '지금은 조건에 맞는 게임이 없어요.'}
+                </p>
+            </div>
+        );
+    }
 
     if (!loaded) {
         return (
@@ -673,13 +710,9 @@ function ThemePanel({ theme, onViewAll, onEmpty }) {
 // ─────────────────────────────────────────────
 function CategorySection({ categoryName, themes, onViewAll }) {
     const [ref, visible] = useScrollReveal(0.04);
-    const [emptyCount, setEmptyCount] = useState(0);
-    const handleEmpty = useCallback(() => setEmptyCount(c => c + 1), []);
 
     const categoryColor = themes[0]?.color;
     const CategoryIcon = themes[0]?.Icon;
-
-    if (emptyCount >= themes.length) return null;
 
     return (
         <section
@@ -708,7 +741,6 @@ function CategorySection({ categoryName, themes, onViewAll }) {
                         key={theme.id}
                         theme={theme}
                         onViewAll={() => onViewAll(theme.params, theme.copy)}
-                        onEmpty={handleEmpty}
                     />
                 ))}
             </div>
@@ -722,6 +754,8 @@ function CategorySection({ categoryName, themes, onViewAll }) {
 const CurationPage = () => {
     const navigate = useTransitionNavigate();
     const [selectedCategory, setSelectedCategory] = useState('전체');
+    // 스포트라이트 배너는 탭을 눌렀을 때만 바뀜 (스크롤로 탭 강조가 바뀔 때마다 배너가 바뀌면 화면 위쪽 높이가 변하고 보이지 않는 배너 요청이 나감)
+    const [spotlightCategory, setSpotlightCategory] = useState('전체');
     const [showBackToTop, setShowBackToTop] = useState(false);
     const isManualScrollRef = useRef(false);
     const tabsContainerRef = useRef(null);
@@ -736,6 +770,7 @@ const CurationPage = () => {
     const handleCategoryClick = (categoryName) => {
         isManualScrollRef.current = true;
         setSelectedCategory(categoryName);
+        setSpotlightCategory(categoryName);
 
         if (categoryName === '전체') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -810,10 +845,10 @@ const CurationPage = () => {
     // 모든 카테고리를 유지하여 탭 점프 시 높이 붕괴(Layout Shift)를 방지
 
     // 🎯 선택된 카테고리에 맞춰 스포트라이트 배너의 대표 테마를 동적으로 결정
-    const spotlightTheme = selectedCategory === '전체'
+    const spotlightTheme = spotlightCategory === '전체'
         ? THEMES[0]
-        : (THEMES.find(t => t.category === selectedCategory && t.panel === 'xl') ||
-           THEMES.find(t => t.category === selectedCategory) ||
+        : (THEMES.find(t => t.category === spotlightCategory && t.panel === 'xl') ||
+           THEMES.find(t => t.category === spotlightCategory) ||
            THEMES[0]);
 
     return (

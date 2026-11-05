@@ -14,7 +14,8 @@ import {
     Circle,
     Triangle,
     X as CrossIcon,
-    Square
+    Square,
+    AlertCircle
 } from 'lucide-react';
 import SichuanBoard from '../sichuan/SichuanBoard';
 import TrophyNotification from '../sichuan/TrophyNotification';
@@ -89,6 +90,24 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
 
     const [gameSessionId, setGameSessionId] = useState(1);
 
+    // 리더보드 등록 결과 ('idle' | 'submitting' | 'success' | 'failed')
+    const [submitStatus, setSubmitStatus] = useState('idle');
+    const submitSeqRef = useRef(0);
+
+    // 점수 등록 후 실제 결과(성공/실패)를 결과 모달에 반영 (이전 판의 늦은 응답은 무시)
+    const submitSichuanScore = useCallback((payload) => {
+        const seq = ++submitSeqRef.current;
+        setSubmitStatus('submitting');
+        arcadeApi.submitScore('sichuan', payload)
+            .then(res => {
+                if (seq === submitSeqRef.current) setSubmitStatus(res?.success === false ? 'failed' : 'success');
+            })
+            .catch(err => {
+                console.error('[SichuanGame] 점수 등록 실패:', err);
+                if (seq === submitSeqRef.current) setSubmitStatus('failed');
+            });
+    }, []);
+
     // 정합성 보장을 위한 동기화 Ref
     const scoreRef = useRef(0);
     const remainingTilesRef = useRef(BOARD_CONFIG.tileCount);
@@ -143,6 +162,8 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
         setRemainingTiles(BOARD_CONFIG.tileCount);
         setGameState('PLAYING');
         setIsResultModalOpen(false);
+        submitSeqRef.current += 1;
+        setSubmitStatus('idle');
         startTimeRef.current = Date.now();
 
         // Ref 초기화
@@ -161,17 +182,24 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
     }, [initGame]);
 
     // 창 크기 변경 시 PC(가로)/모바일(세로) 자동 전환
+    // 진행 중인 판·결과 모달은 보존하고, 시작 전(인트로 오버레이 노출 중)에만 보드를 새 방향으로 교체
+    // (다음 판은 initGame이 현재 화면 방향으로 다시 생성)
+    const showOverlayRef = useRef(showOverlay);
+    useEffect(() => {
+        showOverlayRef.current = showOverlay;
+    }, [showOverlay]);
+
     useEffect(() => {
         const handleResize = () => {
             const nowLandscape = window.innerWidth >= 768;
-            if (isLandscapeRef.current !== nowLandscape) {
+            if (isLandscapeRef.current !== nowLandscape && showOverlayRef.current) {
                 isLandscapeRef.current = nowLandscape;
-                initGame();
+                setBoard(createGameBoard(nowLandscape));
             }
         };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
-    }, [initGame]);
+    }, []);
 
     // 마운트 시 시작 시간 기록 및 언마운트 시 타임아웃 정리
     useEffect(() => {
@@ -218,7 +246,7 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
 
                 // 로그인 회원인 경우에만 리더보드 점수 등록
                 if (user) {
-                    arcadeApi.submitScore('sichuan', {
+                    submitSichuanScore({
                         score: currentScore,
                         clearTimeSec: 120,
                         user
@@ -228,7 +256,7 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
         }, 500);
 
         return () => clearInterval(interval);
-    }, [gameState, gameSessionId, user]);
+    }, [gameState, gameSessionId, user, submitSichuanScore]);
 
     // 사운드 토글
     const handleToggleSound = useCallback(() => {
@@ -280,13 +308,13 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
                 }
             }
 
-            arcadeApi.submitScore('sichuan', {
+            submitSichuanScore({
                 score: finalScore,
                 clearTimeSec,
                 user
-            }).catch(err => console.error('[SichuanGame] 점수 등록 실패:', err));
+            });
         }
-    }, [highScore, user]);
+    }, [highScore, user, submitSichuanScore]);
 
     // 타일 클릭 처리
     const handleTileClick = useCallback((r, c) => {
@@ -665,10 +693,21 @@ const SichuanGame = ({ user, _isAuthenticated, initialBestScore = 0, onBack, onO
 
                         {/* 로그인 상태별 리더보드 안내 배너 */}
                         {user ? (
-                            <div className="w-full py-2.5 px-3.5 mb-5 rounded-2xl bg-ps-blue/10 border border-ps-blue/25 text-xs text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
-                                <Trophy className="w-4 h-4 text-ps-blue shrink-0" />
-                                <span>명예의 전당에 점수가 자동 등록되었습니다!</span>
-                            </div>
+                            submitStatus === 'failed' ? (
+                                <div className="w-full py-2.5 px-3.5 mb-5 rounded-2xl bg-red-500/10 border border-red-500/25 text-xs text-red-500 font-bold flex items-center justify-center gap-1.5 break-keep">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span>기록 등록에 실패했어요. 잠시 후 다시 시도해주세요.</span>
+                                </div>
+                            ) : (
+                                <div className="w-full py-2.5 px-3.5 mb-5 rounded-2xl bg-ps-blue/10 border border-ps-blue/25 text-xs text-ps-blue font-bold flex items-center justify-center gap-1.5 whitespace-nowrap">
+                                    <Trophy className="w-4 h-4 text-ps-blue shrink-0" />
+                                    <span>
+                                        {submitStatus === 'success'
+                                            ? '명예의 전당에 점수가 자동 등록되었습니다!'
+                                            : '명예의 전당에 점수를 등록하는 중...'}
+                                    </span>
+                                </div>
+                            )
                         ) : (
                             <div className="w-full p-3.5 mb-5 rounded-2xl bg-surface-hover/80 border border-divider text-left flex flex-col gap-2.5">
                                 <div className="flex items-start gap-2">

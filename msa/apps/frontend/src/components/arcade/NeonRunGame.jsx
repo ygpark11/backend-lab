@@ -14,7 +14,8 @@ import {
     Zap,
     Crown,
     Home,
-    HelpCircle
+    HelpCircle,
+    AlertCircle
 } from 'lucide-react';
 import GameStartOverlay from './GameStartOverlay';
 import { gameSound } from '../../utils/gameSound';
@@ -112,6 +113,22 @@ const NeonRunGame = ({
     const [bestScore, setBestScore] = useState(initialBestScore);
     const [isNewRecord, setIsNewRecord] = useState(false);
     const [myRank, setMyRank] = useState(null);
+    // 리더보드 등록 결과 ('idle' | 'submitting' | 'success' | 'failed')
+    const [submitStatus, setSubmitStatus] = useState('idle');
+
+    // 로그인 회원의 경우 서버 DB의 최신 최고 기록 동기화 (허브 조회가 끝나기 전에 진입해도 정확한 최고 기록 사용)
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            arcadeApi.getLeaderboard('neon_run', user)
+                .then(data => {
+                    const serverBest = data?.myRank?.score || 0;
+                    if (serverBest > 0) {
+                        setBestScore(prev => Math.max(prev, serverBest));
+                    }
+                })
+                .catch(() => {});
+        }
+    }, [isAuthenticated, user]);
 
     // 게임 종료 통계
     const [gameOverStats, setGameOverStats] = useState({
@@ -511,6 +528,9 @@ const NeonRunGame = ({
         }
 
         setIsNewRecord(false);
+        // 이전 판의 순위/등록 결과가 새 판 결과창에 남지 않도록 초기화
+        setMyRank(null);
+        setSubmitStatus('idle');
         setGameState('PLAYING');
     }, [generateNextChunk]);
 
@@ -649,17 +669,27 @@ const NeonRunGame = ({
 
         // 로그인 유저의 경우 서버 DB에 점수 등록 (단 1회만 안전하게 전송)
         if (isAuthenticated && user) {
+            const startTime = world.startTime;
+            setSubmitStatus('submitting');
             try {
                 const res = await arcadeApi.submitScore('neon_run', {
                     score: finalScore,
                     clearTimeSec,
                     user
                 });
+                // 응답 대기 중 새 판이 시작됐다면 이전 판 결과는 반영하지 않음
+                if (worldRef.current.startTime !== startTime) return;
+                if (res?.success === false) {
+                    setSubmitStatus('failed');
+                    return;
+                }
+                setSubmitStatus('success');
                 if (res?.rank) {
                     setMyRank(res.rank);
                 }
             } catch (err) {
                 console.warn('[NeonRun] 점수 전송 실패:', err);
+                if (worldRef.current.startTime === startTime) setSubmitStatus('failed');
             }
         }
     }, [bestScore, isAuthenticated, user]);
@@ -676,6 +706,18 @@ const NeonRunGame = ({
         };
     }, [gameState, isMuted]);
 
+    // 탭 전환·앱 백그라운드 진입 시 자동 일시정지 (PAUSED 전환 → 렌더 루프 및 비트 사운드 정지)
+    useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setGameState('PAUSED');
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [gameState]);
+
     // =========================================================================
     // 🎨 메인 60FPS 애니메이션 렌더링 루프
     // =========================================================================
@@ -683,18 +725,25 @@ const NeonRunGame = ({
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
+
+        // 일시정지·레디·게임오버 상태에서는 현재 화면을 1회만 그리고 루프를 돌리지 않음 (모바일 발열 방지)
+        // 재개 시 이 effect가 다시 실행되며 lastTime이 새로 잡히므로 정지 시간만큼 dt가 튀지 않음
+        if (gameState !== 'PLAYING') {
+            renderScene(ctx, worldRef.current, 0);
+            return;
+        }
+
         let lastTime = performance.now();
 
         const loop = (currentTime) => {
-            animFrameIdRef.current = requestAnimationFrame(loop);
-            const dt = Math.min(0.05, (currentTime - lastTime) / 1000);
-            lastTime = currentTime;
-
-            if (gameState !== 'PLAYING' || worldRef.current.isGameOver) {
-                // 일시정지나 레디, 게임오버 상태일 때 정적 렌더링
+            if (worldRef.current.isGameOver) {
+                // 게임오버 순간의 정적 화면 1회 렌더링 후 루프 종료 (GAMEOVER 전환 시 다시 1회 렌더링)
                 renderScene(ctx, worldRef.current, 0);
                 return;
             }
+            animFrameIdRef.current = requestAnimationFrame(loop);
+            const dt = Math.min(0.05, Math.max(0, (currentTime - lastTime) / 1000));
+            lastTime = currentTime;
 
             // 1. 월드 업데이트
             updateWorld(worldRef.current, dt);
@@ -1828,10 +1877,21 @@ const NeonRunGame = ({
 
                         {/* 리더보드 순위 알림 */}
                         {isAuthenticated ? (
-                            <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5">
-                                <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
-                                <span>{myRank ? `글로벌 리더보드 현재 ${myRank}위 등극!` : '서버에 점수가 안전하게 동기화되었습니다.'}</span>
-                            </div>
+                            submitStatus === 'failed' ? (
+                                <div className="w-full py-2 px-3 mb-4 rounded-xl bg-red-500/10 border border-red-500/25 text-[11px] text-red-500 font-bold flex items-center justify-center gap-1.5 break-keep">
+                                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                    <span>기록 등록에 실패했어요. 잠시 후 다시 시도해주세요.</span>
+                                </div>
+                            ) : (
+                                <div className="w-full py-2 px-3 mb-4 rounded-xl bg-ps-blue/10 border border-ps-blue/25 text-[11px] text-ps-blue font-bold flex items-center justify-center gap-1.5">
+                                    <Trophy className="w-3.5 h-3.5 text-ps-blue shrink-0" />
+                                    <span>
+                                        {submitStatus === 'success'
+                                            ? (myRank ? `글로벌 리더보드 현재 ${myRank}위 등극!` : '서버에 점수가 안전하게 동기화되었습니다.')
+                                            : '서버에 점수를 등록하는 중...'}
+                                    </span>
+                                </div>
+                            )
                         ) : (
                             <div className="mb-4 w-full">
                                 <button

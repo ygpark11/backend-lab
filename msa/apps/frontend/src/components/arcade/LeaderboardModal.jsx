@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Trophy,
     X,
@@ -7,7 +7,8 @@ import {
     LogIn,
     User,
     RotateCw,
-    Zap
+    Zap,
+    AlertCircle
 } from 'lucide-react';
 import { arcadeApi } from '../../api/arcadeApi';
 
@@ -36,18 +37,34 @@ const LeaderboardModal = ({
     const [activeGame, setActiveGame] = useState(initialGameType);
     const [leaderboardData, setLeaderboardData] = useState({ topList: [], myRank: null });
     const [isLoading, setIsLoading] = useState(false);
+    const [hasError, setHasError] = useState(false);
+    // 탭을 빠르게 전환할 때 늦게 도착한 이전 탭 응답이 현재 탭을 덮어쓰지 않도록 요청 순번 관리
+    const requestIdRef = useRef(0);
 
     const fetchLeaderboard = useCallback(async (gameType) => {
+        const requestId = ++requestIdRef.current;
         setIsLoading(true);
+        setHasError(false);
         try {
             const data = await arcadeApi.getLeaderboard(gameType, user);
+            if (requestId !== requestIdRef.current) return;
             setLeaderboardData(data);
         } catch {
+            if (requestId !== requestIdRef.current) return;
             setLeaderboardData({ topList: [], myRank: null });
+            setHasError(true);
         } finally {
-            setIsLoading(false);
+            if (requestId === requestIdRef.current) setIsLoading(false);
         }
     }, [user]);
+
+    // 모달이 닫히거나 언마운트되면 진행 중인 응답은 무시
+    useEffect(() => {
+        if (!isOpen) requestIdRef.current += 1;
+    }, [isOpen]);
+    useEffect(() => () => {
+        requestIdRef.current += 1;
+    }, []);
 
     useEffect(() => {
         if (isOpen) {
@@ -156,6 +173,26 @@ const LeaderboardModal = ({
                             <RotateCw className="w-7 h-7 animate-spin text-ps-blue" />
                             <span className="text-xs font-medium">명예의 전당 랭킹을 불러오는 중...</span>
                         </div>
+                    ) : hasError ? (
+                        /* 조회 실패 UI (기록 없음과 구분) */
+                        <div className="py-16 flex flex-col items-center justify-center text-center px-4">
+                            <div className="w-16 h-16 rounded-3xl bg-surface-hover border border-divider flex items-center justify-center text-red-500 mb-3.5 shadow-inner">
+                                <AlertCircle className="w-8 h-8 opacity-70" />
+                            </div>
+                            <h4 className="text-sm sm:text-base font-black text-primary mb-1 break-keep">
+                                랭킹을 불러오지 못했어요
+                            </h4>
+                            <p className="text-xs text-secondary max-w-xs leading-relaxed mb-4 break-keep">
+                                잠시 후 다시 시도해주세요.
+                            </p>
+                            <button
+                                onClick={() => fetchLeaderboard(activeGame)}
+                                className="px-4 py-2 rounded-xl bg-ps-blue hover:bg-blue-600 text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                            >
+                                <RotateCw className="w-3.5 h-3.5" />
+                                <span>다시 시도</span>
+                            </button>
+                        </div>
                     ) : !leaderboardData.topList || leaderboardData.topList.length === 0 ? (
                         /* 데이터 없음 (Empty State) UI */
                         <div className="py-16 flex flex-col items-center justify-center text-center px-4">
@@ -177,7 +214,7 @@ const LeaderboardModal = ({
 
                             return (
                                 <div
-                                    key={item.rank || index}
+                                    key={`${index}-${item.username || item.nickname || ''}-${item.score ?? 0}`}
                                     className={`flex items-center justify-between p-3 sm:p-3.5 rounded-2xl border transition-all ${
                                         index === 0
                                             ? 'bg-amber-500/10 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.08)]'
@@ -251,7 +288,7 @@ const LeaderboardModal = ({
                                 </span>
                             </div>
                         </div>
-                    ) : (
+                    ) : hasError ? null : (
                         <div className="p-3.5 sm:p-4 bg-surface-hover/60 border-t border-divider flex items-center justify-between shrink-0 text-xs text-secondary">
                             <span>아직 등록된 내 기록이 없습니다. 게임을 완료하여 순위표에 도전해보세요!</span>
                         </div>

@@ -5,6 +5,7 @@ import client from './client';
 export const arcadeApi = {
     /**
      * 리더보드 목록 및 내 순위 조회 (비로그인/로그인 공용)
+     * 조회 실패 시 예외를 던짐 → 호출부에서 "기록 없음"과 "조회 실패"를 구분해 처리
      */
     async getLeaderboard(gameType, _user = null) {
         try {
@@ -31,11 +32,7 @@ export const arcadeApi = {
             return { gameType, topList: [], myRank: null };
         } catch (error) {
             console.warn('[arcadeApi] 리더보드 조회 실패:', error?.message);
-            return {
-                gameType,
-                topList: [],
-                myRank: null
-            };
+            throw error;
         }
     },
 
