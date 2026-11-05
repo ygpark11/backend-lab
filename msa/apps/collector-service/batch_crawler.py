@@ -791,16 +791,25 @@ def mine_english_title(html_content: str) -> str | None:
 DELISTED_CONFIRM_DELAY_SEC = 2
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
 
+def _is_off_product_page(url: str) -> bool:
+    """상품 페이지를 요청했는데 상품 페이지가 아닌 곳에 도착했는지.
+
+    단종 상품은 스토어가 /ko-kr/error?... 또는 스토어 홈(/ → /ko-kr/pages/latest)으로 리다이렉트한다.
+    """
+    return "/error" in url or "/product/" not in url
+
 def _store_error_reason(error_url: str) -> str:
-    """PS Store 오류 페이지 URL의 사유 파라미터 추출 (예: emptyRequiredBatarang/204)."""
+    """리다이렉트 사유. 오류 페이지면 파라미터(예: emptyRequiredBatarang/204), 아니면 도착 경로."""
+    if "/error" not in error_url:
+        return f"홈 리다이렉트 ({urlparse(error_url).path or '/'})"
     qs = parse_qs(urlparse(error_url).query)
     return f"{qs.get('widgetErrorType', ['?'])[0]}/{qs.get('widgetStatusCode', ['?'])[0]}"
 
 def _confirm_delisted(target_url: str) -> bool | None:
     """브라우저 없이 HTTP 1회로 단종 여부 재확인.
 
-    단종 상품은 스토어 서버가 즉시 /error로 302 리다이렉트하므로 렌더링 없이 판별 가능.
-    Returns: True=재확인도 /error (단종 확정), False=정상 응답 (일시 오류), None=확인 불가
+    단종 상품은 스토어 서버가 즉시 /error 또는 홈(/)으로 302 리다이렉트하므로 렌더링 없이 판별 가능.
+    Returns: True=재확인도 상품 페이지 밖으로 리다이렉트 (단종 확정), False=정상 응답 (일시 오류), None=확인 불가
     """
     time.sleep(DELISTED_CONFIRM_DELAY_SEC)
     try:
@@ -815,7 +824,7 @@ def _confirm_delisted(target_url: str) -> bool | None:
         return None
 
     if res.status_code in _REDIRECT_STATUS_CODES:
-        return "/error" in res.headers.get("Location", "")
+        return _is_off_product_page(res.headers.get("Location", ""))
     if res.status_code == 200:
         return False
     logger.warning(f"[단종 재확인] 예상 밖 응답 {res.status_code}: {target_url}")
@@ -825,7 +834,7 @@ def crawl_detail_and_send(page, target_url, verbose=False):
     try:
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
 
-        if "/error" in page.url:
+        if _is_off_product_page(page.url):
             # 리다이렉트 1회만으로 단종 확정하면 스토어 일시 오류까지 오탐됨 → HTTP로 재확인
             reason = _store_error_reason(page.url)
             confirmed = _confirm_delisted(target_url)
@@ -839,8 +848,8 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
             logger.warning(f"[단종 오탐] 일시 오류로 판단 (사유 {reason}) → 재수집: {target_url}")
             page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
-            if "/error" in page.url:
-                logger.warning(f"[단종 판정 보류] 재수집도 /error (사유 {_store_error_reason(page.url)}): {target_url}")
+            if _is_off_product_page(page.url):
+                logger.warning(f"[단종 판정 보류] 재수집도 리다이렉트 (사유 {_store_error_reason(page.url)}): {target_url}")
                 return None
 
         try:
@@ -1077,7 +1086,7 @@ def run_ssr_shadow(url: str, dom_res: dict, dom_sec: float) -> None:
     try:
         fetched = ssr_product.fetch_product_html(url)
         cpu_started, started = time.process_time(), time.perf_counter()
-        ssr_res, reason = (None, f"리다이렉트 {fetched.final_url[-40:]}") if "/error" in fetched.final_url \
+        ssr_res, reason = (None, f"리다이렉트 {fetched.final_url[-40:]}") if _is_off_product_page(fetched.final_url) \
             else ssr_product.parse_product_html(fetched.text, url)
         parse_sec, parse_cpu = time.perf_counter() - started, time.process_time() - cpu_started
         fetched.text = ""  # 대용량 HTML 즉시 해제
