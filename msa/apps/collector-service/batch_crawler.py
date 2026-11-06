@@ -9,7 +9,9 @@ import traceback
 import gc
 import json
 import zlib
+from collections import Counter
 from logging.handlers import RotatingFileHandler
+from typing import Optional
 from datetime import datetime
 from urllib.parse import parse_qs, urlparse
 
@@ -680,11 +682,10 @@ def crawl_phase0_new_releases(bm):
     logger.info("[Phase 0] 신규 탐사 프로세스 전체 종료")
 
 def extract_gamehub_image_url(json_text: str) -> str:
-    """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART 이미지 URL 추출 (concept 페이지 / fallback 용).
+    """__NEXT_DATA__ JSON에서 GAMEHUB_COVER_ART 이미지 URL 추출 (Phase 0 신작 후보용).
 
-    product 페이지의 에디션별 정확한 이미지는 crawl_detail_and_send 내
-    page.evaluate() JS 방식으로 별도 처리함. 이 함수는 concept 페이지(Phase 0) 및
-    JS 방식 실패 시 fallback으로만 사용.
+    ⚠️ 첫 매칭을 반환하므로 연관 상품·Concept 이미지가 잡힐 수 있다.
+    상품 상세 수집(crawl_detail_and_send / SSR)에서는 사용하지 말고 ssr_product.pick_image_url을 쓸 것.
 
     - 일반 JSON: product 페이지 ("role":"GAMEHUB_COVER_ART")
     - 이중 직렬화: concept 페이지 (\"role\":\"GAMEHUB_COVER_ART\")
@@ -830,6 +831,15 @@ def _confirm_delisted(target_url: str) -> bool | None:
     logger.warning(f"[단종 재확인] 예상 밖 응답 {res.status_code}: {target_url}")
     return None
 
+def send_collected(payload: dict, via: str = "") -> None:
+    """수집 결과를 오리지널 API(JAVA_API_URL)로 전송 (DOM·SSR 공통)."""
+    title = payload["title"]
+    try:
+        res = session.post(JAVA_API_URL, json=payload, timeout=30)
+        if res.status_code == 200: logger.info(f"Sent{via}: {title} ({payload['currentPrice']} KRW)")
+        else: logger.error(f"Server Error ({res.status_code}): {title}")
+    except Exception as e: logger.error(f"Network Error sending {title}: {e}")
+
 def crawl_detail_and_send(page, target_url, verbose=False):
     try:
         page.goto(target_url, timeout=CONF['timeout'], wait_until="commit")
@@ -869,33 +879,16 @@ def crawl_detail_and_send(page, target_url, verbose=False):
         )
         english_title = mine_english_title(next_data_text) if next_data_text else None
 
-        # 에디션/번들 product-specific 이미지 추출
-        # script[type="application/json"] SSR 태그에서 product ID 기준으로 personalizedMeta 탐색
-        # (script 태그는 domcontentloaded 시 이미 존재 → 저사양 서버에서도 타이밍 무관)
+        # 이미지는 SSR 파서와 같은 규칙(ssr_product.pick_image_url)으로 '이 상품 자신'의 Apollo 캐시에서만 고른다.
+        # (__NEXT_DATA__ 첫 매칭은 DLC·번들에 본편 이미지를 넣는 오염 원인이라 사용하지 않음)
         ps_store_id_for_img = target_url.split("/")[-1].split("?")[0]
-        image_url = page.evaluate("""
-            (psStoreId) => {
-                const scripts = document.querySelectorAll('script[type="application/json"]');
-                for (const s of scripts) {
-                    const text = s.textContent;
-                    if (!text.includes(psStoreId)) continue;
-                    const unesc = text.replace(/\\\\"/g, '"').replace(/\\\\\//g, '/');
-                    let idx = unesc.indexOf('"id":"' + psStoreId + '"');
-                    if (idx === -1) idx = unesc.indexOf('"Product:' + psStoreId + '"');
-                    if (idx === -1) continue;
-                    const win = unesc.substring(idx, idx + 8000);
-                    const pmIdx = win.indexOf('"personalizedMeta"');
-                    if (pmIdx === -1) continue;
-                    const pmWin = win.substring(pmIdx, pmIdx + 2000);
-                    const m = pmWin.match(/"role"\\s*:\\s*"GAMEHUB_COVER_ART"[^}]{0,200}"url"\\s*:\\s*"(https:\\/\\/image\\.api\\.playstation\\.com\\/vulcan\\/[^"]+)"/);
-                    if (m) return m[1].split('?')[0];
-                }
-                return '';
-            }
-        """, ps_store_id_for_img) or ""
-        # fallback: 기존 __NEXT_DATA__ 텍스트 기반 추출 (단일 에디션 등)
-        if not image_url:
-            image_url = extract_gamehub_image_url(next_data_text) if next_data_text else ""
+        product_scripts = page.evaluate("""
+            (key) => Array.from(document.querySelectorAll('script[type="application/json"]'))
+                .filter(s => (s.id || '').startsWith('env:') && s.textContent.includes(key))
+                .map(s => s.textContent)
+        """, f"Product:{ps_store_id_for_img}") or []
+        own_product = ssr_product.product_fields_from_texts(product_scripts, ps_store_id_for_img)
+        del product_scripts
 
         publisher = "Batch Crawler"
         if page.locator("[data-qa='mfe-game-title#publisher']").count() > 0:
@@ -998,11 +991,13 @@ def crawl_detail_and_send(page, target_url, verbose=False):
 
         if not best_offer_data: return None
 
-        if not image_url:
-            try:
-                img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
-                if img_loc.count() > 0: image_url = img_loc.first.get_attribute("src").split("?")[0]
-            except: pass
+        hero_src = None
+        try:
+            img_loc = page.locator("img[data-qa='gameBackgroundImage#heroImage#image']")
+            if img_loc.count() > 0: hero_src = img_loc.first.get_attribute("src")
+        except Exception as e:
+            logger.warning(f"[image] 히어로 이미지 조회 실패: {e}")
+        image_url = ssr_product.pick_image_url(own_product, hero_src)
 
         ps_store_id = target_url.split("/")[-1].split("?")[0]
 
@@ -1053,57 +1048,91 @@ def crawl_detail_and_send(page, target_url, verbose=False):
             "isPs5ProEnhanced": is_ps5_pro_enhanced, "editionContents": edition_features
         }
 
-        # 오리지널 API(JAVA_API_URL)로 데이터 전송
-        try:
-            res = session.post(JAVA_API_URL, json=payload, timeout=30)
-            if res.status_code == 200: logger.info(f"Sent: {title} ({payload['currentPrice']} KRW)")
-            else: logger.error(f"Server Error ({res.status_code}): {title}")
-        except Exception as e: logger.error(f"Network Error sending {title}: {e}")
-
+        send_collected(payload)
         return payload
     except Exception as e:
         logger.error(f"   Error: {target_url} -> {e}")
         return None
 
 
-# --- [6-1. SSR 그림자 모드: 브라우저 결과와 비교 로그만 남기고 전송·저장하지 않음] ---
-# 전환 전 검증용. 0이면 비활성. 로그 키워드: [SSR-SHADOW] 일치 / 불일치 / 실패 / 오류
-SSR_SHADOW_RATIO = float(os.getenv("SSR_SHADOW_RATIO", "0.1"))
-_SHADOW_FIELDS = (
-    "title", "englishTitle", "publisher", "imageUrl", "genreIds", "releaseDate", "originalPrice", "currentPrice",
-    "discountRate", "saleEndDate", "isPlusExclusive", "inCatalog", "platforms", "isPs5ProEnhanced", "editionContents",
-)
+# --- [6-1. 상품 상세 수집: SSR(HTTP) 우선, 실패 시 브라우저(DOM) 대체] ---
+# SSR 파서는 그림자 모드(226건, 14개 필드 100% 일치)로 검증 후 메인 경로로 승격.
+# - SSR이 결과를 못 내면(리다이렉트·파싱 실패·값 검증 실패·HTTP 이상) 해당 건은 기존 DOM 경로로 처리
+#   → 단종 판정·오탐 재확인은 항상 DOM 경로의 기존 로직을 탄다 (SSR 결과만으로 단종 판정하지 않음)
+# - 서킷 브레이커: SSR 실패 연속 SSR_BREAKER_THRESHOLD회, 또는 HTTP 403/429(명시적 차단 신호) 1회면
+#   이번 배치 잔여는 전부 DOM + 디스코드 즉시 알림
+# - SSR_ENABLED=0 이면 전부 DOM (재배포 없이 환경변수로 롤백)
+# - SSR_DELAY_MIN/MAX: SSR 요청 간격(초). 도입 초기는 보수적으로(7~11초 ≈ DOM 대비 2배 속도), 안정 확인 후 축소
+SSR_ENABLED = os.getenv("SSR_ENABLED", "1") == "1"
+SSR_DELAY_MIN = float(os.getenv("SSR_DELAY_MIN", "7"))
+SSR_DELAY_MAX = float(os.getenv("SSR_DELAY_MAX", "11"))
+SSR_BREAKER_THRESHOLD = 5
+_SSR_BLOCK_STATUS = {403, 429}
 
-def _shadow_norm(value):
-    if isinstance(value, str):
-        return " ".join(value.split())
-    if isinstance(value, list) and all(isinstance(v, str) and len(v) <= 6 for v in value):
-        return sorted(value)  # platforms: set 기반이라 순서 무의미
-    return value
+class DetailCollector:
+    def __init__(self) -> None:
+        self.ssr_ok = 0
+        self.dom_fallback = 0
+        self.fail_reasons: Counter = Counter()
+        self.consecutive_fail = 0
+        self.tripped_at: Optional[str] = None
 
-def run_ssr_shadow(url: str, dom_res: dict, dom_sec: float) -> None:
-    pid = url.split("/")[-1][:34]
-    try:
-        fetched = ssr_product.fetch_product_html(url)
-        cpu_started, started = time.process_time(), time.perf_counter()
-        ssr_res, reason = (None, f"리다이렉트 {fetched.final_url[-40:]}") if _is_off_product_page(fetched.final_url) \
-            else ssr_product.parse_product_html(fetched.text, url)
-        parse_sec, parse_cpu = time.perf_counter() - started, time.process_time() - cpu_started
-        fetched.text = ""  # 대용량 HTML 즉시 해제
-    except Exception as e:
-        logger.warning(f"[SSR-SHADOW] 오류 | {pid} | {e}")
-        return
+    def collect(self, bm, url: str):
+        if SSR_ENABLED and self.tripped_at is None:
+            res = self._try_ssr(url)
+            if res is not None:
+                return res
+        self.dom_fallback += 1
+        return run_with_watchdog(bm, url)
 
-    timing = f"dom {dom_sec:.1f}s | ssr fetch {fetched.elapsed:.2f}s parse {parse_sec:.2f}s (cpu {parse_cpu:.2f}s)"
-    if ssr_res is None:
-        logger.warning(f"[SSR-SHADOW] 실패 | {timing} | {pid} | {reason}")
-        return
-    diffs = [f for f in _SHADOW_FIELDS if _shadow_norm(dom_res.get(f)) != _shadow_norm(ssr_res.get(f))]
-    if diffs:
-        detail = json.dumps({f: [dom_res.get(f), ssr_res.get(f)] for f in diffs}, ensure_ascii=False)
-        logger.warning(f"[SSR-SHADOW] 불일치 | {timing} | {pid} | {detail[:600]}")
-    else:
-        logger.info(f"[SSR-SHADOW] 일치 | {timing} | {pid}")
+    def _try_ssr(self, url: str) -> Optional[dict]:
+        pid = url.split("/")[-1].split("?")[0]
+        human_like_delay(SSR_DELAY_MIN, SSR_DELAY_MAX)  # DOM(건당 ~20초)과 달리 즉시 끝나므로 간격을 명시적으로 둔다
+        status = None
+        try:
+            fetched = ssr_product.fetch_product_html(url)
+            status = fetched.status
+            if status != 200:
+                res, reason = None, f"HTTP {status}"
+            elif _is_off_product_page(fetched.final_url):
+                res, reason = None, "리다이렉트"
+            else:
+                res, reason = ssr_product.parse_product_html(fetched.text, url)
+            fetched.text = ""  # 대용량 HTML 즉시 해제
+        except Exception as e:
+            res, reason = None, f"요청 오류 {type(e).__name__}"
+
+        if res is None:
+            self.fail_reasons[reason.split(" (")[0].split(":")[0]] += 1
+            self.consecutive_fail += 1
+            logger.warning(f"[SSR→DOM] {pid} | {reason}")
+            if status in _SSR_BLOCK_STATUS:
+                self._trip(f"HTTP {status} 응답 (차단 신호) — {pid}")
+            elif self.consecutive_fail >= SSR_BREAKER_THRESHOLD:
+                self._trip(f"연속 {self.consecutive_fail}회 실패 (마지막: {reason}) — {pid}")
+            return None
+
+        self.consecutive_fail = 0
+        self.ssr_ok += 1
+        send_collected(res, via="(SSR)")
+        return res
+
+    def _trip(self, cause: str) -> None:
+        self.tripped_at = datetime.now().strftime("%H:%M")
+        logger.error(f"[SSR 서킷 차단] {cause} → 이번 배치 잔여는 DOM으로 수집")
+        send_discord_alert(
+            f"## ⛔ [PS-Tracker] SSR 차단 의심 (Shard {SHARD_ID}/{SHARD_TOTAL})\n"
+            f"**🕒 시각:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"**🔎 사유:** {cause}\n"
+            f"**📊 지금까지:** SSR 성공 {self.ssr_ok} / DOM {self.dom_fallback}\n"
+            "→ 이번 배치 남은 상품은 브라우저(DOM)로 계속 수집합니다. "
+            "반복되면 이 수집기의 `SSR_ENABLED=0` 또는 `SSR_DELAY_MIN/MAX` 상향을 검토하세요."
+        )
+
+    def summary(self) -> str:
+        reasons = ", ".join(f"{k} {v}" for k, v in self.fail_reasons.most_common(5)) or "-"
+        breaker = f" | ⛔ 서킷 차단 {self.tripped_at}" if self.tripped_at else ""
+        return f"SSR {self.ssr_ok} / DOM {self.dom_fallback} (SSR 실패 사유: {reasons}){breaker}"
 
 
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
@@ -1118,7 +1147,16 @@ def fetch_update_targets():
         logger.error(f"Connection Error: {e}")
     return []
 
-def send_discord_summary(total_scanned, deals_list, delisted_games):
+def send_discord_alert(message: str) -> None:
+    """운영 경보 즉시 전송 (실패해도 수집은 계속)."""
+    if not DISCORD_WEBHOOK_URL: return
+    try:
+        res = requests.post(DISCORD_WEBHOOK_URL, json={"content": message[:1900]}, timeout=10)
+        if not res.ok:
+            logger.error(f"Discord 전송 실패 ({res.status_code}, 경보): {res.text[:300]}")
+    except Exception as e: logger.error(f"Failed to send Discord alert: {e}")
+
+def send_discord_summary(total_scanned, deals_list, delisted_games, collect_route=""):
     if not DISCORD_WEBHOOK_URL: return
     try:
         total_deals, total_delisted = len(deals_list), len(delisted_games)
@@ -1126,7 +1164,10 @@ def send_discord_summary(total_scanned, deals_list, delisted_games):
 
         message = f"## 📢 [PS-Tracker] 일일 수집 리포트 ({CURRENT_MODE})\n"
         message += f"**🗓️ 날짜:** {datetime.now().strftime('%Y-%m-%d')}\n"
-        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지! 🔥\n━━━━━━━━━━━━━━━━━━\n"
+        message += f"**📊 통계:** 총 `{total_scanned}`개 스캔 / **`{total_deals}`**개 할인 감지! 🔥\n"
+        if collect_route:
+            message += f"**⚙️ 수집 경로:** {collect_route}\n"
+        message += "━━━━━━━━━━━━━━━━━━\n"
 
         if total_delisted > 0:
             message += "🚨 **[주의] 단종 의심 게임 (수동 삭제 필요)** 🚨\n"
@@ -1194,6 +1235,7 @@ def run_batch_crawler_logic():
     delisted_games = []
     visited_urls = set()
     total_processed_count = 0
+    detail = DetailCollector()
 
     try:
         # ── Sync 구간: Pre-Phase 1/2/3 + Phase 0 ──────────────────────────
@@ -1236,10 +1278,8 @@ def run_batch_crawler_logic():
                 for i, target in enumerate(targets, 1):
                     url, game_id = target['url'], target['id']
                     check_and_run_vip(bm)
-                    logger.info(f"[Phase 1] ({i}/{total_targets}) 처리 중: {url.split('/')[-1][:25]}")
-                    dom_started = time.perf_counter()
-                    res = run_with_watchdog(bm, url)
-                    dom_sec = time.perf_counter() - dom_started
+                    logger.info(f"[Phase 1] ({i}/{total_targets}) 처리 중: {url.split('/')[-1]}")
+                    res = detail.collect(bm, url)
                     if res:
                         if res.get("is_delisted"):
                             res['game_id'] = game_id
@@ -1248,8 +1288,6 @@ def run_batch_crawler_logic():
                             total_processed_count += 1
                             if res.get("discountRate", 0) > 0:
                                 collected_deals.append(res)
-                            if random.random() < SSR_SHADOW_RATIO:
-                                run_ssr_shadow(url, res, dom_sec)
                     visited_urls.add(url)
                 logger.info(f"[Phase 1] 완료. 처리: {total_processed_count}개")
 
@@ -1295,7 +1333,7 @@ def run_batch_crawler_logic():
                     logger.info(f"Found {len(page_candidates)} new candidates.")
                     for url in page_candidates:
                         check_and_run_vip(bm)
-                        res = run_with_watchdog(bm, url)
+                        res = detail.collect(bm, url)
                         if res:
                             if res.get("is_delisted"):
                                 delisted_games.append(res)
@@ -1308,7 +1346,8 @@ def run_batch_crawler_logic():
             bm.close()
 
         logger.info("[System] Marathon finished. Sending reports...")
-        send_discord_summary(total_processed_count, collected_deals, delisted_games)
+        logger.info(f"[수집 경로] {detail.summary()}")
+        send_discord_summary(total_processed_count, collected_deals, delisted_games, detail.summary())
         refresh_java_server_cache()
 
     except Exception as e:

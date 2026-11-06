@@ -21,7 +21,7 @@ import re
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
+from typing import Any, Iterable, Optional
 
 import requests
 from lxml import html as lxml_html
@@ -80,14 +80,14 @@ def _digits(text: str) -> Optional[int]:
     return int(d) if d else None
 
 
-def _product_fields(root: Any, ps_store_id: str) -> dict:
-    """env:* 스크립트의 Apollo 캐시에서 'Product:{id}' 객체만 병합 (연관 게임 값 혼입 차단)."""
+def product_fields_from_texts(script_texts: Iterable[str], ps_store_id: str) -> dict:
+    """env:* 스크립트 텍스트들의 Apollo 캐시에서 'Product:{id}' 객체만 병합 (연관 게임 값 혼입 차단).
+
+    SSR(lxml)과 브라우저(page.evaluate로 추출한 텍스트) 경로가 공유한다.
+    """
     key = f"Product:{ps_store_id}"
     merged: dict = {}
-    for script in root.cssselect('script[type="application/json"]'):
-        if not (script.get("id") or "").startswith("env:"):
-            continue  # __NEXT_DATA__(대용량)는 파싱하지 않음
-        text = script.text_content()
+    for text in script_texts:
         if key not in text:
             continue
         try:
@@ -100,12 +100,30 @@ def _product_fields(root: Any, ps_store_id: str) -> dict:
     return merged
 
 
-def _cover_art(product: dict) -> str:
+def _product_fields(root: Any, ps_store_id: str) -> dict:
+    texts = (s.text_content() for s in root.cssselect('script[type="application/json"]')
+             if (s.get("id") or "").startswith("env:"))  # __NEXT_DATA__(대용량)는 파싱하지 않음
+    return product_fields_from_texts(texts, ps_store_id)
+
+
+def _own_media(product: dict, role: str) -> str:
     for source in ((product.get("personalizedMeta") or {}).get("media"), product.get("media")):
         for media in source or []:
-            if isinstance(media, dict) and media.get("role") == "GAMEHUB_COVER_ART" and media.get("url"):
+            if isinstance(media, dict) and media.get("role") == role and media.get("url"):
                 return media["url"].split("?")[0]
     return ""
+
+
+def pick_image_url(product: dict, hero_src: Optional[str]) -> str:
+    """대표 이미지 선택. 반드시 '이 상품 자신'의 데이터만 사용한다.
+
+    1) 자기 GAMEHUB_COVER_ART (16:9)  2) 상품 페이지 히어로 이미지 (16:9)  3) 자기 MASTER (1:1)
+    Concept(시리즈)나 __NEXT_DATA__ 첫 매칭은 쓰지 않는다 — DLC·번들에 본편 이미지가 들어가는 오염 원인.
+    모두 없으면 "" (백엔드는 빈 값이면 기존 이미지를 유지).
+    """
+    return (_own_media(product, "GAMEHUB_COVER_ART")
+            or (hero_src or "").split("?")[0]
+            or _own_media(product, "MASTER"))
 
 
 def _to_kst_date(iso_utc: Optional[str]) -> Optional[str]:
@@ -212,15 +230,15 @@ def parse_product_html(html_text: str, target_url: str) -> tuple[Optional[dict],
     if best is None:
         return None, "유효한 오퍼 없음"
 
-    image_url = _cover_art(product)
-    if not image_url:
-        # SSR에는 JS가 그리는 '#image' 대신 '#image-no-js'로 히어로 이미지가 들어 있음
-        for css in ("img[data-qa='gameBackgroundImage#heroImage#image']",
-                    "img[data-qa='gameBackgroundImage#heroImage#image-no-js']"):
-            hero = _first(root, css)
-            if hero is not None and hero.get("src"):
-                image_url = hero.get("src").split("?")[0]
-                break
+    hero_src = None
+    # SSR에는 JS가 그리는 '#image' 대신 '#image-no-js'로 히어로 이미지가 들어 있음
+    for css in ("img[data-qa='gameBackgroundImage#heroImage#image']",
+                "img[data-qa='gameBackgroundImage#heroImage#image-no-js']"):
+        hero = _first(root, css)
+        if hero is not None and hero.get("src"):
+            hero_src = hero.get("src")
+            break
+    image_url = pick_image_url(product, hero_src)
 
     edition_features: list[str] = []
     upsell = _first(root, 'div[data-qa="mfeUpsell"]')
