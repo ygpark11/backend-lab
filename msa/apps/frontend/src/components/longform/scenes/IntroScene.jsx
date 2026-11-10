@@ -8,7 +8,7 @@ import { posterSrc } from '../runtime';
 /**
  * 인트로: ①가격신호등 마크가 그려지고 램프가 빨강→노랑→초록 순으로 켜진 뒤 플래시
  *        ② 커버 포스터가 3D로 날아들고 ③ 제목이 글자 단위로 솟아오른다
- *        ④ "이 가격, 지금 사도 될까?" — 판정은 마지막 씬까지 숨긴다(이탈 방지)
+ *        ④ "이 가격, 지금 사도 될까요?" — 판정은 마지막 씬까지 숨긴다(이탈 방지)
  */
 export default function IntroScene({ lt, model, accent }) {
     const { meta } = model;
@@ -71,7 +71,7 @@ export default function IntroScene({ lt, model, accent }) {
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 22, marginTop: 18, ...riseIn(lt, 2.7, 0.8, 22) }}>
                     <div style={{ fontSize: 50, fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
-                        이 가격, <span style={{ color: accent }}>지금 사도 될까?</span>
+                        이 가격, <span style={{ color: accent }}>지금 사도 될까요?</span>
                     </div>
                     <SignalMark height={40} lit={[0, 1, 2].map((i) => (i === tick ? 1 : 0))} />
                 </div>

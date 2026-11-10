@@ -109,7 +109,7 @@ function OpeningStage({ games, renderMode, freezeAt, durationsParam }) {
                             <KineticText text={`플스 명작 ${games.length}선`} t={t} start={0.55} stagger={0.04} dur={0.6} charStyle={{ color: accent }} />
                         </div>
                         <div style={{ fontSize: 30, fontWeight: 700, color: 'rgba(255,255,255,0.7)', marginTop: 18, ...riseIn(t, 2.6, 0.7, 16) }}>
-                            지금 사도 후회 없는 가격만 골랐습니다
+                            지금 사도 후회 없는 가격만 골랐어요
                         </div>
                     </div>
 

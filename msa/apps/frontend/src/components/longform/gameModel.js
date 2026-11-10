@@ -59,15 +59,15 @@ function verdictReason(game) {
     const { priceVerdict: v, currentPrice: cur, lowestPrice: low, isAllTimeLowNew } = game;
     const gap = low > 0 ? cur - low : 0;
     if (v === 'BUY_NOW') {
-        return isAllTimeLowNew ? '역대 최저가를 새로 썼습니다. 지금이 가장 싼 순간' : '역대 최저가와 같은 가격. 사도 되는 타이밍';
+        return isAllTimeLowNew ? '역대 최저가를 새로 썼어요. 지금이 가장 싼 순간이에요' : '역대 최저가와 같은 가격이에요. 사도 되는 타이밍이에요';
     }
     if (v === 'GOOD_OFFER') {
-        return gap > 0 ? `역대 최저보다 ${fmt(gap)}원 비싸지만 충분히 좋은 가격` : '합리적인 가격. 급하면 사도 괜찮아요';
+        return gap > 0 ? `역대 최저보다 ${fmt(gap)}원 비싸지만 충분히 좋은 가격이에요` : '합리적인 가격이에요. 급하면 사도 괜찮아요';
     }
     if (v === 'WAIT') {
-        return gap > 0 ? `역대 최저 ${fmt(low)}원까지 ${fmt(gap)}원 더 내려간 적이 있어요` : '지금은 구매 타이밍이 아닙니다';
+        return gap > 0 ? `역대 최저 ${fmt(low)}원까지 ${fmt(gap)}원 더 내려간 적이 있어요` : '지금은 구매 타이밍이 아니에요';
     }
-    return '가격 데이터를 모으는 중. 알림을 걸어두세요';
+    return '가격 데이터를 모으는 중이에요. 알림을 걸어두세요';
 }
 
 /** 가격 이력 → 계단형 구간 [{ from, to, price, discounted }] (날짜는 ms) */
@@ -166,7 +166,7 @@ export function buildModel(game, { now = new Date(), final = false, index = null
         const cheaperHigher = higher.find((e) => e.current <= me.current);
         const nearHigher = higher.find((e) => e.current - me.current > 0 && e.current - me.current <= 15000);
         if (cheaperHigher) {
-            editionInsight = { tone: 'good', text: `상위 ${cheaperHigher.label}이 오히려 ${fmt(me.current - cheaperHigher.current)}원 더 저렴합니다` };
+            editionInsight = { tone: 'good', text: `상위 ${cheaperHigher.label}이 오히려 ${fmt(me.current - cheaperHigher.current)}원 더 저렴해요` };
         } else if (nearHigher) {
             editionInsight = { tone: 'info', text: `${fmt(nearHigher.current - me.current)}원만 더 내면 ${nearHigher.label}` };
         } else if (higher.length) {

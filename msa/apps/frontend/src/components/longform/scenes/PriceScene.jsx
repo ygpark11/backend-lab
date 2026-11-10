@@ -30,7 +30,7 @@ function PriceChart({ lt, price, accent }) {
     if (steps.length === 0) {
         return (
             <div style={{ ...panelStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, color: 'rgba(255,255,255,0.5)' }}>
-                가격 기록을 모으는 중입니다
+                가격 기록을 모으는 중이에요
             </div>
         );
     }
@@ -169,7 +169,7 @@ export default function PriceScene({ lt, model, accent }) {
 
     return (
         <div style={{ position: 'absolute', inset: 0 }}>
-            <SceneTitle lt={lt} num={1} title="가격 분석" sub="이번 할인, 숫자로 확인합니다" accent={accent} />
+            <SceneTitle lt={lt} num={1} title="가격 분석" sub="이번 할인, 숫자로 확인해볼게요" accent={accent} />
 
             <div style={{ position: 'absolute', left: 120, top: 330, width: 860 }}>
                 {/* 정가 + 취소선 */}

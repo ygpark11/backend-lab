@@ -23,7 +23,7 @@ export default function EditionScene({ lt, model, accent }) {
 
     return (
         <div style={{ position: 'absolute', inset: 0 }}>
-            <SceneTitle lt={lt} num={4} title="에디션 비교" sub="어떤 판을 사야 이득일까" accent={accent} />
+            <SceneTitle lt={lt} num={4} title="에디션 비교" sub="어떤 판을 사야 이득일까요?" accent={accent} />
 
             <div style={{ position: 'absolute', left: 120, top: 320, width: 1680, display: 'flex', flexDirection: 'column', gap: rows.length > 3 ? 22 : 36 }}>
                 {rows.map((e, i) => {

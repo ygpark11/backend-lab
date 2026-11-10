@@ -113,12 +113,12 @@ export default function DefenseScene({ lt, model, accent, nowMs }) {
         defense.monthsPerSale && { label: '할인 주기', value: defense.monthsPerSale, unit: '개월마다', decimals: defense.monthsPerSale < 10 ? 1 : 0, prefix: '약 ' },
     ].filter(Boolean);
     const nextLabel = defense.nextSale
-        ? (defense.nextSalePast ? '예상 시점이 지났어요. 곧 할인할 가능성' : `${defense.nextSale.slice(0, 4)}년 ${Number(defense.nextSale.slice(5, 7))}월`)
+        ? (defense.nextSalePast ? '예상 시점이 지났어요. 곧 할인할 수 있어요' : `${defense.nextSale.slice(0, 4)}년 ${Number(defense.nextSale.slice(5, 7))}월`)
         : null;
 
     return (
         <div style={{ position: 'absolute', inset: 0 }}>
-            <SceneTitle lt={lt} num={2} title="할인 방어력" sub="얼마나 자주, 얼마나 깊게 할인하는 게임일까" accent={accent} />
+            <SceneTitle lt={lt} num={2} title="할인 방어력" sub="얼마나 자주, 얼마나 깊게 할인하는 게임일까요?" accent={accent} />
 
             <TierShield lt={lt} defense={defense} />
             <div style={{ position: 'absolute', left: 120, top: 760, width: 600, textAlign: 'center' }}>

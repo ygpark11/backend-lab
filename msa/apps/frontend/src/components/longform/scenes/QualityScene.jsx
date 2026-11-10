@@ -24,7 +24,7 @@ export default function QualityScene({ lt, model, accent }) {
 
     return (
         <div style={{ position: 'absolute', inset: 0 }}>
-            <SceneTitle lt={lt} num={3} title="품질 검증" sub="이 가격에 이만큼 즐길 수 있을까" accent={accent} />
+            <SceneTitle lt={lt} num={3} title="품질 검증" sub="이 가격에 이만큼 즐길 수 있을까요?" accent={accent} />
 
             {hasMeta && (
                 <div style={{ position: 'absolute', left: hasTime ? 200 : 620, top: 330 }}>
