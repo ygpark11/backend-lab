@@ -74,7 +74,9 @@ import DonationModal from '../components/DonationModal';
 import { useAuth } from '../contexts/AuthContext';
 import { pushRecentGame } from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
-import GameLongformCard from '../components/GameLongformCard';
+// 롱폼 촬영 전용 카드는 일반 사용자에게 필요 없으므로 별도 청크로 분리
+const GameLongformCard = lazyWithReload(() => import('../components/longform/GameLongformCard'));
+const LongformOpening = lazyWithReload(() => import('../components/longform/LongformOpening'));
 
 // ── 검색 결과용 meta description (가격 판단 근거 요약) ─────────────────
 const UNRATED_DEFENSE_TIERS = ['등급 외', '분석 불가'];
@@ -1150,12 +1152,25 @@ export default function GameDetailPage() {
         );
     }
 
+    // 🎬 롱폼 영상 전체 오프닝 — /games/:id?view=longform-opening&ids=1742,442,...
+    if (new URLSearchParams(location.search).get('view') === 'longform-opening') {
+        return (
+            <div className="fixed inset-0 z-[200] bg-black">
+                <Suspense fallback={null}>
+                    <LongformOpening firstGame={game} />
+                </Suspense>
+            </div>
+        );
+    }
+
     // 🎬 롱폼 촬영용 16:9 카드 — /games/:id?view=longform
     if (new URLSearchParams(location.search).get('view') === 'longform') {
         const showOutro = new URLSearchParams(location.search).get('final') === 'true';
         return (
-            <div className="fixed inset-0 z-[200] bg-[#080810]">
-                <GameLongformCard game={game} showOutro={showOutro} />
+            <div className="fixed inset-0 z-[200] bg-black">
+                <Suspense fallback={null}>
+                    <GameLongformCard game={game} showOutro={showOutro} />
+                </Suspense>
             </div>
         );
     }
