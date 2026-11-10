@@ -224,7 +224,10 @@ export function sceneFacts(model, id) {
             return {
                 tier: defense.tierText, trackedMonths: defense.trackedMonths, discountCount: defense.discountCount,
                 maxRate: defense.maxRate, monthsPerSale: defense.monthsPerSale && Math.round(defense.monthsPerSale * 10) / 10,
-                nextSaleEstimate: defense.nextSale, coldStart: defense.coldStart,
+                nextSaleEstimate: defense.nextSale,
+                // coldStart: 추적 첫 기록이 이미 할인 중이었는지 (주기 계산에서 이미 보정됨). "데이터가 적다"는 뜻이 아니므로 대본에서 언급하지 않는다
+                coldStart: defense.coldStart,
+                trackingStartDate: defense.trackingStart,
             };
         case 'quality':
             return {

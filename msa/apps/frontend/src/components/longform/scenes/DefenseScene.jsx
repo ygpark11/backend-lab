@@ -157,9 +157,10 @@ export default function DefenseScene({ lt, model, accent, nowMs }) {
                     <span style={{ fontSize: 34, fontWeight: 900, color: accent, textShadow: `0 0 20px ${alpha(accent, 0.6)}` }}>{nextLabel}</span>
                 </div>
             )}
-            {defense.coldStart && (
+            {/* coldStart = 추적 첫 기록이 이미 할인 중이었음(그 할인의 시작일은 모름). 사이트 DefenseTrophyCard와 같은 문구 */}
+            {defense.coldStart && defense.trackingStart && (
                 <div style={{ position: 'absolute', left: 820, top: 868, fontSize: 18, fontWeight: 700, color: 'rgba(255,255,255,0.42)', ...riseIn(lt, 3.9, 0.6, 10) }}>
-                    추적 초기 데이터라 예측 정확도가 낮을 수 있어요
+                    {fmtDate(defense.trackingStart).slice(0, 7)} 수집 시작 · 이전 데이터 미포함
                 </div>
             )}
         </div>
