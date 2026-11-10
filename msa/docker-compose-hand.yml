@@ -20,8 +20,6 @@ services:
       - SITE_BASE_URL=https://ps-signal.com
       - SHARD_ID=0
       - SHARD_TOTAL=2
-      # SSR 카나리: 2호기(hand-3)에서 먼저 검증 중 → 1호기는 기존 DOM 수집 유지. 안정 확인 후 제거(기본값 1)
-      - SSR_ENABLED=0
     shm_size: '1gb'
     volumes:
       - ./crawler_data:/app/data
