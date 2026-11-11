@@ -226,13 +226,10 @@ export default function PriceScene({ lt, model, accent }) {
                 </div>
 
                 {/* 할인 마감 */}
-                {price.saleEndDate && price.daysLeft !== null && (
+                {price.saleEndDate && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 34, fontSize: 24, fontWeight: 800, color: 'rgba(255,255,255,0.7)', ...riseIn(lt, 3.8, 0.6, 14) }}>
-                        <CalendarDays style={{ width: 26, height: 26, color: price.daysLeft <= 3 ? SALE_RED : 'rgba(255,255,255,0.6)' }} />
+                        <CalendarDays style={{ width: 26, height: 26, color: 'rgba(255,255,255,0.6)' }} />
                         할인 종료 {fmtDate(price.saleEndDate)}
-                        <span style={{ padding: '4px 12px', borderRadius: 8, fontSize: 20, fontWeight: 900, color: price.daysLeft <= 3 ? '#fff' : 'rgba(255,255,255,0.85)', background: price.daysLeft <= 3 ? SALE_RED : 'rgba(255,255,255,0.1)' }}>
-                            {price.daysLeft === 0 ? '오늘 마감' : `D-${price.daysLeft}`}
-                        </span>
                     </div>
                 )}
             </div>

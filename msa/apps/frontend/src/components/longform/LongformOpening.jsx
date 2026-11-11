@@ -83,7 +83,6 @@ function OpeningStage({ games, renderMode, freezeAt, durationsParam }) {
     const chips = [
         facts.maxDiscount > 0 && { text: `최대 ${facts.maxDiscount}% 할인`, color: SALE_RED },
         facts.allTimeLowNewCount > 0 && { text: `역대 최저가 갱신 ${facts.allTimeLowNewCount}개`, color: GREEN },
-        facts.daysLeft !== null && { text: facts.daysLeft === 0 ? '오늘 마감' : `마감까지 D-${facts.daysLeft}`, color: '#ffffff' },
     ].filter(Boolean);
 
     return createPortal(
