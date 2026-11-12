@@ -24,11 +24,21 @@ Sentry.init({
         /googleadservices/,
         // Cloudflare JS Detections 인라인 스크립트(Rocket Loader 경유)의 iframe 접근 에러
         /Blocked a frame with origin/,
+        // 원인 불명의 외부 코드/확장 프로그램이 던지는 값 없는 reject
+        /Non-Error promise rejection captured with value: undefined/,
+        // 브라우저 확장 프로그램 메시지 에러
+        /Invalid call to runtime\.sendMessage/,
+        // 인앱 브라우저/개인정보 보호 모드의 스토리지 접근 거부
+        /Failed to read the 'localStorage' property/,
     ],
     denyUrls: [
         /pagead2\.googlesyndication\.com/,
         /adservice\.google/,
         /pagead\/js\/adsbygoogle\.js/,
+        // 브라우저 확장 프로그램 스크립트
+        /^chrome-extension:\/\//,
+        /^moz-extension:\/\//,
+        /^safari-extension:\/\//,
     ],
 });
 // --- Sentry 설정 끝 ---
