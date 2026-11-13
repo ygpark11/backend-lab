@@ -77,6 +77,7 @@ import GameShortsCard from '../components/GameShortsCard';
 // 롱폼 촬영 전용 카드는 일반 사용자에게 필요 없으므로 별도 청크로 분리
 const GameLongformCard = lazyWithReload(() => import('../components/longform/GameLongformCard'));
 const LongformOpening = lazyWithReload(() => import('../components/longform/LongformOpening'));
+const LongformThumbnail = lazyWithReload(() => import('../components/longform/LongformThumbnail'));
 
 // ── 검색 결과용 meta description (가격 판단 근거 요약) ─────────────────
 const UNRATED_DEFENSE_TIERS = ['등급 외', '분석 불가'];
@@ -1158,6 +1159,17 @@ export default function GameDetailPage() {
             <div className="fixed inset-0 z-[200] bg-black">
                 <Suspense fallback={null}>
                     <LongformOpening firstGame={game} />
+                </Suspense>
+            </div>
+        );
+    }
+
+    // 🖼️ 롱폼 썸네일 — /games/:id?view=longform-thumbnail&ids=1742,442,...&main=442&label=표시할 이름
+    if (new URLSearchParams(location.search).get('view') === 'longform-thumbnail') {
+        return (
+            <div className="fixed inset-0 z-[200] bg-black">
+                <Suspense fallback={null}>
+                    <LongformThumbnail firstGame={game} />
                 </Suspense>
             </div>
         );
