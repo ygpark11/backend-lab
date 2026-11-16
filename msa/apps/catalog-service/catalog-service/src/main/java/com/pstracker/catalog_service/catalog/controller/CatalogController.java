@@ -4,12 +4,12 @@ import com.pstracker.catalog_service.catalog.dto.*;
 import com.pstracker.catalog_service.catalog.scheduler.CrawlerScheduler;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameVoteService;
+import com.pstracker.catalog_service.global.event.BatchCompletedEvent;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
-import com.pstracker.catalog_service.insights.service.InsightsService;
-import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -28,9 +28,8 @@ public class CatalogController {
 
     private final CatalogService catalogService;
     private final CrawlerScheduler scheduler;
-    private final InsightsService insightsService;
     private final GameVoteService gameVoteService;
-    private final SubscriptionService subscriptionService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 데이터 적재 API
     @PostMapping("/collect")
@@ -78,10 +77,8 @@ public class CatalogController {
 
     @PostMapping("/batch-complete")
     public ResponseEntity<String> onCrawlerBatchCompleted() {
-        log.info("일배치 완료 — 전체 로컬 캐시 초기화");
-        insightsService.refreshInsightsCache();
-        catalogService.refreshCurationCache();
-        subscriptionService.refreshPsPlusPricingCache();
+        log.info("일배치 완료 — 전체 로컬 캐시 초기화 이벤트 발행");
+        eventPublisher.publishEvent(new BatchCompletedEvent());
         return ResponseEntity.ok("Cache cleared successfully");
     }
 
@@ -101,7 +98,7 @@ public class CatalogController {
     ) {
         Long memberId = (principal != null) ? principal.getMemberId() : null;
 
-        GameVoteResponse response = gameVoteService.toggleVote(gameId, memberId, requestDto.getVoteType());
+        GameVoteResponse response = gameVoteService.toggleVote(gameId, memberId, requestDto.voteType());
 
         return ResponseEntity.ok(response);
     }

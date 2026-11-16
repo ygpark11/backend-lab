@@ -1,19 +1,14 @@
 package com.pstracker.catalog_service.arcade.dto;
 
-import lombok.AllArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
 
-@Getter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class ScoreSubmitResponse {
-
-    private boolean success;
-    private boolean isNewHighScore;
-    private long rank;
-    private int score;
-    private String message;
+public record ScoreSubmitResponse(
+        boolean success,
+        @JsonProperty("newHighScore") boolean isNewHighScore,
+        long rank,
+        int score,
+        String message
+) {
 }

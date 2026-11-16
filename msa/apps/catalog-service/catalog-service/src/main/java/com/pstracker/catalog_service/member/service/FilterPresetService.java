@@ -2,6 +2,8 @@ package com.pstracker.catalog_service.member.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.domain.UserFilterPreset;
 import com.pstracker.catalog_service.member.dto.FilterPresetCreateRequest;
@@ -49,7 +51,7 @@ public class FilterPresetService {
     @Transactional
     public FilterPresetResponse updatePreset(Long memberId, Long presetId, FilterPresetUpdateRequest request) {
         UserFilterPreset preset = presetRepository.findByIdAndMemberId(presetId, memberId)
-                .orElseThrow(() -> new IllegalArgumentException("프리셋을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_PRESET_NOT_FOUND));
 
         if (request.name() != null) {
             if (request.name().isBlank()) {
@@ -67,7 +69,7 @@ public class FilterPresetService {
     @Transactional
     public void deletePreset(Long memberId, Long presetId) {
         UserFilterPreset preset = presetRepository.findByIdAndMemberId(presetId, memberId)
-                .orElseThrow(() -> new IllegalArgumentException("프리셋을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILTER_PRESET_NOT_FOUND));
         presetRepository.delete(preset);
     }
 

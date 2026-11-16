@@ -2,45 +2,30 @@ package com.pstracker.catalog_service.catalog.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.Builder;
 
 import java.time.LocalDate;
 import java.util.List;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class CollectRequest {
-    private String psStoreId;
-    private String title;
-    private String englishTitle;
-    private String publisher;
-    private String imageUrl;
-    private String description;
-
-    // 가격 관련
-    private Integer originalPrice;
-    private Integer currentPrice;
-    private Integer discountRate;
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
-    private LocalDate saleEndDate;
-
-    private String genreIds;       // "Action, RPG" 형태의 문자열
-    private LocalDate releaseDate;
-
-    @JsonProperty("isPlusExclusive")
-    private boolean isPlusExclusive;
-
-    @JsonProperty("inCatalog")
-    private boolean inCatalog;
-
-    private List<String> platforms;
-
-    @JsonProperty("isPs5ProEnhanced")
-    private boolean isPs5ProEnhanced;
-
-    private List<String> editionContents;
+@Builder(toBuilder = true)
+public record CollectRequest(
+        String psStoreId,
+        String title,
+        String englishTitle,
+        String publisher,
+        String imageUrl,
+        String description,
+        Integer originalPrice,
+        Integer currentPrice,
+        Integer discountRate,
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd", timezone = "Asia/Seoul")
+        LocalDate saleEndDate,
+        String genreIds,
+        LocalDate releaseDate,
+        @JsonProperty("isPlusExclusive") boolean isPlusExclusive,
+        @JsonProperty("inCatalog") boolean inCatalog,
+        List<String> platforms,
+        @JsonProperty("isPs5ProEnhanced") boolean isPs5ProEnhanced,
+        List<String> editionContents
+) {
 }

@@ -1,35 +1,21 @@
 package com.pstracker.catalog_service.catalog.repository;
 
+import com.pstracker.catalog_service.catalog.dto.GameInsightStats;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSuggestResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDate;
 import java.util.List;
 
 public interface GameRepositoryCustom {
-    /**
-     * 게임 검색
-     * @param condition 검색 조건
-     * @param pageable 페이징 정보
-     * @return 검색 결과 페이지
-     */
     Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable);
 
-    /**
-     * 연관 게임 추천
-     * @param genreIds 기준 게임이 가진 장르 ID 목록
-     * @param excludeGameId 추천에서 제외할 현재 게임 ID (자기 자신)
-     * @param limit 가져올 개수
-     * @return 추천 게임 리스트
-     */
     List<GameSearchResponse> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
 
-    long countMustPlayGames();
+    GameInsightStats fetchGameInsightStats(LocalDate today, LocalDate tomorrow);
 
-    /**
-     * 게임 이름 자동완성 (한국어/영문/초성/AI키워드 지원)
-     */
     List<GameSuggestResponse> suggestByName(String keyword, int limit);
 }

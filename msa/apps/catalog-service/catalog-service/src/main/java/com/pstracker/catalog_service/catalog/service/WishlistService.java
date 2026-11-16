@@ -9,6 +9,8 @@ import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryReposito
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
@@ -43,7 +45,7 @@ public class WishlistService {
     @Transactional
     public String toggleWishlist(Long memberId, Long gameId, Integer targetPrice) {
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 게임을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND));
 
         if (targetPrice != null && targetPrice <= 0) {
             throw new IllegalArgumentException("목표가는 0원보다 커야 합니다.");
@@ -112,12 +114,7 @@ public class WishlistService {
                         GameGenreResult::getGameId, Collectors.mapping(GameGenreResult::getGenreName, Collectors.toList())));
         wishlist.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of())));
 
-        Map<Long, Integer> historyCountMap = priceHistoryRepository.countGroupByGameId(gameIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        arr -> (Long) arr[0],
-                        arr -> ((Long) arr[1]).intValue()
-                ));
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(gameIds);
         wishlist.forEach(dto -> {
             int historySize = historyCountMap.getOrDefault(dto.getGameId(), 0);
             PriceVerdict verdict = PriceVerdictCalculator.forGame(

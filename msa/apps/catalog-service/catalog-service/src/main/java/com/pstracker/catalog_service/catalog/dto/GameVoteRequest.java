@@ -1,9 +1,6 @@
 package com.pstracker.catalog_service.catalog.dto;
 
 import com.pstracker.catalog_service.catalog.domain.VoteType;
-import lombok.Data;
 
-@Data
-public class GameVoteRequest {
-    private VoteType voteType;
+public record GameVoteRequest(VoteType voteType) {
 }

@@ -1,5 +1,7 @@
 package com.pstracker.catalog_service.notification.service;
 
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.notification.domain.Notification;
 import com.pstracker.catalog_service.notification.dto.NotificationListResponse;
 import com.pstracker.catalog_service.notification.dto.NotificationResponse;
@@ -59,7 +61,7 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long notificationId, Long memberId) {
         Notification notification = notificationRepository.findByIdAndMemberId(notificationId, memberId)
-                .orElseThrow(() -> new IllegalArgumentException("알림을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOTIFICATION_NOT_FOUND));
         notification.markAsRead();
     }
 

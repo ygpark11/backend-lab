@@ -1,6 +1,8 @@
 package com.pstracker.catalog_service.scraping.service;
 
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import com.pstracker.catalog_service.scraping.domain.GameCandidate;
@@ -47,7 +49,7 @@ public class ScrapingQueueService {
     @Transactional
     public void deleteCandidate(String psStoreId) {
         if (!gameCandidateRepository.existsByPsStoreId(psStoreId)) {
-            throw new IllegalArgumentException("존재하지 않는 후보 게임입니다: " + psStoreId);
+            throw new BusinessException(ErrorCode.CANDIDATE_NOT_FOUND, "존재하지 않는 후보 게임입니다: " + psStoreId);
         }
         gameCandidateRepository.deleteByPsStoreId(psStoreId);
     }
@@ -74,11 +76,11 @@ public class ScrapingQueueService {
 
         // 4. 후보군(GameCandidate)에서 대상 조회
         GameCandidate candidate = gameCandidateRepository.findByPsStoreId(psStoreId)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 이미 요청된 게임입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.CANDIDATE_NOT_FOUND, "유효하지 않거나 이미 요청된 게임입니다."));
 
         // 유저 정보 조회
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "존재하지 않는 유저입니다."));
 
         // 5. FAILED 재시도인 경우 기존 레코드 제거 후 신규 삽입 (unique 제약 준수)
         scrapingRequestRepository.deleteByPsStoreIdAndStatus(psStoreId, ScrapingRequestStatus.FAILED);
@@ -114,7 +116,7 @@ public class ScrapingQueueService {
         scrapingRequestRepository.deleteByPsStoreIdAndStatus(psStoreId, ScrapingRequestStatus.FAILED);
 
         Member admin = memberRepository.findById(adminMemberId)
-                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "관리자 정보를 찾을 수 없습니다."));
 
         ScrapingRequest request = ScrapingRequest.builder()
                 .member(admin)
@@ -131,7 +133,7 @@ public class ScrapingQueueService {
     @Transactional
     public void adminRetryRequest(Long requestId, Long adminMemberId) {
         ScrapingRequest req = scrapingRequestRepository.findById(requestId)
-                .orElseThrow(() -> new IllegalArgumentException("요청을 찾을 수 없습니다. id=" + requestId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCRAPING_REQUEST_NOT_FOUND, "요청을 찾을 수 없습니다. id=" + requestId));
         if (req.getStatus() != ScrapingRequestStatus.FAILED) {
             throw new IllegalStateException("FAILED 상태인 요청만 재시도할 수 있습니다.");
         }
@@ -140,7 +142,7 @@ public class ScrapingQueueService {
         scrapingRequestRepository.deleteByPsStoreIdAndStatus(psStoreId, ScrapingRequestStatus.FAILED);
 
         Member admin = memberRepository.findById(adminMemberId)
-                .orElseThrow(() -> new IllegalArgumentException("관리자 정보를 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "관리자 정보를 찾을 수 없습니다."));
 
         ScrapingRequest newReq = ScrapingRequest.builder()
                 .member(admin)

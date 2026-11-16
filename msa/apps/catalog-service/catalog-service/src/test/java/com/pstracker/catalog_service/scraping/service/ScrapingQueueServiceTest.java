@@ -1,6 +1,8 @@
 package com.pstracker.catalog_service.scraping.service;
 
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.domain.Role;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
@@ -193,11 +195,12 @@ class ScrapingQueueServiceTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 psStoreId로 삭제 요청 시 IllegalArgumentException이 발생해야 한다.")
+    @DisplayName("존재하지 않는 psStoreId로 삭제 요청 시 CANDIDATE_NOT_FOUND 예외가 발생해야 한다.")
     void deleteCandidate_존재하지_않는_게임_예외() {
         assertThatThrownBy(() -> scrapingQueueService.deleteCandidate("PPSA-NOTEXIST-999"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("존재하지 않는 후보 게임입니다");
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode())
+                .isEqualTo(ErrorCode.CANDIDATE_NOT_FOUND);
     }
 
     // ── adminRegisterGame ────────────────────────────────────────────────────
@@ -321,11 +324,12 @@ class ScrapingQueueServiceTest {
     }
 
     @Test
-    @DisplayName("adminRetryRequest — 존재하지 않는 requestId면 예외")
+    @DisplayName("adminRetryRequest — 존재하지 않는 requestId면 SCRAPING_REQUEST_NOT_FOUND 예외")
     void adminRetryRequest_존재하지않는ID_예외() {
         assertThatThrownBy(() -> scrapingQueueService.adminRetryRequest(99999L, adminMember.getId()))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("요청을 찾을 수 없습니다");
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode())
+                .isEqualTo(ErrorCode.SCRAPING_REQUEST_NOT_FOUND);
     }
 
     @Test

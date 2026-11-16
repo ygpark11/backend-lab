@@ -1,6 +1,7 @@
 package com.pstracker.catalog_service.catalog.repository;
 
 import com.pstracker.catalog_service.catalog.domain.Platform;
+import com.pstracker.catalog_service.catalog.dto.GameInsightStats;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.catalog.dto.GameSuggestResponse;
@@ -9,6 +10,7 @@ import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.jpa.JPAExpressions;
@@ -28,7 +30,6 @@ import static com.pstracker.catalog_service.catalog.domain.QGame.game;
 import static com.pstracker.catalog_service.catalog.domain.QGamePriceHistory.gamePriceHistory;
 import static org.springframework.util.StringUtils.hasText;
 
-
 @RequiredArgsConstructor
 public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
@@ -36,37 +37,12 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     @Override
     public Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable) {
+        BooleanExpression[] predicates = searchPredicates(condition);
+
         List<GameSearchResponse> content = queryFactory
-                .select(new QGameSearchResponse(
-                        game.id, game.name, game.imageUrl,
-                        game.originalPrice, game.currentPrice, game.discountRate,
-                        game.isPlusExclusive, game.saleEndDate, game.pioneerName,
-                        game.inCatalog, game.createdAt,
-                        game.isPs5ProEnhanced,
-                        game.bestSellerRank, game.mostDownloadedRank,
-                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
-                        game.allTimeLowPrice, game.isAllTimeLowNew
-                ))
+                .select(gameSearchProjection())
                 .from(game)
-                .where(
-                        nameContains(condition.getKeyword()),
-                        priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
-                        discountRateGoe(condition.getMinDiscountRate()),
-                        metaScoreGoe(condition.getMinMetaScore()),
-                        userScoreGoe(condition.getMinUserScore()),
-                        platformEq(condition.getPlatform()),
-                        plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreEq(condition.getGenre()),
-                        inCatalogEq(condition.getInCatalog()),
-                        isAllTimeLow(condition.getIsAllTimeLow()),
-                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
-                        bestSellerEq(condition.getIsBestSeller()),
-                        mostDownloadedEq(condition.getIsMostDownloaded()),
-                        isClosingSoon(condition.getIsClosingSoon()),
-                        isNewDiscount(condition.getIsNewDiscount()),
-                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
-                        vibeTagsContains(condition.getVibeTags())
-                )
+                .where(predicates)
                 .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
@@ -75,25 +51,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         JPAQuery<Long> countQuery = queryFactory
                 .select(game.count())
                 .from(game)
-                .where(
-                        nameContains(condition.getKeyword()),
-                        priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
-                        discountRateGoe(condition.getMinDiscountRate()),
-                        metaScoreGoe(condition.getMinMetaScore()),
-                        userScoreGoe(condition.getMinUserScore()),
-                        platformEq(condition.getPlatform()),
-                        plusExclusiveEq(condition.getIsPlusExclusive()),
-                        genreEq(condition.getGenre()),
-                        inCatalogEq(condition.getInCatalog()),
-                        isAllTimeLow(condition.getIsAllTimeLow()),
-                        ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
-                        bestSellerEq(condition.getIsBestSeller()),
-                        mostDownloadedEq(condition.getIsMostDownloaded()),
-                        isClosingSoon(condition.getIsClosingSoon()),
-                        isNewDiscount(condition.getIsNewDiscount()),
-                        playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
-                        vibeTagsContains(condition.getVibeTags())
-                );
+                .where(predicates);
 
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
@@ -103,53 +61,79 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
         NumberExpression<Integer> fallbackScore = game.mcMetaScore.coalesce(game.igdbCriticScore);
 
         return queryFactory
-                .select(new QGameSearchResponse(
-                        game.id, game.name, game.imageUrl,
-                        game.originalPrice, game.currentPrice, game.discountRate,
-                        game.isPlusExclusive, game.saleEndDate, game.pioneerName,
-                        game.inCatalog, game.createdAt,
-                        game.isPs5ProEnhanced,
-                        game.bestSellerRank, game.mostDownloadedRank,
-                        game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
-                        game.allTimeLowPrice, game.isAllTimeLowNew
-                ))
+                .select(gameSearchProjection())
                 .from(game)
                 .where(
                         game.id.ne(excludeGameId),
                         game.gameGenres.any().genre.id.in(genreIds),
-                        fallbackScore.goe(75).or(fallbackScore.isNull())
-                )
+                        fallbackScore.goe(75).or(fallbackScore.isNull()))
                 .orderBy(
                         game.discountRate.desc(),
                         fallbackScore.desc().nullsLast(),
-                        game.lastUpdated.desc()
-                )
+                        game.lastUpdated.desc())
                 .limit(limit)
                 .fetch();
     }
 
+    private QGameSearchResponse gameSearchProjection() {
+        return new QGameSearchResponse(
+                game.id, game.name, game.imageUrl,
+                game.originalPrice, game.currentPrice, game.discountRate,
+                game.isPlusExclusive, game.saleEndDate, game.pioneerName,
+                game.inCatalog, game.createdAt,
+                game.isPs5ProEnhanced,
+                game.bestSellerRank, game.mostDownloadedRank,
+                game.mcMetaScore, game.igdbCriticScore, game.vibeTags,
+                game.allTimeLowPrice, game.isAllTimeLowNew);
+    }
+
+    private BooleanExpression[] searchPredicates(GameSearchCondition condition) {
+        return new BooleanExpression[] {
+                nameContains(condition.getKeyword()),
+                priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
+                discountRateGoe(condition.getMinDiscountRate()),
+                metaScoreGoe(condition.getMinMetaScore()),
+                userScoreGoe(condition.getMinUserScore()),
+                platformEq(condition.getPlatform()),
+                plusExclusiveEq(condition.getIsPlusExclusive()),
+                genreEq(condition.getGenre()),
+                inCatalogEq(condition.getInCatalog()),
+                isAllTimeLow(condition.getIsAllTimeLow()),
+                ps5ProEnhancedEq(condition.getIsPs5ProEnhanced()),
+                bestSellerEq(condition.getIsBestSeller()),
+                mostDownloadedEq(condition.getIsMostDownloaded()),
+                isClosingSoon(condition.getIsClosingSoon()),
+                isNewDiscount(condition.getIsNewDiscount()),
+                playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
+                vibeTagsContains(condition.getVibeTags())
+        };
+    }
+
     private BooleanExpression nameContains(String keyword) {
-        if (!hasText(keyword)) return null;
+        if (!hasText(keyword))
+            return null;
 
         String strippedKeyword = keyword.strip().replaceAll("\\s+", "");
         String jsonPattern = "%" + strippedKeyword.toLowerCase() + "%";
 
         return Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.name)
-                    .containsIgnoreCase(strippedKeyword)
+                .containsIgnoreCase(strippedKeyword)
                 .or(Expressions.stringTemplate("REPLACE({0}, ' ', '')", game.englishName)
-                    .containsIgnoreCase(strippedKeyword))
+                        .containsIgnoreCase(strippedKeyword))
                 .or(game.chosungName.containsIgnoreCase(strippedKeyword))
                 .or(Expressions.booleanTemplate(
                         "JSON_SEARCH({0}, 'one', {1}) IS NOT NULL",
                         game.searchKeywords,
-                        jsonPattern
-                ));
+                        jsonPattern));
     }
 
     private BooleanExpression priceBetween(Integer minPrice, Integer maxPrice) {
-        if (minPrice != null && maxPrice != null) return game.currentPrice.between(minPrice, maxPrice);
-        else if (minPrice != null) return game.currentPrice.goe(minPrice);
-        else if (maxPrice != null) return game.currentPrice.loe(maxPrice);
+        if (minPrice != null && maxPrice != null)
+            return game.currentPrice.between(minPrice, maxPrice);
+        else if (minPrice != null)
+            return game.currentPrice.goe(minPrice);
+        else if (maxPrice != null)
+            return game.currentPrice.loe(maxPrice);
         return null;
     }
 
@@ -158,13 +142,15 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression metaScoreGoe(Integer minMetaScore) {
-        if (minMetaScore == null) return null;
+        if (minMetaScore == null)
+            return null;
         return game.mcMetaScore.goe(minMetaScore)
                 .or(game.mcMetaScore.isNull().and(game.igdbCriticScore.goe(minMetaScore)));
     }
 
     private BooleanExpression userScoreGoe(Double minUserScore) {
-        if (minUserScore == null) return null;
+        if (minUserScore == null)
+            return null;
         return game.mcUserScore.goe(minUserScore)
                 .or(game.mcUserScore.isNull().and(game.igdbUserScore.goe(minUserScore)));
     }
@@ -178,7 +164,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression genreEq(String genreName) {
-        if (!hasText(genreName)) return null;
+        if (!hasText(genreName))
+            return null;
         return game.gameGenres.any().genre.name.eq(genreName);
     }
 
@@ -223,21 +210,22 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             return null;
         }
         LocalDate today = LocalDate.now();
-        
+
         return JPAExpressions.selectOne()
                 .from(gamePriceHistory)
                 .where(
                         gamePriceHistory.game.id.eq(game.id),
                         gamePriceHistory.discountRate.gt(0),
-                        // QueryDSL에서 LocalDateTime 컬럼의 날짜 부분만 비교할 수 없으므로 
+                        // QueryDSL에서 LocalDateTime 컬럼의 날짜 부분만 비교할 수 없으므로
                         // 오늘 시작(00:00:00)부터 끝(23:59:59) 사이에 기록된 이력을 찾습니다.
                         gamePriceHistory.createdAt.goe(today.atStartOfDay()),
-                        gamePriceHistory.createdAt.lt(today.plusDays(1).atStartOfDay())
-                ).exists();
+                        gamePriceHistory.createdAt.lt(today.plusDays(1).atStartOfDay()))
+                .exists();
     }
 
     private BooleanExpression vibeTagsContains(List<String> vibeTags) {
-        if (vibeTags == null || vibeTags.isEmpty()) return null;
+        if (vibeTags == null || vibeTags.isEmpty())
+            return null;
         BooleanExpression result = null;
         for (String tag : vibeTags) {
             // JSON_CONTAINS는 MySQL에서 0/1(integer)을 반환하므로
@@ -245,8 +233,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             BooleanExpression condition = Expressions.numberTemplate(Integer.class,
                     "JSON_CONTAINS({0}, JSON_QUOTE({1}))",
                     game.vibeTags,
-                    tag
-            ).eq(1);
+                    tag).eq(1);
             result = (result == null) ? condition : result.or(condition);
         }
         return result;
@@ -281,11 +268,14 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
             switch (order.getProperty()) {
                 case "price" -> orders.add(new OrderSpecifier<>(direction, game.currentPrice));
                 case "discountRate" -> orders.add(new OrderSpecifier<>(direction, game.discountRate));
-                case "metaScore" -> orders.add(new OrderSpecifier<>(direction, game.mcMetaScore.coalesce(game.igdbCriticScore)));
-                case "saleEndDate" -> orders.add(new OrderSpecifier<>(direction, game.saleEndDate, OrderSpecifier.NullHandling.NullsLast));
+                case "metaScore" ->
+                    orders.add(new OrderSpecifier<>(direction, game.mcMetaScore.coalesce(game.igdbCriticScore)));
+                case "saleEndDate" -> orders
+                        .add(new OrderSpecifier<>(direction, game.saleEndDate, OrderSpecifier.NullHandling.NullsLast));
                 case "releaseDate" -> orders.add(new OrderSpecifier<>(direction, game.releaseDate));
-                case "playTime" -> orders.add(new OrderSpecifier<>(direction, game.hltbMainStory, OrderSpecifier.NullHandling.NullsLast));
-                default ->orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
+                case "playTime" -> orders.add(
+                        new OrderSpecifier<>(direction, game.hltbMainStory, OrderSpecifier.NullHandling.NullsLast));
+                default -> orders.add(new OrderSpecifier<>(direction, game.lastUpdated));
             }
         }
         return orders.toArray(new OrderSpecifier[0]);
@@ -303,15 +293,63 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     @Override
-    public long countMustPlayGames() {
-        Long count = queryFactory
-                .select(game.count())
+    public GameInsightStats fetchGameInsightStats(LocalDate today, LocalDate tomorrow) {
+        BooleanExpression isAllTimeLowExpr = game.discountRate.gt(0)
+                .and(game.currentPrice.loe(game.allTimeLowPrice));
+        BooleanExpression isMustPlayExpr = game.mcMetaScore.goe(85)
+                .or(game.mcMetaScore.isNull().and(game.igdbCriticScore.goe(85)))
+                .and(game.discountRate.goe(50));
+        BooleanExpression isGoodOfferExpr = game.discountRate.gt(0)
+                .and(game.allTimeLowPrice.gt(0))
+                .and(game.currentPrice.gt(game.allTimeLowPrice))
+                .and(game.currentPrice.subtract(game.allTimeLowPrice).longValue().multiply(5L)
+                        .loe(game.allTimeLowPrice.longValue()));
+        BooleanExpression isWaitExpr = game.discountRate.gt(0)
+                .and(game.allTimeLowPrice.isNull()
+                        .or(game.allTimeLowPrice.eq(0))
+                        .or(game.currentPrice.gt(game.allTimeLowPrice)
+                                .and(game.currentPrice.subtract(game.allTimeLowPrice).longValue().multiply(5L)
+                                        .gt(game.allTimeLowPrice.longValue()))));
+
+        GameInsightStats stats = queryFactory
+                .select(Projections.constructor(GameInsightStats.class,
+                        sumCase(isAllTimeLowExpr),
+                        sumCase(isMustPlayExpr),
+                        game.id.count(),
+                        sumCase(game.discountRate.gt(0)),
+                        new CaseBuilder()
+                                .when(game.saleEndDate.isNotNull().and(game.saleEndDate.goe(today)))
+                                .then(game.originalPrice.subtract(game.currentPrice).longValue())
+                                .otherwise(0L)
+                                .sum()
+                                .coalesce(0L),
+                        game.lastUpdated.max(),
+                        sumCase(game.saleEndDate.between(today, tomorrow)),
+                        sumCase(game.isPs5ProEnhanced.isTrue()),
+                        sumCase(game.inCatalog.isTrue()),
+                        sumCase(game.isPlusExclusive.isTrue().and(game.discountRate.gt(0))),
+                        sumCase(game.hltbMainStory.gt(0.0).and(game.hltbMainStory.loe(10.0))),
+                        sumCase(game.hltbMainStory.gt(10.0).and(game.hltbMainStory.loe(30.0))),
+                        sumCase(game.hltbMainStory.gt(30.0).and(game.hltbMainStory.loe(100.0))),
+                        sumCase(game.hltbMainStory.gt(100.0)),
+                        sumCase(game.discountRate.gt(0).and(game.allTimeLowPrice.gt(0))
+                                .and(game.currentPrice.loe(game.allTimeLowPrice))),
+                        sumCase(isGoodOfferExpr),
+                        sumCase(isWaitExpr),
+                        sumCase(game.discountRate.eq(0).or(game.currentPrice.isNull()).or(game.currentPrice.eq(0)))
+                ))
                 .from(game)
-                .where(
-                        game.mcMetaScore.goe(85).or(game.mcMetaScore.isNull().and(game.igdbCriticScore.goe(85))),
-                        game.discountRate.goe(50)
-                )
                 .fetchOne();
-        return count != null ? count : 0L;
+
+        return stats != null ? stats : GameInsightStats.empty();
+    }
+
+    private NumberExpression<Long> sumCase(BooleanExpression condition) {
+        return new CaseBuilder()
+                .when(condition)
+                .then(1L)
+                .otherwise(0L)
+                .sum()
+                .coalesce(0L);
     }
 }

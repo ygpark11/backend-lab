@@ -1,13 +1,9 @@
 package com.pstracker.catalog_service.member.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-
-@Data
-@AllArgsConstructor
-public class MyPagePioneeredGameResponse {
-    private Long id;
-    private String title;
-    private String imageUrl;
-    private String date;
+public record MyPagePioneeredGameResponse(
+        Long id,
+        String title,
+        String imageUrl,
+        String date
+) {
 }

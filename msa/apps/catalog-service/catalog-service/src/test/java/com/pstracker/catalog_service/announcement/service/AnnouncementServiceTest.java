@@ -38,10 +38,8 @@ class AnnouncementServiceTest {
     @DisplayName("공지사항 생성 시 createdAt, updatedAt 타임스탬프가 설정되어야 한다.")
     void createAnnouncement_shouldSetTimestamps() {
         // given
-        AnnouncementRequest request = new AnnouncementRequest();
-        request.setType(AnnouncementType.INFO);
-        request.setTitle("테스트 공지");
-        request.setContent("테스트 내용입니다.");
+        AnnouncementRequest request = new AnnouncementRequest(
+                AnnouncementType.INFO, "테스트 공지", "테스트 내용입니다.");
 
         // when
         AnnouncementResponse response = announcementService.createAnnouncement(request);
@@ -58,10 +56,8 @@ class AnnouncementServiceTest {
     @DisplayName("공지사항 수정 시 updatedAt이 갱신되어야 한다.")
     void updateAnnouncement_shouldUpdateUpdatedAt() throws InterruptedException {
         // given
-        AnnouncementRequest createRequest = new AnnouncementRequest();
-        createRequest.setType(AnnouncementType.INFO);
-        createRequest.setTitle("초기 제목");
-        createRequest.setContent("초기 내용");
+        AnnouncementRequest createRequest = new AnnouncementRequest(
+                AnnouncementType.INFO, "초기 제목", "초기 내용");
         AnnouncementResponse created = announcementService.createAnnouncement(createRequest);
         em.flush();
         em.clear();
@@ -70,10 +66,8 @@ class AnnouncementServiceTest {
         Thread.sleep(10);
 
         // when
-        AnnouncementRequest updateRequest = new AnnouncementRequest();
-        updateRequest.setType(AnnouncementType.UPDATE);
-        updateRequest.setTitle("수정된 제목");
-        updateRequest.setContent("수정된 내용");
+        AnnouncementRequest updateRequest = new AnnouncementRequest(
+                AnnouncementType.UPDATE, "수정된 제목", "수정된 내용");
         announcementService.updateAnnouncement(created.id(), updateRequest);
         em.flush();
         em.clear();

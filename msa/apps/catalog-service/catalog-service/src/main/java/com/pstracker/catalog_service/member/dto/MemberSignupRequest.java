@@ -2,22 +2,19 @@ package com.pstracker.catalog_service.member.dto;
 
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.domain.Role;
-import lombok.Data;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@Data
-public class MemberSignupRequest {
-    private String email;
-    private String password;
-    private String nickname;
-
-    // DTO -> Entity 변환 메서드 (비밀번호 암호화 포함)
+public record MemberSignupRequest(
+        String email,
+        String password,
+        String nickname
+) {
     public Member toEntity(PasswordEncoder passwordEncoder) {
         return Member.builder()
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .nickname(nickname)
-                .role(Role.USER) // 기본 가입은 USER
+                .role(Role.USER)
                 .build();
     }
 }

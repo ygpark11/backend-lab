@@ -46,18 +46,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
             @Param("today") LocalDate today
     );
 
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.currentPrice <= g.allTimeLowPrice")
-    long countAllTimeLowGamesFast();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0")
-    long countTotalDiscountedGames();
-
-    @Query("SELECT SUM(g.originalPrice - g.currentPrice) FROM Game g WHERE g.saleEndDate IS NOT NULL AND g.saleEndDate >= CURRENT_DATE")
-    Long sumTotalDiscountAmount();
-
-    @Query("SELECT MAX(g.lastUpdated) FROM Game g")
-    LocalDateTime findLatestUpdateDateTime();
-
     List<Game> findByFamilyIdOrderByOriginalPriceAsc(String familyId);
 
     @Query("SELECT g.id FROM Game g ORDER BY g.id")
@@ -111,49 +99,13 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
     @Query("SELECT g FROM Game g WHERE g.description = :description OR g.vibeTags IS NULL OR g.searchKeywords IS NULL ORDER BY g.id ASC")
     List<Game> findTop5NeedingAiUpdate(@Param("description") String description, Pageable pageable);
 
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.saleEndDate BETWEEN CURRENT_DATE AND :tomorrow")
-    long countClosingSoonGames(@Param("tomorrow") LocalDate tomorrow);
-
     @Query("SELECT COUNT(DISTINCT h.game.id) FROM GamePriceHistory h " +
             "WHERE h.discountRate > 0 " +
             "AND h.createdAt BETWEEN :startOfDay AND :endOfDay")
     long countNewDiscountGames(@Param("startOfDay") LocalDateTime startOfDay,
                                @Param("endOfDay") LocalDateTime endOfDay);
 
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPs5ProEnhanced = true")
-    long countPs5ProEnhancedDeals();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.inCatalog = true")
-    long countInCatalogDeals();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.isPlusExclusive = true AND g.discountRate > 0")
-    long countPlusExclusiveDeals();
-
     @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMapping(g.psStoreId, g.id) " +
             "FROM Game g WHERE g.psStoreId IN :psStoreIds")
     List<GameIdMapping> findGameIdsByPsStoreIds(@Param("psStoreIds") List<String> psStoreIds);
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 0 AND g.hltbMainStory <= 10")
-    long countShortPlayTimeGames();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 10 AND g.hltbMainStory <= 30")
-    long countMediumPlayTimeGames();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 30 AND g.hltbMainStory <= 100")
-    long countLongPlayTimeGames();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.hltbMainStory > 100")
-    long countEpicPlayTimeGames();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.allTimeLowPrice > 0 AND g.currentPrice <= g.allTimeLowPrice")
-    long countVerdictBuyNow();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.allTimeLowPrice > 0 AND g.currentPrice > g.allTimeLowPrice AND (g.currentPrice - g.allTimeLowPrice) * 1.0 / g.allTimeLowPrice * 100 <= 20")
-    long countVerdictGoodOffer();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND (g.allTimeLowPrice IS NULL OR g.allTimeLowPrice = 0 OR (g.currentPrice > g.allTimeLowPrice AND (g.currentPrice - g.allTimeLowPrice) * 1.0 / g.allTimeLowPrice * 100 > 20))")
-    long countVerdictWait();
-
-    @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate = 0 OR g.currentPrice IS NULL OR g.currentPrice = 0")
-    long countVerdictTracking();
 }

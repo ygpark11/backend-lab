@@ -99,16 +99,16 @@ class SubscriptionServiceTest {
         // when
         PsPlusPricingResponse response = subscriptionService.getLatestPricing();
         PsPlusPricingResponse.TierPriceDto dto =
-                response.getPricingData().get(PsPlusTier.ESSENTIAL);
+                response.pricingData().get(PsPlusTier.ESSENTIAL);
 
         // then: 정가 노출, 할인 정보 없음
         assertThat(response.isPromotionActive()).isFalse();
-        assertThat(response.getPromotionDiscountRate()).isEqualTo(0);
-        assertThat(dto.getPrice12Month()).isEqualTo(57000);
-        assertThat(dto.getDiscountPrice12Month()).isNull();
-        assertThat(dto.getDiscountRate12Month()).isEqualTo(0);
-        assertThat(dto.getDiscountPrice1Month()).isNull();
-        assertThat(dto.getDiscountRate1Month()).isEqualTo(0);
+        assertThat(response.promotionDiscountRate()).isEqualTo(0);
+        assertThat(dto.price12Month()).isEqualTo(57000);
+        assertThat(dto.discountPrice12Month()).isNull();
+        assertThat(dto.discountRate12Month()).isEqualTo(0);
+        assertThat(dto.discountPrice1Month()).isNull();
+        assertThat(dto.discountRate1Month()).isEqualTo(0);
     }
 
     @Test
@@ -122,22 +122,22 @@ class SubscriptionServiceTest {
         // when
         PsPlusPricingResponse response = subscriptionService.getLatestPricing();
         PsPlusPricingResponse.TierPriceDto dto =
-                response.getPricingData().get(PsPlusTier.ESSENTIAL);
+                response.pricingData().get(PsPlusTier.ESSENTIAL);
 
         // then - 최상위 프로모션 요약 반영
         assertThat(response.isPromotionActive()).isTrue();
-        assertThat(response.getPromotionDiscountRate()).isEqualTo(50);
+        assertThat(response.promotionDiscountRate()).isEqualTo(50);
 
         // then - 12개월: 정가 노출, 할인가/할인율 정상
-        assertThat(dto.getPrice12Month()).isEqualTo(57000);
-        assertThat(dto.getDiscountPrice12Month()).isEqualTo(28500);
-        assertThat(dto.getDiscountRate12Month()).isEqualTo(50);
+        assertThat(dto.price12Month()).isEqualTo(57000);
+        assertThat(dto.discountPrice12Month()).isEqualTo(28500);
+        assertThat(dto.discountRate12Month()).isEqualTo(50);
 
         // then - 1개월/3개월: 할인 정보 없음
-        assertThat(dto.getDiscountPrice1Month()).isNull();
-        assertThat(dto.getDiscountRate1Month()).isEqualTo(0);
-        assertThat(dto.getDiscountPrice3Month()).isNull();
-        assertThat(dto.getDiscountRate3Month()).isEqualTo(0);
+        assertThat(dto.discountPrice1Month()).isNull();
+        assertThat(dto.discountRate1Month()).isEqualTo(0);
+        assertThat(dto.discountPrice3Month()).isNull();
+        assertThat(dto.discountRate3Month()).isEqualTo(0);
     }
 
     @Test
@@ -150,10 +150,10 @@ class SubscriptionServiceTest {
 
         // when
         PsPlusPricingResponse.TierPriceDto dto =
-                subscriptionService.getLatestPricing().getPricingData().get(PsPlusTier.SPECIAL);
+                subscriptionService.getLatestPricing().pricingData().get(PsPlusTier.SPECIAL);
 
         // then
-        assertThat(dto.getDiscountRate12Month()).isEqualTo(34);
+        assertThat(dto.discountRate12Month()).isEqualTo(34);
     }
 
     // ==================== 수집 중복 방지 (isSamePrice) 테스트 ====================
@@ -244,11 +244,11 @@ class SubscriptionServiceTest {
         // when
         List<PsPlusPricingResponse.PsPlusPriceHistoryDto> history =
                 subscriptionService.getLatestPricing()
-                        .getHistoryData().get(PsPlusTier.ESSENTIAL).get("price12Month");
+                        .historyData().get(PsPlusTier.ESSENTIAL).get("price12Month");
 
         // then: originalPrice fallback = price → discountRate = 0
         assertThat(history).isNotEmpty();
-        assertThat(history.get(0).getDiscountRate()).isEqualTo(0);
+        assertThat(history.get(0).discountRate()).isEqualTo(0);
     }
 
     @Test
@@ -262,12 +262,12 @@ class SubscriptionServiceTest {
         // when
         List<PsPlusPricingResponse.PsPlusPriceHistoryDto> history =
                 subscriptionService.getLatestPricing()
-                        .getHistoryData().get(PsPlusTier.ESSENTIAL).get("price12Month");
+                        .historyData().get(PsPlusTier.ESSENTIAL).get("price12Month");
 
         // then: (57000 - 28500) / 57000 * 100 = 50%
         assertThat(history).isNotEmpty();
-        assertThat(history.get(0).getPrice()).isEqualTo(28500);
-        assertThat(history.get(0).getDiscountRate()).isEqualTo(50);
+        assertThat(history.get(0).price()).isEqualTo(28500);
+        assertThat(history.get(0).discountRate()).isEqualTo(50);
     }
 
     // ==================== 헬퍼 ====================
@@ -289,19 +289,18 @@ class SubscriptionServiceTest {
                                               int p1m, int p3m, int p12m,
                                               Integer orig1m, Integer orig3m, Integer orig12m,
                                               java.time.LocalDate sed1m, java.time.LocalDate sed3m, java.time.LocalDate sed12m) {
-        PsPlusCollectRequest.TierPriceReq tierPrice = new PsPlusCollectRequest.TierPriceReq();
-        ReflectionTestUtils.setField(tierPrice, "price1Month", p1m);
-        ReflectionTestUtils.setField(tierPrice, "price3Month", p3m);
-        ReflectionTestUtils.setField(tierPrice, "price12Month", p12m);
-        ReflectionTestUtils.setField(tierPrice, "originalPrice1Month", orig1m);
-        ReflectionTestUtils.setField(tierPrice, "originalPrice3Month", orig3m);
-        ReflectionTestUtils.setField(tierPrice, "originalPrice12Month", orig12m);
-        ReflectionTestUtils.setField(tierPrice, "saleEndDate1Month", sed1m);
-        ReflectionTestUtils.setField(tierPrice, "saleEndDate3Month", sed3m);
-        ReflectionTestUtils.setField(tierPrice, "saleEndDate12Month", sed12m);
+        PsPlusCollectRequest.TierPriceReq tierPrice = PsPlusCollectRequest.TierPriceReq.builder()
+                .price1Month(p1m)
+                .price3Month(p3m)
+                .price12Month(p12m)
+                .originalPrice1Month(orig1m)
+                .originalPrice3Month(orig3m)
+                .originalPrice12Month(orig12m)
+                .saleEndDate1Month(sed1m)
+                .saleEndDate3Month(sed3m)
+                .saleEndDate12Month(sed12m)
+                .build();
 
-        PsPlusCollectRequest request = new PsPlusCollectRequest();
-        ReflectionTestUtils.setField(request, "data", Map.of(tier, tierPrice));
-        return request;
+        return new PsPlusCollectRequest(Map.of(tier, tierPrice));
     }
 }

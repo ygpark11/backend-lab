@@ -37,6 +37,9 @@ public class CatalogServiceTest {
     private CatalogService catalogService;
 
     @Autowired
+    private CatalogAdminService catalogAdminService;
+
+    @Autowired
     private GameRepository gameRepository;
 
     @Autowired
@@ -221,7 +224,7 @@ public class CatalogServiceTest {
         );
 
         // when
-        catalogService.adminUpdateGame(before.getId(), req);
+        catalogAdminService.adminUpdateGame(before.getId(), req);
         em.flush(); em.clear();
 
         // then: name/englishName은 null 가드로 보호됨
@@ -245,7 +248,7 @@ public class CatalogServiceTest {
                 null, null, null, null,
                 null, 40.0, 60.0, 100.0
         );
-        catalogService.adminUpdateGame(game.getId(), setReq);
+        catalogAdminService.adminUpdateGame(game.getId(), setReq);
         em.flush(); em.clear();
 
         // when: HLTB 전체 null
@@ -255,7 +258,7 @@ public class CatalogServiceTest {
                 null, null, null, null,
                 null, null, null, null
         );
-        catalogService.adminUpdateGame(game.getId(), clearReq);
+        catalogAdminService.adminUpdateGame(game.getId(), clearReq);
         em.flush(); em.clear();
 
         // then: HLTB 전부 null로 초기화됨
@@ -375,7 +378,7 @@ public class CatalogServiceTest {
         );
 
         // when
-        catalogService.bulkDeleteGames(gameIds);
+        catalogAdminService.bulkDeleteGames(gameIds);
         em.flush(); em.clear();
 
         // then: 게임 삭제됨
@@ -400,7 +403,7 @@ public class CatalogServiceTest {
 
         // when & then: 예외 없이 완료되어야 함
         org.assertj.core.api.Assertions.assertThatCode(
-                () -> catalogService.bulkDeleteGames(List.of(existingId, nonExistentId))
+                () -> catalogAdminService.bulkDeleteGames(List.of(existingId, nonExistentId))
         ).doesNotThrowAnyException();
 
         em.flush(); em.clear();

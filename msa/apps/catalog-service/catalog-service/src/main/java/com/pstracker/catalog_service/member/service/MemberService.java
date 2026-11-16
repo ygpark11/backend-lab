@@ -1,5 +1,7 @@
 package com.pstracker.catalog_service.member.service;
 
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.global.security.JwtToken;
 import com.pstracker.catalog_service.global.security.JwtTokenProvider;
 import com.pstracker.catalog_service.member.domain.Member;
@@ -32,7 +34,7 @@ public class MemberService {
     @Transactional
     public Long signup(MemberSignupRequest request) {
         // 1. 중복 검사
-        if (memberRepository.existsByEmail(request.getEmail())) {
+        if (memberRepository.existsByEmail(request.email())) {
             throw new IllegalArgumentException("이미 가입된 이메일입니다.");
         }
 
@@ -46,7 +48,7 @@ public class MemberService {
     public JwtToken login(MemberLoginRequest request) {
         // 1. Login ID/PW를 기반으로 Authentication 객체 생성
         UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword());
+                new UsernamePasswordAuthenticationToken(request.email(), request.password());
 
         // 2. 실제 검증 (사용자 비밀번호 체크)
         // authenticate() 실행 시 CustomUserDetailsService.loadUserByUsername()이 호출됨
@@ -55,7 +57,7 @@ public class MemberService {
         // 3. 인증 정보를 기반으로 JWT 토큰 생성
         JwtToken jwtToken = jwtTokenProvider.generateToken(authentication);
 
-        log.debug("Login Success: {}", request.getEmail());
+        log.debug("Login Success: {}", request.email());
         return jwtToken;
     }
 
@@ -64,6 +66,6 @@ public class MemberService {
      */
     public Member findById(Long memberId) {
         return memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
     }
 }

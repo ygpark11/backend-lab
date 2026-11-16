@@ -3,7 +3,7 @@ package com.pstracker.catalog_service.catalog.controller;
 import com.pstracker.catalog_service.catalog.dto.AdminGameDetailResponse;
 import com.pstracker.catalog_service.catalog.dto.AdminGameUpdateRequest;
 import com.pstracker.catalog_service.catalog.dto.AdminRegisterRequest;
-import com.pstracker.catalog_service.catalog.service.CatalogService;
+import com.pstracker.catalog_service.catalog.service.CatalogAdminService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.insights.service.InsightsService;
@@ -26,7 +26,7 @@ import java.util.List;
 @Slf4j
 public class AdminController {
 
-    private final CatalogService catalogService;
+    private final CatalogAdminService catalogAdminService;
     private final GameReadService gameReadService;
     private final InsightsService insightsService;
     private final ScrapingQueueService scrapingQueueService;
@@ -34,13 +34,13 @@ public class AdminController {
 
     @DeleteMapping("/games/{gameId}")
     public ResponseEntity<Void> deleteGame(@PathVariable Long gameId) {
-        catalogService.deleteGame(gameId);
+        catalogAdminService.deleteGame(gameId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/games/{gameId}/refresh")
     public ResponseEntity<String> refreshGame(@PathVariable Long gameId) {
-        catalogService.triggerSingleGameRefresh(gameId);
+        catalogAdminService.triggerSingleGameRefresh(gameId);
         return ResponseEntity.ok("재수집 요청이 완료되었습니다. (로그를 확인하세요)");
     }
 
@@ -48,7 +48,7 @@ public class AdminController {
     public ResponseEntity<String> refreshAllCaches() {
         insightsService.refreshInsightsCache();
         insightsService.refreshTrendingCache();
-        catalogService.refreshCurationCache();
+        gameReadService.refreshCurationCache();
         subscriptionService.refreshPsPlusPricingCache();
         return ResponseEntity.ok("전체 로컬 캐시가 성공적으로 초기화되었습니다.");
     }
@@ -64,7 +64,7 @@ public class AdminController {
         if (gameIds == null || gameIds.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        catalogService.bulkDeleteGames(gameIds);
+        catalogAdminService.bulkDeleteGames(gameIds);
         return ResponseEntity.noContent().build();
     }
 
@@ -85,7 +85,7 @@ public class AdminController {
     public ResponseEntity<Void> updateGame(
             @PathVariable Long gameId,
             @RequestBody AdminGameUpdateRequest req) {
-        catalogService.adminUpdateGame(gameId, req);
+        catalogAdminService.adminUpdateGame(gameId, req);
         return ResponseEntity.noContent().build();
     }
 

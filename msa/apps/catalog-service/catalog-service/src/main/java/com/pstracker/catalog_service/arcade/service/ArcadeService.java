@@ -7,6 +7,8 @@ import com.pstracker.catalog_service.arcade.dto.LeaderboardResponse;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitRequest;
 import com.pstracker.catalog_service.arcade.dto.ScoreSubmitResponse;
 import com.pstracker.catalog_service.arcade.repository.ArcadeRecordRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +38,10 @@ public class ArcadeService {
         ArcadeGameType gameType = ArcadeGameType.fromCode(gameTypeCode);
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다. id=" + memberId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "존재하지 않는 회원입니다. id=" + memberId));
 
-        int newScore = request.getScore();
-        int newClearTime = request.getClearTimeSec();
+        int newScore = request.score();
+        int newClearTime = request.clearTimeSec();
 
         Optional<ArcadeRecord> recordOpt = arcadeRecordRepository.findByMemberIdAndGameType(memberId, gameType);
 

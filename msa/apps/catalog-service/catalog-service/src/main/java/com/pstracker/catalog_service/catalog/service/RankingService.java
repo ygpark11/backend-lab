@@ -22,8 +22,8 @@ public class RankingService {
      */
     @Transactional
     public void updateRankings(RankingUpdateRequest request) {
-        String type = request.getRankingType();
-        List<String> psStoreIds = request.getPsStoreIds();
+        String type = request.rankingType();
+        List<String> psStoreIds = request.psStoreIds();
 
         log.info("[Ranking Update] Type: {}, Target Count: {}", type, psStoreIds.size());
 

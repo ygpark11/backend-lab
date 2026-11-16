@@ -10,11 +10,15 @@ import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryReposito
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.event.BatchCompletedEvent;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,6 +50,11 @@ public class GameReadService {
                key = "#condition.curationCacheKey() + '_' + #pageable.sort.toString()")
     public Page<GameSearchResponse> searchGamesForCuration(GameSearchCondition condition, Pageable pageable) {
         return gameRepository.searchGames(condition, pageable);
+    }
+
+    @EventListener
+    public void onBatchCompleted(BatchCompletedEvent event) {
+        refreshCurationCache();
     }
 
     public void refreshCurationCache() {
@@ -87,7 +96,7 @@ public class GameReadService {
     @Cacheable(value = GlobalCacheConfig.GAME_DETAIL_CACHE, key = "#gameId")
     public GameDetailResponse getBaseGameDetail(Long gameId) {
         Game game = gameRepository.findByIdWithGenres(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("Game not found: " + gameId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "게임을 찾을 수 없습니다. id=" + gameId));
 
         // 1. 가격 이력 → 차트 DTO + 판정에 필요한 컨텍스트
         List<GamePriceHistory> histories = priceHistoryRepository.findAllByGameIdOrderByCreatedAtAsc(gameId);
@@ -117,7 +126,7 @@ public class GameReadService {
         List<Game> familyList = gameRepository.findByFamilyIdOrderByOriginalPriceAsc(familyId);
         if (familyList.isEmpty()) return List.of();
 
-        Map<Long, Integer> historyCountMap = countHistoryByGameIds(
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(
                 familyList.stream().map(Game::getId).toList());
 
         return familyList.stream()
@@ -139,7 +148,7 @@ public class GameReadService {
         List<GameSearchResponse> rawList = getRelatedGames(game);
         if (rawList.isEmpty()) return List.of();
 
-        Map<Long, Integer> historyCountMap = countHistoryByGameIds(
+        Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(
                 rawList.stream().map(GameSearchResponse::getId).toList());
 
         return rawList.stream()
@@ -157,16 +166,6 @@ public class GameReadService {
                 .toList();
     }
 
-    /** gameId 목록으로 가격 이력 건수를 일괄 조회해 Map으로 반환 */
-    private Map<Long, Integer> countHistoryByGameIds(List<Long> gameIds) {
-        return priceHistoryRepository.countGroupByGameId(gameIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        arr -> (Long) arr[0],
-                        arr -> ((Long) arr[1]).intValue()
-                ));
-    }
-
     private List<GameSearchResponse> getRelatedGames(Game game) {
         List<Long> genreIds = game.getGameGenres().stream()
                 .map(gg -> gg.getGenre().getId())
@@ -180,7 +179,7 @@ public class GameReadService {
      */
     public AdminGameDetailResponse getAdminGameDetail(Long gameId) {
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("게임을 찾을 수 없습니다. id=" + gameId));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND, "게임을 찾을 수 없습니다. id=" + gameId));
         return AdminGameDetailResponse.from(game);
     }
 }

@@ -2,7 +2,7 @@ package com.pstracker.catalog_service.catalog.api;
 
 import com.pstracker.catalog_service.catalog.controller.AdminController;
 import com.pstracker.catalog_service.catalog.dto.AdminGameDetailResponse;
-import com.pstracker.catalog_service.catalog.service.CatalogService;
+import com.pstracker.catalog_service.catalog.service.CatalogAdminService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
 import com.pstracker.catalog_service.global.config.SecurityConfig;
 import com.pstracker.catalog_service.global.security.CustomAccessDeniedHandler;
@@ -40,7 +40,7 @@ public class AdminControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CatalogService catalogService;
+    private CatalogAdminService catalogAdminService;
 
     @MockitoBean
     private GameReadService gameReadService;
@@ -94,7 +94,7 @@ public class AdminControllerTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void deleteGame_Success_Admin() throws Exception {
         Long gameId = 1L;
-        doNothing().when(catalogService).deleteGame(gameId);
+        doNothing().when(catalogAdminService).deleteGame(gameId);
 
         mockMvc.perform(delete("/api/v1/admin/games/{gameId}", gameId)
                         .with(csrf()))
@@ -125,7 +125,7 @@ public class AdminControllerTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void refreshGame_Success_Admin() throws Exception {
         Long gameId = 1L;
-        doNothing().when(catalogService).triggerSingleGameRefresh(gameId);
+        doNothing().when(catalogAdminService).triggerSingleGameRefresh(gameId);
 
         mockMvc.perform(post("/api/v1/admin/games/{gameId}/refresh", gameId)
                         .with(csrf()))
@@ -156,7 +156,7 @@ public class AdminControllerTest {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void refreshAllCaches_Success_Admin() throws Exception {
         doNothing().when(insightsService).refreshInsightsCache();
-        doNothing().when(catalogService).refreshCurationCache();
+        doNothing().when(gameReadService).refreshCurationCache();
         doNothing().when(subscriptionService).refreshPsPlusPricingCache();
 
         mockMvc.perform(post("/api/v1/admin/cache/refresh")
@@ -218,7 +218,7 @@ public class AdminControllerTest {
     @DisplayName("성공: 관리자(ADMIN)가 다중 삭제 요청 시 204 반환")
     @WithMockUser(username = "admin", roles = "ADMIN")
     void bulkDeleteGames_Success_Admin() throws Exception {
-        doNothing().when(catalogService).bulkDeleteGames(any());
+        doNothing().when(catalogAdminService).bulkDeleteGames(any());
 
         mockMvc.perform(delete("/api/v1/admin/games/bulk")
                         .contentType("application/json")
@@ -289,7 +289,7 @@ public class AdminControllerTest {
     @DisplayName("성공: 관리자(ADMIN)가 게임 수정 요청 시 204 반환")
     @WithMockUser(username = "admin", roles = "ADMIN")
     void updateGame_Success_Admin() throws Exception {
-        doNothing().when(catalogService).adminUpdateGame(any(), any());
+        doNothing().when(catalogAdminService).adminUpdateGame(any(), any());
 
         mockMvc.perform(patch("/api/v1/admin/games/{gameId}", 1L)
                         .contentType("application/json")

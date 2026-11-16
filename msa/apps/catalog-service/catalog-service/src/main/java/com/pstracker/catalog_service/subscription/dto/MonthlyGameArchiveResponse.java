@@ -1,24 +1,23 @@
 package com.pstracker.catalog_service.subscription.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.List;
 
-@Getter
-@AllArgsConstructor
-public class MonthlyGameArchiveResponse {
-    private String targetMonth;
-    private List<ArchiveGameDto> games;
+public record MonthlyGameArchiveResponse(
+        String targetMonth,
+        List<ArchiveGameDto> games
+) {
+    public MonthlyGameArchiveResponse withGames(List<ArchiveGameDto> enrichedGames) {
+        return new MonthlyGameArchiveResponse(targetMonth, enrichedGames);
+    }
 
-    @Getter
-    @Setter
-    @AllArgsConstructor
-    public static class ArchiveGameDto {
-        private String psStoreId;
-        private String title;
-        private String imageUrl;
-        private Long gameId;
+    public record ArchiveGameDto(
+            String psStoreId,
+            String title,
+            String imageUrl,
+            Long gameId
+    ) {
+        public ArchiveGameDto withGameId(Long gameId) {
+            return new ArchiveGameDto(psStoreId, title, imageUrl, gameId);
+        }
     }
 }

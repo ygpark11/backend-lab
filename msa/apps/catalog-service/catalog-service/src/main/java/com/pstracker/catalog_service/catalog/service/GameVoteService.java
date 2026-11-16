@@ -6,6 +6,8 @@ import com.pstracker.catalog_service.catalog.domain.VoteType;
 import com.pstracker.catalog_service.catalog.dto.GameVoteResponse;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,7 @@ public class GameVoteService {
         }
 
         Game game = gameRepository.findById(gameId)
-                .orElseThrow(() -> new IllegalArgumentException("게임을 찾을 수 없습니다."));
+                .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND));
 
         Optional<GameVote> existingVoteOpt = gameVoteRepository.findByMemberIdAndGameId(memberId, gameId);
         VoteType finalUserVote = null;

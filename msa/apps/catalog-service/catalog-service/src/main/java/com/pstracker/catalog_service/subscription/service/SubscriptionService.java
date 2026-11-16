@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.dto.GameIdMapping;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.global.config.GlobalCacheConfig;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
+import com.pstracker.catalog_service.global.event.BatchCompletedEvent;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
 import com.pstracker.catalog_service.scraping.domain.GameCandidate;
 import com.pstracker.catalog_service.scraping.repository.GameCandidateRepository;
@@ -25,6 +26,7 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -114,9 +116,9 @@ public class SubscriptionService {
 
         int maxPromotionDiscountRate = pricingData.values().stream()
                 .flatMapToInt(t -> IntStream.of(
-                        t.getDiscountRate1Month(),
-                        t.getDiscountRate3Month(),
-                        t.getDiscountRate12Month()))
+                        t.discountRate1Month(),
+                        t.discountRate3Month(),
+                        t.discountRate12Month()))
                 .max()
                 .orElse(0);
 
@@ -164,6 +166,11 @@ public class SubscriptionService {
                 .toList();
     }
 
+    @EventListener
+    public void onBatchCompleted(BatchCompletedEvent event) {
+        refreshPsPlusPricingCache();
+    }
+
     public void refreshPsPlusPricingCache() {
         var cache = cacheManager.getCache(GlobalCacheConfig.PS_PLUS_PRICING_CACHE);
         if (cache != null) {
@@ -175,7 +182,7 @@ public class SubscriptionService {
     @Transactional
     @CacheEvict(cacheNames = GlobalCacheConfig.PS_PLUS_PRICING_CACHE, allEntries = true)
     public void upsertPsPlusPrices(PsPlusCollectRequest request) {
-        if (request.getData() == null || request.getData().isEmpty()) {
+        if (request.data() == null || request.data().isEmpty()) {
             log.warn("수집된 PS Plus 데이터가 없습니다.");
             return;
         }
@@ -186,7 +193,7 @@ public class SubscriptionService {
                 .collect(Collectors.toMap(PsPlusPricing::getTier, p -> p));
 
         AtomicBoolean discountStarted = new AtomicBoolean(false);
-        request.getData().forEach((tier, prices) -> {
+        request.data().forEach((tier, prices) -> {
             if (upsertTierPrice(tier, prices, existingMap)) {
                 discountStarted.set(true);
             }
@@ -203,15 +210,15 @@ public class SubscriptionService {
      */
     private boolean upsertTierPrice(PsPlusTier tier, PsPlusCollectRequest.TierPriceReq prices,
                                     Map<PsPlusTier, PsPlusPricing> existingMap) {
-        Integer price1Month = prices.getPrice1Month();
-        Integer price3Month = prices.getPrice3Month();
-        Integer price12Month = prices.getPrice12Month();
+        Integer price1Month = prices.price1Month();
+        Integer price3Month = prices.price3Month();
+        Integer price12Month = prices.price12Month();
         Integer originalPrice1Month = prices.resolvedOriginalPrice1Month();
         Integer originalPrice3Month = prices.resolvedOriginalPrice3Month();
         Integer originalPrice12Month = prices.resolvedOriginalPrice12Month();
-        LocalDate saleEndDate1Month = prices.getSaleEndDate1Month();
-        LocalDate saleEndDate3Month = prices.getSaleEndDate3Month();
-        LocalDate saleEndDate12Month = prices.getSaleEndDate12Month();
+        LocalDate saleEndDate1Month = prices.saleEndDate1Month();
+        LocalDate saleEndDate3Month = prices.saleEndDate3Month();
+        LocalDate saleEndDate12Month = prices.saleEndDate12Month();
 
         return Optional.ofNullable(existingMap.get(tier))
                 .map(current -> updateIfChanged(current, tier,
@@ -366,8 +373,8 @@ public class SubscriptionService {
 
         // 메인 DB 매핑을 위한 psStoreId 추출
         List<String> psStoreIds = page.getContent().stream()
-                .flatMap(response -> response.getGames().stream())
-                .map(MonthlyGameArchiveResponse.ArchiveGameDto::getPsStoreId)
+                .flatMap(response -> response.games().stream())
+                .map(MonthlyGameArchiveResponse.ArchiveGameDto::psStoreId)
                 .toList();
 
         // Game ID 가져오기
@@ -377,13 +384,10 @@ public class SubscriptionService {
                         GameIdMapping::gameId
                 ));
 
-        // 기존 DTO에 gameId 매핑
-        page.getContent().forEach(response -> {
-            response.getGames().forEach(game -> {
-                game.setGameId(gameIdMap.get(game.getPsStoreId()));
-            });
-        });
-
-        return page;
+        return page.map(response -> response.withGames(
+                response.games().stream()
+                        .map(game -> game.withGameId(gameIdMap.get(game.psStoreId())))
+                        .toList()
+        ));
     }
 }

@@ -46,8 +46,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         // (세션을 안 쓰더라도, 임시적으로 Authentication 객체를 만들기 위해 필요)
         return new DefaultOAuth2User(
                 Collections.singleton(new SimpleGrantedAuthority(member.getRoleKey())),
-                attributes.getAttributes(),
-                attributes.getNameAttributeKey());
+                attributes.attributes(),
+                attributes.nameAttributeKey());
     }
 
     /**
@@ -56,7 +56,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
      * - 없으면 -> 새로운 Member 엔티티 생성 후 저장
      */
     private Member saveOrUpdate(OAuthAttributes attributes) {
-        Member member = memberRepository.findByEmail(attributes.getEmail())
+        Member member = memberRepository.findByEmail(attributes.email())
                 .orElseGet(attributes::toEntity);
 
         return memberRepository.save(member);

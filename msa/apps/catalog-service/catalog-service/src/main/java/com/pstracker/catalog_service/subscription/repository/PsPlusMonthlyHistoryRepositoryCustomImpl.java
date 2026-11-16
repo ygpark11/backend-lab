@@ -56,7 +56,7 @@ public class PsPlusMonthlyHistoryRepositoryCustomImpl implements PsPlusMonthlyHi
                             )).toList();
                     return new MonthlyGameArchiveResponse(entry.getKey(), gameDtos);
                 })
-                .sorted((a, b) -> b.getTargetMonth().compareTo(a.getTargetMonth()))
+                .sorted((a, b) -> b.targetMonth().compareTo(a.targetMonth()))
                 .toList();
 
         // 4. Page 처리를 위한 Count 쿼리 (총 '월'의 개수)

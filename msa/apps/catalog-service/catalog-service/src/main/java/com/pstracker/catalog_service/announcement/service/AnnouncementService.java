@@ -5,6 +5,8 @@ import com.pstracker.catalog_service.announcement.dto.AnnouncementRequest;
 import com.pstracker.catalog_service.announcement.dto.AnnouncementResponse;
 import com.pstracker.catalog_service.announcement.event.AnnouncementCreatedEvent;
 import com.pstracker.catalog_service.announcement.repository.AnnouncementRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -34,9 +36,9 @@ public class AnnouncementService {
     @Transactional
     public AnnouncementResponse createAnnouncement(AnnouncementRequest request) {
         Announcement announcement = Announcement.create(
-                request.getType(),
-                request.getTitle(),
-                request.getContent()
+                request.type(),
+                request.title(),
+                request.content()
         );
 
         Announcement saved = announcementRepository.save(announcement);
@@ -52,9 +54,9 @@ public class AnnouncementService {
     @Transactional
     public AnnouncementResponse updateAnnouncement(Long id, AnnouncementRequest request) {
         Announcement announcement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 공지사항을 찾을 수 없습니다. ID=" + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND, "해당 공지사항을 찾을 수 없습니다. ID=" + id));
 
-        announcement.update(request.getType(), request.getTitle(), request.getContent());
+        announcement.update(request.type(), request.title(), request.content());
 
         return AnnouncementResponse.from(announcement);
     }
@@ -65,7 +67,7 @@ public class AnnouncementService {
     @Transactional
     public void deleteAnnouncement(Long id) {
         Announcement announcement = announcementRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 공지사항을 찾을 수 없습니다. ID=" + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.ANNOUNCEMENT_NOT_FOUND, "해당 공지사항을 찾을 수 없습니다. ID=" + id));
 
         announcementRepository.delete(announcement);
     }

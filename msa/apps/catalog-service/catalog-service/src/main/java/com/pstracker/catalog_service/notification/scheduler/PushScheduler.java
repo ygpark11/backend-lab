@@ -28,7 +28,7 @@ public class PushScheduler {
     @Scheduled(cron = "0 0 19 * * *", zone = "Asia/Seoul")
     public void sendClosingSoonPush() {
         log.info("마감 임박 게임 푸시 알림 스케줄러 실행");
-        long closingSoonCount = insightsService.getClosingSoonCount();
+        long closingSoonCount = insightsService.getInsightsSummary().closingSoonCount();
 
         if (closingSoonCount > 0) {
             String title = "할인 마감 임박!";
@@ -54,7 +54,7 @@ public class PushScheduler {
     @Scheduled(cron = "0 0 15 * * *", zone = "Asia/Seoul")
     public void sendNewDiscountPush() {
         log.info("신규 할인 게임 푸시 알림 스케줄러 실행");
-        long newDiscountCount = insightsService.getNewDiscountCount();
+        long newDiscountCount = insightsService.getInsightsSummary().newDiscountCount();
 
         if (newDiscountCount > 0) {
             String title = "새로운 할인이 시작되었습니다!";

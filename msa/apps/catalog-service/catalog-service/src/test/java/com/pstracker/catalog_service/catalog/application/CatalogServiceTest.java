@@ -6,8 +6,11 @@ import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.catalog.service.CatalogAdminService;
 import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,6 +39,9 @@ public class CatalogServiceTest {
     @InjectMocks
     private CatalogService catalogService;
 
+    @InjectMocks
+    private CatalogAdminService catalogAdminService;
+
     @Mock private GameReadService gameReadService;
     @Mock private GameRepository gameRepository;
     @Mock private GamePriceHistoryRepository priceHistoryRepository;
@@ -52,7 +58,7 @@ public class CatalogServiceTest {
         given(gameRepository.findById(gameId)).willReturn(Optional.of(mockGame));
 
         // when
-        catalogService.deleteGame(gameId);
+        catalogAdminService.deleteGame(gameId);
 
         // then
         verify(gameRepository, times(1)).delete(mockGame);
@@ -68,9 +74,10 @@ public class CatalogServiceTest {
         given(gameRepository.findById(invalidId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> catalogService.deleteGame(invalidId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 게임을 찾을 수 없습니다");
+        assertThatThrownBy(() -> catalogAdminService.deleteGame(invalidId))
+                .isInstanceOf(BusinessException.class)
+                .extracting(ex -> ((BusinessException) ex).getErrorCode())
+                .isEqualTo(ErrorCode.GAME_NOT_FOUND);
     }
 
     // ========== upsertGameData — editionContents ==========
@@ -80,8 +87,9 @@ public class CatalogServiceTest {
     void upsertGameData_NewEditionContents_EvictsFamilyCache() {
         // given: 기존에 editionContents가 없는 게임
         Game existingGame = createExistingGame();
-        CollectRequest request = buildRequest();
-        request.setEditionContents(List.of("기본 게임", "DLC 팩"));
+        CollectRequest request = buildRequest().toBuilder()
+                .editionContents(List.of("기본 게임", "DLC 팩"))
+                .build();
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
@@ -100,8 +108,9 @@ public class CatalogServiceTest {
         Game existingGame = createExistingGame();
         existingGame.updateEditionContents(List.of("기본 게임"));
 
-        CollectRequest request = buildRequest();
-        request.setEditionContents(List.of("기본 게임")); // 동일 내용
+        CollectRequest request = buildRequest().toBuilder()
+                .editionContents(List.of("기본 게임")) // 동일 내용
+                .build();
 
         given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
         given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
@@ -117,8 +126,9 @@ public class CatalogServiceTest {
     @DisplayName("upsertGameData: 가격이 0이면 처리를 건너뛰고 어떤 저장도 발생하지 않는다")
     void upsertGameData_ZeroPrice_SkipsAllProcessing() {
         // given
-        CollectRequest request = buildRequest();
-        request.setCurrentPrice(0);
+        CollectRequest request = buildRequest().toBuilder()
+                .currentPrice(0)
+                .build();
 
         // when
         catalogService.upsertGameData(request);
@@ -184,13 +194,13 @@ public class CatalogServiceTest {
 
     /** 기본 수집 요청 DTO. genreIds=null 이라 genreRepository 호출 없음. */
     private CollectRequest buildRequest() {
-        CollectRequest dto = new CollectRequest();
-        dto.setPsStoreId("HP0700-PPSA001-GAME");
-        dto.setTitle("Test Game");
-        dto.setOriginalPrice(69900);
-        dto.setCurrentPrice(69900);
-        dto.setDiscountRate(0);
-        dto.setReleaseDate(LocalDate.now().minusMonths(2));
-        return dto;
+        return CollectRequest.builder()
+                .psStoreId("HP0700-PPSA001-GAME")
+                .title("Test Game")
+                .originalPrice(69900)
+                .currentPrice(69900)
+                .discountRate(0)
+                .releaseDate(LocalDate.now().minusMonths(2))
+                .build();
     }
 }

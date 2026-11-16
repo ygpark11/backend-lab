@@ -50,7 +50,7 @@ public class InternalWebhookController {
             @RequestBody RankingUpdateRequest payload) {
         rankingService.updateRankings(payload);
 
-        log.info("[Webhook] 랭킹 업데이트 수신 및 처리 완료 ({})", payload.getRankingType());
+        log.info("[Webhook] 랭킹 업데이트 수신 및 처리 완료 ({})", payload.rankingType());
         return ResponseEntity.ok("Rankings processed");
     }
 

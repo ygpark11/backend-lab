@@ -92,10 +92,10 @@ class ArcadeServiceTest {
         em.clear();
 
         // then
-        assertThat(response.isSuccess()).isTrue();
+        assertThat(response.success()).isTrue();
         assertThat(response.isNewHighScore()).isTrue();
-        assertThat(response.getScore()).isEqualTo(10000);
-        assertThat(response.getRank()).isEqualTo(1);
+        assertThat(response.score()).isEqualTo(10000);
+        assertThat(response.rank()).isEqualTo(1);
 
         Optional<ArcadeRecord> saved = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN);
         assertThat(saved).isPresent();
@@ -124,7 +124,7 @@ class ArcadeServiceTest {
 
         // then
         assertThat(response.isNewHighScore()).isTrue();
-        assertThat(response.getScore()).isEqualTo(14000);
+        assertThat(response.score()).isEqualTo(14000);
 
         ArcadeRecord updated = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN).orElseThrow();
         assertThat(updated.getScore()).isEqualTo(14000);
@@ -152,7 +152,7 @@ class ArcadeServiceTest {
 
         // then
         assertThat(response.isNewHighScore()).isFalse();
-        assertThat(response.getScore()).isEqualTo(15000); // 여전히 15000점 유지
+        assertThat(response.score()).isEqualTo(15000); // 여전히 15000점 유지
 
         ArcadeRecord record = arcadeRecordRepository.findByMemberIdAndGameType(member1.getId(), ArcadeGameType.SICHUAN).orElseThrow();
         assertThat(record.getScore()).isEqualTo(15000);
@@ -213,28 +213,28 @@ class ArcadeServiceTest {
         LeaderboardResponse response = arcadeService.getLeaderboard("sichuan", member2.getId());
 
         // then
-        assertThat(response.getGameType()).isEqualTo("sichuan");
-        assertThat(response.getTopList()).hasSize(3);
+        assertThat(response.gameType()).isEqualTo("sichuan");
+        assertThat(response.topList()).hasSize(3);
 
         // 1위 확인
-        assertThat(response.getTopList().get(0).getRank()).isEqualTo(1);
-        assertThat(response.getTopList().get(0).getUsername()).isEqualTo("GamerOne");
-        assertThat(response.getTopList().get(0).getScore()).isEqualTo(15000);
+        assertThat(response.topList().get(0).rank()).isEqualTo(1);
+        assertThat(response.topList().get(0).username()).isEqualTo("GamerOne");
+        assertThat(response.topList().get(0).score()).isEqualTo(15000);
 
         // 2위 확인
-        assertThat(response.getTopList().get(1).getRank()).isEqualTo(2);
-        assertThat(response.getTopList().get(1).getUsername()).isEqualTo("GamerTwo");
-        assertThat(response.getTopList().get(1).getScore()).isEqualTo(12000);
+        assertThat(response.topList().get(1).rank()).isEqualTo(2);
+        assertThat(response.topList().get(1).username()).isEqualTo("GamerTwo");
+        assertThat(response.topList().get(1).score()).isEqualTo(12000);
 
         // 3위 확인
-        assertThat(response.getTopList().get(2).getRank()).isEqualTo(3);
-        assertThat(response.getTopList().get(2).getUsername()).isEqualTo("GamerThree");
-        assertThat(response.getTopList().get(2).getScore()).isEqualTo(12000);
+        assertThat(response.topList().get(2).rank()).isEqualTo(3);
+        assertThat(response.topList().get(2).username()).isEqualTo("GamerThree");
+        assertThat(response.topList().get(2).score()).isEqualTo(12000);
 
         // member2의 myRank 검증
-        assertThat(response.getMyRank()).isNotNull();
-        assertThat(response.getMyRank().getRank()).isEqualTo(2);
-        assertThat(response.getMyRank().getScore()).isEqualTo(12000);
+        assertThat(response.myRank()).isNotNull();
+        assertThat(response.myRank().rank()).isEqualTo(2);
+        assertThat(response.myRank().score()).isEqualTo(12000);
     }
 
     @Test
@@ -252,8 +252,8 @@ class ArcadeServiceTest {
         LeaderboardResponse response = arcadeService.getLeaderboard("sichuan", null);
 
         // then
-        assertThat(response.getTopList()).hasSize(1);
-        assertThat(response.getMyRank()).isNull();
+        assertThat(response.topList()).hasSize(1);
+        assertThat(response.myRank()).isNull();
     }
 
     @Test
@@ -271,11 +271,11 @@ class ArcadeServiceTest {
         LeaderboardResponse response = arcadeService.getLeaderboard("flight", member1.getId());
 
         // then
-        assertThat(response.getGameType()).isEqualTo("flight");
-        assertThat(response.getTopList()).hasSize(1);
-        assertThat(response.getTopList().get(0).getScore()).isEqualTo(85000);
-        assertThat(response.getMyRank()).isNotNull();
-        assertThat(response.getMyRank().getRank()).isEqualTo(1);
-        assertThat(response.getMyRank().getScore()).isEqualTo(85000);
+        assertThat(response.gameType()).isEqualTo("flight");
+        assertThat(response.topList()).hasSize(1);
+        assertThat(response.topList().get(0).score()).isEqualTo(85000);
+        assertThat(response.myRank()).isNotNull();
+        assertThat(response.myRank().rank()).isEqualTo(1);
+        assertThat(response.myRank().score()).isEqualTo(85000);
     }
 }

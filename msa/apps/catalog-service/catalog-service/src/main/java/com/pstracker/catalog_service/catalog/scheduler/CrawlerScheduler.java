@@ -36,29 +36,7 @@ public class CrawlerScheduler {
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void scheduleCrawling() {
         log.info("Scheduled Task: Triggering Batch Crawlers ({} instances)...", clientManager.getAll().size());
-        List<CollectorApiClient> clients = clientManager.getAll();
-
-        for (int i = 0; i < clients.size(); i++) {
-            final int shardIdx = i;
-            final CollectorApiClient client = clients.get(i);
-            final long delayMs = shardIdx * SHARD_DELAY_MS;
-
-            Thread.ofVirtual().start(() -> {
-                try {
-                    if (delayMs > 0) {
-                        log.info("배치 수집기 #{}: {}분 후 기동 예정", shardIdx, delayMs / 60_000);
-                        Thread.sleep(delayMs);
-                    }
-                    String response = client.triggerBatchCrawl(new CrawlTriggerRequest(internalSecretKey));
-                    log.info("배치 수집기 #{} 기동 완료. Response: {}", shardIdx, response);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    log.warn("배치 수집기 #{} 기동 인터럽트됨", shardIdx);
-                } catch (Exception e) {
-                    log.error("배치 수집기 #{} 기동 실패: {}", shardIdx, e.getMessage());
-                }
-            });
-        }
+        dispatchBatchCrawls("배치 수집기");
     }
 
     /**
@@ -87,20 +65,29 @@ public class CrawlerScheduler {
     /** 수동 배치 트리거 (AdminController → CatalogController에서 호출) */
     public void triggerCrawler() {
         log.info("Triggering manual batch crawl ({} instances)...", clientManager.getAll().size());
+        dispatchBatchCrawls("수동 배치 수집기");
+    }
+
+    private void dispatchBatchCrawls(String label) {
         List<CollectorApiClient> clients = clientManager.getAll();
         for (int i = 0; i < clients.size(); i++) {
             final int shardIdx = i;
             final CollectorApiClient client = clients.get(i);
             final long delayMs = shardIdx * SHARD_DELAY_MS;
+
             Thread.ofVirtual().start(() -> {
                 try {
-                    if (delayMs > 0) Thread.sleep(delayMs);
+                    if (delayMs > 0) {
+                        log.info("{} #{}: {}분 후 기동 예정", label, shardIdx, delayMs / 60_000);
+                        Thread.sleep(delayMs);
+                    }
                     String response = client.triggerBatchCrawl(new CrawlTriggerRequest(internalSecretKey));
-                    log.info("수동 배치 수집기 #{} 기동 완료. Response: {}", shardIdx, response);
+                    log.info("{} #{} 기동 완료. Response: {}", label, shardIdx, response);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
+                    log.warn("{} #{} 기동 인터럽트됨", label, shardIdx);
                 } catch (Exception e) {
-                    log.error("수동 배치 수집기 #{} 기동 실패: {}", shardIdx, e.getMessage());
+                    log.error("{} #{} 기동 실패: {}", label, shardIdx, e.getMessage());
                 }
             });
         }

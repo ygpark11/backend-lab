@@ -4,6 +4,8 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.repository.GameVoteRepository;
 import com.pstracker.catalog_service.catalog.repository.WishlistRepository;
+import com.pstracker.catalog_service.global.exception.BusinessException;
+import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
 import com.pstracker.catalog_service.member.dto.MyPagePioneeredGameResponse;
 import com.pstracker.catalog_service.member.dto.MyPageProfileResponse;
@@ -32,8 +34,7 @@ public class MyPageService {
     private final GameVoteRepository gameVoteRepository;
 
     public MyPageProfileResponse getMyProfile(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
+        Member member = findMemberOrThrow(memberId);
 
         // 1-1. 스탯 계산
         int totalSavedAmount = wishlistRepository.sumSavedAmountByMemberId(memberId);
@@ -97,24 +98,21 @@ public class MyPageService {
     }
 
     public MyPageSettings getMySettings(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
+        Member member = findMemberOrThrow(memberId);
         return new MyPageSettings(member.isPriceAlertEnabled(), member.isNightModeEnabled());
     }
 
     @Transactional
     public MyPageSettings updateMySettings(Long memberId, MyPageSettings settingsDto) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
+        Member member = findMemberOrThrow(memberId);
 
-        member.updateSettings(settingsDto.isPriceAlert(), settingsDto.isNightMode());
+        member.updateSettings(settingsDto.priceAlert(), settingsDto.nightMode());
         return new MyPageSettings(member.isPriceAlertEnabled(), member.isNightModeEnabled());
     }
 
     @Transactional
     public String updateNickname(Long memberId, String newNickname) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("회원 정보가 없습니다."));
+        Member member = findMemberOrThrow(memberId);
 
         String trimmedNickname = newNickname.trim();
 
@@ -137,5 +135,10 @@ public class MyPageService {
         gameRepository.updatePioneerNameByMemberId(memberId, trimmedNickname);
 
         return member.getNickname();
+    }
+
+    private Member findMemberOrThrow(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "회원 정보가 없습니다."));
     }
 }

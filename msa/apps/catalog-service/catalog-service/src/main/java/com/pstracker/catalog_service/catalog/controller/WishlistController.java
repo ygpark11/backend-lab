@@ -25,7 +25,7 @@ public class WishlistController {
             @RequestBody(required = false) WishlistRequest request,
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
-        Integer targetPrice = (request != null) ? request.getTargetPrice() : null;
+        Integer targetPrice = (request != null) ? request.targetPrice() : null;
         String resultMessage = wishlistService.toggleWishlist(principal.getMemberId(), gameId, targetPrice);
         return ResponseEntity.ok(resultMessage);
     }
