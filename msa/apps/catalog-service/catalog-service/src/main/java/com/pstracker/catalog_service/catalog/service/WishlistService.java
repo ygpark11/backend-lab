@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.domain.Wishlist;
 import com.pstracker.catalog_service.catalog.dto.GameGenreResult;
 import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
+import com.pstracker.catalog_service.catalog.dto.WishlistStatusResponse;
 import com.pstracker.catalog_service.catalog.repository.GameGenreRepository;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
@@ -40,10 +41,10 @@ public class WishlistService {
     private final MemberRepository memberRepository; // Proxy 조회용
 
     /**
-     * 찜하기 토글 (목표가가 전달되면 목표가 설정/수정, 미전달 시 기존 찜 취소 또는 신규 추가)
+     * 찜 등록 또는 목표가 설정/수정 (멱등한 upsert 동작).
      */
     @Transactional
-    public String toggleWishlist(Long memberId, Long gameId, Integer targetPrice) {
+    public WishlistStatusResponse upsertWishlist(Long memberId, Long gameId, Integer targetPrice) {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GAME_NOT_FOUND));
 
@@ -59,29 +60,39 @@ public class WishlistService {
 
         if (existingWishlist.isPresent()) {
             Wishlist wishlist = existingWishlist.get();
-
-            // 1. 이미 찜한 상태인데 새로운 목표가를 보냈다 -> '수정'
             if (targetPrice != null) {
                 wishlist.updateTargetPrice(targetPrice);
-                return "목표가가 설정되었습니다.";
-            } else {
-                // 2. 목표가 없이 다시 하트를 눌렀다 -> 기존 찜 '취소'
-                wishlistRepository.delete(wishlist);
-                return "찜 목록에서 삭제되었습니다.";
+                return WishlistStatusResponse.saved(targetPrice, "목표가가 설정되었습니다.");
             }
-        } else {
-            // 3. 새로 찜하는 경우 -> '추가'
-            if (wishlistRepository.countByMemberId(memberId) >= MAX_WISHLIST_LIMIT) {
-                throw new IllegalStateException("위시리스트는 최대 " + MAX_WISHLIST_LIMIT + "개까지만 등록 가능합니다.");
-            }
-
-            Member memberRef = memberRepository.getReferenceById(memberId);
-
-            Wishlist newWishlist = Wishlist.createWithTargetPrice(memberRef, game, targetPrice);
-            wishlistRepository.save(newWishlist);
-
-            return "찜 목록에 추가되었습니다.";
+            // targetPrice가 없으면 기존 목표가를 유지한 채 멱등하게 성공 응답
+            return WishlistStatusResponse.saved(wishlist.getTargetPrice(), "찜 목록에 추가되었습니다.");
         }
+
+        if (wishlistRepository.countByMemberId(memberId) >= MAX_WISHLIST_LIMIT) {
+            throw new IllegalStateException("위시리스트는 최대 " + MAX_WISHLIST_LIMIT + "개까지만 등록 가능합니다.");
+        }
+
+        Member memberRef = memberRepository.getReferenceById(memberId);
+        Wishlist newWishlist = Wishlist.createWithTargetPrice(memberRef, game, targetPrice);
+        wishlistRepository.save(newWishlist);
+
+        String message = (targetPrice != null) ? "목표가가 설정되었습니다." : "찜 목록에 추가되었습니다.";
+        return WishlistStatusResponse.saved(newWishlist.getTargetPrice(), message);
+    }
+
+    /**
+     * 찜 해제 (이미 해제된 경우에도 멱등하게 성공 응답).
+     */
+    @Transactional
+    public WishlistStatusResponse removeWishlist(Long memberId, Long gameId) {
+        if (!gameRepository.existsById(gameId)) {
+            throw new BusinessException(ErrorCode.GAME_NOT_FOUND);
+        }
+
+        wishlistRepository.findByMemberIdAndGameId(memberId, gameId)
+                .ifPresent(wishlistRepository::delete);
+
+        return WishlistStatusResponse.removed("찜 목록에서 삭제되었습니다.");
     }
 
     /**

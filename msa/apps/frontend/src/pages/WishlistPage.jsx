@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import client from '../api/client';
+import { getMyWishlist, removeWishlist } from '../api/wishlistApi';
 import toast from 'react-hot-toast';
 import {useLocation} from 'react-router-dom';
 import {useTransitionNavigate} from '../hooks/useTransitionNavigate';
@@ -158,21 +158,23 @@ const WishlistPage = () => {
         const isFirst = gamesRef.current.length === 0;
         setLoading(true);
         try {
-            const response = await client.get('/api/v1/wishlists', {
-                params: { page: pageNumber, size: WISHLIST_PAGE_SIZE, sort: 'createdAt,desc' }
+            const pageData = await getMyWishlist({
+                page: pageNumber,
+                size: WISHLIST_PAGE_SIZE,
+                sort: 'createdAt,desc'
             });
             setLoadFailed(false);
             setLoadMoreFailed(false);
             if (isFirst) {
-                setGames(response.data.content);
+                setGames(pageData.content);
             } else {
                 setGames(prev => {
                     const existingIds = new Set(prev.map(g => g.gameId || g.id));
-                    const newGames = response.data.content.filter(g => !existingIds.has(g.gameId || g.id));
+                    const newGames = pageData.content.filter(g => !existingIds.has(g.gameId || g.id));
                     return [...prev, ...newGames];
                 });
             }
-            setTotalElements(response.data.totalElements);
+            setTotalElements(pageData.totalElements);
         } catch (error) {
             console.error(error);
             if (isFirst) setLoadFailed(true);
@@ -200,14 +202,14 @@ const WishlistPage = () => {
     const performDelete = async (gameId) => {
         const toastId = toast.loading('삭제 중...');
         try {
-            await client.post(`/api/v1/wishlists/${gameId}`);
+            const { liked, message } = await removeWishlist(gameId);
 
             toast.dismiss(toastId);
-            toast.success("삭제되었습니다", { duration: 3000 });
+            toast.success(message || "삭제되었습니다", { duration: 3000 });
 
             // 목록·개수 반영은 아래 이벤트 리스너가 처리 (상세 모달에서 해제한 경우와 같은 경로)
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
-                detail: { gameId: Number(gameId), liked: false }
+                detail: { gameId: Number(gameId), liked }
             }));
 
         } catch {

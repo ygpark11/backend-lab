@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import client from '../api/client';
+import { upsertWishlist, removeWishlist } from '../api/wishlistApi';
 import toast from 'react-hot-toast';
 import SkeletonCard from '../components/SkeletonCard';
 import {differenceInCalendarDays, parseISO} from 'date-fns';
@@ -729,12 +730,20 @@ const GameListPage = () => {
         );
 
         try {
-            await client.post(`/api/v1/wishlists/${gameId}`);
+            const { liked, message } = newLiked
+                ? await upsertWishlist(gameId)
+                : await removeWishlist(gameId);
+
+            setGames(prevGames =>
+                prevGames.map(game =>
+                    game.id === gameId ? { ...game, liked } : game
+                )
+            );
             toast.success(
-                originalLiked ? '위시리스트에서 삭제되었습니다.' : '위시리스트에 추가되었습니다! (할인 알림 활성화)'
+                liked ? `${message} (할인 알림 활성화)` : message
             );
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
-                detail: { gameId, liked: newLiked }
+                detail: { gameId, liked }
             }));
         } catch (error) {
             setGames(prevGames =>

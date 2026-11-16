@@ -2,6 +2,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { useTransitionNavigate } from '../hooks/useTransitionNavigate';
 import client from '../api/client';
+import { upsertWishlist, removeWishlist } from '../api/wishlistApi';
 import toast from 'react-hot-toast';
 // 차트 라이브러리(recharts)는 용량이 커서 상세 본문 렌더링을 막지 않도록 별도 지연 로드
 const PriceChart = lazyWithReload(() => import('../components/PriceChart'));
@@ -988,22 +989,21 @@ export default function GameDetailPage() {
         ), { duration: 5000, style: { background: 'transparent', boxShadow: 'none' } });
     };
 
-    const handleTargetSubmit = async (targetPrice = null) => {
+    const submitWishlistChange = async (requestFn) => {
         const toastId = toast.loading('처리 중...');
         try {
-            const response = await client.post(`/api/v1/wishlists/${id}`, { targetPrice });
-            const msg = response.data;
-            const added = msg.includes("추가") || msg.includes("설정") || msg.includes("완료");
+            const { liked, targetPrice: savedTargetPrice, message } = await requestFn();
 
-            setIsLiked(added);
+            setIsLiked(liked);
+            setGame(prev => prev ? { ...prev, liked, myTargetPrice: liked ? savedTargetPrice : null } : prev);
             setIsTargetModalOpen(false);
-            toast.success(msg, {
+            toast.success(message, {
                 id: toastId,
-                icon: added ? <Heart className="w-5 h-5 text-red-500 fill-current animate-bounce" /> : <Heart className="w-5 h-5 text-secondary" />
+                icon: liked ? <Heart className="w-5 h-5 text-red-500 fill-current animate-bounce" /> : <Heart className="w-5 h-5 text-secondary" />
             });
 
             window.dispatchEvent(new CustomEvent('ps-wishlist-updated', {
-                detail: { gameId: Number(id), liked: added }
+                detail: { gameId: Number(id), liked }
             }));
 
             const res = await client.get(`/api/v1/games/${id}`);
@@ -1030,6 +1030,9 @@ export default function GameDetailPage() {
         }
     };
 
+    const handleTargetSubmit = (targetPrice = null) =>
+        submitWishlistChange(() => upsertWishlist(id, targetPrice));
+
     const onWishlistClick = async () => {
         if (!isAuthenticated) {
             openLoginModal();
@@ -1037,7 +1040,7 @@ export default function GameDetailPage() {
         }
 
         if (isLiked) {
-            handleTargetSubmit(null);
+            submitWishlistChange(() => removeWishlist(id));
         } else {
             const success = await handleTargetSubmit(null);
             if (success) setIsTargetModalOpen(true);

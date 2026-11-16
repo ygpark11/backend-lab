@@ -1,7 +1,8 @@
 package com.pstracker.catalog_service.catalog.controller;
 
-import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
 import com.pstracker.catalog_service.catalog.dto.WishlistRequest;
+import com.pstracker.catalog_service.catalog.dto.WishlistResponse;
+import com.pstracker.catalog_service.catalog.dto.WishlistStatusResponse;
 import com.pstracker.catalog_service.catalog.service.WishlistService;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import lombok.RequiredArgsConstructor;
@@ -19,15 +20,22 @@ public class WishlistController {
 
     private final WishlistService wishlistService;
 
-    @PostMapping("/{gameId}")
-    public ResponseEntity<String> toggleWishlist(
+    @PutMapping("/{gameId}")
+    public ResponseEntity<WishlistStatusResponse> upsertWishlist(
             @PathVariable Long gameId,
             @RequestBody(required = false) WishlistRequest request,
             @AuthenticationPrincipal MemberPrincipal principal
     ) {
         Integer targetPrice = (request != null) ? request.targetPrice() : null;
-        String resultMessage = wishlistService.toggleWishlist(principal.getMemberId(), gameId, targetPrice);
-        return ResponseEntity.ok(resultMessage);
+        return ResponseEntity.ok(wishlistService.upsertWishlist(principal.getMemberId(), gameId, targetPrice));
+    }
+
+    @DeleteMapping("/{gameId}")
+    public ResponseEntity<WishlistStatusResponse> removeWishlist(
+            @PathVariable Long gameId,
+            @AuthenticationPrincipal MemberPrincipal principal
+    ) {
+        return ResponseEntity.ok(wishlistService.removeWishlist(principal.getMemberId(), gameId));
     }
 
     @GetMapping
