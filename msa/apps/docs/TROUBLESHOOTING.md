@@ -100,8 +100,9 @@
 ### ⚡ Case 27. 1GB 램 한계를 극복하는 하이브리드 캐싱 전략 (Hybrid Caching)
 * **문제 발생:** 빈번한 DB 조회가 CPU 스파이크를 유발하나, 사용자별 '찜(Like)' 상태나 '투표' 같은 개인화된 동적 데이터 때문에 전체 페이지를 캐싱(Full Caching)할 수 없음.
 * **해결 방안:** 
-  * **Caffeine Cache 도입:** 변경 빈도가 낮은 '게임 상세 메타 정보'와 '가격 차트'는 로컬 캐시(TTL 1h)에 담아 DB I/O 부하를 제거.
+  * **Caffeine Cache 도입:** 변경 빈도가 낮은 '게임 상세 메타 정보'와 '가격 차트'는 로컬 캐시에 담아 DB I/O 부하를 제거.
   * **하이브리드 조립(Hybrid 조립):** 캐시된 정적 데이터(Game Info)를 먼저 꺼내오고, 실시간 동적 데이터(User Status)만 DB에서 조회한 뒤 Service Layer에서 하나의 응답으로 병합(Assemble)하여 반환.
+  * **후속 확장:** Node 1이 2코어 8GB ARM64 서버로 이전됨에 따라 `gameDetailCache` 상한을 5,000건(`TTL 24h`)으로 확장하여 신규 수집 증가분을 여유 있게 수용하도록 조정.
 
 ### 🔄 Case 28. Spring AOP의 Self-Invocation 문제 해결
 * **문제 발생:** `CatalogService` 내부에서 `@Cacheable`이 선언된 자신의 다른 메서드를 호출(`this.method`)할 경우, 스프링 캐시가 작동하지 않고 매번 DB를 찌름.
@@ -224,3 +225,25 @@
 * **문제 발생:** 사용자가 알림 수신에 동의했음에도 FCM 알림이 수신되지 않음.
 * **원인 분석:** 알림 권한은 DB의 계정 정보가 아니라 현재 접속 중인 '브라우저 기기' 단위로 관리됨.
 * **해결 방안:** 로그인 직후 기기의 실제 권한 상태(`Notification.permission`)를 체크하여, 권한이 없을 경우 브라우저 네이티브 권한 요청 팝업을 띄우는 프론트엔드 동기화 로직 추가.
+
+---
+
+## 7. Migration & Performance Tuning (모던화 및 성능 개선)
+
+### 🚀 Case 38. Spring Boot 4.1.2 · JDK 25 · OpenFeign QueryDSL 7.7 · Jackson 3 마이그레이션
+* **배경:** 유지보수가 중단된 `com.querydsl:querydsl-jpa:5.0.0:jakarta` 의존성 탈피, Java 25 LTS 런타임 및 Spring Boot 4 / Gradle 9 생태계 전환을 통한 장기 유지보수성과 코드 현대화 추진.
+* **주요 이슈 및 해결:**
+  * **Spring Boot 4 스타터 모듈화:** `spring-boot-starter-web` → `spring-boot-starter-webmvc`, `spring-boot-starter-aop` → `spring-boot-starter-aspectj`로 전환하고, 테스트 계층에는 `spring-boot-starter-webmvc-test`, `spring-boot-starter-security-test`를 추가해 변경된 `@WebMvcTest`(`org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest`) 패키지 경로에 대응.
+  * **OpenFeign QueryDSL 7.7 전환:** `io.github.openfeign.querydsl:querydsl-jpa:7.7` + `querydsl-apt:7.7:jpa`로 교체. `@QueryProjection`을 Java `record` 생성자에 직접 적용 가능해져 남은 DTO 3종(`GameGenreResult`, `GameSearchResponse`, `WishlistResponse`)까지 전 DTO를 불변 `record`로 통일(`GameRepositoryCustomImpl`의 `.sum()` → `.sumLong()` 변경).
+  * **Jackson 3 패키지 전환 & 외부 계약 보호:** `ObjectMapper` 등이 `tools.jackson.*`로 이동함에 따라 직렬화 코드를 전환하고(`com.fasterxml.jackson.annotation.*` 유지), `DtoJsonContractTest`를 추가해 프론트엔드와의 기존 JSON 키 계약을 100% 검증.
+
+### 🛡️ Case 39. 캐시·트랜잭션 AOP 우선순위 및 `@Async` 이벤트 리스너 커넥션 점유 해소
+* **문제 발견:**
+  1. `@EnableCaching`과 `@EnableTransactionManagement`가 동일한 기본 우선순위(`Ordered.LOWEST_PRECEDENCE`)를 가져, `@Cacheable` 메서드 호출 시 캐시 히트 여부와 무관하게 DB 트랜잭션/`EntityManager`가 먼저 열릴 수 있음.
+  2. `@Async` `@TransactionalEventListener` (`GamePriceChangedListener`, `PsPlusDiscountListener`, `ScrapingEventListener`)가 `REQUIRES_NEW` 트랜잭션 안에서 외부 FCM HTTP I/O까지 수행하여, 네트워크 대기 중 DB 커넥션을 점유. 또한 `PioneerScrapingCompletedEvent`가 Detached `Member` 엔티티를 `@Async` 스레드로 넘기는 구조였음.
+  3. `InsightsService`가 대시보드 1회 구성에 19개 개별 캐시 키와 20회 DB 쿼리를 실행.
+* **해결 방안:**
+  * `@EnableCaching(order = Ordered.HIGHEST_PRECEDENCE)`로 캐시 AOP가 트랜잭션 AOP 바깥에서 먼저 실행되도록 조정.
+  * 이벤트 4종(`AnnouncementCreatedEvent`, `GamePriceChangedEvent`, `PioneerScrapingCompletedEvent`, `CrawlerErrorEvent`)을 불변 Java `record`로 전환하고, 엔티티 대신 스칼라 ID/닉네임만 전달.
+  * 이벤트 리스너와 `CatalogAdminService.triggerSingleGameRefresh()`, `GameScouterService`, `InternalWebhookController`에서 불필요한 `@Transactional`을 제거해 **DB 쓰기와 외부 HTTP I/O의 트랜잭션 경계를 엄격히 분리**.
+  * `GameRepositoryCustomImpl.fetchGameInsightStats()` 단일 `CaseBuilder` 조건부 집계 쿼리로 `InsightsService`를 20쿼리 → 3쿼리, 단일 `insightsCache`로 통합.

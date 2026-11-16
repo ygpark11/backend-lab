@@ -1,10 +1,10 @@
 # 🧠 핵심 구현 기술 상세 (Architecture & Implementation)
 
-데이터 정합성 확보와 제한된 리소스 내 안정적인 서비스 운영을 위해 내린 주요 기술적 의사결정을 설명합니다.
+초기 1GB RAM 환경의 제약에서 출발해 Node 1을 2코어 8GB ARM64 환경으로 확장하기까지, 데이터 정합성과 운영 안정성을 확보하기 위해 내린 주요 기술적 의사결정을 설명합니다.
 
 ---
 
-## 1. Backend Strategy (Java & Spring Boot)
+## 1. Backend Strategy (Java 25 & Spring Boot 4.1)
 
 ### 1-1. 선별적 수집 + 조건부 영속성 (Selective Collection & Conditional Persistence)
 
@@ -12,65 +12,68 @@
 * **Solution:**
   * **수집 대상 선별:** 마지막 수집 이후 하루가 지난 게임과 할인 종료일이 도래한 게임만 수집 대상으로 지정. 가격 변동이 없는 게임은 수집 자체를 건너뜀.
   * **조건부 저장:** `CatalogService` 내 `isSameCondition()` 메서드로 이전 데이터와 비교하여, 가격·할인율·세일 종료일 중 하나라도 변동이 있을 때만 DB에 저장.
-* **Effect:** 크롤링 요청 수와 DB 쓰기 횟수를 줄여 1GB RAM 환경에서의 부하를 낮추고, 가격 이력 테이블의 불필요한 레코드 누적을 방지.
+* **Effect:** 크롤링 요청 수(특히 1GB RAM 환경인 수집 워커 Node 2·3)와 DB 쓰기 횟수를 줄이고, 가격 이력 테이블의 불필요한 레코드 누적을 방지.
 
 ---
 
 ### 1-2. 이벤트 기반 아키텍처 (Event-Driven Architecture)
 
-* **Problem:** 가격 변동 저장 로직과 FCM·Discord 알림 발송 로직이 강하게 결합(Coupling)되면, 알림 전송 실패 시 트랜잭션 전체가 롤백될 위험이 있음.
-* **Solution:** `ApplicationEventPublisher`를 도입하여 가격 저장 로직(Core)과 알림 발송 로직(Side Effect)을 분리.
-  * 가격 변동 저장 완료 후 `GamePriceChangedEvent`를 발행.
-  * 이벤트 리스너에 `@Async`를 적용하여 알림 발송을 별도 스레드에서 비동기 처리.
-* **Effect:** 알림 발송 중 예외가 발생해도 데이터 저장에는 영향을 주지 않음. 알림 로직 변경 시 핵심 도메인 코드를 수정하지 않아도 됨.
+* **Problem:** 가격 변동 저장 로직과 FCM·Discord 알림 발송 및 캐시 무효화 로직이 강하게 결합(Coupling)되면, 부가 기능 실패 시 핵심 트랜잭션이 롤백되거나 외부 HTTP I/O 동안 DB 커넥션이 점유될 위험이 있음.
+* **Solution:** `ApplicationEventPublisher`와 `@TransactionalEventListener`를 도입하여 핵심 도메인 저장(Core)과 후속 부가 작업(Side Effect)을 분리.
+  * 가격 변동 저장 완료 후 `GamePriceChangedEvent`, 수집 완료 시 `PioneerScrapingCompletedEvent`, 배치 완료 시 `BatchCompletedEvent`를 발행.
+  * 모든 이벤트 페이로드는 Java `record`로 불변 설계하여 `@Async` 경계로 Detached JPA 엔티티가 넘어가지 않도록 스칼라 ID·값만 전달.
+  * `GamePriceChangedListener`, `PsPlusDiscountListener`, `ScrapingEventListener`에서 DB 쓰기와 외부 FCM HTTP 발송을 별도 트랜잭션 경계로 분리하여, 외부 네트워크 대기 중 HikariCP 커넥션을 점유하지 않도록 개선.
+* **Effect:** 알림 발송 중 예외가 발생해도 데이터 저장에는 영향을 주지 않으며, 도메인 서비스 간 순환/강결합 없이 알림·캐시 갱신 확장이 가능.
 
 ---
 
-### 1-3. 타입 안전한 동적 쿼리 + 역정규화 (QueryDSL & Denormalization)
+### 1-3. 타입 안전한 동적 쿼리 + 역정규화 + 조건부 단일 스캔 (QueryDSL & Denormalization)
 
 #### 동적 복합 검색 (Complex Search)
-* 가격 범위, Metacritic 점수, 장르, 할인율 등 N개 조건을 조합하는 검색 요청을 처리하기 위해 QueryDSL `BooleanBuilder` 기반 동적 쿼리를 구현.
-* 컴파일 타임에 쿼리 오류를 감지할 수 있어 런타임 에러 발생 지점을 줄임.
+* 가격 범위, Metacritic 점수, 장르, 할인율 등 N개 조건을 조합하는 검색 요청을 처리하기 위해 OpenFeign QueryDSL 7.7(`io.github.openfeign.querydsl:querydsl-jpa`) 기반 동적 쿼리를 구현.
+* 검색·찜 응답용 `@QueryProjection` DTO(`GameSearchResponse`, `WishlistResponse`, `GameGenreResult`)를 포함해 대부분의 요청/응답 DTO를 Java `record`로 통일하고, 17개 조건절과 프로젝션 로직을 공통 헬퍼 메서드로 통합.
 
-#### 조인 비용 제거를 위한 역정규화
-* **Problem:** 할인 게임 목록 조회 시, 1:N 관계인 `GamePriceHistory` 테이블에서 게임별 최근 가격을 구하는 Greatest-N-per-Group 서브쿼리와 Join이 매 조회마다 발생. 1GB RAM 환경에서 동시 접속 시 CPU 스파이크로 이어짐.
-* **Solution:** `current_price`, `discount_rate`, `lowest_price` 등 검색·정렬에 필수적인 필드를 `Game` 메인 엔티티에 중복 컬럼으로 배치(역정규화).
-  * 단일 테이블 스캔으로 조회 가능하여 Join 연산을 제거.
-  * 데이터 갱신(Upsert) 시점에 트랜잭션 내에서 두 테이블의 데이터를 동기화하여 정합성 유지.
+#### 조인 비용 제거를 위한 역정규화 & 단일 스캔 통계 집계
+* **Problem:** 할인 게임 목록 조회 시 1:N 관계인 `GamePriceHistory` 테이블에서 게임별 최근 가격을 구하는 Greatest-N-per-Group 서브쿼리와 Join이 매 조회마다 발생해 동시 접속 시 CPU 스파이크를 유발. 또한 `InsightsService` 통계 대시보드 역시 20회에 달하는 개별 count 쿼리로 DB 왕복 비용이 컸음.
+* **Solution:**
+  * `current_price`, `discount_rate`, `lowest_price` 등 검색·정렬에 필수적인 필드를 `Game` 메인 엔티티에 역정규화하여 단일 테이블 조회로 Join 제거(데이터 갱신 시 트랜잭션 내 동기화).
+  * `GameRepositoryCustomImpl.fetchGameInsightStats()`에서 `CaseBuilder` 조건부 집계 1회 쿼리로 게임 통계 지표를 한 번에 조회하도록 통합(`InsightsService` 20쿼리 → 3쿼리, 19개 개별 캐시 → `InsightsSummaryResponse` 1개 캐시).
 
 ---
 
-### 1-4. 리소스 제약을 고려한 5-Cache 하이브리드 전략 (Local Cache & Eviction)
+### 1-4. 5-Cache 하이브리드 전략 & 계층 분리 (Local Cache & Eviction)
 
-* **Problem:** B2C 카탈로그 서비스 특성상 게임 상세·통계·큐레이션·구독 가격·트렌딩 조회에 읽기 요청이 집중되지만, 1GB RAM 환경에서 별도 Redis 서버를 운영하는 것은 OOM 위험이 있음. 또한 게임 기본 정보(일 단위 변경), 유저 찜/투표 상태(실시간 변경), 찜 TOP 10(시간 단위 변경)을 동일한 방식으로 캐싱할 수 없음.
-* **Solution:** 데이터 생명주기에 맞춘 5-Cache 하이브리드 전략.
+* **Problem:** B2C 카탈로그 서비스 특성상 게임 상세·통계·큐레이션·구독 가격·트렌딩 조회에 읽기 요청이 집중됨. 초기 1GB RAM 환경의 Redis OOM 위험에서 출발해 2코어 8GB ARM64 단일 노드로 확장한 현재까지도 네트워크 왕복 없는 인프로세스 캐시가 적합함. 단, 게임 기본 정보(일 단위 변경), 유저 찜/투표 상태(실시간 변경), 찜 TOP N(시간 단위 변경)은 생명주기가 달라 단일 정책으로 관리할 수 없음.
+* **Solution:** 데이터 생명주기에 맞춘 Caffeine 5-Cache 하이브리드 전략 (`GlobalCacheConfig`).
 
-| 캐시명 | 대상 데이터 | TTL | 무효화 방식 |
-| :--- | :--- | :--- | :--- |
-| `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 배치 완료 시 웹훅 일괄 무효화 |
-| `insightsCache` | 통계 대시보드 | 24h | 배치 완료 시 웹훅 일괄 무효화 |
-| `curationCache` | 큐레이션 테마 미리보기 | 24h | 배치 완료 시 웹훅 일괄 무효화 |
-| `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 가격 갱신 시 `@CacheEvict` 즉시 무효화 |
-| `trendingCache` | 찜 TOP 10 게임 목록 | 1h | TTL 자동 만료 (찜 변화에 빠르게 반응) |
+| 캐시명 | 대상 데이터 | TTL | 상한 | 무효화 방식 |
+| :--- | :--- | :--- | :--- | :--- |
+| `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 5,000건 | 배치 완료 시 웹훅 일괄 무효화 |
+| `insightsCache` | 통계 대시보드 (`InsightsSummaryResponse`) | 24h | 50건 | 배치 완료 시 `BatchCompletedEvent` 무효화 |
+| `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 | 배치 완료 시 웹훅 일괄 무효화 |
+| `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 | 가격 갱신 시 `@CacheEvict` / 배치 완료 이벤트 무효화 |
+| `trendingCache` | 찜 TOP N 게임 목록 | 1h | 1건 | TTL 자동 만료 (찜 변화에 빠르게 반응) |
 
-**정적/동적 데이터 분리 조립:**
-캐싱된 게임 메타 정보(정적)를 꺼낸 뒤, 유저의 찜·투표 상태(동적)는 별도 DB 조회 후 `withDynamicData()`로 조립하여 반환. 캐시 정합성을 유지하면서 개인화 데이터를 함께 제공.
+**정적/동적 데이터 분리 조립 & AOP 순서 보장:**
+* 캐싱된 게임 메타 정보(정적)를 꺼낸 뒤, 유저의 찜·투표 상태(동적)만 별도 DB 조회 후 `withDynamicData()`로 조립하여 반환.
+* `@EnableCaching(order = Ordered.HIGHEST_PRECEDENCE)`를 지정하여 캐시 히트 시 `@Transactional` 프록시 진입 전에 즉시 반환함으로써 불필요한 DB 커넥션/EntityManager 생성을 방지.
 
-**Spring AOP Self-Invocation 해결:**
-`@Cacheable` 메서드를 동일 클래스에서 호출 시 Spring AOP 프록시가 개입하지 않아 캐시가 무시되는 문제를, `CatalogService`(쓰기/조율)와 `GameReadService`(읽기/캐시)로 빈을 분리하여 해결.
+**서비스 책임 분리 (`CatalogService` / `GameReadService` / `CatalogAdminService`):**
+* 동일 클래스 내 `@Cacheable` Self-Invocation을 해결하기 위해 읽기/캐시 전담 `GameReadService`를 분리.
+* 관리자 CRUD와 외부 크롤러 HTTP refresh(`triggerSingleGameRefresh`)를 `CatalogAdminService`로 분리하여, 외부 HTTP 호출이 DB 트랜잭션을 물지 않도록 경계를 정비.
 
 **배치 기반 일괄 무효화:**
-일일 배치가 완료되는 즉시 내부 웹훅 API를 호출하여 4개 캐시를 일괄 무효화. 무거운 통계·큐레이션 쿼리의 DB 부하를 첫 요청 이전에 처리하여, 서비스 재개 직후에도 지연 없이 최신 데이터를 제공.
+* 일일 배치가 완료되는 즉시 내부 웹훅 API를 호출하여 `BatchCompletedEvent` 및 캐시 무효화를 트리거하고, 최신 통계·카탈로그가 반영되도록 구성.
 
 ---
 
 ### 1-5. 전역 예외 처리 표준화 + AOP 기반 성능 가시성 확보
 
-* **Problem:** 예외 응답이 컨트롤러마다 `String`으로 개별 처리되어 프론트엔드가 `typeof === 'string'` 분기를 해야 하는 API 불일치 발생. 또한 서비스 레이어의 실행 시간을 관측할 단일 지점이 없어, 어느 메서드가 느린지 배포 이후에야 인지하는 구조였음.
+* **Problem:** 과거 컨트롤러마다 예외 응답이 불일치하고 리소스 미존재(404), 외부 크롤러 장애(503), 서버 내부 오류(500)가 구분되지 않았으며, 서비스 실행 시간을 관측할 단일 지점이 없었음.
 * **Solution:**
-  * `@RestControllerAdvice`의 `GlobalExceptionHandler`로 전역 예외를 단일 진입점에서 `ErrorResponse` (JSON 레코드)로 통일. 컨트롤러에서 중복 try-catch를 제거하고 HTTP 상태 코드도 의미에 맞게 정비 (`IllegalStateException` → 409 Conflict).
-  * `@Aspect` + `@Around("within(@Service *)")`로 모든 서비스 빈의 실행 시간을 횡단 관심사로 측정하는 `ServiceExecutionAspect` 추가. 500ms 초과 시 WARN 레벨 로그를 기록하여 Grafana Loki에서 느린 메서드를 선제적으로 탐지.
-* **Effect:** 예외 처리 책임이 한 곳으로 집중되어 컨트롤러가 비즈니스 로직에만 집중. AOP 특성상 모니터링 코드를 서비스 코드에 침투시키지 않고도 전체 레이어의 성능 이상을 감지 가능.
+  * `ErrorCode` + `BusinessException` + `@RestControllerAdvice` `GlobalExceptionHandler`를 통해 전역 예외를 단일 진입점에서 `ErrorResponse(String message)` JSON 레코드로 통일 (`*_NOT_FOUND` → 404 Not Found, `CRAWLER_UNAVAILABLE` → 503 Service Unavailable, `IllegalArgumentException`/검증 실패 → 400 Bad Request, `IllegalStateException` → 409 Conflict, 그 외 `Exception` → 500 + 안전 메시지).
+  * `@Aspect` + `@Around("within(@org.springframework.stereotype.Service *)")`로 모든 서비스 빈의 실행 시간을 횡단 관심사로 측정하는 `ServiceExecutionAspect` 운영. 500ms 초과 시 `[SLOW]` WARN 로그를 기록해 Grafana Loki에서 선제적으로 탐지.
+* **Effect:** 예외 처리 책임이 한 곳으로 집중되어 컨트롤러가 비즈니스 로직에만 집중하며, HTTP 상태 코드 의미와 직렬화(Jackson 3 `tools.jackson.*`) 일관성을 유지.
 
 ---
 
@@ -112,4 +115,4 @@
 | [OBSERVABILITY.md](OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud + Deadman Switch) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 3-Node 서버 배포, CI/CD 파이프라인, 멀티 아키텍처 빌드 |
 | [EXTERNAL_SERVICES.md](EXTERNAL_SERVICES.md) | Google Gemini, FCM, Discord 연동 |
-| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | 개발 과정 37가지 기술 이슈 분석 |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | 개발 과정 39가지 기술 이슈 분석 |

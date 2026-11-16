@@ -126,7 +126,7 @@ graph TD
 | **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 크롤링 전담 — SHARD_ID=0 (짝수 인덱스 게임) | 크롤링 전담 — SHARD_ID=1 (홀수 인덱스 게임) |
 | **서버** | Oracle A1 ARM64 — 2코어, 8GB RAM | Oracle AMD — 1코어, 1GB RAM | Oracle AMD — 1코어, 1GB RAM (구 1호기 재활용) |
 | **IP 주소** | `10.0.0.12` (Private) | `10.0.0.61` (Private) | Private (VCN 내부망) |
-| **Tech Stack** | Java 21, Spring Boot, MySQL 8.0, Caddy, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) | Python 3.10, Playwright, Local Cache (JSON) |
+| **Tech Stack** | Java 25, Spring Boot 4.1, MySQL 8.0, Caddy, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) | Python 3.10, Playwright, Local Cache (JSON) |
 | **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000` (Private Only) | `5000` (Private Only) |
 
 > **리소스 격리 전략:** Chromium과 MySQL·JVM이 동일 서버에서 메모리를 경합하여 OOM이 발생한 경험을 바탕으로 물리적으로 격리했습니다. 이후 SHARD_ID 기반 수평 확장으로 수집 처리 시간을 단축했습니다.
@@ -163,7 +163,7 @@ graph TD
 * **Analysis:** 1:N 구조의 가격 이력 테이블을 매 조회마다 Join하는 구조가 근본 원인. 검색 필터 적용 시 인덱스를 활용하지 못하는 케이스도 있었음.
 * **Solution:** `current_price`, `discount_rate` 등을 메인 테이블에 역정규화. 데이터 갱신 시 트랜잭션 내 두 테이블을 동기화하여 정합성 유지.
 
-👉 **[전체 37가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
+👉 **[전체 39가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
 
 ---
 
@@ -171,7 +171,7 @@ graph TD
 
 | 구분 | 기술 스택 |
 | :--- | :--- |
-| **Backend** | Java 21, Spring Boot 3.5, Spring Security, JPA/QueryDSL, Gradle, JUnit 5, Mockito |
+| **Backend** | Java 25, Spring Boot 4.1, Spring Security, JPA / OpenFeign QueryDSL 7, Gradle 9, JUnit 5, Mockito |
 | **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios |
 | **Data & Crawling** | Python 3.10, Playwright, Manual Stealth (JS Injection) |
 | **Database** | MySQL 8.0 |
@@ -186,7 +186,7 @@ graph TD
 
 ### 사전 준비
 - Docker & Docker Compose
-- Java 21+ (로컬 디버깅용)
+- Java 25+ (로컬 디버깅용)
 - Node.js 20+ (프론트엔드 로컬 실행용)
 
 ### 로컬 개발 환경

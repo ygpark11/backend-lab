@@ -1,6 +1,6 @@
 # 📡 관측성 및 모니터링 가이드 (Observability with PLG)
 
-이 문서는 제한된 리소스(1GB RAM) 환경에서 서버의 상태를 실시간으로 감시하기 위해 구축한 **PLG 스택(Prometheus, Loki, Grafana)** 의 아키텍처와 설정 방법을 설명합니다.
+이 문서는 제한된 리소스(초기 1GB RAM, 현 Node 1 2코어 8GB ARM64) 환경에서 모니터링 오버헤드를 최소화하면서 서버 상태를 실시간으로 감시하기 위해 구축한 **PLG 스택(Prometheus, Loki, Grafana)** 의 아키텍처와 설정 방법을 설명합니다.
 
 ---
 
@@ -42,7 +42,7 @@ graph LR
 
 ## 2. 리소스 다이어트 전략 (Resource Optimization)
 
-Oracle Cloud Free Tier(1GB RAM) 환경에서 모니터링 에이전트가 메인 서비스(Java)를 죽이는 주객전도 현상을 막기 위해 철저한 리소스 제한을 적용했습니다.
+초기 Oracle Cloud Free Tier(1GB RAM) 환경에서 모니터링 에이전트가 메인 서비스(Java)를 죽이는 주객전도 현상을 막기 위해 철저한 리소스 제한을 적용했으며, 2코어 8GB ARM64 서버로 이전한 현재도 경량 구성을 유지하고 있습니다.
 
 ### 📉 용량 산정 과정 (Capacity Planning)
 단순한 감(Guess)이 아닌, **실제 운영 중인 컨테이너의 리소스 점유율(Footprint)** 을 측정하여 최적의 한계점을 산출했습니다.
@@ -168,7 +168,7 @@ sum(rate({filename=~"/var/log/pstracker/.*"} |= "[SLOW]" [5m]))
 
 | 캐시명 | 용도 | TTL | 상한 |
 |--------|------|-----|------|
-| `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 2,000건 |
+| `gameDetailCache` | 게임 상세 (메타·가격 이력) | 24h | 5,000건 |
 | `insightsCache` | 통계 대시보드 | 24h | 50건 |
 | `curationCache` | 큐레이션 테마 미리보기 | 24h | 30건 |
 | `psPlusPricingCache` | PS Plus 구독 가격 | 24h | 1건 |

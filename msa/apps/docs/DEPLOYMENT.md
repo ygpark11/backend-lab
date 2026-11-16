@@ -99,8 +99,8 @@ RUN npm run build
 
 ### 🛡️ 신뢰성 중심 배포 (Reliability-First Deployment)
 기존에는 빌드 속도를 위해 테스트를 생략(`-x test`)했으나, 안정성 확보를 위해 **배포 전 테스트 수행을 의무화**했습니다.
-- CI 파이프라인의 독립 스텝(`Run Tests`)에서 `./gradlew test`가 수행됩니다.
-- Dockerfile 내 빌드는 `-x test`로 테스트를 제외하여 빌드 시간을 단축하고, 테스트와 빌드의 역할을 명확히 분리했습니다.
+- CI 파이프라인의 독립 스텝(`Run Tests`)에서 `./gradlew test`가 수행됩니다 (Gradle 9.2.1 + Java 25 툴체인, Spring Boot 4.1.2).
+- `catalog-service` 컨테이너 이미지는 `eclipse-temurin:25-jdk-noble` 빌더와 `eclipse-temurin:25-jre-noble` 런타임을 사용하며, Dockerfile 내 빌드는 `-x test`로 중복 테스트를 생략해 테스트와 이미지 패키징의 역할을 분리했습니다.
 - 테스트 실패 시(Red) 이후 단계가 즉시 중단되어, 결함 있는 코드가 운영 서버에 배포되는 것을 원천 차단합니다.
 
 ---
