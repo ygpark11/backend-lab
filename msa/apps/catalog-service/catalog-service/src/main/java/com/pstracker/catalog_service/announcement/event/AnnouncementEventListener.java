@@ -33,7 +33,7 @@ public class AnnouncementEventListener {
             return;
         }
 
-        String pushTitle = "[공지] " + event.getTitle();
+        String pushTitle = "[공지] " + event.title();
         String pushBody = "공지가 등록되었습니다. 자세한 내용은 공지사항에서 확인해주세요.";
 
         Map<String, String> fcmData = Map.of("url", "/games");

@@ -1,5 +1,6 @@
 package com.pstracker.catalog_service.scraping.service;
 
+import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.dto.CrawlerCallbackRequest;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.scraping.domain.GameCandidate;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -37,7 +39,11 @@ public class ScrapingWebhookService {
         if ("SUCCESS".equals(payload.status())) {
             request.markAsCompleted();
             log.debug("수집 완료 보고 접수! 개척자 {}님에게 푸시 알림 발송 준비...", request.getMember().getNickname());
-            eventPublisher.publishEvent(new PioneerScrapingCompletedEvent(request.getPsStoreId(), request.getMember()));
+            eventPublisher.publishEvent(new PioneerScrapingCompletedEvent(
+                    request.getPsStoreId(),
+                    request.getMember().getId(),
+                    request.getMember().getNickname()
+            ));
         } else {
             request.markAsFailed(payload.errorMessage());
             log.error("크롤링 실패 보고 접수: {}", payload.errorMessage());
@@ -64,5 +70,16 @@ public class ScrapingWebhookService {
                 .imageUrl(payload.imageUrl())
                 .build());
         return true;
+    }
+
+    /**
+     * 비동기 이벤트 리스너가 외부 FCM 호출 전에 DB 업데이트만 짧은 독립 트랜잭션으로 커밋하도록 분리한다.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public String assignPioneerAndGetGameName(String psStoreId, Long memberId, String memberNickname) {
+        Game game = gameRepository.findByPsStoreId(psStoreId)
+                .orElseThrow(() -> new IllegalArgumentException("수집 완료 콜백을 받았으나 DB에서 게임을 찾을 수 없습니다: " + psStoreId));
+        game.updatePioneerInfo(memberId, memberNickname);
+        return game.getName();
     }
 }

@@ -10,12 +10,13 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Configuration
-@EnableCaching
+@EnableCaching(order = Ordered.HIGHEST_PRECEDENCE)
 public class GlobalCacheConfig {
 
     public static final String GAME_DETAIL_CACHE = "gameDetailCache";
@@ -30,10 +31,10 @@ public class GlobalCacheConfig {
 
     @Bean
     public CacheManager cacheManager(MeterRegistry meterRegistry) {
-        // 1. 게임 상세 캐시 (전체 게임 수 ~2,000개 기준, 1GB 서버 메모리 고려)
+        // 1. 게임 상세 캐시 (전체 카탈로그 및 신규 수집 증가 여유분 반영)
         Cache<Object, Object> gameDetailNative = Caffeine.newBuilder()
                 .expireAfterWrite(24, TimeUnit.HOURS)
-                .maximumSize(2_000)
+                .maximumSize(5_000)
                 .recordStats()
                 .build();
         CaffeineCacheMetrics.monitor(meterRegistry, gameDetailNative, GAME_DETAIL_CACHE);

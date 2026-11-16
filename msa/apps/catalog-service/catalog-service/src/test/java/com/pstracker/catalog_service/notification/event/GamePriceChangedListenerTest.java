@@ -47,7 +47,7 @@ public class GamePriceChangedListenerTest {
     void handle_NoSubscribers() {
         GamePriceChangedEvent event = createEvent();
 
-        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+        given(wishlistRepository.findAllByGameIdWithMember(event.gameId()))
                 .willReturn(Collections.emptyList());
 
         listener.handlePriceChange(event);
@@ -66,7 +66,7 @@ public class GamePriceChangedListenerTest {
 
         Wishlist wishlist = createWishlist(member, 50000);
 
-        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+        given(wishlistRepository.findAllByGameIdWithMember(event.gameId()))
                 .willReturn(List.of(wishlist));
 
         listener.handlePriceChange(event);
@@ -88,7 +88,7 @@ public class GamePriceChangedListenerTest {
         Wishlist wish1 = createWishlist(member1, 50000);
         Wishlist wish2 = createWishlist(member2, 30000);
 
-        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+        given(wishlistRepository.findAllByGameIdWithMember(event.gameId()))
                 .willReturn(List.of(wish1, wish2));
 
         FcmToken token1 = createToken(member1, "token_1");
@@ -117,7 +117,7 @@ public class GamePriceChangedListenerTest {
         Wishlist wishlist = createWishlist(member, 50000);
         FcmToken token = createToken(member, "token_error");
 
-        given(wishlistRepository.findAllByGameIdWithMember(event.getGameId()))
+        given(wishlistRepository.findAllByGameIdWithMember(event.gameId()))
                 .willReturn(List.of(wishlist));
 
         given(fcmTokenRepository.findAllByMemberIdInWithMember(List.of(1L)))

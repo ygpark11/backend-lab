@@ -98,7 +98,7 @@ public class JwtTokenProvider {
         Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(authStr.split(","))
                         .map(SimpleGrantedAuthority::new)
-                        .collect(Collectors.toList());
+                        .toList();
 
         // 3. 클레임에서 memberId 가져오기
         Long memberId = ((Number) claims.get(MEMBER_ID_KEY)).longValue();

@@ -3,7 +3,6 @@ package com.pstracker.catalog_service.catalog.service;
 import com.pstracker.catalog_service.catalog.dto.GameDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -11,7 +10,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class GameScouterService {
 
     /**
@@ -62,8 +60,8 @@ public class GameScouterService {
                 .orElse(LocalDate.now());
         long tracked = Math.max(1, ChronoUnit.MONTHS.between(trackingStart, LocalDate.now()));
 
-        boolean firstWasDiscounted = history.get(0).discountRate() != null
-                && history.get(0).discountRate() > 0;
+        boolean firstWasDiscounted = history.getFirst().discountRate() != null
+                && history.getFirst().discountRate() > 0;
 
         int discountCount = (int) history.stream()
                 .filter(h -> h.discountRate() != null && h.discountRate() > 0)

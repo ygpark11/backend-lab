@@ -10,13 +10,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -32,9 +31,8 @@ public class PsPlusDiscountListener {
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handlePsPlusDiscount(PsPlusDiscountEvent event) {
-        log.info("🎉 PS Plus 할인 시작 이벤트 수신 → 전체 사용자 알림 발송");
+        log.info("PS Plus 할인 시작 이벤트 수신 → 전체 사용자 알림 발송");
 
         List<FcmToken> allTokens = fcmTokenRepository.findAllWithMember();
 
@@ -45,11 +43,11 @@ public class PsPlusDiscountListener {
 
         // 멤버별로 그룹화 (한 멤버가 여러 기기 등록 가능)
         Map<Long, List<FcmToken>> tokensByMember = allTokens.stream()
-                .collect(java.util.stream.Collectors.groupingBy(t -> t.getMember().getId()));
+                .collect(Collectors.groupingBy(t -> t.getMember().getId()));
 
-        // in-app Notification: 야간 여부 관계없이 전체 등록 (안전장치)
+        // DB 저장만 짧은 Repository 트랜잭션으로 커밋하고, 외부 FCM HTTP 호출은 커넥션 없이 수행
         List<Notification> notifications = tokensByMember.values().stream()
-                .map(tokens -> tokens.get(0).getMember())
+                .map(tokens -> tokens.getFirst().getMember())
                 .map(member -> Notification.create(member, TITLE, MESSAGE, null))
                 .toList();
         notificationRepository.saveAll(notifications);
@@ -59,7 +57,7 @@ public class PsPlusDiscountListener {
         try {
             fcmService.sendMulticastMessage(allTokens, TITLE, MESSAGE, Map.of("url", "/ps-plus"));
         } catch (Exception e) {
-            log.error("❌ PS Plus FCM 발송 실패: {}", e.getMessage());
+            log.error("PS Plus FCM 발송 실패: {}", e.getMessage());
         }
     }
 }

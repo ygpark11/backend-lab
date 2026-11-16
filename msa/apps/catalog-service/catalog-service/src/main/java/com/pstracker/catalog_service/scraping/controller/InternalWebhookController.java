@@ -10,7 +10,6 @@ import com.pstracker.catalog_service.scraping.service.ScrapingWebhookService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -25,7 +24,6 @@ public class InternalWebhookController {
     private final HltbScrapingService hltbScrapingService;
 
     @PostMapping("/callback")
-    @Transactional
     public ResponseEntity<?> handleCrawlerCallback(
             @RequestBody CrawlerCallbackRequest payload) {
         scrapingWebhookService.processCallback(payload);
@@ -33,7 +31,6 @@ public class InternalWebhookController {
     }
 
     @PostMapping("/candidates/sync")
-    @Transactional
     public ResponseEntity<String> syncGameCandidates(
             @RequestBody CandidateSyncRequest payload) {
         boolean saved = scrapingWebhookService.syncCandidate(payload);
@@ -45,7 +42,6 @@ public class InternalWebhookController {
     }
 
     @PostMapping("/rankings/update")
-    @Transactional
     public ResponseEntity<String> updateRankings(
             @RequestBody RankingUpdateRequest payload) {
         rankingService.updateRankings(payload);
