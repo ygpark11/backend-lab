@@ -10,7 +10,7 @@ description = 'Demo project for Spring Boot'
 
 java {
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
@@ -59,9 +59,9 @@ dependencies {
     // DB Driver
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    // Lombok & Processors
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+    // Lombok & Processors (JDK 25 호환을 위해 1.18.42 명시)
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
 
     // Testing
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -71,18 +71,14 @@ dependencies {
 }
 
 // QueryDSL QClass가 생성될 경로를 지정합니다. (빌드 시 자동 생성됨)
-def querydslDir = "$buildDir/generated/querydsl"
+def querydslDir = layout.buildDirectory.dir("generated/querydsl")
 
 sourceSets {
     main.java.srcDirs += [ querydslDir ]
 }
 
-tasks.withType(JavaCompile) {
-    options.getGeneratedSourceOutputDirectory().set(file(querydslDir))
-}
-
-clean.doLast {
-    file(querydslDir).deleteDir()
+tasks.withType(JavaCompile).configureEach {
+    options.getGeneratedSourceOutputDirectory().set(querydslDir)
 }
 
 tasks.named('test') {

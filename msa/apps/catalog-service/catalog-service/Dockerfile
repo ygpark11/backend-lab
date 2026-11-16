@@ -1,5 +1,5 @@
 # 1단계: 빌드 환경 (Builder)
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-jammy AS builder
+FROM --platform=$BUILDPLATFORM eclipse-temurin:25-jdk-noble AS builder
 
 WORKDIR /app
 
@@ -20,7 +20,7 @@ RUN --mount=type=cache,target=/root/.gradle \
     ./gradlew build --no-daemon -x test -Duser.timezone=Asia/Seoul
 
 # 2단계: 실행 환경 (Runner)
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /app
 
