@@ -48,10 +48,6 @@ public class CatalogService {
     private final GameScouterService gameScouterService;
     private final CollectorClientManager clientManager;
 
-    /**
-     * 게임 데이터 수집 및 저장 (Upsert)
-     * @param request 수집 요청 DTO
-     */
     @Transactional
     public void upsertGameData(CollectRequest request) {
 
@@ -104,12 +100,6 @@ public class CatalogService {
         }
     }
 
-    /**
-     * 장르 문자열 파싱 및 엔티티 매핑
-     * - 1번의 IN절 SELECT로 기존 장르를 한꺼번에 조회하고, 없는 장르만 saveAll()로 배치 저장
-     * @param genreIds 콤마 구분 장르 문자열
-     * @return 장르 엔티티 집합
-     */
     private Set<Genre> resolveGenres(String genreIds) {
         if (!StringUtils.hasText(genreIds)) return new HashSet<>();
 
@@ -121,12 +111,10 @@ public class CatalogService {
 
         if (names.isEmpty()) return new HashSet<>();
 
-        // 1번의 IN절 SELECT로 기존 장르 모두 조회
         Map<String, Genre> existingByName = genreRepository.findByNameIn(names)
                 .stream()
                 .collect(Collectors.toMap(Genre::getName, g -> g));
 
-        // 없는 장르만 골라서 saveAll()로 배치 저장 (jdbc.batch_size 설정이 적용됨)
         List<Genre> toSave = names.stream()
                 .filter(name -> !existingByName.containsKey(name))
                 .map(Genre::new)
@@ -147,11 +135,6 @@ public class CatalogService {
         return new HashSet<>(existingByName.values());
     }
 
-    /**
-     * 게임 엔티티 조회 또는 신규 생성
-     * @param request 수집 요청 DTO
-     * @return 게임 엔티티
-     */
     private Game findOrCreateGame(CollectRequest request) {
         return gameRepository.findByPsStoreIdWithGenres(request.getPsStoreId())
                 .orElseGet(() -> Game.create(
@@ -165,12 +148,6 @@ public class CatalogService {
                 ));
     }
 
-    /**
-     * 게임 메타데이터 업데이트
-     * @param game 게임 엔티티
-     * @param request 수집 요청 DTO
-     * @param genres 장르 엔티티 집합
-     */
     private void updateGameMetadata(Game game, CollectRequest request, Set<Genre> genres) {
         game.updateInfo(
                 request.getTitle(),
@@ -183,16 +160,10 @@ public class CatalogService {
                 request.isPs5ProEnhanced()
         );
 
-        // 플랫폼 정보 최신화
         Set<Platform> platforms = resolvePlatforms(request.getPlatforms());
         game.updatePlatforms(platforms);
     }
 
-    /**
-     * 플랫폼 문자열 파싱 및 Enum 매핑
-     * @param platformNames 플랫폼 이름 리스트
-     * @return 플랫폼 Enum 집합
-     */
     private Set<Platform> resolvePlatforms(List<String> platformNames) {
         Set<Platform> platforms = new HashSet<>();
         if (platformNames == null || platformNames.isEmpty()) {
@@ -209,12 +180,6 @@ public class CatalogService {
         return platforms;
     }
 
-
-    /**
-     * 가격 정보 처리: 변동 감지, 이력 저장, 가격 하락 알림 발행
-     * @param game 게임 엔티티
-     * @param request 수집 요청 DTO
-     */
     private void processPriceInfo(Game game, CollectRequest request) {
         Optional<GamePriceHistory> latestHistoryOpt = priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(game);
 
@@ -236,12 +201,6 @@ public class CatalogService {
         publishAlertIfDropped(game, latestHistoryOpt, request.getCurrentPrice(), request.getDiscountRate());
     }
 
-    /**
-     * 가격 정보 변경 여부 판단
-     * @param latestHistoryOpt 최신 가격 이력 Optional
-     * @param request 수집 요청 DTO
-     * @return 변경되었으면 true, 아니면 false
-     */
     private boolean shouldSaveHistory(Optional<GamePriceHistory> latestHistoryOpt, CollectRequest request) {
         return latestHistoryOpt
                 .map(history -> !history.isSameCondition(
@@ -253,13 +212,6 @@ public class CatalogService {
                 .orElse(true); // 이력이 없으면 무조건 저장
     }
 
-    /**
-     * 가격 하락 시 알림 이벤트 발행
-     * @param game 게임 엔티티
-     * @param oldHistoryOpt 이전 가격 이력 Optional
-     * @param newPrice 새로운 가격
-     * @param newDiscountRate 새로운 할인율
-     */
     private void publishAlertIfDropped(Game game, Optional<GamePriceHistory> oldHistoryOpt, int newPrice, int newDiscountRate) {
         if (oldHistoryOpt.isEmpty()) return;
 

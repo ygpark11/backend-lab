@@ -45,3 +45,6 @@ firebase-service-account.json
 # 클로드 관련 파일
 .claudeignore
 CLAUDE.md
+
+# 로컬 작업/설계 참고 문서
+/docs/

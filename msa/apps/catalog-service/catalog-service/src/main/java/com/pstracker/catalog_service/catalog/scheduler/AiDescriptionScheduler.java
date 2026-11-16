@@ -25,6 +25,9 @@ public class AiDescriptionScheduler {
 
     private static final String TARGET_DESCRIPTION = "Full Data Crawler";
     private static final int MAX_API_CALLS_PER_DAY = 20; // 일일 무료 호출 할당량
+    private static final int MAX_CONSECUTIVE_FAILURES = 3;
+    private static final long RETRY_WAIT_MS = 60_000L;
+    private static final long RATE_LIMIT_WAIT_MS = 10_000L;
 
     /**
      * 매일 새벽 3시 0분 0초 실행 (KST 기준)
@@ -35,6 +38,7 @@ public class AiDescriptionScheduler {
         log.info("AI Batch Insight Scheduler Started (Max {} calls)", MAX_API_CALLS_PER_DAY);
 
         int totalSuccess = 0;
+        int consecutiveFailures = 0;
 
         for (int i = 0; i < MAX_API_CALLS_PER_DAY; i++) {
             // 1. DB에서 대상 게임 5개만 조회 (description, vibeTags, searchKeywords 중 하나라도 없으면 포함)
@@ -57,16 +61,21 @@ public class AiDescriptionScheduler {
             }
 
             if (insights.isEmpty()) {
-                log.warn("AI 응답 파싱 실패 또는 빈 응답. 잠시 대기 후 재시도합니다.");
+                consecutiveFailures++;
+                if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+                    log.error("AI 응답 실패가 {}회 연속 발생하여 오늘의 배치를 중단합니다.", MAX_CONSECUTIVE_FAILURES);
+                    break;
+                }
+                log.warn("AI 응답 파싱 실패 또는 빈 응답 ({}/{}). 잠시 대기 후 재시도합니다.",
+                        consecutiveFailures, MAX_CONSECUTIVE_FAILURES);
                 i--;
-                try {
-                    Thread.sleep(60_000);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                if (!sleepMillis(RETRY_WAIT_MS)) {
                     break;
                 }
                 continue;
             }
+
+            consecutiveFailures = 0;
 
             Map<Long, AiService.AiInsightDto> insightMap = insights.stream()
                     .collect(Collectors.toMap(AiService.AiInsightDto::id, dto -> dto));
@@ -88,14 +97,21 @@ public class AiDescriptionScheduler {
             gameRepository.saveAll(targetGames);
 
             // DB 커넥션 미점유 상태로 API 레이트 리밋 대기
-            try {
-                Thread.sleep(10_000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (!sleepMillis(RATE_LIMIT_WAIT_MS)) {
                 log.error("스레드 인터럽트 발생");
                 break;
             }
         }
         log.info("[Daily Batch] Finished. Updated {} games today.", totalSuccess);
+    }
+
+    protected boolean sleepMillis(long millis) {
+        try {
+            Thread.sleep(millis);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 }

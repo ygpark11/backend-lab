@@ -38,9 +38,7 @@ public class WishlistService {
     private final MemberRepository memberRepository; // Proxy 조회용
 
     /**
-     * 찜하기 토글 (Toggle)
-     * - 이미 있으면 -> 삭제 (return false)
-     * - 없으면 -> 저장 (return true)
+     * 찜하기 토글 (목표가가 전달되면 목표가 설정/수정, 미전달 시 기존 찜 취소 또는 신규 추가)
      */
     @Transactional
     public String toggleWishlist(Long memberId, Long gameId, Integer targetPrice) {

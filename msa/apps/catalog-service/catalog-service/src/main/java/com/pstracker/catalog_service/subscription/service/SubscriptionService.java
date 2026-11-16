@@ -38,6 +38,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Slf4j
 @Service
@@ -111,9 +112,17 @@ public class SubscriptionService {
                         }
                 ));
 
+        int maxPromotionDiscountRate = pricingData.values().stream()
+                .flatMapToInt(t -> IntStream.of(
+                        t.getDiscountRate1Month(),
+                        t.getDiscountRate3Month(),
+                        t.getDiscountRate12Month()))
+                .max()
+                .orElse(0);
+
         return new PsPlusPricingResponse(
-                false,  // TODO: 프로모션 기간 시 로직 변경
-                0,
+                maxPromotionDiscountRate > 0,
+                maxPromotionDiscountRate,
                 pricingData,
                 historyData
         );

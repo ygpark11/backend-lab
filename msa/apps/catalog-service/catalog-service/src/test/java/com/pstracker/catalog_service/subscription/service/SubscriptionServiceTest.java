@@ -97,10 +97,13 @@ class SubscriptionServiceTest {
         em.flush(); em.clear();
 
         // when
+        PsPlusPricingResponse response = subscriptionService.getLatestPricing();
         PsPlusPricingResponse.TierPriceDto dto =
-                subscriptionService.getLatestPricing().getPricingData().get(PsPlusTier.ESSENTIAL);
+                response.getPricingData().get(PsPlusTier.ESSENTIAL);
 
         // then: 정가 노출, 할인 정보 없음
+        assertThat(response.isPromotionActive()).isFalse();
+        assertThat(response.getPromotionDiscountRate()).isEqualTo(0);
         assertThat(dto.getPrice12Month()).isEqualTo(57000);
         assertThat(dto.getDiscountPrice12Month()).isNull();
         assertThat(dto.getDiscountRate12Month()).isEqualTo(0);
@@ -117,8 +120,13 @@ class SubscriptionServiceTest {
         em.flush(); em.clear();
 
         // when
+        PsPlusPricingResponse response = subscriptionService.getLatestPricing();
         PsPlusPricingResponse.TierPriceDto dto =
-                subscriptionService.getLatestPricing().getPricingData().get(PsPlusTier.ESSENTIAL);
+                response.getPricingData().get(PsPlusTier.ESSENTIAL);
+
+        // then - 최상위 프로모션 요약 반영
+        assertThat(response.isPromotionActive()).isTrue();
+        assertThat(response.getPromotionDiscountRate()).isEqualTo(50);
 
         // then - 12개월: 정가 노출, 할인가/할인율 정상
         assertThat(dto.getPrice12Month()).isEqualTo(57000);

@@ -15,7 +15,6 @@ public interface GamePriceHistoryRepository extends JpaRepository<GamePriceHisto
     @Modifying(clearAutomatically = true)
     @Query("DELETE FROM GamePriceHistory h WHERE h.game.id IN :gameIds")
     void deleteByGameIds(@Param("gameIds") List<Long> gameIds);
-    // 특정 게임의 가장 최근 가격 이력 1건 조회
 
     /**
      * 특정 게임의 가장 최근 가격 이력 1건 조회

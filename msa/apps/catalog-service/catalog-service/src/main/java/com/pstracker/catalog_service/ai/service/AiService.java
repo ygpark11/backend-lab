@@ -30,38 +30,6 @@ public class AiService {
     private final TagTaxonomyRegistry taxonomyRegistry;
     private final GeminiApiClient geminiApiClient;
 
-    /**
-     * [Feature A] 게임 3줄 요약
-     */
-    public String summarizeGame(String gameTitle) {
-        try {
-            String prompt = "PlayStation 게임 '%s'에 대해 한국어로 3줄 이내로 흥미진진하게 요약 설명해줘.".formatted(gameTitle);
-            return callGemini(prompt);
-        } catch (Exception e) {
-            log.error("❌ 요약 실패: {}", gameTitle, e);
-            return null;
-        }
-    }
-
-    /**
-     * [Feature B] 맞춤 추천
-     */
-    public String recommendGames(List<String> myWishlistTitles, List<String> candidateTitles) {
-        try {
-            String prompt = """
-                내 취향: %s.
-                후보 목록: %s.
-                이 중에서 3개 추천해주고 JSON으로 답해줘.
-                형식: [{"title": "...", "reason": "..."}]
-                """.formatted(String.join(", ", myWishlistTitles), String.join(", ", candidateTitles));
-
-            return callGemini(prompt);
-        } catch (Exception e) {
-            log.error("❌ 추천 실패", e);
-            return "[]";
-        }
-    }
-
     public List<AiInsightDto> generateBatchInsights(List<Game> games) {
         try {
             String gameListText = games.stream()

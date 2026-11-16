@@ -46,9 +46,6 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
             @Param("today") LocalDate today
     );
 
-    // 설명이 'Full Data Crawler'인 게임 20개 조회 (최신순)
-    List<Game> findTop20ByDescriptionOrderByIdDesc(String description);
-
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate > 0 AND g.currentPrice <= g.allTimeLowPrice")
     long countAllTimeLowGamesFast();
 
@@ -159,8 +156,4 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
 
     @Query("SELECT COUNT(g.id) FROM Game g WHERE g.discountRate = 0 OR g.currentPrice IS NULL OR g.currentPrice = 0")
     long countVerdictTracking();
-
-    @Modifying(clearAutomatically = true)
-    @Query("DELETE FROM Game g WHERE g.id IN :ids")
-    void deleteByIds(@Param("ids") List<Long> ids);
 }
