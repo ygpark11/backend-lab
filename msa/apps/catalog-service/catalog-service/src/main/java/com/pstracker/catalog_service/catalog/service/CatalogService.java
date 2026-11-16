@@ -238,10 +238,10 @@ public class CatalogService {
         }
 
         Page<GameSearchResponse> result = gameRepository.searchGames(condition, safe);
-        if (!result.isEmpty()) {
-            enrichSearchResults(result.getContent(), memberId);
+        if (result.isEmpty()) {
+            return result;
         }
-        return result;
+        return enrichSearchResults(result, memberId);
     }
 
     @Transactional(readOnly = true)
@@ -283,27 +283,30 @@ public class CatalogService {
     }
 
     /** 검색 결과에 장르·찜 여부·가격 판정을 일괄 세팅 (gameIds 추출 1회) */
-    private void enrichSearchResults(List<GameSearchResponse> games, Long memberId) {
-        List<Long> gameIds = games.stream().map(GameSearchResponse::getId).toList();
+    private Page<GameSearchResponse> enrichSearchResults(Page<GameSearchResponse> page, Long memberId) {
+        List<Long> gameIds = page.getContent().stream().map(GameSearchResponse::id).toList();
 
         Map<Long, List<String>> gameGenreMap = gameGenreRepository.findGameGenres(gameIds)
                 .stream()
                 .collect(Collectors.groupingBy(
-                        GameGenreResult::getGameId,
-                        Collectors.mapping(GameGenreResult::getGenreName, Collectors.toList())));
-        games.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getId(), List.of())));
+                        GameGenreResult::gameId,
+                        Collectors.mapping(GameGenreResult::genreName, Collectors.toList())));
 
-        if (memberId != null) {
-            Set<Long> likedIds = new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds));
-            games.forEach(dto -> dto.setLiked(likedIds.contains(dto.getId())));
-        }
+        Set<Long> likedIds = memberId != null
+                ? new HashSet<>(wishlistRepository.findGameIdsByMemberIdAndGameIdIn(memberId, gameIds))
+                : Set.of();
 
         Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(gameIds);
-        games.forEach(dto -> {
-            int historySize = historyCountMap.getOrDefault(dto.getId(), 0);
+
+        return page.map(dto -> {
+            int historySize = historyCountMap.getOrDefault(dto.id(), 0);
             PriceVerdict verdict = PriceVerdictCalculator.forGame(
-                    dto.getPrice(), dto.getOriginalPrice(), dto.getAllTimeLowPrice(), historySize);
-            dto.setPriceVerdict(verdict.name());
+                    dto.price(), dto.originalPrice(), dto.allTimeLowPrice(), historySize);
+            return dto.withEnriched(
+                    gameGenreMap.getOrDefault(dto.id(), List.of()),
+                    likedIds.contains(dto.id()),
+                    verdict.name()
+            );
         });
     }
 

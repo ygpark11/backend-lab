@@ -149,18 +149,18 @@ public class GameReadService {
         if (rawList.isEmpty()) return List.of();
 
         Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(
-                rawList.stream().map(GameSearchResponse::getId).toList());
+                rawList.stream().map(GameSearchResponse::id).toList());
 
         return rawList.stream()
                 .map(r -> {
                     PriceVerdict verdict = PriceVerdictCalculator.forGame(
-                            r.getPrice(), r.getOriginalPrice(), r.getAllTimeLowPrice(),
-                            historyCountMap.getOrDefault(r.getId(), 0)
+                            r.price(), r.originalPrice(), r.allTimeLowPrice(),
+                            historyCountMap.getOrDefault(r.id(), 0)
                     );
                     return new GameDetailResponse.RelatedGameDto(
-                            r.getId(), r.getName(), r.getImageUrl(),
-                            r.getOriginalPrice(), r.getPrice(), r.getDiscountRate(),
-                            r.getSaleEndDate(), r.getDisplayScore(), verdict
+                            r.id(), r.name(), r.imageUrl(),
+                            r.originalPrice(), r.price(), r.discountRate(),
+                            r.saleEndDate(), r.displayScore(), verdict
                     );
                 })
                 .toList();

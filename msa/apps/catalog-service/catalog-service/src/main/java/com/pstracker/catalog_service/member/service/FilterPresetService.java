@@ -1,7 +1,7 @@
 package com.pstracker.catalog_service.member.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.pstracker.catalog_service.global.exception.BusinessException;
 import com.pstracker.catalog_service.global.exception.ErrorCode;
 import com.pstracker.catalog_service.member.domain.Member;
@@ -76,7 +76,7 @@ public class FilterPresetService {
     private String serialize(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("필터 조건 형식이 올바르지 않습니다.");
         }
     }

@@ -321,7 +321,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                                 .when(game.saleEndDate.isNotNull().and(game.saleEndDate.goe(today)))
                                 .then(game.originalPrice.subtract(game.currentPrice).longValue())
                                 .otherwise(0L)
-                                .sum()
+                                .sumLong()
                                 .coalesce(0L),
                         game.lastUpdated.max(),
                         sumCase(game.saleEndDate.between(today, tomorrow)),
@@ -349,7 +349,7 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .when(condition)
                 .then(1L)
                 .otherwise(0L)
-                .sum()
+                .sumLong()
                 .coalesce(0L);
     }
 }

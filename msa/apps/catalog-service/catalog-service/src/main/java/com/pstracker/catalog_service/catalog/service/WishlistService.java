@@ -94,32 +94,34 @@ public class WishlistService {
         Pageable safe = PageRequest.of(pageable.getPageNumber(), Math.min(pageable.getPageSize(), 50), pageable.getSort());
         Page<WishlistResponse> result = wishlistRepository.findAllByMemberId(memberId, safe);
 
-        if (!result.isEmpty()) {
-            markGameGenre(result.getContent());
+        if (result.isEmpty()) {
+            return result;
         }
-
-        return result;
+        return enrichWishlist(result);
     }
 
     /**
      * 찜 목록에 장르 정보 및 가격 판정 매핑
      * - 게임 ID 리스트로 한 번에 조회하여 N+1 문제 방지
      */
-    private void markGameGenre(List<WishlistResponse> wishlist) {
-        List<Long> gameIds = wishlist.stream().map(WishlistResponse::getGameId).toList();
+    private Page<WishlistResponse> enrichWishlist(Page<WishlistResponse> page) {
+        List<Long> gameIds = page.getContent().stream().map(WishlistResponse::gameId).toList();
 
         List<GameGenreResult> gameGenres = gameGenreRepository.findGameGenres(gameIds);
         Map<Long, List<String>> gameGenreMap = gameGenres.stream()
                 .collect(Collectors.groupingBy(
-                        GameGenreResult::getGameId, Collectors.mapping(GameGenreResult::getGenreName, Collectors.toList())));
-        wishlist.forEach(dto -> dto.setGenres(gameGenreMap.getOrDefault(dto.getGameId(), List.of())));
+                        GameGenreResult::gameId, Collectors.mapping(GameGenreResult::genreName, Collectors.toList())));
 
         Map<Long, Integer> historyCountMap = priceHistoryRepository.countMapByGameIds(gameIds);
-        wishlist.forEach(dto -> {
-            int historySize = historyCountMap.getOrDefault(dto.getGameId(), 0);
+
+        return page.map(dto -> {
+            int historySize = historyCountMap.getOrDefault(dto.gameId(), 0);
             PriceVerdict verdict = PriceVerdictCalculator.forGame(
-                    dto.getCurrentPrice(), dto.getOriginalPrice(), dto.getLowestPrice(), historySize);
-            dto.setPriceVerdict(verdict.name());
+                    dto.currentPrice(), dto.originalPrice(), dto.lowestPrice(), historySize);
+            return dto.withEnriched(
+                    gameGenreMap.getOrDefault(dto.gameId(), List.of()),
+                    verdict.name()
+            );
         });
     }
 }
