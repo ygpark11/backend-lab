@@ -51,8 +51,10 @@ public class AuthController {
         JwtToken jwtToken = memberService.login(request);
 
         // 2. Access Token 쿠키 생성
-        ResponseCookie accessTokenCookie = createTokenCookie(AuthConstants.ACCESS_TOKEN, jwtToken.getAccessToken(), accessTokenValidityTime);
-        ResponseCookie refreshTokenCookie = createTokenCookie(AuthConstants.REFRESH_TOKEN, jwtToken.getRefreshToken(), refreshTokenValidityTime);
+        ResponseCookie accessTokenCookie = createTokenCookie(AuthConstants.ACCESS_TOKEN, jwtToken.getAccessToken(),
+                accessTokenValidityTime);
+        ResponseCookie refreshTokenCookie = createTokenCookie(AuthConstants.REFRESH_TOKEN, jwtToken.getRefreshToken(),
+                refreshTokenValidityTime);
 
         // 4. 응답 헤더에 설정
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
@@ -83,14 +85,15 @@ public class AuthController {
     public ResponseEntity<Void> reissue(HttpServletRequest request, HttpServletResponse response) {
         String refreshToken = getCookieValue(request, AuthConstants.REFRESH_TOKEN);
 
-        if (refreshToken == null || !jwtTokenProvider.validateToken(refreshToken)) {
+        if (refreshToken == null || !jwtTokenProvider.validateRefreshToken(refreshToken)) {
             return ResponseEntity.status(401).build();
         }
 
         Authentication authentication = jwtTokenProvider.getAuthentication(refreshToken);
         JwtToken newTokens = jwtTokenProvider.generateToken(authentication);
 
-        ResponseCookie newAccessTokenCookie = createTokenCookie(AuthConstants.ACCESS_TOKEN, newTokens.getAccessToken(), accessTokenValidityTime);
+        ResponseCookie newAccessTokenCookie = createTokenCookie(AuthConstants.ACCESS_TOKEN, newTokens.getAccessToken(),
+                accessTokenValidityTime);
 
         response.addHeader(HttpHeaders.SET_COOKIE, newAccessTokenCookie.toString());
         return ResponseEntity.ok().build();
@@ -98,8 +101,8 @@ public class AuthController {
 
     private ResponseCookie createTokenCookie(String name, String value, long maxAge) {
         // 쿠키 값 인코딩 (공백이나 특수문자 처리)
-        String encodedValue = (value == null || value.isEmpty()) ? "" :
-                URLEncoder.encode(value, StandardCharsets.UTF_8);
+        String encodedValue = (value == null || value.isEmpty()) ? ""
+                : URLEncoder.encode(value, StandardCharsets.UTF_8);
 
         return ResponseCookie.from(name, encodedValue)
                 .path("/")
@@ -111,7 +114,8 @@ public class AuthController {
     }
 
     private String getCookieValue(HttpServletRequest request, String name) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null)
+            return null;
         return Arrays.stream(request.getCookies())
                 .filter(cookie -> name.equals(cookie.getName()))
                 .map(cookie -> {

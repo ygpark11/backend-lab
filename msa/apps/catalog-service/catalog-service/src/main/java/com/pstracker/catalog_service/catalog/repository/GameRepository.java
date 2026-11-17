@@ -38,10 +38,11 @@ public interface GameRepository extends JpaRepository<Game, Long>, GameRepositor
      * 1. 갱신 주기 도래: 오늘 자정(todayStart) 이전에 갱신된 게임 (하루 1회 보장)
      * 2. 세일 중인 게임 제외: 정가(NULL)이거나, 할인이 어제부로 종료된 게임만 조회
      */
-    @Query("SELECT g FROM Game g WHERE g.lastUpdated < :todayStart " +
+    @Query("SELECT new com.pstracker.catalog_service.catalog.dto.GameIdMapping(g.psStoreId, g.id) " +
+            "FROM Game g WHERE g.lastUpdated < :todayStart " +
             "AND (g.saleEndDate IS NULL OR g.saleEndDate < :today) " +
             "ORDER BY g.lastUpdated ASC")
-    List<Game> findGamesToUpdate(
+    List<GameIdMapping> findGamesToUpdate(
             @Param("todayStart") LocalDateTime todayStart,
             @Param("today") LocalDate today
     );

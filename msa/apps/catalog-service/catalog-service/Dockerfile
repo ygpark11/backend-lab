@@ -17,15 +17,19 @@ RUN --mount=type=cache,target=/root/.gradle \
 # 소스 복사 및 빌드
 COPY src src
 RUN --mount=type=cache,target=/root/.gradle \
-    ./gradlew build --no-daemon -x test -Duser.timezone=Asia/Seoul
+    ./gradlew bootJar --no-daemon -Duser.timezone=Asia/Seoul \
+    && java -Djarmode=tools -jar build/libs/*SNAPSHOT.jar extract --layers --launcher --destination extracted
 
 # 2단계: 실행 환경 (Runner)
 FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /app
 
-# 빌드 결과물 복사
-COPY --from=builder /app/build/libs/*SNAPSHOT.jar app.jar
+# Spring Boot Layered JAR 복사 (의존성 캐시 재사용으로 이미지 push/pull 효율화)
+COPY --from=builder /app/extracted/dependencies/ ./
+COPY --from=builder /app/extracted/spring-boot-loader/ ./
+COPY --from=builder /app/extracted/snapshot-dependencies/ ./
+COPY --from=builder /app/extracted/application/ ./
 
-# 타임존 설정
-ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "-jar", "app.jar"]
+# 타임존 설정 (JVM 옵션은 JAVA_TOOL_OPTIONS 환경변수로 주입)
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Seoul", "org.springframework.boot.loader.launch.JarLauncher"]

@@ -123,6 +123,7 @@ public class GameReadService {
     }
 
     private List<GameDetailResponse.FamilyGameDto> buildFamilyGames(String familyId) {
+        if (familyId == null || familyId.isBlank()) return List.of();
         List<Game> familyList = gameRepository.findByFamilyIdOrderByOriginalPriceAsc(familyId);
         if (familyList.isEmpty()) return List.of();
 

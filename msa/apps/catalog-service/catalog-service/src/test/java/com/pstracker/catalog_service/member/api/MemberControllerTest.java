@@ -64,7 +64,7 @@ class MemberControllerTest {
     @Test
     @DisplayName("액세스 토큰 만료(인증 없음) + 리프레시 토큰 쿠키 존재 시 401 — 기존 재발급 흐름 유지")
     void getMyInfo_expiredAccessWithRefreshCookie_returns401() throws Exception {
-        when(jwtTokenProvider.validateToken(any())).thenReturn(false);
+        when(jwtTokenProvider.validateAccessToken(any())).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/members/me")
                         .cookie(new Cookie(AuthConstants.ACCESS_TOKEN, "expired-access"),
@@ -85,7 +85,7 @@ class MemberControllerTest {
     @DisplayName("유효한 액세스 토큰이면 200과 회원 정보")
     void getMyInfo_validAccessToken_returns200() throws Exception {
         MemberPrincipal principal = new MemberPrincipal(1L, "user@test.com", "ROLE_USER");
-        when(jwtTokenProvider.validateToken("valid-access")).thenReturn(true);
+        when(jwtTokenProvider.validateAccessToken("valid-access")).thenReturn(true);
         when(jwtTokenProvider.getAuthentication("valid-access"))
                 .thenReturn(new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         when(memberService.findById(1L)).thenReturn(mock(Member.class));

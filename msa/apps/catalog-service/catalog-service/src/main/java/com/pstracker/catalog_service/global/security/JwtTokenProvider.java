@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.global.security;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecurityException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -29,6 +30,9 @@ public class JwtTokenProvider {
 
     private static final String AUTHORITIES_KEY = "auth";
     private static final String MEMBER_ID_KEY = "mid";
+    private static final String TOKEN_TYPE_KEY = "typ";
+    private static final String TOKEN_TYPE_ACCESS = "access";
+    private static final String TOKEN_TYPE_REFRESH = "refresh";
 
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secretKey,
@@ -62,6 +66,7 @@ public class JwtTokenProvider {
                 .subject(authentication.getName())          // payload "sub": "user@email.com"
                 .claim(AUTHORITIES_KEY, authorities)   // payload "auth": "ROLE_USER"
                 .claim(MEMBER_ID_KEY, memberId)
+                .claim(TOKEN_TYPE_KEY, TOKEN_TYPE_ACCESS)
                 .expiration(new Date(now + accessTokenValidityTime)) // 유효기간
                 .signWith(key)                              // 서명 (Header + Payload + SecretKey)
                 .compact();
@@ -71,6 +76,7 @@ public class JwtTokenProvider {
                 .subject(authentication.getName())
                 .claim(AUTHORITIES_KEY, authorities)
                 .claim(MEMBER_ID_KEY, memberId)
+                .claim(TOKEN_TYPE_KEY, TOKEN_TYPE_REFRESH)
                 .expiration(new Date(now + refreshTokenValidityTime))
                 .signWith(key)
                 .compact();
@@ -101,7 +107,11 @@ public class JwtTokenProvider {
                         .toList();
 
         // 3. 클레임에서 memberId 가져오기
-        Long memberId = ((Number) claims.get(MEMBER_ID_KEY)).longValue();
+        Object rawMemberId = claims.get(MEMBER_ID_KEY);
+        if (!(rawMemberId instanceof Number memberIdNumber)) {
+            throw new IllegalArgumentException("회원 ID 정보가 없는 토큰입니다.");
+        }
+        Long memberId = memberIdNumber.longValue();
 
         // 4. Role 문자열 정리 (ROLE_USER -> USER)
         // MemberPrincipal 생성자에서 다시 "ROLE_"을 붙이므로 여기선 제거
@@ -115,14 +125,29 @@ public class JwtTokenProvider {
 
     /**
      * [토큰 검증]
-     * 토큰이 위조되었거나 만료되지 않았는지 확인
+     * 서명 위조 또는 만료 여부를 확인 (Access/Refresh 공통)
      */
     public boolean validateToken(String token) {
+        return validateTokenWithType(token, null);
+    }
+
+    /** Access Token 검증 (Refresh Token 오용 차단) */
+    public boolean validateAccessToken(String token) {
+        return validateTokenWithType(token, TOKEN_TYPE_ACCESS);
+    }
+
+    /** Refresh Token 검증 (Access Token 오용 차단) */
+    public boolean validateRefreshToken(String token) {
+        return validateTokenWithType(token, TOKEN_TYPE_REFRESH);
+    }
+
+    private boolean validateTokenWithType(String token, String expectedType) {
         try {
-            Jwts.parser()
-                    .verifyWith(key) // 비밀키로 서명 검증
-                    .build()
-                    .parseSignedClaims(token);
+            JwtParserBuilder parserBuilder = Jwts.parser().verifyWith(key);
+            if (expectedType != null) {
+                parserBuilder.require(TOKEN_TYPE_KEY, expectedType);
+            }
+            parserBuilder.build().parseSignedClaims(token);
             return true;
         } catch (SecurityException | MalformedJwtException e) {
             log.info("Invalid JWT Token", e);
@@ -130,6 +155,8 @@ public class JwtTokenProvider {
             log.info("Expired JWT Token", e);
         } catch (UnsupportedJwtException e) {
             log.info("Unsupported JWT Token", e);
+        } catch (JwtException e) {
+            log.info("JWT validation failed", e);
         } catch (IllegalArgumentException e) {
             log.info("JWT claims string is empty.", e);
         }

@@ -61,7 +61,7 @@ class WishlistControllerTest {
         }).when(jwtAuthenticationEntryPoint).commence(any(), any(), any());
 
         MemberPrincipal principal = new MemberPrincipal(1L, "user@test.com", "USER");
-        when(jwtTokenProvider.validateToken("valid-token")).thenReturn(true);
+        when(jwtTokenProvider.validateAccessToken("valid-token")).thenReturn(true);
         when(jwtTokenProvider.getAuthentication("valid-token"))
                 .thenReturn(new UsernamePasswordAuthenticationToken(principal, "", principal.getAuthorities()));
     }

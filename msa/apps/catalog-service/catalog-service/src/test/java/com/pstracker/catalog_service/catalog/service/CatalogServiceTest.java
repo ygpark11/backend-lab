@@ -494,6 +494,41 @@ public class CatalogServiceTest {
         assertThat(result.getName()).isEqualTo("TestGame Updated");
     }
 
+    @Test
+    @DisplayName("getGamesToUpdate 는 경량 프로젝션으로 오늘 이전 갱신·할인종료 게임의 대상 URL 만 반환한다")
+    void getGamesToUpdate_returnsOnlyStaleOrEndedDiscountTargets() {
+        // given: 1) 어제 갱신 & 세일 없음 → 대상 포함
+        catalogService.upsertGameData(createDto("PROD-OLD-1", "Old Game", 50000, 50000, 0, null));
+        // 2) 어제 갱신 & 어제 세일 종료 → 대상 포함
+        catalogService.upsertGameData(createDto("PROD-ENDED-2", "Ended Sale", 50000, 25000, 50, LocalDate.now().minusDays(1)));
+        // 3) 어제 갱신 & 아직 세일 중 → 대상 제외
+        catalogService.upsertGameData(createDto("PROD-ACTIVE-3", "Active Sale", 50000, 25000, 50, LocalDate.now().plusDays(3)));
+        // 4) 오늘 갱신 → 대상 제외
+        catalogService.upsertGameData(createDto("PROD-TODAY-4", "Today Game", 50000, 50000, 0, null));
+
+        em.flush();
+        em.clear();
+
+        java.time.LocalDateTime yesterday = java.time.LocalDateTime.now().minusDays(1);
+        for (String storeId : List.of("PROD-OLD-1", "PROD-ENDED-2", "PROD-ACTIVE-3")) {
+            Game g = gameRepository.findByPsStoreId(storeId).orElseThrow();
+            org.springframework.test.util.ReflectionTestUtils.setField(g, "lastUpdated", yesterday);
+        }
+        em.flush();
+        em.clear();
+
+        // when
+        List<com.pstracker.catalog_service.catalog.dto.GameTargetResponse> targets = catalogService.getGamesToUpdate();
+
+        // then
+        assertThat(targets)
+                .extracting(com.pstracker.catalog_service.catalog.dto.GameTargetResponse::url)
+                .containsExactlyInAnyOrder(
+                        "https://store.playstation.com/ko-kr/product/PROD-OLD-1",
+                        "https://store.playstation.com/ko-kr/product/PROD-ENDED-2"
+                );
+    }
+
     private CollectRequest createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {
         return new CollectRequest(
                 id,

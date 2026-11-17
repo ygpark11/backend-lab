@@ -220,7 +220,7 @@ public class CatalogService {
     public List<GameTargetResponse> getGamesToUpdate() {
         LocalDate today = LocalDate.now();
         return gameRepository.findGamesToUpdate(today.atStartOfDay(), today).stream()
-                .map(game -> new GameTargetResponse(game.getId(), PS_STORE_BASE_URL + game.getPsStoreId()))
+                .map(target -> new GameTargetResponse(target.gameId(), PS_STORE_BASE_URL + target.psStoreId()))
                 .toList();
     }
 
