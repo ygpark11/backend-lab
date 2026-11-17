@@ -184,6 +184,8 @@ export function buildModel(game, { now = new Date(), final = false, index = null
         releaseYear: game.releaseDate ? game.releaseDate.slice(0, 4) : null,
         imageUrl: game.imageUrl,
         inCatalog: Boolean(game.inCatalog),
+        isPs5ProEnhanced: Boolean(game.isPs5ProEnhanced),
+        isPlusExclusive: Boolean(game.isPlusExclusive),
         index,
         count,
     };

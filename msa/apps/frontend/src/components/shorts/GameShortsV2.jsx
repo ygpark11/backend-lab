@@ -1,23 +1,24 @@
 // YouTube Shorts 2.0 모션그래픽 — /games/:id?view=shorts-v2&ids=442,671,1744&render=1&durations=g1:8.6,g2:8.0,g3:8.8
 //
 // 1080x1920 세로 풀스크린 결정적(pure t) 타임라인 엔진:
-// - 0.00초 첫 프레임부터 1번 게임 커버·가격·할인율이 즉시 노출 (공통 인트로 제거로 스와이프 이탈 방어)
-// - 게임당 8~9초 압축(총 24~27초), 아웃트로 없이 마지막 게임 직후 루프
-// - YouTube Shorts UI 세이프존(상단 120px, 우측 175px 버튼 열, 하단 450px 제목/관련동영상) 엄수
+// - 0.00초 첫 프레임부터 1번 게임 커버·선명한 최종 할인가·할인율·역대최저가·핵심 요약이 즉시 노출
+// - Phase 2: 3D 금속 방패 + 실시간 가격 이력 계단 차트 + 메타/유저 이중 링 대시보드
+// - Phase 3: 초고속 ○△×□ 슬롯 릴 판정 + 하단/우측 세이프존(y <= 1356, x <= 890) 엄수
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
+import { ArrowDown, Flame, TrendingUp } from 'lucide-react';
 import client from '../../api/client';
 import { alpha, anim, clamp, ease, lerp, prog, shake } from '../longform/engine';
 import { BRAND_NAME, NEUTRAL_ACCENT, SALE_RED, buildModel, fmt } from '../longform/gameModel';
 import { FONT_FAMILY, LF_CONTRACT_VERSION, posterSrc, useLongformRuntime, useStageScale } from '../longform/runtime';
-import { Grain, Odometer, PsSymbol, Ring, SignalMark } from '../longform/primitives';
+import { Grain, Odometer, SignalMark } from '../longform/primitives';
 import { Backdrop, Vignette } from '../longform/chrome';
+import { MiniPriceChart, MiniTierShield, QualityDashboard, VerdictReelBanner } from './ShortsCharts';
 
 export const SHORTS_W = 1080;
 export const SHORTS_H = 1920;
 
-const GREEN = '#22c55e';
 const WIPE_DUR = 0.34;
 const DEFAULT_SLOT_DUR = 8.4;
 const MIN_SLOT_DUR = 6.5;
@@ -43,6 +44,8 @@ function buildShortsFacts(model) {
         title: meta.title,
         genre: meta.genre,
         inCatalog: meta.inCatalog,
+        isPs5ProEnhanced: meta.isPs5ProEnhanced,
+        isPlusExclusive: meta.isPlusExclusive,
         currentPrice: price.current,
         originalPrice: price.original,
         discountRate: price.rate,
@@ -51,6 +54,7 @@ function buildShortsFacts(model) {
         allTimeLow: price.atl,
         saleEndDate: price.saleEndDate,
         metaScore: quality?.meta ?? null,
+        userScore: quality?.user ?? null,
         playtimeMain: quality?.main ?? null,
         pricePerHour: quality?.perHour ?? null,
         tier: defense?.tierText ?? null,
@@ -87,16 +91,16 @@ function buildShortsManifest(models, durationsParam) {
     scenes.forEach((s, i) => {
         const m = models[i];
         const isFirst = i === 0;
-        const tickAt = isFirst ? 0.0 : 0.12;
-        const impactAt = isFirst ? 0.22 : 0.45;
-        const atlAt = isFirst ? 0.85 : 1.05;
-        const verdictAt = Math.max(4.6, s.duration - 2.2);
+        const impactAt = isFirst ? 0.14 : 0.34;
+        const atlAt = isFirst ? 0.32 : 0.90;
+        const verdictAt = Math.max(4.4, s.duration - 2.55);
 
-        if (m.price.original) at(s, tickAt, 'tick', { duration: 0.95 });
+        // 1번 게임은 0.00s부터 선명한 최종가 표시(오도미터 블러 없음), 2·3번 게임만 전환 직후 오도미터 틱 사운드 배치
+        if (!isFirst && m.price.original) at(s, 0.08, 'tick', { duration: 0.78 });
         if (m.price.rate > 0) at(s, impactAt, 'impact');
         if (m.price.atl === 'new' || m.price.atl === 'equal') at(s, atlAt, 'chime');
-        at(s, 2.25, 'flip');
-        at(s, verdictAt, 'impactBig');
+        at(s, 2.2, 'flip');
+        at(s, verdictAt + 0.48, 'impactBig');
         if (i < scenes.length - 1) at(s, s.duration - WIPE_DUR + 0.04, 'whoosh');
     });
 
@@ -114,39 +118,57 @@ function buildShortsManifest(models, durationsParam) {
 
 function titleFontSize(title) {
     const len = title.length;
-    if (len <= 14) return 58;
-    if (len <= 22) return 50;
-    if (len <= 32) return 44;
-    return 38;
+    if (len <= 14) return 60;
+    if (len <= 22) return 52;
+    if (len <= 32) return 46;
+    return 40;
 }
 
 function priceFontSize(priceText) {
     const len = priceText.length;
-    if (len <= 6) return 126;
-    if (len <= 7) return 112;
-    return 96;
+    if (len <= 6) return 124;
+    if (len <= 7) return 110;
+    return 94;
+}
+
+function FeatureBadges({ meta }) {
+    const tags = [
+        meta.isPs5ProEnhanced && { text: 'PS5 Pro', color: '#e2e8f0', bg: 'rgba(255,255,255,0.12)' },
+        meta.isPlusExclusive && { text: 'PLUS 할인', color: '#facc15', bg: alpha('#facc15', 0.16) },
+        meta.inCatalog && { text: 'PS+ 카탈로그', color: '#38bdf8', bg: alpha('#38bdf8', 0.16) },
+    ].filter(Boolean);
+    if (!tags.length) return null;
+    return tags.map((tg) => (
+        <span key={tg.text} style={{
+            padding: '3px 10px', borderRadius: 8, fontSize: 18, fontWeight: 900,
+            color: tg.color, background: tg.bg, border: `1px solid ${alpha(tg.color, 0.45)}`,
+            whiteSpace: 'nowrap',
+        }}>
+            {tg.text}
+        </span>
+    ));
 }
 
 function TopHud({ t, scenes, activeIdx, endLabel }) {
     return (
         <div style={{
-            position: 'absolute', top: 108, left: 64, right: 64, zIndex: 40,
-            display: 'flex', flexDirection: 'column', gap: 14, pointerEvents: 'none',
+            position: 'absolute', top: 114, left: 64, right: 64, zIndex: 40,
+            display: 'flex', flexDirection: 'column', gap: 12, pointerEvents: 'none',
         }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <SignalMark height={22} />
-                    <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: '0.24em', color: 'rgba(255,255,255,0.85)' }}>
+                    <SignalMark height={24} />
+                    <span style={{ fontSize: 22, fontWeight: 900, letterSpacing: '0.24em', color: 'rgba(255,255,255,0.88)' }}>
                         {BRAND_NAME.toUpperCase()}
                     </span>
                     <span style={{
-                        padding: '5px 16px', borderRadius: 999, fontSize: 22, fontWeight: 900, color: SALE_RED,
+                        padding: '5px 16px', borderRadius: 999, fontSize: 23, fontWeight: 900, color: SALE_RED,
                         background: alpha(SALE_RED, 0.16), border: `1.5px solid ${alpha(SALE_RED, 0.55)}`,
                     }}>
                         {endLabel}
                     </span>
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.65)', fontVariantNumeric: 'tabular-nums' }}>
+                <div style={{ fontSize: 26, fontWeight: 900, letterSpacing: '0.14em', color: 'rgba(255,255,255,0.65)', fontVariantNumeric: 'tabular-nums' }}>
                     <span style={{ color: '#fff' }}>{String(activeIdx + 1).padStart(2, '0')}</span> / {String(scenes.length).padStart(2, '0')}
                 </div>
             </div>
@@ -168,170 +190,85 @@ function TopHud({ t, scenes, activeIdx, endLabel }) {
     );
 }
 
-function StatCard({ showP, accent, label, mainText, subText, leftSlot }) {
-    if (showP <= 0) return null;
-    return (
-        <div style={{
-            display: 'flex', alignItems: 'center', gap: 22, padding: '22px 26px', borderRadius: 24,
-            background: 'rgba(255,255,255,0.06)', border: `1.5px solid ${alpha(accent, 0.3)}`,
-            boxShadow: `0 14px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08)`,
-            opacity: clamp(showP * 1.6),
-            transform: `translateY(${(1 - showP) * 36}px)`,
-        }}>
-            {leftSlot}
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.06em' }}>{label}</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1.18, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {mainText}
-                </div>
-                {subText && (
-                    <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255,255,255,0.72)', marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {subText}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }) {
+function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0, exitScale = 1, exitDim = 0 }) {
     const { meta, price, defense, quality, verdict } = model;
-    const impactAt = isFirst ? 0.22 : 0.45;
-    const tickAt = isFirst ? -0.12 : 0.12;
-    const atlAt = isFirst ? 0.85 : 1.05;
-    const dockAt = 2.25;
-    const verdictAt = Math.max(4.6, duration - 2.2);
+    const impactAt = isFirst ? 0.14 : 0.34;
+    const dockAt = 2.15;
+    const verdictAt = Math.max(4.4, duration - 2.55);
+    const verdictLandAt = verdictAt + 0.48;
 
-    const dockP = anim(lt, dockAt, 0.55, ease.inOutCubic);
-    const verdictP = anim(lt, verdictAt, 0.5, ease.outBack);
-    const activeAccent = lt >= verdictAt ? verdict.color : NEUTRAL_ACCENT;
-    const sh = shake(lt, impactAt, { duration: 0.35, amp: 10, freq: 42 });
+    const dockP = anim(lt, dockAt, 0.52, ease.inOutCubic);
+    const activeAccent = lt >= verdictLandAt ? verdict.color : NEUTRAL_ACCENT;
+    const sh = shake(lt, impactAt, { duration: 0.3, amp: 9, freq: 42 });
 
-    // 0.00s에 화면이 비지 않도록 g1은 첫 프레임부터 포스터·타이틀·가격·할인율이 즉시 보이게 설정
-    const heroScale = isFirst ? lerp(1.06, 1, anim(lt, 0, 0.25, ease.outQuart)) : 1;
+    // 1번 게임은 t=0.00부터 모든 핵심 정보가 흐림/오표기 없이 선명하게 보이도록 설계
+    const heroScale = isFirst ? lerp(1.04, 1, anim(lt, 0, 0.22, ease.outQuart)) : 1;
+    const g1PricePop = isFirst ? lerp(1.1, 1, anim(lt, 0, 0.24, ease.outBack)) : 1;
     const bob = Math.sin(lt * 2.2) * 5 * (1 - dockP);
 
-    // 포스터 크기/위치 보간: 상단 중앙 대형(460x613) -> Phase 2 좌상단 컴팩트(224x298)
-    const posterW = lerp(460, 224, dockP);
-    const posterH = lerp(613, 298, dockP);
-    const posterX = lerp(310, 64, dockP);
-    const posterY = lerp(380, 214, dockP) + bob;
-    const posterRot = lerp(-1.8, 0, dockP);
+    // Phase 1 포스터 중심(242 + 470/2 = 477)과 하단 안전영역(64..890, 중심 = 477)의 수직 축 일치
+    const posterW = lerp(470, 200, dockP);
+    const posterH = lerp(626, 266, dockP);
+    const posterX = lerp(242, 64, dockP);
+    const posterY = lerp(348, 200, dockP) + bob;
+    const posterRot = lerp(-1.5, 0, dockP);
 
-    const discountPop = isFirst ? anim(lt, 0, impactAt, ease.outBack) : anim(lt, impactAt - 0.18, 0.32, ease.outBack);
-    const discountScale = lerp(isFirst ? 1.45 : 1.9, 1, discountPop);
-    const atlPop = anim(lt, atlAt, 0.36, ease.outBack);
-    const strikeP = isFirst ? lerp(0.35, 1, anim(lt, 0, 0.35, ease.outExpo)) : anim(lt, 0.12, 0.45, ease.outExpo);
-    const savingsP = anim(lt, 1.05, 0.42, ease.outExpo);
-    const sweep = ((lt - 0.5) % 2.4) / 0.9;
+    const discountPop = isFirst ? anim(lt, 0, 0.22, ease.outBack) : anim(lt, 0.12, 0.28, ease.outBack);
+    const discountScale = lerp(isFirst ? 1.16 : 1.75, 1, discountPop);
+    const atlScale = isFirst ? lerp(1.1, 1, anim(lt, 0, 0.25, ease.outBack)) : anim(lt, 0.65, 0.32, ease.outBack);
+    const atlOpacity = isFirst ? 1 : clamp(atlScale * 2);
+    const strikeP = isFirst ? 1 : anim(lt, 0.10, 0.36, ease.outExpo);
+    const hookRowP = isFirst ? lerp(0.7, 1, anim(lt, 0, 0.32, ease.outExpo)) : anim(lt, 0.55, 0.38, ease.outExpo);
+    const sweep = ((lt - 0.35) % 2.4) / 0.9;
 
     const priceText = fmt(price.current);
     const heroPriceFont = priceFontSize(priceText);
     const tSize = titleFontSize(meta.title);
     const subTag = [meta.platforms.slice(0, 2).join(' · '), meta.genre].filter(Boolean).join(' · ');
 
-    // Phase 2 스펙 카드 구성 (최대 3장)
-    const specCards = [];
-    if (defense) {
-        specCards.push({
-            key: 'defense',
-            accent: defense.tier.metal[1],
-            label: '할인 방어력',
-            mainText: `${defense.tierText} (${defense.tier.desc})`,
-            subText: [
-                defense.discountCount > 0 && `누적 ${defense.discountCount}회 할인`,
-                defense.monthsPerSale && `평균 ${Math.round(defense.monthsPerSale * 10) / 10}개월 주기`,
-            ].filter(Boolean).join(' · ') || '가격 이력 추적 중',
-            leftSlot: (
-                <div style={{
-                    width: 84, height: 84, borderRadius: 20, flexShrink: 0,
-                    background: `linear-gradient(135deg, ${defense.tier.metal[0]}, ${defense.tier.metal[1]})`,
-                    color: '#0b0c12', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 44, fontWeight: 900, boxShadow: `0 10px 26px ${alpha(defense.tier.metal[1], 0.4)}`,
-                }}>
-                    {defense.tierKey}
-                </div>
-            ),
-        });
-    }
-    if (quality && (quality.meta || quality.main)) {
-        const metaVal = quality.meta ?? 0;
-        const ringFill = anim(lt, 2.65, 0.9, ease.outCubic);
-        specCards.push({
-            key: 'quality',
-            accent: metaVal >= 85 ? GREEN : NEUTRAL_ACCENT,
-            label: '평가 · 플레이 볼륨',
-            mainText: quality.main ? `메인 ${quality.main}시간` : `메타크리틱 ${metaVal}점`,
-            subText: [
-                quality.perHour && `시간당 ${fmt(quality.perHour)}원`,
-                quality.tags?.[0]?.name,
-            ].filter(Boolean).join(' · ') || '검증된 타이틀',
-            leftSlot: quality.meta ? (
-                <Ring size={94} stroke={10} value={(metaVal / 100) * ringFill} color={metaVal >= 85 ? GREEN : NEUTRAL_ACCENT} glow={12}>
-                    <span style={{ fontSize: 30, fontWeight: 900, fontVariantNumeric: 'tabular-nums' }}>{Math.round(metaVal * ringFill)}</span>
-                </Ring>
-            ) : (
-                <div style={{
-                    width: 84, height: 84, borderRadius: 20, flexShrink: 0,
-                    background: alpha(NEUTRAL_ACCENT, 0.2), border: `1.5px solid ${alpha(NEUTRAL_ACCENT, 0.5)}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 900, color: NEUTRAL_ACCENT,
-                }}>
-                    {quality.main}H
-                </div>
-            ),
-        });
-    }
-    specCards.push({
-        key: 'bonus',
-        accent: meta.inCatalog ? '#38bdf8' : SALE_RED,
-        label: meta.inCatalog ? '구독 혜택' : '할인 요약',
-        mainText: meta.inCatalog ? 'PS Plus 카탈로그 포함' : (price.savings > 0 ? `${fmt(price.savings)}원 절약` : endLabel),
-        subText: meta.inCatalog ? `구독자는 무료 플레이 · ${endLabel}` : (price.lowest ? `역대 최저 ${fmt(price.lowest)}원 · ${endLabel}` : endLabel),
-        leftSlot: (
-            <div style={{
-                width: 84, height: 84, borderRadius: 20, flexShrink: 0,
-                background: alpha(meta.inCatalog ? '#38bdf8' : SALE_RED, 0.18),
-                border: `1.5px solid ${alpha(meta.inCatalog ? '#38bdf8' : SALE_RED, 0.5)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 30, fontWeight: 900, color: meta.inCatalog ? '#38bdf8' : SALE_RED,
-            }}>
-                {meta.inCatalog ? 'PS+' : `-${price.rate}%`}
-            </div>
-        ),
-    });
+    const hookChips = [
+        price.savings > 0 && `${fmt(price.savings)}원 절약`,
+        quality?.meta && `메타 ${quality.meta}점`,
+        quality?.main && `메인 ${quality.main}시간`,
+    ].filter(Boolean);
 
-    const showSpecs = specCards.slice(0, 3);
-    const ctaP = isLast ? anim(lt, duration - 1.4, 0.4, ease.outExpo) : 0;
+    const hasDefense = Boolean(defense);
+    const chartWidth = hasDefense ? 584 : 826;
+    const ctaP = isLast ? anim(lt, duration - 1.35, 0.35, ease.outExpo) : 0;
+    const arrowBob = isLast ? Math.sin(lt * 7) * 4 : 0;
 
     return (
         <div style={{
             position: 'absolute', inset: 0, overflow: 'hidden',
-            transform: `translateY(${slideY}px)`,
+            transform: `translateY(${slideY}px) scale(${exitScale})`,
+            transformOrigin: 'center center',
         }}>
             <Backdrop t={lt} imageUrl={meta.imageUrl} accent={activeAccent} width={SHORTS_W} height={SHORTS_H} />
 
-            {/* 슬롯 전환 시 상단 발광 바 */}
             {slideY > 1 && (
                 <div style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, height: 8,
-                    background: NEUTRAL_ACCENT, boxShadow: `0 0 36px ${NEUTRAL_ACCENT}`,
+                    position: 'absolute', top: 0, left: 0, right: 0, height: 10,
+                    background: NEUTRAL_ACCENT, boxShadow: `0 0 40px ${NEUTRAL_ACCENT}`,
                 }} />
             )}
 
             <div style={{ position: 'absolute', inset: 0, transform: `translate(${sh.x}px, ${sh.y}px) scale(${heroScale})` }}>
                 {/* Phase 1 상단 타이틀 */}
                 <div style={{
-                    position: 'absolute', left: 64, right: 64, top: 216,
+                    position: 'absolute', left: 64, right: 64, top: 202,
                     opacity: 1 - clamp(dockP * 1.8),
-                    transform: `translateY(${dockP * -30}px)`,
+                    transform: `translateY(${dockP * -28}px)`,
                 }}>
-                    {subTag && (
-                        <div style={{ fontSize: 22, fontWeight: 800, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.05em', marginBottom: 8 }}>
-                            {subTag}
-                        </div>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                        {subTag && (
+                            <span style={{ fontSize: 23, fontWeight: 800, color: 'rgba(255,255,255,0.68)', letterSpacing: '0.04em' }}>
+                                {subTag}
+                            </span>
+                        )}
+                        <FeatureBadges meta={meta} />
+                    </div>
                     <div style={{
-                        fontSize: tSize, fontWeight: 900, lineHeight: 1.14, letterSpacing: '-0.02em', color: '#fff',
+                        fontSize: tSize, fontWeight: 900, lineHeight: 1.13, letterSpacing: '-0.02em', color: '#fff',
                         textShadow: '0 8px 34px rgba(0,0,0,0.75)',
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                     }}>
@@ -339,40 +276,43 @@ function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }
                     </div>
                 </div>
 
-                {/* Phase 2 도킹 헤더 (우측 타이틀 + 가격 요약) */}
+                {/* Phase 2 도킹 헤더 (y=200..475 안쪽에 안전하게 수납) */}
                 {dockP > 0.05 && (
                     <div style={{
-                        position: 'absolute', left: 318, right: 64, top: 218,
+                        position: 'absolute', left: 288, right: 64, top: 200, maxHeight: 278, overflow: 'hidden',
                         opacity: clamp((dockP - 0.2) * 1.5),
-                        transform: `translateY(${(1 - dockP) * 28}px)`,
+                        transform: `translateY(${(1 - dockP) * 24}px)`,
                     }}>
-                        {subTag && (
-                            <div style={{ fontSize: 20, fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginBottom: 6 }}>
-                                {subTag}
-                            </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
+                            {subTag && (
+                                <span style={{ fontSize: 20, fontWeight: 800, color: 'rgba(255,255,255,0.62)' }}>
+                                    {subTag}
+                                </span>
+                            )}
+                            <FeatureBadges meta={meta} />
+                        </div>
                         <div style={{
-                            fontSize: Math.min(44, tSize), fontWeight: 900, lineHeight: 1.15, color: '#fff',
+                            fontSize: Math.min(40, tSize), fontWeight: 900, lineHeight: 1.13, color: '#fff',
                             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                         }}>
                             {meta.title}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 18 }}>
-                            <span style={{ fontSize: 64, fontWeight: 900, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: 10 }}>
+                            <span style={{ fontSize: 60, fontWeight: 900, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
                                 {priceText}원
                             </span>
                             {price.rate > 0 && (
                                 <span style={{
                                     padding: '4px 14px', borderRadius: 12, background: SALE_RED, color: '#fff',
-                                    fontSize: 30, fontWeight: 900,
+                                    fontSize: 28, fontWeight: 900,
                                 }}>
                                     -{price.rate}%
                                 </span>
                             )}
                         </div>
                         {price.original && (
-                            <div style={{ fontSize: 28, fontWeight: 700, color: 'rgba(255,255,255,0.45)', textDecoration: 'line-through', marginTop: 4 }}>
-                                정가 {fmt(price.original)}원
+                            <div style={{ fontSize: 25, fontWeight: 700, color: 'rgba(255,255,255,0.55)', marginTop: 4 }}>
+                                정가 <span style={{ textDecoration: 'line-through', textDecorationThickness: 2 }}>{fmt(price.original)}원</span>
                             </div>
                         )}
                     </div>
@@ -400,17 +340,19 @@ function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }
                         )}
                     </div>
 
-                    {/* 역대 최저가 배지 */}
+                    {/* 역대 최저가 배지 (t=0.00부터 즉시 노출) */}
                     {(price.atl === 'new' || price.atl === 'equal') && dockP < 0.7 && (
                         <div style={{
                             position: 'absolute', left: -24, top: 24,
-                            padding: '10px 22px', borderRadius: 16,
+                            padding: '10px 20px', borderRadius: 16,
                             background: price.atl === 'new' ? 'linear-gradient(135deg, #f97316, #ef4444)' : 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                            color: '#fff', fontSize: 28, fontWeight: 900,
+                            color: '#fff', fontSize: 27, fontWeight: 900,
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
                             boxShadow: '0 12px 30px rgba(0,0,0,0.55)', border: '1.5px solid rgba(255,255,255,0.35)',
-                            transform: `scale(${atlPop})`, opacity: clamp(atlPop * 2) * (1 - dockP),
+                            transform: `scale(${atlScale})`, opacity: atlOpacity * (1 - dockP),
                         }}>
-                            {price.atl === 'new' ? '🔥 역대 최저가 갱신' : '✨ 역대 최저가 동률'}
+                            {price.atl === 'new' ? <Flame size={26} strokeWidth={2.5} /> : <TrendingUp size={26} strokeWidth={2.5} />}
+                            <span>{price.atl === 'new' ? '역대 최저가 갱신' : '역대 최저가 동률'}</span>
                         </div>
                     )}
 
@@ -419,7 +361,7 @@ function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }
                         <div style={{
                             position: 'absolute', right: -34, bottom: 24,
                             padding: '10px 28px', borderRadius: 22, background: SALE_RED, color: '#fff',
-                            fontSize: 82, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.08,
+                            fontSize: 80, fontWeight: 900, letterSpacing: '-0.04em', lineHeight: 1.08,
                             boxShadow: `0 16px 46px ${alpha(SALE_RED, 0.65)}`,
                             transform: `rotate(4deg) scale(${discountScale})`,
                             opacity: (isFirst ? 1 : clamp(discountPop * 2)) * (1 - dockP),
@@ -429,111 +371,90 @@ function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }
                     )}
                 </div>
 
-                {/* Phase 1 대형 가격 롤링 (y: 1030~1350, 우측 UI 회피) */}
+                {/* Phase 1 대형 가격 + 핵심 요약 (g1은 t=0.00부터 선명한 최종가, g2/g3은 사각 클리핑 없는 drop-shadow Odometer) */}
                 {dockP < 0.85 && (
                     <div style={{
-                        position: 'absolute', left: 64, right: 170, top: 1035,
+                        position: 'absolute', left: 64, right: 190, top: 1002,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                         opacity: 1 - clamp(dockP * 1.6),
-                        transform: `translateY(${dockP * -40}px)`,
+                        transform: `translateY(${dockP * -36}px)`,
                     }}>
                         {price.original && (
-                            <div style={{ position: 'relative', display: 'inline-block', fontSize: 44, fontWeight: 800, color: 'rgba(255,255,255,0.52)', fontVariantNumeric: 'tabular-nums' }}>
-                                정가 {fmt(price.original)}원
-                                <div style={{
-                                    position: 'absolute', left: -4, top: '52%', height: 5, borderRadius: 3, background: SALE_RED,
-                                    width: `${strikeP * 104}%`,
-                                }} />
+                            <div style={{ fontSize: 42, fontWeight: 800, color: 'rgba(255,255,255,0.56)', fontVariantNumeric: 'tabular-nums' }}>
+                                정가{' '}
+                                <span style={{ position: 'relative', display: 'inline-block' }}>
+                                    {fmt(price.original)}원
+                                    <span style={{
+                                        position: 'absolute', left: -4, top: '52%', height: 5, borderRadius: 3, background: SALE_RED,
+                                        width: `${strikeP * 104}%`,
+                                    }} />
+                                </span>
                             </div>
                         )}
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6, lineHeight: 1 }}>
-                            <span style={{
-                                fontSize: heroPriceFont, fontWeight: 900, letterSpacing: '-0.05em',
-                                textShadow: `0 0 60px ${alpha(SALE_RED, 0.4)}, 0 10px 30px rgba(0,0,0,0.75)`,
-                            }}>
-                                {price.original
-                                    ? <Odometer from={price.original} to={price.current} t={lt} start={tickAt} dur={1.1} />
-                                    : fmt(price.current)}
+                        <div style={{
+                            display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 10, marginTop: 8, lineHeight: 1,
+                            transform: `scale(${g1PricePop})`,
+                            filter: `drop-shadow(0 0 28px ${alpha(SALE_RED, 0.35)}) drop-shadow(0 10px 24px rgba(0,0,0,0.75))`,
+                        }}>
+                            <span style={{ fontSize: heroPriceFont, fontWeight: 900, letterSpacing: '-0.05em', fontVariantNumeric: 'tabular-nums' }}>
+                                {isFirst || !price.original
+                                    ? priceText
+                                    : <Odometer from={price.original} to={price.current} t={lt} start={0.08} dur={0.78} />}
                             </span>
                             <span style={{ fontSize: Math.round(heroPriceFont * 0.42), fontWeight: 900 }}>원</span>
                         </div>
-                        {price.savings > 0 && (
+                        {hookChips.length > 0 && (
                             <div style={{
-                                marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 10,
-                                padding: '8px 20px', borderRadius: 14,
-                                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.16)',
-                                fontSize: 28, fontWeight: 800, color: 'rgba(255,255,255,0.9)',
-                                opacity: clamp(savingsP * 1.5), transform: `translateY(${(1 - savingsP) * 14}px)`,
+                                marginTop: 22, padding: '10px 24px', borderRadius: 999,
+                                maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.18)',
+                                fontSize: 25, fontWeight: 800, color: 'rgba(255,255,255,0.92)',
+                                opacity: clamp(hookRowP * 1.4),
+                                transform: `translateY(${(1 - hookRowP) * 12}px)`,
                             }}>
-                                <span>{fmt(price.savings)}원 절약</span>
-                                {price.atl === 'new' && <span style={{ color: GREEN }}>· 사상 최저</span>}
+                                {hookChips.join('  ·  ')}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Phase 2 스펙 카드 (y: 550~1120, x: 64..905 안전 영역) */}
-                {dockP > 0.3 && (
+                {/* Phase 2 상단: 3D 방패 + 실시간 가격 이력 계단 차트 (y: 500~784, left: 64..890) */}
+                {dockP > 0.25 && (
                     <div style={{
-                        position: 'absolute', left: 64, right: 175, top: 556,
-                        display: 'flex', flexDirection: 'column', gap: 18,
+                        position: 'absolute', left: 64, top: 500, width: 826, height: 284,
+                        display: 'flex', gap: 18, alignItems: 'stretch',
                     }}>
-                        {showSpecs.map((card, idx) => (
-                            <StatCard
-                                key={card.key}
-                                showP={anim(lt, 2.48 + idx * 0.14, 0.42, ease.outExpo)}
-                                accent={card.accent}
-                                label={card.label}
-                                mainText={card.mainText}
-                                subText={card.subText}
-                                leftSlot={card.leftSlot}
-                            />
-                        ))}
+                        {hasDefense && <MiniTierShield lt={lt} start={2.28} defense={defense} width={224} />}
+                        <MiniPriceChart lt={lt} start={2.32} price={price} accent={activeAccent} width={chartWidth} height={284} />
                     </div>
                 )}
 
-                {/* Phase 3 판정 배지 (y: 1140~1335, x: 64..905 안전 영역) */}
-                {verdictP > 0 && (
-                    <div style={{
-                        position: 'absolute', left: 64, right: 175, top: 1146,
-                        padding: '24px 28px', borderRadius: 26,
-                        background: alpha(verdict.color, 0.15),
-                        border: `2px solid ${alpha(verdict.color, 0.65)}`,
-                        boxShadow: `0 18px 50px rgba(0,0,0,0.6), 0 0 60px ${alpha(verdict.color, 0.3)}`,
-                        display: 'flex', alignItems: 'center', gap: 22,
-                        opacity: clamp(verdictP * 1.8),
-                        transform: `scale(${lerp(0.9, 1, verdictP)})`,
-                    }}>
-                        <PsSymbol
-                            kind={verdict.symbol}
-                            size={66}
-                            color={verdict.color}
-                            strokeWidth={9}
-                            draw={anim(lt, verdictAt + 0.05, 0.35)}
-                            glow={12}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 44, fontWeight: 900, color: verdict.color, lineHeight: 1.1 }}>
-                                {verdict.label}
-                            </div>
-                            <div style={{ fontSize: 22, fontWeight: 700, color: 'rgba(255,255,255,0.88)', marginTop: 6, lineHeight: 1.3 }}>
-                                {verdict.reason}
-                            </div>
-                        </div>
+                {/* Phase 2 하단: 메타·유저 이중 링 + 플레이타임 대시보드 (y: 804~1054, left: 64..890) */}
+                {dockP > 0.35 && (
+                    <div style={{ position: 'absolute', left: 64, top: 804, width: 826, height: 250 }}>
+                        <QualityDashboard lt={lt} start={2.65} model={model} accent={activeAccent} width={826} height={250} />
                     </div>
                 )}
 
-                {/* 마지막 게임 끝 1.4초: 아래 '관련 동영상' 링크 유도 포인터 (y: 1370) */}
+                {/* Phase 3: 초고속 ○△×□ 슬롯 릴 판정 배너 (y: 1076~1268, left: 64..890) */}
+                <div style={{ position: 'absolute', left: 64, top: 1076, width: 826, height: 192 }}>
+                    <VerdictReelBanner lt={lt} verdictAt={verdictAt} verdict={verdict} width={826} height={192} />
+                </div>
+
+                {/* 마지막 게임 끝 1.35초: y <= 1356 안전 구역 내 관련 동영상 포인터 */}
                 {isLast && ctaP > 0 && (
                     <div style={{
-                        position: 'absolute', left: 64, right: 175, top: 1368,
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '12px 22px', borderRadius: 999,
+                        position: 'absolute', left: 64, top: 1288, width: 826, height: 68,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+                        padding: '0 24px', borderRadius: 999,
                         background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.32)',
                         opacity: clamp(ctaP * 1.5),
-                        transform: `translateY(${(1 - ctaP) * 20}px)`,
+                        transform: `translateY(${(1 - ctaP) * 18}px)`,
                     }}>
-                        <span style={{ fontSize: 24, color: NEUTRAL_ACCENT, fontWeight: 900 }}>▼</span>
-                        <span style={{ fontSize: 23, fontWeight: 800, color: '#fff' }}>
+                        <span style={{ display: 'inline-flex', transform: `translateY(${arrowBob}px)`, color: NEUTRAL_ACCENT }}>
+                            <ArrowDown size={24} strokeWidth={2.8} />
+                        </span>
+                        <span style={{ fontSize: 25, fontWeight: 800, color: '#fff' }}>
                             전체 할인 분석은 아래 관련 동영상 · ps-signal.com
                         </span>
                     </div>
@@ -542,6 +463,7 @@ function GameSlot({ model, lt, duration, isFirst, isLast, endLabel, slideY = 0 }
 
             <Vignette />
             <Grain t={lt} />
+            {exitDim > 0 && <div style={{ position: 'absolute', inset: 0, background: '#000', opacity: exitDim, pointerEvents: 'none' }} />}
         </div>
     );
 }
@@ -562,7 +484,6 @@ function ShortsV2Stage({ models, renderMode, freezeAt, durationsParam }) {
     const nextScene = activeIdx < scenes.length - 1 ? scenes[activeIdx + 1] : null;
     const lt = Math.max(0, t - currentScene.start);
 
-    // 다음 게임으로의 쾌속 수직 와이프 (현재 슬롯 마지막 WIPE_DUR 동안 아래에서 위로 진입)
     const wipeProg = nextScene ? prog(t, currentScene.end - WIPE_DUR, WIPE_DUR) : 0;
     const wipeEase = ease.inOutCubic(wipeProg);
 
@@ -579,7 +500,8 @@ function ShortsV2Stage({ models, renderMode, freezeAt, durationsParam }) {
                     isFirst={activeIdx === 0}
                     isLast={activeIdx === scenes.length - 1}
                     endLabel={endLabel}
-                    slideY={wipeEase * -120}
+                    exitScale={lerp(1, 0.95, wipeEase)}
+                    exitDim={wipeEase * 0.45}
                 />
 
                 {nextScene && wipeProg > 0 && (
