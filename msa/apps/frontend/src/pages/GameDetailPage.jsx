@@ -76,6 +76,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { pushRecentGame } from '../utils/recentGames';
 import GameShortsCard from '../components/GameShortsCard';
 // 롱폼 촬영 전용 카드는 일반 사용자에게 필요 없으므로 별도 청크로 분리
+const GameShortsV2 = lazyWithReload(() => import('../components/shorts/GameShortsV2'));
 const GameLongformCard = lazyWithReload(() => import('../components/longform/GameLongformCard'));
 const LongformOpening = lazyWithReload(() => import('../components/longform/LongformOpening'));
 const LongformThumbnail = lazyWithReload(() => import('../components/longform/LongformThumbnail'));
@@ -1147,6 +1148,17 @@ export default function GameDetailPage() {
     if (!game) return null;
 
     // 🎬 Shorts 촬영용 전체화면 카드 — /games/:id?view=shorts
+    // 🎬 쇼츠 2.0 모션그래픽 — /games/:id?view=shorts-v2&ids=442,671,1744
+    if (new URLSearchParams(location.search).get('view') === 'shorts-v2') {
+        return (
+            <div className="fixed inset-0 z-[200] bg-black">
+                <Suspense fallback={null}>
+                    <GameShortsV2 firstGame={game} />
+                </Suspense>
+            </div>
+        );
+    }
+
     if (new URLSearchParams(location.search).get('view') === 'shorts') {
         return (
             <div className="fixed inset-0 z-[200] overflow-y-auto bg-[#080810]">

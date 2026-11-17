@@ -1,5 +1,5 @@
 // 무대 크롬 — 배경, HUD(진행바·로어서드·브랜드), PS 심볼 마스크 전환
-import React from 'react';
+import React, { useId } from 'react';
 import { STAGE_H, STAGE_W, alpha, anim, clamp, ease, noise1, prog } from './engine';
 import { BRAND_NAME } from './gameModel';
 import { SignalMark } from './primitives';
@@ -7,17 +7,24 @@ import { backdropSrc, posterSrc } from './runtime';
 import { CX, CY, polygonPoints } from './transitions';
 
 // ── 배경: 흐린 커버 아트(2.5D 드리프트) + 오로라 + 도트 그리드 + 비네팅 ────
-export function Backdrop({ t, imageUrl, accent }) {
-    // 작은 해상도에서 블러를 건 뒤 확대 → 1920 전체에 블러를 거는 것보다 훨씬 가볍다
-    const dx = noise1(t * 0.06) * 26;
-    const dy = noise1(t * 0.05 + 40) * 18;
-    const s = 4.4 + Math.sin(t * 0.08) * 0.08;
+export function Backdrop({ t, imageUrl, accent, width = STAGE_W, height = STAGE_H }) {
+    const uid = useId().replace(/:/g, '');
+    const rx = width / STAGE_W;
+    const ry = height / STAGE_H;
+    // 작은 해상도에서 블러를 건 뒤 확대 → 전체 스테이지에 직접 블러를 거는 것보다 훨씬 가볍다
+    const dx = noise1(t * 0.06) * 26 * rx;
+    const dy = noise1(t * 0.05 + 40) * 18 * ry;
+    const baseScale = Math.max(width / 480, height / 270) * 1.1;
+    const s = baseScale + Math.sin(t * 0.08) * 0.08;
     const blobs = [
-        { x: 1500 + Math.sin(t * 0.21) * 140, y: 180 + Math.cos(t * 0.17) * 90, r: 760, a: 0.34 },
-        { x: 260 + Math.cos(t * 0.15) * 120, y: 900 + Math.sin(t * 0.19) * 70, r: 820, a: 0.22 },
-        { x: 960 + Math.sin(t * 0.11 + 2) * 260, y: 560 + Math.cos(t * 0.13) * 120, r: 620, a: 0.12 },
+        { x: (1500 + Math.sin(t * 0.21) * 140) * rx, y: (180 + Math.cos(t * 0.17) * 90) * ry, r: 760, a: 0.34 },
+        { x: (260 + Math.cos(t * 0.15) * 120) * rx, y: (900 + Math.sin(t * 0.19) * 70) * ry, r: 820, a: 0.22 },
+        { x: (960 + Math.sin(t * 0.11 + 2) * 260) * rx, y: (560 + Math.cos(t * 0.13) * 120) * ry, r: 620, a: 0.12 },
     ];
     const gridShift = (t * 14) % 48;
+    const dotsId = `lfDots_${uid}`;
+    const fadeId = `lfDotsFade_${uid}`;
+    const maskId = `lfDotsMask_${uid}`;
 
     return (
         <div style={{ position: 'absolute', inset: 0, background: '#06060c', overflow: 'hidden' }}>
@@ -35,22 +42,22 @@ export function Backdrop({ t, imageUrl, accent }) {
                     background: `radial-gradient(circle, ${alpha(accent, b.a)} 0%, ${alpha(accent, b.a * 0.35)} 35%, transparent 68%)`,
                 }} />
             ))}
-            <svg width={STAGE_W} height={STAGE_H} style={{ position: 'absolute', inset: 0, opacity: 0.09 }}>
+            <svg width={width} height={height} style={{ position: 'absolute', inset: 0, opacity: 0.09 }}>
                 <defs>
-                    <pattern id="lfDots" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform={`translate(${gridShift} ${gridShift * 0.5})`}>
+                    <pattern id={dotsId} width="48" height="48" patternUnits="userSpaceOnUse" patternTransform={`translate(${gridShift} ${gridShift * 0.5})`}>
                         <circle cx="2" cy="2" r="1.6" fill="#fff" />
                     </pattern>
-                    <radialGradient id="lfDotsFade" cx="50%" cy="50%" r="60%">
+                    <radialGradient id={fadeId} cx="50%" cy="50%" r="60%">
                         <stop offset="0%" stopColor="#fff" stopOpacity="1" />
                         <stop offset="100%" stopColor="#fff" stopOpacity="0" />
                     </radialGradient>
-                    <mask id="lfDotsMask"><rect width={STAGE_W} height={STAGE_H} fill="url(#lfDotsFade)" /></mask>
+                    <mask id={maskId}><rect width={width} height={height} fill={`url(#${fadeId})`} /></mask>
                 </defs>
-                <rect width={STAGE_W} height={STAGE_H} fill="url(#lfDots)" mask="url(#lfDotsMask)" />
+                <rect width={width} height={height} fill={`url(#${dotsId})`} mask={`url(#${maskId})`} />
             </svg>
             {/* 사선 라이트 빔 (아주 느리게 이동) */}
             <div style={{
-                position: 'absolute', top: -300, left: -600 + ((t * 40) % 3200), width: 380, height: 1700,
+                position: 'absolute', top: -300, left: -600 + ((t * 40) % (width + 1300)), width: 380, height: height + 650,
                 transform: 'rotate(18deg)',
                 background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.035), transparent)',
             }} />
