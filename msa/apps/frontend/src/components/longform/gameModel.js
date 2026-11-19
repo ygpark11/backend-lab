@@ -42,9 +42,20 @@ export function cleanTitle(title) {
         prev = t;
         t = t.replace(/\([^()]*\)/g, '');
     } while (t !== prev);
-    t = t.replace(/\[?\s*PS[45][™®]?(\s*[&/]\s*PS[45][™®]?)?\s*\]?/gi, '');
+    // "PS4™와 PS5™", "PS5 버전"처럼 접속어·'버전'이 붙은 표기도 통째로 지운다
+    // (2026-11-18: 화면에 "It Takes Two와", "호그와트 레거시버전"으로 남음. shorts-automation cleanGameTitle과 같은 규칙)
+    t = t.replace(/\[?\s*PS[45][™®]?(\s*(?:[&/]|와|및|and)\s*PS[45][™®]?)?(?:\s*버전)?\s*\]?/gi, ' ');
     t = t.replace(/[™®]/g, '').replace(/\s+/g, ' ').trim().replace(/(?:-|:)\s*$/, '').trim();
     return t || title.trim();
+}
+
+// 제목 끝 에디션 꼬리. 소개하는 게임 자체가 상위판("BIOHAZARD requiem 디럭스 에디션")이면
+// 이걸 떼어낸 본편 제목을 기준으로 에디션 이름을 붙여야 기본판/상위판이 뒤바뀌지 않는다 (2026-11-18 롱폼 2편)
+const EDITION_TAIL = /\s*(?:-|:)?\s*(?:디지털\s*|슈퍼\s*|Super\s*|Digital\s*)?(?:디럭스|얼티밋|얼티메이트|컴플리트|골드|스탠다드|스탠더드|프리미엄|스페셜|레전더리|로얄|Deluxe|Ultimate|Complete|Gold|Standard|Premium|Special|Legendary|Royal)\s*(?:에디션|Edition)\s*$/i;
+
+/** 에디션 꼬리를 뗀 본편 제목 */
+function baseTitleOf(title) {
+    return title.replace(EDITION_TAIL, '').trim() || title;
 }
 
 /** 에디션 이름에서 본편 제목을 떼어 "Digital Deluxe Edition" / "기본판"만 남긴다 */
@@ -52,7 +63,7 @@ function editionLabel(name, baseTitle) {
     const clean = cleanTitle(name);
     const rest = clean.startsWith(baseTitle) ? clean.slice(baseTitle.length).trim() : clean;
     // 대괄호 문자 클래스 표기는 Tailwind가 임의 속성 클래스로 오인해 잘못된 CSS를 만들므로 그룹으로 쓴다
-    return rest.replace(/^(?:-|:|·)\s*/, '') || '기본판';
+    return rest.replace(/^(?:-|:|·|\+)\s*/, '') || '기본판';
 }
 
 function verdictReason(game) {
@@ -147,25 +158,33 @@ export function buildModel(game, { now = new Date(), final = false, index = null
     } : null;
 
     // ── 에디션: editionContents가 있는 진짜 에디션만 (Upgrade/추가 콘텐츠 제외) ──
+    // 소개하는 게임은 구성 정보가 없어도 항상 넣는다. 빠지면 NOW 표시 없이 다른 에디션만 나온다 (2026-11-18 킹덤 컴 2)
+    const baseTitle = baseTitleOf(title);
     const editions = (game.familyGames ?? [])
-        .filter((e) => Array.isArray(e.editionContents) && e.editionContents.length > 0 && !/upgrade|업그레이드/i.test(e.name))
+        .filter((e) => e.id === game.id
+            || (Array.isArray(e.editionContents) && e.editionContents.length > 0 && !/upgrade|업그레이드/i.test(e.name)))
         .map((e) => ({
             id: e.id,
-            label: editionLabel(e.name, title),
+            label: editionLabel(e.name, baseTitle),
             current: e.currentPrice,
             original: e.originalPrice,
             rate: e.discountRate > 0 ? e.discountRate : 0,
             isCurrent: e.id === game.id,
-            contents: e.editionContents.filter((c) => !cleanTitle(c).startsWith(title)).slice(0, 4),
+            contents: (e.editionContents ?? []).filter((c) => !cleanTitle(c).startsWith(baseTitle)).slice(0, 4),
         }))
         .sort((a, b) => a.original - b.original);
     let editionInsight = null;
     const me = editions.find((e) => e.isCurrent);
     if (me && editions.length > 1) {
         const higher = editions.filter((e) => e.original > me.original);
+        // 소개하는 게임이 상위판인데 하위판보다 싸진 경우 (예: 디럭스 64,260원 < 기본판 79,800원)
+        const pricierLower = editions.filter((e) => e.original < me.original && e.current > me.current)
+            .sort((a, b) => b.current - a.current)[0];
         const cheaperHigher = higher.find((e) => e.current <= me.current);
         const nearHigher = higher.find((e) => e.current - me.current > 0 && e.current - me.current <= 15000);
-        if (cheaperHigher) {
+        if (pricierLower) {
+            editionInsight = { tone: 'good', text: `${pricierLower.label}보다 오히려 ${fmt(pricierLower.current - me.current)}원 더 저렴해요` };
+        } else if (cheaperHigher) {
             editionInsight = { tone: 'good', text: `상위 ${cheaperHigher.label}이 오히려 ${fmt(me.current - cheaperHigher.current)}원 더 저렴해요` };
         } else if (nearHigher) {
             editionInsight = { tone: 'info', text: `${fmt(nearHigher.current - me.current)}원만 더 내면 ${nearHigher.label}` };
@@ -179,7 +198,8 @@ export function buildModel(game, { now = new Date(), final = false, index = null
     const meta = {
         title,
         publisher: game.publisher || null,
-        genre: game.genres?.[0] || null,
+        // '유니크'는 스토어 분류명일 뿐 장르가 아니라 "유니크 게임 ○○"으로 읽혀서 건너뛴다
+        genre: game.genres?.find((g) => g !== '유니크') || null,
         platforms: game.platforms ?? [],
         releaseYear: game.releaseDate ? game.releaseDate.slice(0, 4) : null,
         imageUrl: game.imageUrl,
