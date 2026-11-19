@@ -37,4 +37,9 @@ public class ScrapingScheduler {
             scrapingQueueManager.markRequestAsFailed(request.getId(), e.getMessage());
         }
     }
+
+    @Scheduled(fixedDelay = 600_000)
+    public void recoverStuckJobs() {
+        scrapingQueueManager.recoverStuckProcessingJobs();
+    }
 }

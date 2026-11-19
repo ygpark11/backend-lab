@@ -15,6 +15,7 @@ import java.util.List;
 public class RankingService {
 
     private final GameRepository gameRepository;
+    private final GameReadService gameReadService;
 
     /**
      * 랭킹 일괄 업데이트
@@ -54,6 +55,7 @@ public class RankingService {
             }
         }
 
+        gameReadService.refreshCurationCache();
         log.info("[Ranking Update] 완료! 총 {}개 중 {}개 매칭 및 랭킹 부여 성공.", psStoreIds.size(), successCount);
     }
 }

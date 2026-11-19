@@ -212,7 +212,7 @@ docker compose -f docker-compose-local.yml up -d --build
 | 문서 | 내용 |
 | :--- | :--- |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 핵심 구현 기술 상세 (Backend·Data Engineering 설계 결정 및 근거) |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 37가지 기술 이슈 분석 |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 39가지 기술 이슈 분석 |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | CI/CD 파이프라인, SSL 전략, 멀티 아키텍처 빌드 |
 | [RUNBOOK.md](docs/RUNBOOK.md) | 로컬 실행·운영 배포 명령어, 환경 변수 설정, 초기 설정 가이드 |
 | [OBSERVABILITY.md](docs/OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud) |

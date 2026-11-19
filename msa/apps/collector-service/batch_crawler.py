@@ -835,7 +835,7 @@ def send_collected(payload: dict, via: str = "") -> None:
     """수집 결과를 오리지널 API(JAVA_API_URL)로 전송 (DOM·SSR 공통)."""
     title = payload["title"]
     try:
-        res = session.post(JAVA_API_URL, json=payload, timeout=30)
+        res = session.post(JAVA_API_URL, json=payload, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=30)
         if res.status_code == 200: logger.info(f"Sent{via}: {title} ({payload['currentPrice']} KRW)")
         else: logger.error(f"Server Error ({res.status_code}): {title}")
     except Exception as e: logger.error(f"Network Error sending {title}: {e}")
@@ -1138,7 +1138,7 @@ class DetailCollector:
 # --- [7. 유틸리티 (디스코드, 타겟조회, 캐시초기화)] ---
 def fetch_update_targets():
     try:
-        res = session.get(TARGET_API_URL, timeout=10)
+        res = session.get(TARGET_API_URL, headers={"X-Internal-Secret": CRAWLER_SECRET_KEY}, timeout=10)
         if res.status_code == 200:
             targets = res.json()  # [{"id": Long, "url": String}, ...]
             logger.info(f"📥 Received {len(targets)} targets.")

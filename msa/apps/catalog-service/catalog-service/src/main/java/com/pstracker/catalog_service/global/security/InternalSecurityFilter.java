@@ -10,6 +10,8 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
 @Slf4j
@@ -21,6 +23,8 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
 
     private final List<String> internalUris = List.of(
             "/api/internal/**",                             // 파이썬 -> 자바 동기화 및 콜백
+            "/api/v1/games/collect",                        // 게임 데이터 적재
+            "/api/v1/games/targets",                        // 수집 대상 게임 목록 조회
             "/api/v1/games/batch-complete",                 // 캐시 초기화
             "/api/v1/subscriptions/ps-plus/collect",        // 구독권 수집
             "/api/v1/subscriptions/benefits/collect"        // 월간게임, 카탈로그 추가 게임 수집
@@ -36,10 +40,10 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
         boolean isInternalUri = internalUris.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestUri));
 
         if (isInternalUri) {
-            // 헤더에서 시크릿 키 추출 및 검증
+            // 헤더에서 시크릿 키 추출 및 상수 시간 비교 검증
             String secretHeader = request.getHeader("X-Internal-Secret");
 
-            if (secretHeader == null || !secretHeader.equals(internalSecretKey)) {
+            if (!isValidSecret(secretHeader)) {
                 log.warn("비정상적인 내부 API 접근 시도 차단! URI: {}, IP: {}", requestUri, request.getRemoteAddr());
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access Denied");
                 return; // 실패 시 필터 체인 즉시 중단 (컨트롤러 진입 불가)
@@ -47,5 +51,15 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isValidSecret(String secretHeader) {
+        if (secretHeader == null || internalSecretKey == null || internalSecretKey.isEmpty()) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                secretHeader.getBytes(StandardCharsets.UTF_8),
+                internalSecretKey.getBytes(StandardCharsets.UTF_8)
+        );
     }
 }

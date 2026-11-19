@@ -112,6 +112,10 @@ public class MyPageService {
 
     @Transactional
     public String updateNickname(Long memberId, String newNickname) {
+        if (newNickname == null || newNickname.isBlank()) {
+            throw new IllegalArgumentException("닉네임을 입력해주세요.");
+        }
+
         Member member = findMemberOrThrow(memberId);
 
         String trimmedNickname = newNickname.trim();

@@ -33,4 +33,15 @@ public interface ScrapingRequestRepository extends JpaRepository<ScrapingRequest
     boolean existsByPsStoreId(String psStoreId);
 
     Page<ScrapingRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    @Modifying
+    @Query("UPDATE ScrapingRequest r " +
+            "SET r.status = :newStatus, r.errorMessage = :errorMessage, r.updatedAt = CURRENT_TIMESTAMP " +
+            "WHERE r.status = :currentStatus AND r.updatedAt < :threshold")
+    int failStuckRequests(
+            @Param("currentStatus") ScrapingRequestStatus currentStatus,
+            @Param("newStatus") ScrapingRequestStatus newStatus,
+            @Param("errorMessage") String errorMessage,
+            @Param("threshold") LocalDateTime threshold
+    );
 }

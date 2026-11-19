@@ -1,11 +1,12 @@
 package com.pstracker.catalog_service.member.controller;
 
-import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
 import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.member.dto.MyPagePioneeredGameResponse;
 import com.pstracker.catalog_service.member.dto.MyPageProfileResponse;
 import com.pstracker.catalog_service.member.dto.MyPageSettings;
+import com.pstracker.catalog_service.member.dto.NicknameUpdateRequest;
 import com.pstracker.catalog_service.member.service.MyPageService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -47,10 +48,9 @@ public class MyPageController {
     @PutMapping("/nickname")
     public ResponseEntity<String> updateNickname(
             @AuthenticationPrincipal MemberPrincipal principal,
-            @RequestBody java.util.Map<String, String> request) {
+            @Valid @RequestBody NicknameUpdateRequest request) {
 
-        String newNickname = request.get("nickname");
-        String updatedNickname = myPageService.updateNickname(principal.getMemberId(), newNickname);
+        String updatedNickname = myPageService.updateNickname(principal.getMemberId(), request.nickname());
 
         return ResponseEntity.ok(updatedNickname);
     }

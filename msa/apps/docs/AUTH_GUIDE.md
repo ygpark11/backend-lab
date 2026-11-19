@@ -120,16 +120,16 @@ public void onAuthenticationSuccess(HttpServletRequest request, HttpServletRespo
     JwtToken jwtToken = jwtTokenProvider.generateToken(authentication);
 
     // 2. Access Token -> HttpOnly Cookie (SameSite=Lax 필수)
-    ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", jwtToken.getAccessToken())
+    ResponseCookie accessTokenCookie = ResponseCookie.from("accessToken", jwtToken.getAccessToken())
             .path("/")
             .httpOnly(true)
             .secure(true) // HTTPS Only
             .sameSite("Lax") // CSRF 1차 방어선
-            .maxAge(1800)
+            .maxAge(3600)
             .build();
 
     // 3. Refresh Token -> HttpOnly Cookie
-    ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", jwtToken.getRefreshToken())
+    ResponseCookie refreshTokenCookie = ResponseCookie.from("refreshToken", jwtToken.getRefreshToken())
             .path("/")
             .httpOnly(true)
             .secure(true)
@@ -164,6 +164,6 @@ public void onAuthenticationSuccess(HttpServletRequest request, HttpServletRespo
 사용자가 로그아웃되지 않도록, Access Token 만료 시 백그라운드에서 자동으로 쿠키를 갱신합니다.
 
 1.  **Frontend:** API 요청 → `401 Unauthorized` 에러 수신.
-2.  **Frontend:** `POST /api/v1/auth/refresh` 요청 (이때, `Refresh Token` 쿠키가 자동으로 실려감).
+2.  **Frontend:** `POST /api/v1/auth/reissue` 요청 (이때, `Refresh Token` 쿠키가 자동으로 실려감).
 3.  **Backend:** 쿠키 검증 후 새로운 `Access Token`을 **쿠키(Set-Cookie)로 재발급**.
 4.  **Frontend:** 별도의 저장 로직 없이, 실패했던 API 요청을 즉시 **재시도(Retry)**. (브라우저가 갱신된 쿠키를 자동으로 전송)

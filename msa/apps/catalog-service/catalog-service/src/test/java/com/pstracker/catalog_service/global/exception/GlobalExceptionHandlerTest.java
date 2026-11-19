@@ -4,6 +4,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,6 +23,21 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().message()).isEqualTo("게임을 찾을 수 없습니다. id=42");
+    }
+
+    @Test
+    @DisplayName("JSON 파싱 오류와 필수 파라미터 누락은 500 대신 400 Bad Request를 반환한다")
+    void handleMalformedBodyAndMissingParam_returns400() {
+        ResponseEntity<ErrorResponse> bodyRes = handler.handleHttpMessageNotReadableException(
+                new HttpMessageNotReadableException("bad json", (org.springframework.http.HttpInputMessage) null));
+        assertThat(bodyRes.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bodyRes.getBody()).isNotNull();
+
+        ResponseEntity<ErrorResponse> paramRes = handler.handleMissingServletRequestParameterException(
+                new MissingServletRequestParameterException("q", "String"));
+        assertThat(paramRes.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(paramRes.getBody()).isNotNull();
+        assertThat(paramRes.getBody().message()).contains("q");
     }
 
     @Test

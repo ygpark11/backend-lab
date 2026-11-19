@@ -3,6 +3,7 @@ package com.pstracker.catalog_service.catalog.scheduler;
 import com.pstracker.catalog_service.ai.service.AiService;
 import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
+import com.pstracker.catalog_service.catalog.service.GameReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
@@ -22,6 +23,7 @@ public class AiDescriptionScheduler {
 
     private final GameRepository gameRepository;
     private final AiService aiService;
+    private final GameReadService gameReadService;
 
     private static final String TARGET_DESCRIPTION = "Full Data Crawler";
     private static final int MAX_API_CALLS_PER_DAY = 20; // 일일 무료 호출 할당량
@@ -93,8 +95,9 @@ public class AiDescriptionScheduler {
                 }
             }
 
-            // @Transactional 제거로 dirty checking 비활성화 → 명시적 저장
+            // @Transactional 제거로 dirty checking 비활성화 → 명시적 저장 및 상세 캐시 무효화
             gameRepository.saveAll(targetGames);
+            targetGames.forEach(g -> gameReadService.evictGameDetailCache(g.getId()));
 
             // DB 커넥션 미점유 상태로 API 레이트 리밋 대기
             if (!sleepMillis(RATE_LIMIT_WAIT_MS)) {
