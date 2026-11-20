@@ -25,10 +25,6 @@ FROM eclipse-temurin:25-jre-noble
 
 WORKDIR /app
 
-# Docker healthcheck용 curl 설치 (noble JRE 이미지 미포함)
-RUN apt-get update && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
 # Spring Boot Layered JAR 복사 (의존성 캐시 재사용으로 이미지 push/pull 효율화)
 COPY --from=builder /app/extracted/dependencies/ ./
 COPY --from=builder /app/extracted/spring-boot-loader/ ./
