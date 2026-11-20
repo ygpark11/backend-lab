@@ -34,13 +34,15 @@ jobs:
 
       # 5. 빌드 & 푸시 (변수 주입 포함, AMD64 + ARM64 멀티 아키텍처)
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: msa/apps/frontend
           file: msa/apps/frontend/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-web:latest
+          cache-from: type=gha,scope=face
+          cache-to: type=gha,mode=max,scope=face
           build-args: |
             VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
             VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}

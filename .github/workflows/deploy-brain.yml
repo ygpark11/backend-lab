@@ -27,7 +27,7 @@ jobs:
 
       # 3. Gradle 캐싱
       - name: Gradle Caching
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -60,13 +60,15 @@ jobs:
 
       # 8. 도커 이미지 빌드 & 허브로 전송 (AMD64 + ARM64 멀티 아키텍처 지원)
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: msa/apps/catalog-service/catalog-service
           file: msa/apps/catalog-service/catalog-service/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ secrets.DOCKER_USERNAME }}/ps-tracker-api:latest
+          cache-from: type=gha,scope=brain
+          cache-to: type=gha,mode=max,scope=brain
 
       # 9. 새 서버(A1)에 접속해서 배포 명령 내리기
       - name: Deploy to Server via SSH
@@ -84,8 +86,12 @@ jobs:
             # 2. 최신 이미지 당겨오기 (ARM 네이티브 버전으로 다운로드됨)
             docker compose -f docker-compose-brain.yml pull catalog-service
 
-            # 3. 컨테이너 교체 (무중단 갱신)
-            docker compose -f docker-compose-brain.yml up -d catalog-service
+            # 3. 컨테이너 교체 및 헬스체크 통과 검증
+            if ! docker compose -f docker-compose-brain.yml up -d --wait --wait-timeout 120 catalog-service; then
+              echo "catalog-service failed to become healthy!"
+              docker logs --tail 50 ps-tracker-api || true
+              exit 1
+            fi
 
             # 4. 뒷정리 (이미지 찌꺼기 청소)
             docker image prune -f
