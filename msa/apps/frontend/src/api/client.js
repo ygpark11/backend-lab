@@ -67,6 +67,19 @@ client.interceptors.response.use(
             return Promise.reject(error);
         }
 
+        // 429 Too Many Requests
+        if (status === 429) {
+            toast.error("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.", {
+                id: 'rate-limit-error',
+                style: {
+                    borderRadius: '10px',
+                    background: '#333',
+                    color: '#fff',
+                },
+            });
+            return Promise.reject(error);
+        }
+
         // 401 Unauthorized
         if (status === 401 && !originalRequest._retry) {
             // 🚨 reissue 요청 자체가 401이면 무한 루프 방지를 위해 즉시 거절
