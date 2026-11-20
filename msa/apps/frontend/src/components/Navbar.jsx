@@ -64,51 +64,70 @@ const Navbar = () => {
         // 로그인하지 않은 유저에게는 알림 설정을 묻지 않음
         if (!isAuthenticated) return;
 
+        let cancelled = false;
+
         const initNotificationToast = async () => {
-            // FCM 지원 여부 체크
-            const { isSupported } = await import('../utils/fcm');
-            const supported = await isSupported();
+            try {
+                // FCM 지원 여부 체크 (청크 로드 실패·미지원 환경에서는 알림 유도 토스트만 생략)
+                const { isSupported } = await import('../utils/fcm');
+                const supported = await isSupported();
 
-            if (!supported || !('Notification' in window)) return;
+                if (cancelled || !supported || !('Notification' in window)) return;
 
-            const hasSkipped = sessionStorage.getItem('skipNotification');
+                let hasSkipped = false;
+                try {
+                    hasSkipped = Boolean(sessionStorage.getItem('skipNotification'));
+                } catch { /* 스토리지 접근 제한 환경 무시 */ }
 
-            if (Notification.permission === 'default' && !hasSkipped) {
-                toast((t) => (
-                    <div className="flex flex-col gap-3 min-w-[250px] bg-base p-4 rounded-xl border border-divider shadow-xl">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span>
-                            <span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span>
+                if (Notification.permission === 'default' && !hasSkipped) {
+                    toast((t) => (
+                        <div className="flex flex-col gap-3 min-w-[250px] bg-base p-4 rounded-xl border border-divider shadow-xl">
+                            <div className="flex flex-col">
+                                <span className="font-bold text-sm text-primary">찜한 게임 할인 알림 받기</span>
+                                <span className="text-xs text-secondary mt-1">가격이 떨어지면 가장 먼저 알려드릴까요?</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => {
+                                    toast.dismiss(t.id);
+                                    try {
+                                        const { requestFcmToken } = await import('../utils/fcm');
+                                        await requestFcmToken();
+                                        if ('Notification' in window && Notification.permission === 'granted') {
+                                            toast.success('알림 설정 완료!');
+                                        } else {
+                                            toast.error('알림 차단됨');
+                                        }
+                                    } catch {
+                                        toast.error('알림 설정을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+                                    }
+                                }}>
+                                    네, 받을래요!
+                                </button>
+                                <button className="bg-surface hover:bg-surface-hover border border-divider text-secondary px-3 py-2 rounded-lg text-xs font-bold flex-1 transition-colors" onClick={() => {
+                                    toast.dismiss(t.id);
+                                    try {
+                                        sessionStorage.setItem('skipNotification', 'true');
+                                    } catch { /* 스토리지 접근 제한 환경 무시 */ }
+                                }}>
+                                    나중에
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button className="bg-ps-blue text-white px-3 py-2 rounded-lg text-xs font-bold shadow-md flex-1 hover:bg-blue-600 transition-colors" onClick={async () => {
-                                toast.dismiss(t.id);
-                                const { requestFcmToken } = await import('../utils/fcm');
-                                await requestFcmToken();
-                                if ('Notification' in window && Notification.permission === 'granted') {
-                                    toast.success('알림 설정 완료!');
-                                } else {
-                                    toast.error('알림 차단됨');
-                                }
-                            }}>
-                                네, 받을래요!
-                            </button>
-                            <button className="bg-surface hover:bg-surface-hover border border-divider text-secondary px-3 py-2 rounded-lg text-xs font-bold flex-1 transition-colors" onClick={() => {
-                                toast.dismiss(t.id);
-                                sessionStorage.setItem('skipNotification', 'true');
-                            }}>
-                                나중에
-                            </button>
-                        </div>
-                    </div>
-                ), {
-                    id: 'fcm-permission-toast',
-                    duration: 10000,
-                    style: { background: 'transparent', boxShadow: 'none', padding: 0 }
-                });
+                    ), {
+                        id: 'fcm-permission-toast',
+                        duration: 10000,
+                        style: { background: 'transparent', boxShadow: 'none', padding: 0 }
+                    });
+                }
+            } catch {
+                // 미지원 브라우저·네트워크/배포 전환으로 인한 청크 로드 실패 시 알림 유도 토스트만 생략
             }
         };
         initNotificationToast();
+
+        return () => {
+            cancelled = true;
+        };
     }, [isAuthenticated]);
 
     useEffect(() => {
