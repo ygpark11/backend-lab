@@ -119,6 +119,9 @@ services:
       - ./config.alloy:/etc/alloy/config.alloy:ro
       - ./logs/backend:/var/log/pstracker:ro
       - /etc/localtime:/etc/localtime:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro
     env_file:
       - .env
     ports:
@@ -129,8 +132,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.2'
-          memory: "128M"
+          cpus: '0.3'
+          memory: "256M"
 
 volumes:
   db_data:

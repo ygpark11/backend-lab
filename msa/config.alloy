@@ -9,7 +9,50 @@ prometheus.scrape "spring_app" {
     forward_to      = [prometheus.remote_write.grafana_cloud_metrics.receiver]
 }
 
-// 2. Prometheus Remote Write (Grafana Cloud로 전송)
+// 2. Host (Node 1 OS) 메트릭 수집 (Grafana Cloud 무료 티어 절약을 위해 핵심 collector만 선별)
+prometheus.exporter.unix "node1_host" {
+    procfs_path = "/host/proc"
+    sysfs_path  = "/host/sys"
+    rootfs_path = "/host/root"
+
+    set_collectors = [
+        "cpu",
+        "meminfo",
+        "filesystem",
+        "loadavg",
+        "diskstats",
+    ]
+
+    filesystem {
+        mount_points_exclude = "^/(dev|proc|sys|run|snap|var/lib/docker/.+|var/lib/containerd/.+)($|/)"
+        fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|tmpfs)$"
+    }
+}
+
+prometheus.scrape "node1_host" {
+    targets         = prometheus.exporter.unix.node1_host.targets
+    scrape_interval = "30s"
+    forward_to      = [prometheus.remote_write.grafana_cloud_metrics.receiver]
+}
+
+// 3. MySQL 서버 메트릭 수집 (최소 권한 alloy_exporter 계정 + 핵심 collector만 선별)
+prometheus.exporter.mysql "pstracker_mysql" {
+    data_source_name = sys.env("MYSQL_EXPORTER_DSN")
+
+    set_collectors = [
+        "global_status",
+        "global_variables",
+        "info_schema.processlist",
+    ]
+}
+
+prometheus.scrape "pstracker_mysql" {
+    targets         = prometheus.exporter.mysql.pstracker_mysql.targets
+    scrape_interval = "30s"
+    forward_to      = [prometheus.remote_write.grafana_cloud_metrics.receiver]
+}
+
+// 4. Prometheus Remote Write (Grafana Cloud로 전송)
 prometheus.remote_write "grafana_cloud_metrics" {
     endpoint {
         url = sys.env("GRAFANA_METRICS_URL")
