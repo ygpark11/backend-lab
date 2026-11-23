@@ -15,6 +15,8 @@
 graph LR
     subgraph "Node 1: Brain Server"
         App["Spring Boot API"]
+        Host["Host OS (/proc, /sys, /)"]
+        DB[("MySQL 8.0")]
         Logs["Log Files"]
         Alloy["🕵️ Grafana Alloy"]
     end
@@ -22,12 +24,14 @@ graph LR
     subgraph "Grafana Cloud (SaaS)"
         Mimir["📈 Prometheus (Metrics)"]
         Loki["📝 Loki (Logs)"]
-        Dash["📊 Dashboard"]
+        Dash["📊 Dashboard (7단)"]
     end
 
     Discord["🔔 Discord Alert"]
 
     App -->|Actuator| Alloy
+    Host -->|unix exporter| Alloy
+    DB -->|mysql exporter| Alloy
     Logs -->|File Read| Alloy
     
     Alloy ==>|Remote Write| Mimir
@@ -35,7 +39,7 @@ graph LR
     
     Mimir -.-> Dash
     Loki -.-> Dash
-    Mimir --"Deadman Switch"--> Discord
+    Mimir --"4종 Alert Rules"--> Discord
 ```
 
 ---
@@ -55,7 +59,8 @@ graph LR
    
 2. 튜닝 기록 (Tuning Log):
 - 1차 시도 (0.1 CPU / 64MB): 초기 구동은 성공했으나, 로그 수집량이 급증하는 시점에 메모리 부족으로 컨테이너가 강제 재시작(Restart)되는 현상 발견.
-- 최종 결정 (0.2 CPU / 128MB): 평시 점유율(약 40~50MB) 대비 **2배 이상의 안전 마진(Safety Margin)** 을 확보하여, 스파이크가 튀어도 OOM이 발생하지 않도록 설정.
+- 2차 결정 (0.2 CPU / 128MB): App 메트릭·로그 수집 시 평시 점유율(약 40~50MB) 대비 2배 이상의 안전 마진을 확보하여 OOM 방지.
+- 3차 확장 (0.3 CPU / 256MB — 현재): Alloy 내장 `unix`(Node 1 OS) 및 `mysql` exporter를 추가해 **App + Host + DB 3계층 관측성**으로 확장하면서 리소스 여유를 상향.
    
 ### 📉 Grafana Alloy 컨테이너 제한 (`docker-compose-brain.yml`)
 
@@ -63,42 +68,71 @@ graph LR
 deploy:
   resources:
     limits:
-      cpus: '0.2'        # CPU 20% 초과 사용 금지
-      memory: "128M"     # 메모리 128MB 초과 시 OOM Kill
+      cpus: '0.3'        # CPU 30% 초과 사용 금지
+      memory: "256M"     # 메모리 256MB 초과 시 OOM Kill
 ```
 
-- Lightweight: 무거운 Java 기반 에이전트 대신 Go 언어 기반의 Alloy 사용.
-- Log Throttling: 로그 수집 주기를 30초(sync_period)로 설정하여 디스크 I/O 부하 최소화.
+- Lightweight: 별도 exporter 컨테이너를 띄우지 않고 Go 기반 단일 Alloy 에이전트에 내장 exporter(`unix`, `mysql`) 통합.
+- Free Tier Series Budget: Grafana Cloud 무료 티어 한도(Active Series 10,000)를 준수하기 위해 `set_collectors`로 필수 지표만 선별하고 가상·도커 마운트를 제외하여 **456 → 1,468개(한도의 14.7%)**로 억제.
+- Log Throttling: 로그 수집 주기를 2분(`sync_period = "2m"`)으로 설정하여 디스크 I/O 부하 최소화.
 
 ---
 
 ## 3. 수집 설정 분석 (`config.alloy`)
 
-Alloy가 어떻게 데이터를 수집하고 전송하는지에 대한 핵심 설정입니다.
+Alloy가 어떻게 **App · Host · MySQL** 3계층 메트릭과 로그를 수집하고 전송하는지에 대한 핵심 설정입니다.
 
-### ① 메트릭 수집 (Prometheus Scrape)
-Spring Boot Actuator가 노출하는 엔드포인트를 긁어옵니다.
+### ① App 메트릭 수집 (Spring Boot Actuator)
+Spring Boot Actuator가 노출하는 엔드포인트를 30초 주기로 스크래핑합니다.
 
-```groovy
+```alloy
 prometheus.scrape "spring_app" {
     targets = [
-        // 도커 네트워크 내부 DNS 사용 (http://catalog-service:8080)
+        // 같은 도커 네트워크에 있으므로 서비스명(catalog-service)으로 접근
         {__address__ = "catalog-service:8080"},
     ]
-    metrics_path = "/actuator/prometheus"
-    // 수집한 데이터를 클라우드로 전송
-    forward_to   = [prometheus.remote_write.grafana_cloud_metrics.receiver]
+    metrics_path    = "/actuator/prometheus"
+    scrape_interval = "30s"
+    forward_to      = [prometheus.remote_write.grafana_cloud_metrics.receiver]
 }
 ```
 
-### ② 로그 수집 (Loki File Read)
+### ② Host (Node 1 OS) 메트릭 수집 (`prometheus.exporter.unix`)
+`docker-compose-brain.yml`에서 호스트 `/proc`, `/sys`, `/`를 읽기 전용(`/host/*:ro`)으로 마운트하고, 핵심 5개 collector만 선별합니다.
+
+```alloy
+prometheus.exporter.unix "node1_host" {
+    procfs_path = "/host/proc"
+    sysfs_path  = "/host/sys"
+    rootfs_path = "/host/root"
+
+    set_collectors = ["cpu", "meminfo", "filesystem", "loadavg", "diskstats"]
+
+    filesystem {
+        mount_points_exclude = "^/(dev|proc|sys|run|snap|var/lib/docker/.+|var/lib/containerd/.+)($|/)"
+        fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|tmpfs)$"
+    }
+}
+```
+
+### ③ MySQL 서버 내부 메트릭 수집 (`prometheus.exporter.mysql`)
+보안상 `root` 대신 비즈니스 테이블 접근 권한이 없는 최소 권한 전용 계정(`alloy_exporter`, `MAX_USER_CONNECTIONS 3`, `PROCESS` + `REPLICATION CLIENT` + `SELECT ON performance_schema.*`)을 생성하고 `.env`의 `MYSQL_EXPORTER_DSN`으로 주입합니다.
+
+```alloy
+prometheus.exporter.mysql "pstracker_mysql" {
+    data_source_name = sys.env("MYSQL_EXPORTER_DSN")
+    set_collectors   = ["global_status", "global_variables", "info_schema.processlist"]
+}
+```
+
+### ④ 로그 수집 (Loki File Read)
 서버에 쌓이는 로그 파일을 직접 읽어서 전송합니다.
 
-```groovy
+```alloy
 local.file_match "app_logs" {
     // 호스트에서 마운트된 로그 폴더 경로
     path_targets = [{"__path__" = "/var/log/pstracker/*.log"}]
-    sync_period = "30s" // 실시간성보다는 성능을 위해 30초 주기 동기화
+    sync_period  = "2m" // 실시간성보다는 디스크 I/O 절약을 위한 2분 주기 동기화
 }
 
 loki.source.file "log_scrape" {
@@ -107,7 +141,7 @@ loki.source.file "log_scrape" {
 }
 ```
 
-### ③ 클라우드 전송 (Remote Write)
+### ⑤ 클라우드 전송 (Remote Write)
 수집된 데이터를 암호화하여 Grafana Cloud로 쏘아 보냅니다. (자격 증명은 환경변수 처리)
 
 ```groovy
@@ -126,24 +160,30 @@ prometheus.remote_write "grafana_cloud_metrics" {
 
 ## 4. 알림 시스템 (Alerting)
 
-서버가 다운되었을 때 가장 빠르게 인지할 수 있도록 Deadman Switch 패턴을 적용했습니다.
+Grafana Cloud Alerting(`PS-Tracker > 1m-Check`, 1분 주기 평가)에서 Discord `#server-monitor` (`Discord-Monitor`)로 **4종 장애·임계치 알림**을 발송합니다.
 
-### 🚨 Deadman Switch (생존 신고)
-- 개념: "서버가 살아있다"는 신호(Metric)가 끊기면 즉시 알람을 울리는 방식.
-- 조건: `up{job="spring_app"} == 0` 또는 데이터 수신 없음(No Data) 상태가 3분 이상 지속될 때.
-- 채널: Discord `#server-monitor` 채널로 긴급 호출.
+### 🚨 운영 Alert Rules (4종)
 
-### 📊 프로덕션 대시보드 구조 (5단 골든 시그널 아키텍처)
+| 규칙명 | 감지 대상 | 조건 (Threshold) | Pending (`For`) | No Data 처리 |
+| :--- | :--- | :--- | :---: | :--- |
+| **Brain Server Down** *(Deadman Switch)* | Spring Boot 앱 / Node 1 다운 | `up{job="spring_app"} == 0` | `3m` | `Alerting` |
+| **MySQL Server Down** | MySQL 컨테이너 다운 / 수집 중단 | `mysql_up < 1` | `2m` | `Alerting` |
+| **Node 1 Disk High** | 루트 디스크(`/`) 고갈 위험 | `(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85` | `5m` | `OK` *(서버 다운 시 중복 알림 방지)* |
+| **Node 1 RAM High** | 호스트 메모리(8GB) OOM 위험 | `(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85` | `5m` | `OK` *(서버 다운 시 중복 알림 방지)* |
 
-장애 발생 시 위에서 아래로 흐르며 원인을 빠르게 추적할 수 있도록 재정렬된 구조입니다.
+### 📊 프로덕션 대시보드 구조 (7단 App · Host · DB 3계층 아키텍처)
+
+장애 발생 시 위에서 아래로 흐르며 애플리케이션 → 인프라(OS) → DB 원인을 빠르게 추적할 수 있도록 구성했습니다.
 
 | Row | 목적 | 주요 패널 |
 |-----|------|----------|
 | 1단: 🔥 긴급 장애 징후 | 최우선 확인 | Slow Service Rate, Recent Slow Calls, ERROR logs, HTTP Status Codes |
 | 2단: 🏃 트래픽 및 성능 | 부하 파악 | Throughput (RPS), Latency, TOP 10 엔드포인트 |
-| 3단: 🧠 시스템 리소스 | 리소스 상태 | CPU Usage, Heap Used (%), GC Stop-the-World Duration |
-| 4단: 🔌 DB 커넥션 풀 | HikariCP 상태 | Connections Size, Active/Idle, Connection Acquire Time |
+| 3단: 🧠 시스템 리소스 (JVM) | 앱 리소스 상태 | JVM CPU Usage, Heap Used (%), GC Stop-the-World Duration |
+| 4단: 🔌 DB 커넥션 풀 (HikariCP) | 앱 커넥션 상태 | Connections Size, Active/Idle, Connection Acquire Time |
 | 5단: 💾 캐시 성능 | Caffeine 5개 통합 | Cache Hit Rate, Cache Size, Cache Evictions Rate |
+| 6단: 🖥️ 호스트 리소스 (Node 1 OS) | 서버 OS 상태 | Disk Usage (`/`), Host RAM Usage (%), Host CPU Usage (%), Load Average (1m/5m) |
+| 7단: 🐬 MySQL 서버 내부 | DB 엔진 상태 | MySQL Status (`UP/DOWN`), Connections (Connected/Running), QPS & Slow Queries, InnoDB Buffer Pool (%) |
 
 ---
 
@@ -191,6 +231,29 @@ sum by (cache) (rate(cache_evictions_total[5m]))
 - Hit Rate가 배포 직후 낮은 것은 콜드 스타트로 정상. 하루 이후에도 50% 미만이면 TTL 또는 `maximumSize` 조정 검토.
 - Evictions이 크롤러 배치 완료 시간대에 맞춰 스파이크가 뜨면 캐시 무효화 정상 동작. 배치 이후에도 0이면 `evictGameDetailCache()` 미호출 버그 의심.
 - `psPlusPricingCache`는 PS Plus 가격 갱신 시 `@CacheEvict`로 즉시 무효화되므로, 배치와 무관하게 Eviction이 발생할 수 있음.
+
+#### Host (Node 1 OS) & MySQL Server (Prometheus)
+
+```promql
+# 6단: Node 1 루트 디스크 사용률 (%)
+(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+
+# 6단: Node 1 전체 RAM 사용률 (%)
+(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
+
+# 6단: Node 1 전체 CPU 사용률 (%)
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# 7단: MySQL QPS & 5분 슬로우 쿼리 수
+rate(mysql_global_status_questions[5m])
+increase(mysql_global_status_slow_queries[5m])
+
+# 7단: InnoDB Buffer Pool 사용률 (%) — 최신 mysqld_exporter state 레이블 기준
+(1 - sum(mysql_global_status_buffer_pool_pages{state="free"}) / sum(mysql_global_status_buffer_pool_pages{state=~"data|free|misc"})) * 100
+
+# Grafana Cloud 무료 티어 Active Series 총량 확인 (한도 10,000 / 실측 ~1,468)
+count({__name__=~".+"})
+```
 
 ---
 

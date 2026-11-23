@@ -17,6 +17,7 @@ MYSQL_ROOT_PASSWORD=your_root_password
 MYSQL_DATABASE=pstracker
 MYSQL_USER=pstracker_user
 MYSQL_PASSWORD=your_db_password
+MYSQL_EXPORTER_DSN=alloy_exporter:your_exporter_password@(mysql:3306)/
 
 # [Application]
 APP_PROFILE=prod
