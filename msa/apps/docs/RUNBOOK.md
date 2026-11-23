@@ -151,7 +151,7 @@ jwt:
 | **스크립트** | `/home/ubuntu/db_backup.sh` |
 | **로그** | `/home/ubuntu/backup.log` |
 | **스케줄** | 매일 23:00 KST (`cron: 0 14 * * *` — UTC 기준) |
-| **저장소** | Oracle Object Storage (`ps-tracker-backup` 버킷, 네임스페이스: `axaiesjuor3l`) |
+| **저장소** | Oracle Object Storage (`ps-tracker-backup` 버킷, 네임스페이스: `<your-oci-namespace>`) |
 | **보관 정책** | 최근 7일치 유지, 초과분 자동 삭제 |
 | **파일명 형식** | `pstracker_YYYY-MM-DD.sql.gz` |
 
