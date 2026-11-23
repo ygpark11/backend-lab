@@ -39,7 +39,7 @@ graph LR
     
     Mimir -.-> Dash
     Loki -.-> Dash
-    Mimir --"4종 Alert Rules"--> Discord
+    Mimir --"5종 Alert Rules"--> Discord
 ```
 
 ---
@@ -160,9 +160,9 @@ prometheus.remote_write "grafana_cloud_metrics" {
 
 ## 4. 알림 시스템 (Alerting)
 
-Grafana Cloud Alerting(`PS-Tracker > 1m-Check`, 1분 주기 평가)에서 Discord `#server-monitor` (`Discord-Monitor`)로 **4종 장애·임계치 알림**을 발송합니다.
+Grafana Cloud Alerting(`PS-Tracker > 1m-Check`, 1분 주기 평가)에서 Discord `#server-monitor` (`Discord-Monitor`)로 **5종 장애·임계치 알림**을 발송합니다.
 
-### 🚨 운영 Alert Rules (4종)
+### 🚨 운영 Alert Rules (5종)
 
 | 규칙명 | 감지 대상 | 조건 (Threshold) | Pending (`For`) | No Data 처리 |
 | :--- | :--- | :--- | :---: | :--- |
@@ -170,6 +170,7 @@ Grafana Cloud Alerting(`PS-Tracker > 1m-Check`, 1분 주기 평가)에서 Discor
 | **MySQL Server Down** | MySQL 컨테이너 다운 / 수집 중단 | `mysql_up < 1` | `2m` | `Alerting` |
 | **Node 1 Disk High** | 루트 디스크(`/`) 고갈 위험 | `(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 > 85` | `5m` | `OK` *(서버 다운 시 중복 알림 방지)* |
 | **Node 1 RAM High** | 호스트 메모리(8GB) OOM 위험 | `(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85` | `5m` | `OK` *(서버 다운 시 중복 알림 방지)* |
+| **Meilisearch Search Fallback** | Meilisearch 장애·타임아웃으로 MySQL 폴백 전환 | `sum(increase(pstracker_search_fallback_total[5m])) > 3` | `2m` | `OK` *(평소 폴백 0회 시 시계열 미생성)* |
 
 ### 📊 프로덕션 대시보드 구조 (7단 App · Host · DB 3계층 아키텍처)
 
