@@ -157,17 +157,17 @@ graph TD
 * **Analysis:** Chromium과 JVM·MySQL이 동일 서버에서 메모리를 경합.
 * **Solution:** API/DB 노드(Node 1)와 크롤러 노드(Node 2)로 물리적 분리. 이후 3호기(Node 3)를 추가하여 SHARD_ID 기반 수평 확장.
 
-### ⚡ Case 32. JDK 21 가상 스레드 도입과 JPA LazyInitializationException (Backend)
+### ⚡ Case 10. JDK 21 가상 스레드 도입과 JPA LazyInitializationException (Backend)
 * **Problem:** `CompletableFuture.supplyAsync()`로 게임 상세 조회를 병렬화한 후 `LazyInitializationException: could not initialize proxy - no Session` 발생.
 * **Cause:** 가상 스레드는 부모 ThreadLocal을 상속하지 않아 JPA 세션이 하위 스레드에 전파되지 않음.
 * **Solution:** QueryDSL DTO 프로젝션으로 전환하여 Lazy 로딩 의존을 제거. `fetch join + limit` 조합 시 Hibernate가 LIMIT을 무시하는 문제도 2-Query 패턴으로 함께 해결.
 
-### 🔍 Case 40. Meilisearch 하이브리드 검색 도입과 한글 토크나이징·HTTP PATCH 해결 (Search/Backend)
+### 🔍 Case 23. Meilisearch 하이브리드 검색 도입과 한글 토크나이징·HTTP PATCH 해결 (Search/Backend)
 * **Problem:** PS 스토어 게임명 특성(부제·로마숫자·특수문자·한영혼용·오타) 때문에 기존 MySQL `LIKE` 검색이 실전 쿼리 38개 기준 **15.8%(Top-1 7.9%)**만 성공하고, PoC 과정에서는 Meilisearch `charabia` 토크나이저가 유니코드 자모·초성을 1글자씩 분리해 오탐을 유발. 실운영 첫 배포에서는 `SimpleClientHttpRequestFactory`(`HttpURLConnection`)가 HTTP `PATCH`를 미지원해 인덱스 설정 적용이 차단됨.
 * **Solution:** 두벌식 **QWERTY-자모 양방향 ASCII 인코딩** + **19개 초성 고유 ASCII 매핑(`search_keywords` 포함)** + PS 스토어 한영·로마숫자 동의어 사전 + `/multi-search(all)`을 적용하고, HTTP 클라이언트를 `JdkClientHttpRequestFactory`로 전환. 가격·16개 필터 정합성은 MySQL이 유지하는 하이브리드(`game.id IN`) + 장애 시 자동 폴백 구조로 설계.
 * **Result:** 실전 검색 성공률 **15.8% → 97.4%**(Top-1 **7.9% → 94.7%**), ARM64 실측 **RAM 40MiB · 디스크 16.7MB · 3,626건 초기 색인 1.6초** 달성.
 
-👉 **[전체 40가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
+👉 **[전체 23가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
 
 ---
 
@@ -217,7 +217,7 @@ docker compose -f docker-compose-local.yml up -d --build
 | 문서 | 내용 |
 | :--- | :--- |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 핵심 구현 기술 상세 (Backend·Data Engineering 설계 결정 및 근거) |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 40가지 기술 이슈 분석 |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 23가지 핵심 기술 이슈 분석 |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | CI/CD 파이프라인, SSL 전략, 멀티 아키텍처 빌드 |
 | [RUNBOOK.md](docs/RUNBOOK.md) | 로컬 실행·운영 배포 명령어, 환경 변수 설정, 초기 설정 가이드 |
 | [OBSERVABILITY.md](docs/OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud) |

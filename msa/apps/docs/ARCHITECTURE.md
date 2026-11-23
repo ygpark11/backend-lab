@@ -128,4 +128,4 @@
 | [OBSERVABILITY.md](OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud + Deadman Switch) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | 3-Node 서버 배포, CI/CD 파이프라인, 멀티 아키텍처 빌드 |
 | [EXTERNAL_SERVICES.md](EXTERNAL_SERVICES.md) | Google Gemini, FCM, Discord 연동 |
-| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | 개발 과정 40가지 기술 이슈 분석 |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | 개발 과정 23가지 핵심 기술 이슈 분석 |
