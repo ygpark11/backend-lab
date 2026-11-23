@@ -247,3 +247,22 @@
   * 이벤트 4종(`AnnouncementCreatedEvent`, `GamePriceChangedEvent`, `PioneerScrapingCompletedEvent`, `CrawlerErrorEvent`)을 불변 Java `record`로 전환하고, 엔티티 대신 스칼라 ID/닉네임만 전달.
   * 이벤트 리스너와 `CatalogAdminService.triggerSingleGameRefresh()`, `GameScouterService`, `InternalWebhookController`에서 불필요한 `@Transactional`을 제거해 **DB 쓰기와 외부 HTTP I/O의 트랜잭션 경계를 엄격히 분리**.
   * `GameRepositoryCustomImpl.fetchGameInsightStats()` 단일 `CaseBuilder` 조건부 집계 쿼리로 `InsightsService`를 20쿼리 → 3쿼리, 단일 `insightsCache`로 통합.
+
+### 🔍 Case 40. Meilisearch 하이브리드 검색 도입: `charabia` 한글 자모 분리 · `HttpURLConnection` HTTP PATCH 제약 해결
+* **배경 및 문제 발견:**
+  * 기존 MySQL `REPLACE(name, ' ', '') LIKE '%...%'` + `JSON_SEARCH(search_keywords)` 검색은 PS 스토어 게임명 특성(부제·로마숫자·특수문자·한영 혼용·언어 태그 `(중국어, 한국어...)`)과 부딪혀 다중 단어 생략(`사이버펑크 팬텀`, `엘든링 밤의 통치자`), 한영 에디션 혼용(`위쳐 컴플리트`), 한/영 오타(`싸펑`, `엘든닝`, `대이브더다이버`, `지튀에이`), 영문 원제 게임 초성(`ㄱㅇㅆ`)에 실패하고, `/suggest` 자동완성에 `ORDER BY`가 없어 본편 대신 디럭스/스핀오프가 상단에 노출됨.
+  * 실운영 DB 3,626건 대상 실전 38개 쿼리 벤치마크 결과, 기존 MySQL 검색 성공률은 **15.8%(Top-1 7.9%)**, MySQL 쿼리 개선안(다중 토큰 AND + 특수문자 제거)도 오타·한영 동의어 한계로 **47.4%(Top-1 44.7%)**에 그침.
+* **기술 선정:**
+  * MySQL `FULLTEXT ngram`(오타 허용 미지원), Elasticsearch/OpenSearch(Node 1 2 vCPU · 8GB RAM 대비 1.5GB+ JVM 부담 과다) 대신 ARM64 네이티브·초경량 Rust 기반 **Meilisearch (`v1.57.0`)**를 선정하고, 실데이터 PoC로 정량 검증 후 도입 결정.
+* **트러블슈팅 1 — PoC 중 `charabia` 토크나이저의 유니코드 한글 자모·초성 분리:**
+  * **현상:** 한글 짧은 오타(`싸펑`, `엘든닝`)를 잡기 위해 유니코드 호환 자모(`ㅅㅏㅍㅓㅇ`)로 분해해 색인하자, Meilisearch 내장 토크나이저(`charabia`)가 초성(`ㅅ`)과 나머지(`ㅏㅍㅓㅇ`)를 별도 토큰으로 분리해 `싸펑` 0건 · `사펑` 1,143건 오탐 발생. 유니코드 초성(`ㅁㄴㅇㄹ`)도 1글자씩 쪼개져 276건 오탐 발생.
+  * **해결:**
+    1. **두벌식 QWERTY-자모 양방향 ASCII 인코딩(`qwertyText`)**: 한글 음절과 단독 자모를 순수 소문자 ASCII 키열(`사펑`/`싸펑`→`tkvjd`, `엘든링`→`dpfemsfld`, `파판`→`vkvks`)로 변환해 토크나이저 분리를 원천 차단하고, 편집 거리(Levenshtein)로 자모 1~2개 오타 + 한영키 실수(`vkvks`, `쵸ㅠㄷ게ㅕㅜㅏ`→`cyberpunk`)까지 양방향 해결.
+    2. **19개 초성 고유 ASCII 매핑(`chosungAscii`, `disableOnAttributes`)**: 제목과 `search_keywords` 양쪽에서 한글 단어만 ASCII 초성으로 추출해 `ㅇㄱㄱㅇ` 유지, 영문 원제 별칭 초성(`ㄱㅇㅆ`) 신규 지원, `ㅁㄴㅇㄹ` 오탐 0건 달성.
+    3. **PS 스토어 동의어 사전 + `/multi-search(all)` + 인기도 랭킹**: 한영 에디션(`컴플리트↔complete`, `디럭스/딜럭스↔deluxe`, `리마스터↔remastered`)·로마숫자(`II~XVI↔2~16`) 동의어, 단일 HTTP `/multi-search` (`matchingStrategy: "all"`, `rankingScoreThreshold: 0.55/0.65`)로 `피파→피자` 노이즈 차단, `bestSellerRank`/`mcMetaScore` 기반 `popularity:desc`로 본편 대표작 1위 노출.
+* **트러블슈팅 2 — 실운영 첫 배포 시 `SimpleClientHttpRequestFactory`의 HTTP `PATCH` 미지원:**
+  * **현상:** Java 25 / Spring Boot 4 의존성 충돌을 피하기 위해 외부 SDK 없이 내장 `RestClient` + `SimpleClientHttpRequestFactory`로 연동했으나, 실운영 기동 시 `PATCH /indexes/games/settings` 호출에서 `Invalid HTTP method: PATCH` 예외 발생(JDK 구형 `HttpURLConnection` 제약). 장애 격리 폴백 덕분에 서비스 중단 없이 MySQL로 정상 서빙됨.
+  * **해결:** Java 25 내장 `java.net.http.HttpClient` 기반 `JdkClientHttpRequestFactory`로 전환하여 HTTP `PATCH`와 Keep-Alive 커넥션 풀링을 네이티브 지원.
+* **Result:**
+  * 실전 38개 쿼리 기준 검색 성공률 **`15.8% → 97.4%`**, Top-1 정확도 **`7.9% → 94.7%`**, 언어 태그 노이즈(`한국어`) **`2,776건 → 0건`**.
+  * Node 1 ARM64 실운영 실측: **RAM `40.02 MiB` / 384 MiB** (전체 8GB의 0.5%), **디스크 `16.7 MB`**, 3,626건 초기 전체 색인 **`1.6초`**, MySQL 스키마 변경 0.

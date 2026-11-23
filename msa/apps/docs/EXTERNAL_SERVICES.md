@@ -4,19 +4,20 @@
 
 ---
 
-## 1. Google Gemini (AI Game Summarizer)
+## 1. Google Gemini (AI Game Summarizer & Search Keywords)
 
-게임의 상세 정보(줄거리, 특징)를 사용자가 읽기 쉽게 **3줄 요약** 해주는 기능을 위해 도입했습니다.
+게임의 상세 정보(줄거리, 특징)를 사용자가 읽기 쉽게 **3줄 요약**하고, 감성 태그(`vibe_tags`)와 한국 유저용 검색 별칭(`search_keywords`, 예: `사펑`, `고오쓰`, `파판7`)을 추출하기 위해 도입했습니다.
 
 ### 🏗️ 아키텍처 및 데이터 흐름
-사용자 요청 시점에 AI를 호출하는 것이 아니라, **별도의 스케줄러(Daily Batch)** 가 데이터를 채워 넣는 구조입니다.
+사용자 요청 시점에 AI를 호출하는 것이 아니라, **별도의 스케줄러(Daily Batch, 매일 03:00 KST)** 가 데이터를 채워 넣고 저장 직후 Meilisearch 검색 인덱스에도 즉시 증분 반영하는 구조입니다.
 
 ```mermaid
 flowchart LR
-    DB[("MySQL")] -->|"1. 조회 (설명 없는 게임)"| Batch["Daily Batch Job"]
+    DB[("MySQL")] -->|"1. 조회 (설명·키워드 없는 게임)"| Batch["Daily Batch Job"]
     Batch -->|"2. 프롬프트 전송"| Gemini["✨ Gemini 2.5 Flash"]
-    Gemini -->|"3. 요약 텍스트 반환"| Batch
+    Gemini -->|"3. 요약·태그·검색어 반환"| Batch
     Batch -->|"4. 업데이트"| DB
+    Batch -->|"5. search_keywords 즉시 색인"| Meili[("🔍 Meilisearch")]
 ```
 
 ### 🧠 기술적 의사결정 (Technical Decisions)

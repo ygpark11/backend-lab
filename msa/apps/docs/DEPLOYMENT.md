@@ -106,6 +106,8 @@ RUN npm run build
 - **헬스체크 자동 검증 (`--wait`)**:
   - `catalog-service` 컨테이너는 `curl` 패키지 설치 없이 내장 `bash` `/dev/tcp/127.0.0.1/8080`으로 `/actuator/health` 200 응답을 확인합니다.
   - SSH 배포 단계에서 `docker compose -f docker-compose-brain.yml up -d --wait --wait-timeout 120 catalog-service`를 실행하여, 신규 컨테이너가 실제로 `(healthy)` 상태에 도달하지 못하면 최근 로그 50줄을 출력하고 CI를 즉시 실패 처리합니다.
+- **인프라 컨테이너 분리 원칙**:
+  - `mysql`, `meilisearch`, `caddy`, `adminer` 같은 영구 데이터·인프라 컨테이너는 앱 배포(`deploy-brain.yml`) 때마다 재시작하지 않고 서버에 상시 유지합니다. `meilisearch`는 `ps-network` 내부 전용(외부 포트 미노출, `wget` 헬스체크, `0.5 CPU / 384M RAM`, `meili_data` 볼륨)으로 운영되며 장애 시 API가 MySQL로 자동 폴백합니다.
 
 ---
 
@@ -140,7 +142,7 @@ ps-signal.com, www.ps-signal.com {
 | :--- | :--- | :--- | :--- |
 | **인증** | `/api/v1/auth/login`, `/api/v1/members/signup` | `5r/m`, `burst=5 nodelay` | BCrypt CPU 보호 및 브루트포스·가입 스팸 방어 |
 | **토큰 재발급** | `/api/v1/auth/reissue` | `10r/m`, `burst=10 nodelay` | 다중 탭·공유 IP Silent Refresh 허용 + 무한 루프 차단 |
-| **검색·자동완성** | `/api/v1/games/search`, `/api/v1/games/suggest` | `5r/s`, `burst=15 nodelay` | `LIKE`/`JSON_SEARCH` 풀스캔 DB 부하 방어 |
+| **검색·자동완성** | `/api/v1/games/search`, `/api/v1/games/suggest` | `5r/s`, `burst=15 nodelay` | Meilisearch·MySQL 하이브리드 검색 남용 및 폴백 시 DB 부하 방어 |
 | **일반 API** | `/api` | `10r/s`, `burst=30 nodelay` | SPA 초기 동시 요청 및 모바일 공유 IP(NAT) 수용 |
 | **제외** | `/`, `/assets/`, `/sitemap-games.xml`, `/api/og/` | 제한 없음 | SEO 크롤러(Googlebot·Yeti), 광고 심사, SNS 미리보기 봇 보호 *(GA4는 브라우저→Google 직접 전송)* |
 

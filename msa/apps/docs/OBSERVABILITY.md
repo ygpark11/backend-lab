@@ -253,6 +253,9 @@ increase(mysql_global_status_slow_queries[5m])
 
 # Grafana Cloud 무료 티어 Active Series 총량 확인 (한도 10,000 / 실측 ~1,468)
 count({__name__=~".+"})
+
+# Meilisearch 장애·타임아웃으로 MySQL 폴백 전환된 누적/발생 건수 (정상 시 0)
+sum by (endpoint) (increase(pstracker_search_fallback_total[5m]))
 ```
 
 ---

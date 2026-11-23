@@ -31,6 +31,9 @@ OAUTH_CLIENT_SECRET=your_google_client_secret
 # [External API]
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
 GOOGLE_AI_KEY=your_gemini_api_key
+
+# [Search — Meilisearch (프로덕션 필수, 최소 16바이트 이상)]
+MEILI_MASTER_KEY=your_48_char_hex_master_key
 ...
 ```
 
@@ -67,6 +70,19 @@ docker compose -f docker-compose-brain.yml pull
 docker compose -f docker-compose-brain.yml up -d
 docker image prune -f
 ```
+
+### Meilisearch 초기 기동 및 수동 재색인 (Node 1)
+`meilisearch`는 영구 데이터 인프라(`meili_data` 볼륨)로 `deploy-brain.yml`이 자동 재시작하지 않으므로 최초 1회 기동 후 상시 유지합니다.
+```bash
+# 최초 기동 (내부 네트워크 전용)
+docker compose -f docker-compose-brain.yml up -d --wait meilisearch
+
+# 상태 및 실측 리소스 확인
+docker stats --no-stream ps-tracker-meilisearch ps-tracker-api
+docker logs --tail 50 ps-tracker-api | grep -i meili
+```
+- 인덱스가 비어 있으면 `catalog-service` 기동 시 자동으로 전체 색인하며, 매일 `05:00 KST` 스케줄러(`GameSearchSyncScheduler`)가 전체 보정합니다.
+- 수동 전체 재색인이 필요하면 관리자 권한으로 `POST /api/v1/admin/search/reindex`를 호출합니다.
 
 ### Node 2 (Collector Shard A, SHARD_ID=0)
 ```bash
@@ -169,4 +185,4 @@ gunzip -c /home/ubuntu/restore.sql.gz | \
 rm /home/ubuntu/restore.sql.gz
 ```
 
-> 복구 실행 전 현재 DB를 별도로 백업해두는 것을 권장합니다.
+> 복구 실행 전 현재 DB를 별도로 백업해두는 것을 권장합니다. DB 복구 완료 후에는 관리자 API `POST /api/v1/admin/search/reindex`로 Meilisearch 인덱스를 최신 DB 상태와 동기화하세요.

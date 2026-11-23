@@ -17,6 +17,7 @@
 ## 2. 핵심 서비스 기능
 
 - **역대 가격 추적 및 차트 시각화:** 수집된 가격 이력을 차트로 시각화하여 현재 할인이 역대 최저가인지 비교 가능
+- **스마트 검색 및 자동완성:** 한/영 오타(`싸펑`, `엘든닝`, `대이브더다이버`), 초성(`ㅇㄱㄱㅇ`, `ㄱㅇㅆ`), 한영 에디션·로마숫자 동의어(`위처 컴플리트`, `디아블로 4`), 한영키 실수(`vkvks`)까지 지원하는 Meilisearch 하이브리드 검색
 - **스마트 찜하기 및 맞춤 푸시 알림:** 목표가 도달 시 FCM 웹 푸시 발송, 야간 방해금지·채널별 수신 설정 지원
 - **공식 스토어 인기 랭킹 연동:** 베스트셀러·최다 다운로드 랭킹 데이터를 일 단위 배치로 수집
 - **심층 큐레이션 및 복합 필터:** '역대 최저가', 'Metacritic 85점 이상', 'PS5 Pro 향상' 등 복합 조건 필터링
@@ -30,6 +31,7 @@
 - ⚙️ **선별적 수집 + 조건부 영속성:** 하루가 지난 게임·할인 종료일 도래 게임만 수집 대상으로 지정하고, 가격·할인 조건에 변동이 있을 때만 DB에 저장하여 불필요한 크롤링과 중복 저장을 방지 → [상세](docs/ARCHITECTURE.md)
 - 🔗 **이벤트 기반 알림 분리:** `ApplicationEventPublisher`로 가격 저장 로직과 FCM·Discord 발송 로직을 분리하여, 알림 실패가 데이터 저장에 영향을 주지 않도록 관심사 분리 → [상세](docs/ARCHITECTURE.md)
 - 📊 **역정규화 + QueryDSL 동적 쿼리:** 할인 목록 조회의 Greatest-N Join을 역정규화로 제거하고, N개 복합 필터를 `BooleanBuilder` 기반으로 타입 안전하게 처리 → [상세](docs/ARCHITECTURE.md)
+- 🔍 **Meilisearch 하이브리드 검색:** 두벌식 QWERTY-자모·ASCII 초성·PS 스토어 동의어 튜닝으로 실전 검색 성공률을 **15.8% → 97.4%**(Top-1 **7.9% → 94.7%**)로 개선, 40MiB RAM 경량 운영 및 장애 시 MySQL 자동 폴백 → [상세](docs/ARCHITECTURE.md#1-6-meilisearch-하이브리드-검색-아키텍처--장애-격리)
 - 🗄️ **5-Cache 하이브리드 전략:** Redis 없이 Caffeine Cache 5개로 정적/동적 데이터를 분리 운영, 배치 완료 시 웹훅 기반 일괄 무효화 → [상세](docs/ARCHITECTURE.md)
 - 🕷️ **Playwright 수집 엔진:** CDP(WebSocket) 직접 통신 + 네트워크 레벨 리소스 차단 + 배치 단위 브라우저 재시작으로 1GB RAM 환경에서 안정적인 장시간 운영 → [상세](docs/ARCHITECTURE.md)
 - 🚀 **멀티 아키텍처 CI/CD:** GitHub Actions + Buildx로 AMD64/ARM64 네이티브 이미지를 동시 빌드·자동 배포 → [DEPLOYMENT.md](docs/DEPLOYMENT.md)
@@ -62,6 +64,7 @@ graph TD
             Front[React App + Nginx]
             SB[Spring Boot API]
             MySQL[(MySQL DB)]
+            Meili[(🔍 Meilisearch)]
             Alloy[🕵️ Grafana Alloy]
         end
 
@@ -86,6 +89,7 @@ graph TD
         
         %% --- [Connections: Internal Logic] ---
         SB <-->|JPA| MySQL
+        SB <-->|Hybrid Search| Meili
         
         %% Private Network Communication (Brain -> Collector Shards)
         SB --"POST /run (SHARD_ID=0)"--> Py
@@ -126,7 +130,7 @@ graph TD
 | **역할** | 비즈니스 로직 처리, 데이터 저장, 웹 호스팅 | 크롤링 전담 — SHARD_ID=0 (짝수 인덱스 게임) | 크롤링 전담 — SHARD_ID=1 (홀수 인덱스 게임) |
 | **서버** | Oracle A1 ARM64 — 2코어, 8GB RAM | Oracle AMD — 1코어, 1GB RAM | Oracle AMD — 1코어, 1GB RAM (구 1호기 재활용) |
 | **IP 주소** | `10.0.0.12` (Private) | `10.0.0.61` (Private) | Private (VCN 내부망) |
-| **Tech Stack** | Java 25, Spring Boot 4.1, MySQL 8.0, Caddy, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) | Python 3.10, Playwright, Local Cache (JSON) |
+| **Tech Stack** | Java 25, Spring Boot 4.1, MySQL 8.0, Meilisearch v1.57, Caddy, Nginx, React | Python 3.10, Playwright, Local Cache (JSON) | Python 3.10, Playwright, Local Cache (JSON) |
 | **포트 정책** | `80/443` (Public), `8080/3306` (Private Only) | `5000` (Private Only) | `5000` (Private Only) |
 
 > **리소스 격리 전략:** Chromium과 MySQL·JVM이 동일 서버에서 메모리를 경합하여 OOM이 발생한 경험을 바탕으로 물리적으로 격리했습니다. 이후 SHARD_ID 기반 수평 확장으로 수집 처리 시간을 단축했습니다.
@@ -158,12 +162,12 @@ graph TD
 * **Cause:** 가상 스레드는 부모 ThreadLocal을 상속하지 않아 JPA 세션이 하위 스레드에 전파되지 않음.
 * **Solution:** QueryDSL DTO 프로젝션으로 전환하여 Lazy 로딩 의존을 제거. `fetch join + limit` 조합 시 Hibernate가 LIMIT을 무시하는 문제도 2-Query 패턴으로 함께 해결.
 
-### 📊 Case 29. 할인 목록 조회 성능 개선: 역정규화 도입 (Backend/DB)
-* **Problem:** 할인 게임 목록 조회 시 Greatest-N-per-Group 서브쿼리와 Join 연산이 발생. 1GB RAM 환경에서 동시 접속 시 CPU 스파이크 유발.
-* **Analysis:** 1:N 구조의 가격 이력 테이블을 매 조회마다 Join하는 구조가 근본 원인. 검색 필터 적용 시 인덱스를 활용하지 못하는 케이스도 있었음.
-* **Solution:** `current_price`, `discount_rate` 등을 메인 테이블에 역정규화. 데이터 갱신 시 트랜잭션 내 두 테이블을 동기화하여 정합성 유지.
+### 🔍 Case 40. Meilisearch 하이브리드 검색 도입과 한글 토크나이징·HTTP PATCH 해결 (Search/Backend)
+* **Problem:** PS 스토어 게임명 특성(부제·로마숫자·특수문자·한영혼용·오타) 때문에 기존 MySQL `LIKE` 검색이 실전 쿼리 38개 기준 **15.8%(Top-1 7.9%)**만 성공하고, PoC 과정에서는 Meilisearch `charabia` 토크나이저가 유니코드 자모·초성을 1글자씩 분리해 오탐을 유발. 실운영 첫 배포에서는 `SimpleClientHttpRequestFactory`(`HttpURLConnection`)가 HTTP `PATCH`를 미지원해 인덱스 설정 적용이 차단됨.
+* **Solution:** 두벌식 **QWERTY-자모 양방향 ASCII 인코딩** + **19개 초성 고유 ASCII 매핑(`search_keywords` 포함)** + PS 스토어 한영·로마숫자 동의어 사전 + `/multi-search(all)`을 적용하고, HTTP 클라이언트를 `JdkClientHttpRequestFactory`로 전환. 가격·16개 필터 정합성은 MySQL이 유지하는 하이브리드(`game.id IN`) + 장애 시 자동 폴백 구조로 설계.
+* **Result:** 실전 검색 성공률 **15.8% → 97.4%**(Top-1 **7.9% → 94.7%**), ARM64 실측 **RAM 40MiB · 디스크 16.7MB · 3,626건 초기 색인 1.6초** 달성.
 
-👉 **[전체 39가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
+👉 **[전체 40가지 트러블슈팅 로그 보기](docs/TROUBLESHOOTING.md)**
 
 ---
 
@@ -175,7 +179,8 @@ graph TD
 | **Frontend** | React 19, TypeScript, Tailwind CSS, Vite, Axios |
 | **Data & Crawling** | Python 3.10, Playwright, Manual Stealth (JS Injection) |
 | **Database** | MySQL 8.0 |
-| **Infra & DevOps** | Oracle Cloud (A1 ARM64 + AMD), Docker & Compose, Caddy, GitHub Actions |
+| **Search** | Meilisearch v1.57 (Hybrid Search, Spring `RestClient`) |
+| **Infra & DevOps** | Oracle Cloud (A1 ARM64 + AMD), Docker & Compose, Caddy, Nginx, GitHub Actions |
 | **Monitoring** | Grafana Alloy, Grafana Cloud |
 | **External API** | Google Gemini 2.5 Flash, Discord Webhook, Firebase (FCM) |
 | **Cache** | Caffeine (Local Cache) |
@@ -212,7 +217,7 @@ docker compose -f docker-compose-local.yml up -d --build
 | 문서 | 내용 |
 | :--- | :--- |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 핵심 구현 기술 상세 (Backend·Data Engineering 설계 결정 및 근거) |
-| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 39가지 기술 이슈 분석 |
+| [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 개발 과정 40가지 기술 이슈 분석 |
 | [DEPLOYMENT.md](docs/DEPLOYMENT.md) | CI/CD 파이프라인, SSL 전략, 멀티 아키텍처 빌드 |
 | [RUNBOOK.md](docs/RUNBOOK.md) | 로컬 실행·운영 배포 명령어, 환경 변수 설정, 초기 설정 가이드 |
 | [OBSERVABILITY.md](docs/OBSERVABILITY.md) | PLG 모니터링 스택 (Grafana Alloy + Grafana Cloud) |
