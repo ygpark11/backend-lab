@@ -82,11 +82,11 @@
 * **Problem:** MySQL `REPLACE LIKE` + `JSON_SEARCH` 기반 검색은 PS 스토어 게임명 특성(부제·로마숫자·특수문자·한영 혼용·언어 태그·오타) 대응에 구조적 한계가 있었음(실운영 3,626건 38개 쿼리 기준 성공률 15.8%). 반대로 16개 복합 필터·실시간 가격·할인·역대최저가·위시리스트까지 검색 엔진에 전부 복제(Full Offload)할 경우, 일일 크롤링 시 분산 데이터 정합성 리스크와 필터 이중 관리 비용이 급증함.
 * **Solution:** **역할을 분리한 하이브리드 검색 구조** 채택 (MySQL 스키마 변경 0).
   * **자동완성 (`/api/v1/games/suggest`):** Meilisearch(`games` 인덱스)에서 `id, displayName, imageUrl`을 인기도·관련도 순으로 직접 응답.
-  * **키워드 검색 (`/api/v1/games/search?keyword=...`):** Meilisearch에서 관련도 순 `gameId` 목록(최대 500건)만 조회한 뒤, 기존 `GameRepositoryCustomImpl.searchGamesByIds()`에 `game.id IN (...)` 조건으로 넘겨 **기존 16개 필터·실시간 가격·페이징·위시리스트 조립을 100% MySQL에서 처리**. 기본 정렬(`lastUpdated,desc`) 상태일 때는 `CaseBuilder`로 Meilisearch 관련도 순을 유지하고, 가격·할인율·메타스코어 정렬 선택 시 해당 정렬을 존중.
+  * **키워드 검색 (`/api/v1/games/search?keyword=...`):** Meilisearch에서 관련도 순 `gameId` 목록(최대 500건)만 조회한 뒤, 기존 `GameRepositoryCustomImpl.searchGamesByIds()`에 `game.id IN (...)` 조건으로 넘겨 **기존 16개 필터·실시간 가격·페이징·위시리스트 조립은 MySQL에서 그대로 처리**. 기본 정렬(`lastUpdated,desc`) 상태일 때는 `CaseBuilder`로 Meilisearch 관련도 순을 유지하고, 가격·할인율·메타스코어 정렬 선택 시 해당 정렬을 존중.
   * **한글 특화 색인 파이프라인 (`SearchTextNormalizer`):** 외부 SDK 없이 Spring 내장 `RestClient`(`JdkClientHttpRequestFactory`)로 연동. 언어 태그 정제(`cleanTitle`), 두벌식 QWERTY-자모 양방향 ASCII 인코딩(`qwertyText`), 19개 초성 고유 ASCII 매핑(`chosungAscii`, `search_keywords` 포함), PS 스토어 한영·로마숫자 동의어 사전, 단일 HTTP `/multi-search` (`matchingStrategy: "all"`)를 적용.
   * **이중 동기화 전략:** 가격 변동만 있는 크롤링은 건너뛰고, 신규 게임·제목/이미지 변경(`/collect`), AI 검색어 생성(`AiDescriptionScheduler`), 관리자 수정/삭제(`CatalogAdminService`) 시에만 `@TransactionalEventListener(AFTER_COMMIT)` + `@Async`로 증분 반영. 매일 오전 `05:00 KST`(`GameSearchSyncScheduler`) 전체 리싱크(3,626건 ~1.6초)와 기동 시 빈 인덱스 자동 색인, 관리자 수동 재색인(`POST /api/v1/admin/search/reindex`)으로 정합성 보정.
   * **장애 격리 (Graceful Fallback):** 검색 전용 클라이언트 타임아웃을 `connect 200ms / read 400ms`로 제한하고, Meilisearch 다운·타임아웃·오류 시 예외를 전파하지 않고 즉시 기존 MySQL `nameContains` 검색으로 자동 폴백하며 `pstracker.search.fallback` Micrometer 카운터를 기록.
-* **Effect:** 실전 검색 성공률 **15.8% → 97.4%**(Top-1 **7.9% → 94.7%**), ARM64 실운영 **RAM 40.02 MiB · 디스크 16.7 MB**로 경량 운영하며 Meilisearch가 중단돼도 서비스 검색 가용성 100% 유지.
+* **Effect:** 실전 검색 성공률 **15.8% → 97.4%**(Top-1 **7.9% → 94.7%**), ARM64 실운영 **RAM 40.02 MiB · 디스크 16.7 MB**로 경량 운영하며 Meilisearch가 중단돼도 MySQL 폴백으로 서비스 검색 연속성을 유지.
 
 ---
 

@@ -257,7 +257,7 @@
 * **트러블슈팅 1 — PoC 중 `charabia` 토크나이저의 유니코드 한글 자모·초성 분리:**
   * **현상:** 한글 짧은 오타(`싸펑`, `엘든닝`)를 잡기 위해 유니코드 호환 자모(`ㅅㅏㅍㅓㅇ`)로 분해해 색인하자, Meilisearch 내장 토크나이저(`charabia`)가 초성(`ㅅ`)과 나머지(`ㅏㅍㅓㅇ`)를 별도 토큰으로 분리해 `싸펑` 0건 · `사펑` 1,143건 오탐 발생. 유니코드 초성(`ㅁㄴㅇㄹ`)도 1글자씩 쪼개져 276건 오탐 발생.
   * **해결:**
-    1. **두벌식 QWERTY-자모 양방향 ASCII 인코딩(`qwertyText`)**: 한글 음절과 단독 자모를 순수 소문자 ASCII 키열(`사펑`/`싸펑`→`tkvjd`, `엘든링`→`dpfemsfld`, `파판`→`vkvks`)로 변환해 토크나이저 분리를 원천 차단하고, 편집 거리(Levenshtein)로 자모 1~2개 오타 + 한영키 실수(`vkvks`, `쵸ㅠㄷ게ㅕㅜㅏ`→`cyberpunk`)까지 양방향 해결.
+    1. **두벌식 QWERTY-자모 양방향 ASCII 인코딩(`qwertyText`)**: 한글 음절과 단독 자모를 순수 소문자 ASCII 키열(`사펑`/`싸펑`→`tkvjd`, `엘든링`→`dpfemsfld`, `파판`→`vkvks`)로 변환해 토크나이저 분리를 방지하고, 편집 거리(Levenshtein)로 자모 1~2개 오타 + 한영키 실수(`vkvks`, `쵸ㅠㄷ게ㅕㅜㅏ`→`cyberpunk`)까지 양방향 해결.
     2. **19개 초성 고유 ASCII 매핑(`chosungAscii`, `disableOnAttributes`)**: 제목과 `search_keywords` 양쪽에서 한글 단어만 ASCII 초성으로 추출해 `ㅇㄱㄱㅇ` 유지, 영문 원제 별칭 초성(`ㄱㅇㅆ`) 신규 지원, `ㅁㄴㅇㄹ` 오탐 0건 달성.
     3. **PS 스토어 동의어 사전 + `/multi-search(all)` + 인기도 랭킹**: 한영 에디션(`컴플리트↔complete`, `디럭스/딜럭스↔deluxe`, `리마스터↔remastered`)·로마숫자(`II~XVI↔2~16`) 동의어, 단일 HTTP `/multi-search` (`matchingStrategy: "all"`, `rankingScoreThreshold: 0.55/0.65`)로 `피파→피자` 노이즈 차단, `bestSellerRank`/`mcMetaScore` 기반 `popularity:desc`로 본편 대표작 1위 노출.
 * **트러블슈팅 2 — 실운영 첫 배포 시 `SimpleClientHttpRequestFactory`의 HTTP `PATCH` 미지원:**
