@@ -35,6 +35,8 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
 
     private final JPAQueryFactory queryFactory;
 
+    private static final int RELEVANCE_CASE_LIMIT = 100;
+
     @Override
     public Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable) {
         BooleanExpression[] predicates = searchPredicates(condition);
@@ -44,6 +46,39 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 .from(game)
                 .where(predicates)
                 .orderBy(getOrderSpecifiers(pageable.getSort(), condition))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        JPAQuery<Long> countQuery = queryFactory
+                .select(game.count())
+                .from(game)
+                .where(predicates);
+
+        return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
+    }
+
+    @Override
+    public Page<GameSearchResponse> searchGamesByIds(
+            GameSearchCondition condition,
+            List<Long> matchedIds,
+            boolean preserveRelevanceOrder,
+            Pageable pageable
+    ) {
+        if (matchedIds == null || matchedIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        BooleanExpression[] predicates = idFilterPredicates(condition, matchedIds);
+        OrderSpecifier<?>[] orderSpecifiers = preserveRelevanceOrder
+                ? getRelevanceOrderSpecifiers(matchedIds, condition)
+                : getOrderSpecifiers(pageable.getSort(), condition);
+
+        List<GameSearchResponse> content = queryFactory
+                .select(gameSearchProjection())
+                .from(game)
+                .where(predicates)
+                .orderBy(orderSpecifiers)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -88,8 +123,16 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
     }
 
     private BooleanExpression[] searchPredicates(GameSearchCondition condition) {
+        return buildPredicates(nameContains(condition.getKeyword()), condition);
+    }
+
+    private BooleanExpression[] idFilterPredicates(GameSearchCondition condition, List<Long> matchedIds) {
+        return buildPredicates(game.id.in(matchedIds), condition);
+    }
+
+    private BooleanExpression[] buildPredicates(BooleanExpression primaryPredicate, GameSearchCondition condition) {
         return new BooleanExpression[] {
-                nameContains(condition.getKeyword()),
+                primaryPredicate,
                 priceBetween(condition.getMinPrice(), condition.getMaxPrice()),
                 discountRateGoe(condition.getMinDiscountRate()),
                 metaScoreGoe(condition.getMinMetaScore()),
@@ -106,6 +149,29 @@ public class GameRepositoryCustomImpl implements GameRepositoryCustom {
                 isNewDiscount(condition.getIsNewDiscount()),
                 playTimeBetween(condition.getMinPlayTime(), condition.getMaxPlayTime()),
                 vibeTagsContains(condition.getVibeTags())
+        };
+    }
+
+    private OrderSpecifier<?>[] getRelevanceOrderSpecifiers(List<Long> matchedIds, GameSearchCondition condition) {
+        if (Boolean.TRUE.equals(condition.getIsBestSeller())) {
+            return new OrderSpecifier<?>[] { game.bestSellerRank.asc() };
+        }
+        if (Boolean.TRUE.equals(condition.getIsMostDownloaded())) {
+            return new OrderSpecifier<?>[] { game.mostDownloadedRank.asc() };
+        }
+
+        int limit = Math.min(matchedIds.size(), RELEVANCE_CASE_LIMIT);
+        CaseBuilder.Cases<Integer, NumberExpression<Integer>> cases = null;
+        for (int i = 0; i < limit; i++) {
+            BooleanExpression when = game.id.eq(matchedIds.get(i));
+            cases = (cases == null)
+                    ? new CaseBuilder().when(when).then(i)
+                    : cases.when(when).then(i);
+        }
+        NumberExpression<Integer> relevanceRank = cases.otherwise(limit);
+        return new OrderSpecifier<?>[] {
+                new OrderSpecifier<>(Order.ASC, relevanceRank),
+                new OrderSpecifier<>(Order.DESC, game.lastUpdated)
         };
     }
 

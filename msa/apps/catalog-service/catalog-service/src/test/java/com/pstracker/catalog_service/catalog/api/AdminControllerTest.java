@@ -12,6 +12,7 @@ import com.pstracker.catalog_service.global.security.OAuth2AuthenticationSuccess
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.member.service.CustomOAuth2UserService;
 import com.pstracker.catalog_service.scraping.service.ScrapingQueueService;
+import com.pstracker.catalog_service.search.GameSearchIndexService;
 import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +54,9 @@ public class AdminControllerTest {
 
     @MockitoBean
     private SubscriptionService subscriptionService;
+
+    @MockitoBean
+    private GameSearchIndexService gameSearchIndexService;
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;

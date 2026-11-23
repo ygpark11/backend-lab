@@ -529,6 +529,39 @@ public class CatalogServiceTest {
                 );
     }
 
+    @Test
+    @DisplayName("searchGamesByIds: Meilisearch 관련도 순(matchedIds)을 유지하면서 기존 필터 조건을 함께 적용한다")
+    void searchGamesByIds_preservesRelevanceOrderAndAppliesFilters() {
+        catalogService.upsertGameData(createDto("PROD-HYB-1", "스파이더맨 2 디럭스", 89800, 44900, 50, LocalDate.now().plusDays(5)));
+        catalogService.upsertGameData(createDto("PROD-HYB-2", "스파이더맨 2 본편", 79800, 39900, 50, LocalDate.now().plusDays(5)));
+        catalogService.upsertGameData(createDto("PROD-HYB-3", "스파이더맨 리마스터", 59800, 59800, 0, null));
+        em.flush();
+        em.clear();
+
+        Long idDeluxe = gameRepository.findByPsStoreId("PROD-HYB-1").orElseThrow().getId();
+        Long idBase = gameRepository.findByPsStoreId("PROD-HYB-2").orElseThrow().getId();
+        Long idRemaster = gameRepository.findByPsStoreId("PROD-HYB-3").orElseThrow().getId();
+
+        com.pstracker.catalog_service.catalog.dto.GameSearchCondition cond =
+                new com.pstracker.catalog_service.catalog.dto.GameSearchCondition();
+        cond.setMinDiscountRate(30);
+
+        // Meilisearch가 본편(idBase)을 디럭스(idDeluxe)보다 먼저 반환했다고 가정
+        org.springframework.data.domain.Page<com.pstracker.catalog_service.catalog.dto.GameSearchResponse> page =
+                gameRepository.searchGamesByIds(
+                        cond,
+                        List.of(idBase, idDeluxe, idRemaster),
+                        true,
+                        org.springframework.data.domain.PageRequest.of(0, 10)
+                );
+
+        // 30% 이상 할인 필터로 idRemaster 제외 + 관련도 순(idBase -> idDeluxe) 정확히 유지
+        assertThat(page.getContent())
+                .extracting(com.pstracker.catalog_service.catalog.dto.GameSearchResponse::id)
+                .containsExactly(idBase, idDeluxe);
+        assertThat(page.getTotalElements()).isEqualTo(2);
+    }
+
     private CollectRequest createDto(String id, String title, int originalPrice, int currentPrice, int discount, LocalDate saleEnd) {
         return new CollectRequest(
                 id,

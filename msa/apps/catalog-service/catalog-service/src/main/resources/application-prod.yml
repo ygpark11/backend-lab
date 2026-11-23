@@ -44,3 +44,9 @@ app:
   auth:
     cookie-secure: true
     redirect-uri: https://ps-signal.com
+
+meilisearch:
+  enabled: ${MEILISEARCH_ENABLED:true}
+  url: ${MEILISEARCH_URL:http://meilisearch:7700}
+  master-key: ${MEILI_MASTER_KEY:}
+  index-name: games

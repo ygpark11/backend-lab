@@ -135,9 +135,43 @@ services:
           cpus: '0.3'
           memory: "256M"
 
+  # 7. 경량 검색 엔진 (Meilisearch — 내부 네트워크 전용, 장애 시 API가 MySQL로 자동 폴백)
+  meilisearch:
+    image: getmeili/meilisearch:v1.57.0
+    container_name: ps-tracker-meilisearch
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Seoul
+      - MEILI_ENV=production
+      - MEILI_NO_ANALYTICS=true
+      - MEILI_LOG_LEVEL=WARN
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - ps-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: "384M"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   db_data:
   caddy_data:
+  meili_data:
 
 networks:
   ps-network:

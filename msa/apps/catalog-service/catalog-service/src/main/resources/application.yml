@@ -65,6 +65,12 @@ crawler:
 app:
   base-url: https://ps-signal.com
 
+meilisearch:
+  enabled: ${MEILISEARCH_ENABLED:false}
+  url: ${MEILISEARCH_URL:http://127.0.0.1:7700}
+  master-key: ${MEILI_MASTER_KEY:}
+  index-name: games
+
 management:
   endpoints:
     web:

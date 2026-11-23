@@ -11,9 +11,11 @@ import com.pstracker.catalog_service.global.client.collector.CollectorClientMana
 import com.pstracker.catalog_service.global.client.collector.dto.SingleCrawlRequest;
 import com.pstracker.catalog_service.global.exception.BusinessException;
 import com.pstracker.catalog_service.global.exception.ErrorCode;
+import com.pstracker.catalog_service.search.GameSearchSyncEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
@@ -37,6 +39,7 @@ public class CatalogAdminService {
     private final CrawlJobRepository crawlJobRepository;
     private final GameReadService gameReadService;
     private final CollectorClientManager clientManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public void deleteGame(Long gameId) {
@@ -45,6 +48,7 @@ public class CatalogAdminService {
 
         gameRepository.delete(game);
         gameReadService.evictGameDetailCache(gameId);
+        eventPublisher.publishEvent(GameSearchSyncEvent.delete(gameId));
     }
 
     @Transactional
@@ -61,6 +65,7 @@ public class CatalogAdminService {
             gameRepository.delete(game);
             gameReadService.evictGameDetailCache(game.getId());
         }
+        eventPublisher.publishEvent(GameSearchSyncEvent.deleteAll(gameIds));
     }
 
     @Transactional
@@ -80,6 +85,7 @@ public class CatalogAdminService {
 
         game.updatePlayTimes(req.hltbMainStory(), req.hltbMainExtra(), req.hltbCompletionist());
         gameReadService.evictGameDetailCache(gameId);
+        eventPublisher.publishEvent(GameSearchSyncEvent.upsert(gameId));
     }
 
     /**

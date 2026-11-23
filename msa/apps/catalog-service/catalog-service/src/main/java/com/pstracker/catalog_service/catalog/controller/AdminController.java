@@ -9,6 +9,7 @@ import com.pstracker.catalog_service.global.security.MemberPrincipal;
 import com.pstracker.catalog_service.insights.service.InsightsService;
 import com.pstracker.catalog_service.scraping.dto.AdminScrapingResponse;
 import com.pstracker.catalog_service.scraping.service.ScrapingQueueService;
+import com.pstracker.catalog_service.search.GameSearchIndexService;
 import com.pstracker.catalog_service.subscription.service.SubscriptionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,7 @@ public class AdminController {
     private final InsightsService insightsService;
     private final ScrapingQueueService scrapingQueueService;
     private final SubscriptionService subscriptionService;
+    private final GameSearchIndexService gameSearchIndexService;
 
     @DeleteMapping("/games/{gameId}")
     public ResponseEntity<Void> deleteGame(@PathVariable Long gameId) {
@@ -51,6 +53,12 @@ public class AdminController {
         gameReadService.refreshCurationCache();
         subscriptionService.refreshPsPlusPricingCache();
         return ResponseEntity.ok("전체 로컬 캐시가 성공적으로 초기화되었습니다.");
+    }
+
+    @PostMapping("/search/reindex")
+    public ResponseEntity<String> reindexSearch() {
+        int count = gameSearchIndexService.reindexAll();
+        return ResponseEntity.ok("Meilisearch 전체 재색인 요청이 완료되었습니다. (" + count + "건)");
     }
 
     @DeleteMapping("/scraping/candidates/{psStoreId}")

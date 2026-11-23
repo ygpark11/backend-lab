@@ -4,6 +4,7 @@ import com.pstracker.catalog_service.catalog.domain.Game;
 import com.pstracker.catalog_service.catalog.dto.CollectRequest;
 import com.pstracker.catalog_service.catalog.dto.GameSearchCondition;
 import com.pstracker.catalog_service.catalog.dto.GameSearchResponse;
+import com.pstracker.catalog_service.catalog.dto.GameSuggestResponse;
 import com.pstracker.catalog_service.catalog.repository.GamePriceHistoryRepository;
 import com.pstracker.catalog_service.catalog.repository.GameRepository;
 import com.pstracker.catalog_service.catalog.service.CatalogAdminService;
@@ -11,6 +12,8 @@ import com.pstracker.catalog_service.catalog.service.CatalogService;
 import com.pstracker.catalog_service.catalog.service.GameReadService;
 import com.pstracker.catalog_service.global.exception.BusinessException;
 import com.pstracker.catalog_service.global.exception.ErrorCode;
+import com.pstracker.catalog_service.search.GameSearchService;
+import com.pstracker.catalog_service.search.GameSearchSyncEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,9 +21,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -45,6 +50,8 @@ public class CatalogServiceTest {
     @Mock private GameReadService gameReadService;
     @Mock private GameRepository gameRepository;
     @Mock private GamePriceHistoryRepository priceHistoryRepository;
+    @Mock private GameSearchService gameSearchService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     // ========== deleteGame ==========
 
@@ -177,6 +184,74 @@ public class CatalogServiceTest {
         verify(gameRepository, times(1)).searchGames(eq(condition), any(Pageable.class));
         verify(gameReadService, never()).searchGamesForCuration(any(), any());
         assertThat(result).isNotNull();
+    }
+
+    // ========== searchGames / suggestGames — Meilisearch 하이브리드 & 폴백 ==========
+
+    @Test
+    @DisplayName("searchGames: 키워드 검색 시 Meilisearch에서 ID 목록을 받아 searchGamesByIds로 위임한다")
+    void searchGames_WithKeyword_UsesHybridMeilisearchIds() {
+        GameSearchCondition condition = new GameSearchCondition();
+        condition.setKeyword("싸펑");
+        Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "lastUpdated"));
+
+        given(gameSearchService.searchGameIds("싸펑")).willReturn(Optional.of(List.of(436L, 2170L)));
+        given(gameRepository.searchGamesByIds(eq(condition), eq(List.of(436L, 2170L)), eq(true), any(Pageable.class)))
+                .willReturn(Page.empty());
+
+        catalogService.searchGames(condition, pageable, null);
+
+        verify(gameRepository, times(1))
+                .searchGamesByIds(eq(condition), eq(List.of(436L, 2170L)), eq(true), any(Pageable.class));
+        verify(gameRepository, never()).searchGames(any(), any());
+    }
+
+    @Test
+    @DisplayName("searchGames: Meilisearch 장애(Optional.empty) 시 기존 MySQL searchGames로 자동 폴백한다")
+    void searchGames_MeilisearchFailure_FallsBackToMysql() {
+        GameSearchCondition condition = new GameSearchCondition();
+        condition.setKeyword("엘든링");
+        Pageable pageable = PageRequest.of(0, 20);
+
+        given(gameSearchService.searchGameIds("엘든링")).willReturn(Optional.empty());
+        given(gameRepository.searchGames(eq(condition), any(Pageable.class))).willReturn(Page.empty());
+
+        catalogService.searchGames(condition, pageable, null);
+
+        verify(gameRepository, times(1)).searchGames(eq(condition), any(Pageable.class));
+        verify(gameRepository, never()).searchGamesByIds(any(), any(), anyBoolean(), any());
+    }
+
+    @Test
+    @DisplayName("suggestGames: Meilisearch 정상 응답 시 MySQL을 호출하지 않고, 실패 시 MySQL로 폴백한다")
+    void suggestGames_DelegatesAndFallsBack() {
+        List<GameSuggestResponse> expected = List.of(new GameSuggestResponse(436L, "사이버펑크 2077", "img.jpg"));
+        given(gameSearchService.suggest("싸펑", 5)).willReturn(Optional.of(expected));
+        given(gameSearchService.suggest("오류", 5)).willReturn(Optional.empty());
+        given(gameRepository.suggestByName("오류", 5)).willReturn(List.of());
+
+        assertThat(catalogService.suggestGames("싸펑", 5)).isEqualTo(expected);
+        verify(gameRepository, never()).suggestByName(eq("싸펑"), anyInt());
+
+        catalogService.suggestGames("오류", 5);
+        verify(gameRepository, times(1)).suggestByName("오류", 5);
+    }
+
+    @Test
+    @DisplayName("upsertGameData: 가격만 변동된 기존 게임은 Meilisearch 동기화 이벤트를 발행하지 않는다")
+    void upsertGameData_PriceOnlyChange_SkipsSearchSyncEvent() {
+        Game existingGame = createExistingGame();
+        CollectRequest request = buildRequest().toBuilder()
+                .currentPrice(35000)
+                .discountRate(50)
+                .build();
+
+        given(gameRepository.findByPsStoreIdWithGenres("HP0700-PPSA001-GAME")).willReturn(Optional.of(existingGame));
+        given(priceHistoryRepository.findTopByGameOrderByCreatedAtDesc(any())).willReturn(Optional.empty());
+
+        catalogService.upsertGameData(request);
+
+        verify(eventPublisher, never()).publishEvent(any(GameSearchSyncEvent.class));
     }
 
     // ========== helpers ==========

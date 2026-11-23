@@ -13,6 +13,13 @@ import java.util.List;
 public interface GameRepositoryCustom {
     Page<GameSearchResponse> searchGames(GameSearchCondition condition, Pageable pageable);
 
+    Page<GameSearchResponse> searchGamesByIds(
+            GameSearchCondition condition,
+            List<Long> matchedIds,
+            boolean preserveRelevanceOrder,
+            Pageable pageable
+    );
+
     List<GameSearchResponse> findRelatedGames(List<Long> genreIds, Long excludeGameId, int limit);
 
     GameInsightStats fetchGameInsightStats(LocalDate today, LocalDate tomorrow);

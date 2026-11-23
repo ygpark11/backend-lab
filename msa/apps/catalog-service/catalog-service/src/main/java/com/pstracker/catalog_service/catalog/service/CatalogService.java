@@ -6,12 +6,15 @@ import com.pstracker.catalog_service.catalog.event.GamePriceChangedEvent;
 import com.pstracker.catalog_service.catalog.repository.*;
 import com.pstracker.catalog_service.global.domain.PriceVerdict;
 import com.pstracker.catalog_service.global.util.PriceVerdictCalculator;
+import com.pstracker.catalog_service.search.GameSearchService;
+import com.pstracker.catalog_service.search.GameSearchSyncEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,6 +41,7 @@ public class CatalogService {
 
     private final GameReadService gameReadService;
     private final GameScouterService gameScouterService;
+    private final GameSearchService gameSearchService;
 
     @Transactional
     public void upsertGameData(CollectRequest request) {
@@ -52,6 +56,9 @@ public class CatalogService {
         Game game = findOrCreateGame(request);
         boolean isNewGame = game.getId() == null;
         Integer oldOriginalPrice = game.getOriginalPrice();
+        String oldName = game.getName();
+        String oldEnglishName = game.getEnglishName();
+        String oldImageUrl = game.getImageUrl();
 
         updateGameMetadata(game, request, genreEntities);
         boolean editionContentsChanged = game.updateEditionContents(request.editionContents());
@@ -75,6 +82,15 @@ public class CatalogService {
         gameRepository.save(game);
         processPriceInfo(game, request);
         gameReadService.evictGameDetailCache(game.getId());
+
+        // 신규 게임이거나 검색 메타데이터(제목·영문명·썸네일)가 변경된 경우에만 Meilisearch 증분 동기화
+        boolean searchMetadataChanged = isNewGame
+                || !Objects.equals(oldName, game.getName())
+                || !Objects.equals(oldEnglishName, game.getEnglishName())
+                || !Objects.equals(oldImageUrl, game.getImageUrl());
+        if (searchMetadataChanged && game.getId() != null) {
+            eventPublisher.publishEvent(GameSearchSyncEvent.upsert(game.getId()));
+        }
 
         // editionContents 변경 시에만 같은 family 게임들의 캐시도 무효화
         // (다른 에디션 상세 페이지의 familyGames 배열 안에 있는 이 게임의 contents가 stale해지기 때문)
@@ -226,7 +242,8 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<GameSuggestResponse> suggestGames(String keyword, int limit) {
-        return gameRepository.suggestByName(keyword, limit);
+        return gameSearchService.suggest(keyword, limit)
+                .orElseGet(() -> gameRepository.suggestByName(keyword, limit));
     }
 
     @Transactional(readOnly = true)
@@ -237,11 +254,38 @@ public class CatalogService {
             return gameReadService.searchGamesForCuration(condition, safe);
         }
 
-        Page<GameSearchResponse> result = gameRepository.searchGames(condition, safe);
+        Page<GameSearchResponse> result;
+        if (StringUtils.hasText(condition.getKeyword())) {
+            Optional<List<Long>> matchedIdsOpt = gameSearchService.searchGameIds(condition.getKeyword());
+            if (matchedIdsOpt.isPresent()) {
+                List<Long> matchedIds = matchedIdsOpt.get();
+                if (matchedIds.isEmpty()) {
+                    return Page.empty(safe);
+                }
+                boolean preserveRelevance = isDefaultKeywordSort(safe.getSort());
+                result = gameRepository.searchGamesByIds(condition, matchedIds, preserveRelevance, safe);
+            } else {
+                // Meilisearch 비활성화 또는 장애 시 기존 MySQL 검색 자동 폴백
+                result = gameRepository.searchGames(condition, safe);
+            }
+        } else {
+            result = gameRepository.searchGames(condition, safe);
+        }
+
         if (result.isEmpty()) {
             return result;
         }
         return enrichSearchResults(result, memberId);
+    }
+
+    private boolean isDefaultKeywordSort(Sort sort) {
+        if (sort == null || sort.isUnsorted()) {
+            return true;
+        }
+        List<Sort.Order> orders = sort.toList();
+        return orders.size() == 1
+                && "lastUpdated".equals(orders.get(0).getProperty())
+                && orders.get(0).isDescending();
     }
 
     @Transactional(readOnly = true)
