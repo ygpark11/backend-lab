@@ -80,6 +80,16 @@
 ### 1-6. Meilisearch 하이브리드 검색 아키텍처 & 장애 격리 (Hybrid Search & Graceful Fallback)
 
 * **Problem:** MySQL `REPLACE LIKE` + `JSON_SEARCH` 기반 검색은 PS 스토어 게임명 특성(부제·로마숫자·특수문자·한영 혼용·언어 태그·오타) 대응에 구조적 한계가 있었음(실운영 3,626건 38개 쿼리 기준 성공률 15.8%). 반대로 16개 복합 필터·실시간 가격·할인·역대최저가·위시리스트까지 검색 엔진에 전부 복제(Full Offload)할 경우, 일일 크롤링 시 분산 데이터 정합성 리스크와 필터 이중 관리 비용이 급증함.
+* **기술 선정 (검색 대안 비교):**
+
+| 후보 기술 | 검토 결과 | 판단 근거 |
+| :--- | :---: | :--- |
+| **MySQL `FULLTEXT (ngram)`** | 기각 | 추가 인프라 없이 역색인 가능하나, 오타 허용(Fuzzy) 미지원으로 오타 검색 요구사항 해결 불가 |
+| **Elasticsearch / OpenSearch** | 기각 | Nori 형태소 분석·집계 기능은 강력하나, 3,626건 규모 및 단일 ARM64 노드(2 vCPU · 8GB) 대비 JVM 메모리 부담과 샤드·매핑·플러그인 운영 복잡도가 과다 |
+| **Typesense** | 차선 | C++ 인메모리 기반·ARM64 지원의 동급 경량 후보이나, LMDB 메모리 매핑 구조와 직관적인 기본 랭킹 규칙·레퍼런스 접근성 기준으로 Meilisearch 선택 |
+| **Algolia (SaaS)** | 기각 | 무료 플랜 월 요청 한도(1만 건) 초과 시 과금 리스크 및 외부 네트워크 종속 |
+| **Meilisearch (`v1.57`)** | **채택** | Rust + LMDB 기반 ARM64 공식 지원, 오타·접두사·동의어·커스텀 랭킹 설정이 단순하며 실운영 실측 **RAM 40.02 MiB · 디스크 16.7 MB**로 경량 운영 가능 |
+
 * **Solution:** **역할을 분리한 하이브리드 검색 구조** 채택 (MySQL 스키마 변경 0).
   * **자동완성 (`/api/v1/games/suggest`):** Meilisearch(`games` 인덱스)에서 `id, displayName, imageUrl`을 인기도·관련도 순으로 직접 응답.
   * **키워드 검색 (`/api/v1/games/search?keyword=...`):** Meilisearch에서 관련도 순 `gameId` 목록(최대 500건)만 조회한 뒤, 기존 `GameRepositoryCustomImpl.searchGamesByIds()`에 `game.id IN (...)` 조건으로 넘겨 **기존 16개 필터·실시간 가격·페이징·위시리스트 조립은 MySQL에서 그대로 처리**. 기본 정렬(`lastUpdated,desc`) 상태일 때는 `CaseBuilder`로 Meilisearch 관련도 순을 유지하고, 가격·할인율·메타스코어 정렬 선택 시 해당 정렬을 존중.
