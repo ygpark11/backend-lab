@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 매일 새벽 03:30 (AI 검색어 배치 03:00 종료 이후) 전체 리싱크 안전망 스케줄러.
+ * 매일 오전 05:00 (자정 일배치 크롤링 및 새벽 03:00 AI 배치 종료 이후) 전체 리싱크 안전망 스케줄러.
  * 베스트셀러·메타스코어 변동 및 일시적 증분 누락을 1~2초 일괄 업서트로 보정한다.
  */
 @Slf4j
@@ -18,7 +18,7 @@ public class GameSearchSyncScheduler {
 
     private final GameSearchIndexService indexService;
 
-    @Scheduled(cron = "0 30 3 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
     public void scheduledFullReindex() {
         try {
             int count = indexService.reindexAll();
